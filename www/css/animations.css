@@ -1,0 +1,118 @@
+/*
+ The slide-enter prefix is the event name that you
+ have provided within the ngAnimate attribute.
+*/
+
+html, body {
+    height: 100%;
+}
+
+.animate {
+    -webkit-transition: .4s linear all; /* Safari/Chrome */
+    -moz-transition: .4s linear all; /* Firefox */
+    -ms-transition: .4s linear all; /* IE10 */
+    -o-transition: .4s linear all; /* Opera */
+    transition: .4s linear all; /* Future Browsers */
+    overflow: hidden;
+}
+
+.animate-container {
+    position: relative;
+    height: 100%;
+}
+
+.animate-container > * {
+    display: block;
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background-color: #fff;
+}
+
+/* Slide */
+.slide-enter {
+    left: 95%;
+    opacity: 1;
+}
+
+.slide-leave {
+    opacity: 1;
+}
+
+.slide-enter.slide-enter-active {
+    left: 0;
+    opacity: 1;
+}
+
+.slide-leave.slide-leave-active {
+    left: -100%;
+    opacity: 1;
+}
+
+/* Slide Reverse */
+.slide-reverse-enter {
+    left: -95%;
+    opacity: 1;
+}
+
+.slide-reverse-leave {
+    opacity: 1;
+}
+
+.slide-reverse-enter.slide-reverse-enter-active {
+    left: 0;
+    opacity: 1;
+}
+
+.slide-reverse-leave.slide-reverse-leave-active {
+    left: 100%;
+    opacity: 1;
+}
+
+/* Modal */
+.modal-enter {
+    top: 100%;
+    opacity: 1;
+}
+
+.modal-leave {
+    top: 0;
+    opacity: 1;
+}
+
+.modal-enter.modal-enter-active {
+    top: 0;
+    opacity: 1;
+}
+
+.modal-leave.modal-leave-active {
+    top: 0;
+    opacity: 1;
+}
+
+/* Modal Reverse */
+.modal-reverse-enter {
+    top: 0;
+    opacity: 1;
+
+}
+
+.modal-reverse-leave {
+    top: 0;
+    opacity: 1;
+    z-index: 1000;
+}
+
+.modal-reverse-enter.modal-reverse-enter-active {
+    top: 0;
+    opacity: 1;
+}
+
+.modal-reverse-leave.modal-reverse-leave-active {
+    top: 100%;
+    opacity: 1;
+
+}

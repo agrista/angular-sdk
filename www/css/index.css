@@ -1,0 +1,246 @@
+/*!
+ * Agrista Neue v2.3.1
+ *
+ * Built with Twitter Bootstrap.
+ */
+/*!
+ * Bootstrap v2.3.0
+ *
+ * Copyright 2012 Twitter, Inc
+ * Licensed under the Apache License v2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Designed and built with all the love in the world @twitter by @mdo and @fat.
+ */
+
+.view .container {
+    padding: 55px 5px 0;
+}
+.logo {
+    display: inline-block;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+    background: url(img/logo-nav.png) top right no-repeat;
+    width: 160px;
+    height: 60px;
+    position: absolute;
+    margin-top: -10px;
+    margin-left: 0px;
+}
+.sidebar-nav {
+    padding: 8px 0;
+}
+.data-bar {
+    padding-top: 16px;
+}
+.data-bar > h6 {
+    color: #999;
+}
+#profile {
+    margin-right: 160px;
+}
+.dl-horizontal dt {
+    width: 140px;
+}
+.dl-horizontal dd {
+    margin-left: 160px;
+}
+/* Navbar Mods
+  -------------------------------------------------- */
+.animate .navbar {
+    position: absolute;
+    top: 0;
+}
+
+.navbar-inner {
+    min-height: 40px;
+}
+/* Page Title
+  -------------------------------------------------- */
+.page-header {
+    margin-top: -20px;
+    margin-bottom: -38px;
+    background-color: #f5f5f5;
+    padding-bottom: 38px;
+    border-bottom: 1px solid #ddd;
+}
+.page-header h1 {
+    font-size: 24px;
+}
+/* Documents
+  -------------------------------------------------- */
+.bs-docs-sidenav {
+    width: 228px;
+    margin: 0px 0 0;
+    padding: 0;
+    background-color: #fff;
+    -webkit-border-radius: 6px;
+    -moz-border-radius: 6px;
+    border-radius: 6px;
+    -webkit-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.065);
+    -moz-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.065);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.065);
+}
+.bs-docs-sidenav > li > a {
+    display: block;
+    *width: 190px;
+    margin: 0 0 -1px;
+    padding: 8px 14px;
+    border: 1px solid #e5e5e5;
+}
+.bs-docs-sidenav > li:first-child > a {
+    -webkit-border-radius: 6px 6px 0 0;
+    -moz-border-radius: 6px 6px 0 0;
+    border-radius: 6px 6px 0 0;
+}
+.bs-docs-sidenav > li:last-child > a {
+    -webkit-border-radius: 0 0 6px 6px;
+    -moz-border-radius: 0 0 6px 6px;
+    border-radius: 0 0 6px 6px;
+}
+.bs-docs-sidenav > .active > a {
+    position: relative;
+    z-index: 2;
+    padding: 9px 15px;
+    border: 0;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+    -webkit-box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.1), inset -1px 0 0 rgba(0, 0, 0, 0.1);
+    -moz-box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.1), inset -1px 0 0 rgba(0, 0, 0, 0.1);
+    box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.1), inset -1px 0 0 rgba(0, 0, 0, 0.1);
+}
+/* Chevrons */
+.bs-docs-sidenav .icon-chevron-right {
+    float: right;
+    margin-top: 2px;
+    margin-right: -6px;
+    opacity: .25;
+}
+.bs-docs-sidenav > li > a:hover {
+    background-color: #f5f5f5;
+}
+.bs-docs-sidenav a:hover .icon-chevron-right {
+    opacity: .5;
+}
+.bs-docs-sidenav .active .icon-chevron-right,
+.bs-docs-sidenav .active a:hover .icon-chevron-right {
+    background-image: url(/static/lib/bootstrap/img/glyphicons-halflings-white.png);
+    opacity: 1;
+}
+.bs-docs-sidenav.affix {
+    top: 20px;
+}
+.bs-docs-sidenav.affix-bottom {
+    position: absolute;
+    top: auto;
+    bottom: 270px;
+}
+/* Footer
+  -------------------------------------------------- */
+.footer {
+    padding: 70px 0;
+    margin-top: 70px;
+    border-top: 1px solid #e5e5e5;
+    background-color: #f5f5f5;
+}
+.footer p {
+    margin-bottom: 0;
+    color: #777;
+}
+.footer-links {
+    margin: 10px 0;
+}
+.footer-links li {
+    display: inline;
+    margin-right: 10px;
+}
+/* Tables
+  -------------------------------------------------- */
+thead {
+    background-color: #f5f5f5;
+}
+tfoot {
+    background-color: #f5f5f5;
+}
+.table-filter {
+    float: right;
+}
+.table-info {
+    margin-top: 8px;
+}
+.table-paginate {
+    margin-top: 4px;
+    foat: right;
+}
+/* Wells
+  -------------------------------------------------- */
+.wells {
+    -webkit-box-shadow: 0;
+    -moz-box-shadow: 0;
+    box-shadow: 0;
+}
+[class^="appicon-"],
+[class*=" appicon-"] {
+    display: inline-block;
+    width: 21px;
+    height: 21px;
+    *margin-right: .3em;
+    line-height: 21px;
+    vertical-align: text-top;
+    background-image: url("/static/css/img/appicons.png");
+    background-position: 21px 21px;
+    background-repeat: no-repeat;
+    margin-top: -3px;
+}
+/* White icons with optional class, or on hover/active states of certain elements */
+.appicon-white,
+.nav > li > a:hover > [class^="appicon-"],
+.nav > li > a:hover > [class*=" appicon-"],
+.nav > .active > a > [class^="appicon-"],
+.nav > .active > a > [class*=" appicon-"],
+.dropdown-menu > li > a:hover > [class^="appicon-"],
+.dropdown-menu > li > a:hover > [class*=" appicon-"],
+.dropdown-menu > .active > a > [class^="appicon-"],
+.dropdown-menu > .active > a > [class*=" appicon-"] {
+    background-image: url("/static/css/img/appicons-white.png");
+}
+.appicon-home {
+    background-position: 0      0;
+}
+.appicon-network {
+    background-position: -30px 0;
+}
+.appicon-support {
+    background-position: -60px 0;
+}
+.appicon-documents {
+    background-position: 0 -30px;
+}
+.appicon-apps {
+    background-position: -30px -30px;
+}
+.appicon-globe {
+    background-position: -60px -30px;
+}
+.appicon-user {
+    background-position: 0 -60px;
+}
+.appicon-more {
+    background-position: -30px -60px;
+}
+.pull-right {
+    float: right;
+}
+.pull-left {
+    float: left;
+}
+.hide {
+    display: none;
+}
+.show {
+    display: block;
+}
+.invisible {
+    visibility: hidden;
+}
+.affix {
+    position: fixed;
+}

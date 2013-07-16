@@ -1,6 +1,7 @@
-www/js/main-built.js
-www/components/
-.c9revisions/
+.idea/
 node_modules/
-www/index.release.html
-www/css/main-built.css
+platforms/*/assets/
+platforms/*/build/
+platforms/*/www/
+platforms/ios/CordovaLib/build/
+www/components/

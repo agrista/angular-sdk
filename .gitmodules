@@ -1,3 +1,0 @@
-[submodule "www/shared"]
-	path = www/shared
-	url = git://github.com/comoyo/gaia-shared.git

@@ -1,4 +1,3 @@
 {
-  "directory": "www/components",
-  "json"     : "component.json"
+    "directory": "www/components"
 }

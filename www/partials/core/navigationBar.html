@@ -1,0 +1,18 @@
+<div class="navbar">
+    <div class="container">
+        <p class="navbar-text">{{ title }}</p>
+
+        <div class="pull-left" ng-show="showLeftButton()">
+            <button class="btn btn-navbar" ng-tap="navigateLeft()">
+                <i class="glyphicon glyphicon-{{leftButton.icon}}" ng-show="leftButton.icon"></i>
+                <span ng-show="leftButton.title">&nbsp;{{leftButton.title}}</span>
+            </button>
+        </div>
+        <div class="pull-right" ng-show="showRightButton()">
+            <button class="btn btn-primary" ng-tap="navigateRight()">
+                <i class="glyphicon glyphicon-{{rightButton.icon}}" ng-show="rightButton.icon"></i>
+                <span ng-show="rightButton.title">&nbsp;{{rightButton.title}}</span>
+            </button>
+        </div>
+    </div>
+</div>
