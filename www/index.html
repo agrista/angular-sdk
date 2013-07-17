@@ -9,13 +9,13 @@
     <link rel="stylesheet" href="lib/bootstrap/3.0.0/css/bootstrap.css"/>
     <link rel="stylesheet" href="lib/bootstrap-glyphicons/css/bootstrap-glyphicons.css"/>
     <link rel="stylesheet" href="css/animations.css"/>
-    <!--<link rel="stylesheet" href="css/nav.css"/>-->
+    <link rel="stylesheet" href="css/nav.css"/>
 
     <!-- Script resources -->
     <script type="text/javascript" data-main="js/config" src="components/requirejs/require.js"></script>
 </head>
 <body ng-controller="NavigationController">
-    <navigation-menu>
+    <div id="nav-menu">
         <nav class="list-container">
             <ul class="list">
                 <li class="item">Navigation Item 1</li>
@@ -23,9 +23,9 @@
                 <li class="item">Navigation Item 3</li>
             </ul>
         </nav>
-    </navigation-menu>
-    <div id="nav-page" class="animate-container" ng-animate="getTransition()" ng-view>
-        <!--<div class="animate-container" ng-animate="getTransition()" ng-view></div>-->
+    </div>
+    <div id="nav-page" ng-class="{'show-menu': menu.show}">
+        <div class="animate-container" ng-animate="getTransition()" ng-view></div>
     </div>
 </body>
 </html>

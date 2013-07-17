@@ -6,12 +6,9 @@ define(['angular'], function () {
     module.controller('NavigationController', ['$scope', 'navigationService', function($scope, navigationService) {
         $scope.getTransition = navigationService.getCurrentTransition;
 
-
-
         $scope.menu = {
             show: false,
             toggle: function() {
-                console.log('Toggle');
                 $scope.menu.show = !$scope.menu.show;
             }
         };
@@ -47,7 +44,6 @@ define(['angular'], function () {
                 _transitions[name] = data;
             },
             getCurrentTransition: function() {
-                console.log('Next Anim: ' + angular.toJson(_transition));
                 return _transition;
             },
             go: function(url, type, reverse) {

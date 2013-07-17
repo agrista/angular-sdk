@@ -1,12 +1,7 @@
-#nav-hide-menu {
-    display: none;
-}
 #nav-menu {
-    width: 272px;
+    width: 256px;
     overflow: hidden;
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: fixed;
     height: 100%;
 }
 #nav-menu nav {
@@ -23,32 +18,27 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    float: right;
     z-index: 10;
-    -webkit-transform: translateX(0);
-    transform: translateX(0);
-    -webkit-transition-duration: 0.3s;
-    transition-duration: 0.3s;
+    left: 0;
+    top: 0;
+    -webkit-transition: .3s linear all; /* Safari/Chrome */
+    -moz-transition: .3s linear all; /* Firefox */
+    -ms-transition: .3s linear all; /* IE10 */
+    -o-transition: .3s linear all; /* Opera */
+    transition: .3s linear all; /* Future Browsers */
 }
-#nav-menu.shown {
-    left: 0px;
-    overflow-x: hidden;
+
+#nav-page.show-menu {
+    left: 256px;
 }
-#nav-menu:target + #nav-page #nav-show-menu {
-    display: none;
+
+
+
+.nav-animate {
+    -webkit-transition: .3s linear all; /* Safari/Chrome */
+    -moz-transition: .3s linear all; /* Firefox */
+    -ms-transition: .3s linear all; /* IE10 */
+    -o-transition: .3s linear all; /* Opera */
+    transition: .3s linear all; /* Future Browsers */
 }
-#nav-menu:target + #nav-page #nav-hide-menu {
-    display: inline;
-}
-#nav-menu.shown + #nav-page {
-    position: absolute;
-    -webkit-transform: translateX(272px);
-    transform: translateX(272px);
-    -webkit-transition-duration: 0.3s;
-    transition-duration: 0.3s;
-    overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
-}
-body {
-    overflow-x: hidden;
-}
+
