@@ -40,7 +40,7 @@
     <key>CFBundleIconFile</key>
     <string>icon.png</string>
     <key>CFBundleIdentifier</key>
-    <string>com.agrista.AgristaCore</string>
+    <string>com.agrista.framework</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
