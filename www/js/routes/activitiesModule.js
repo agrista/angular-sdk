@@ -1,7 +1,7 @@
 'use strict';
 
 define(['app'], function (app) {
-    app.lazyLoader.controller('ActivitiesController', ['$scope', 'navigationService', function($scope, navigationService) {
+    app.lazyLoader.controller('ActivitiesController', ['$rootScope', '$scope', 'navigationService', function($rootScope, $scope, navigationService) {
         $scope.items = [{
             id: 1,
             title: "Learn this template!",
@@ -113,6 +113,7 @@ define(['app'], function (app) {
         // Navigation
         $scope.navbar = {
             title: 'Activities',
+
             navigateRight: function() {
                 navigationService.go('/tasks', 'slide');
             }

@@ -13,6 +13,24 @@
  * Designed and built with all the love in the world @twitter by @mdo and @fat.
  */
 
+
+/* Sidebar
+  -------------------------------------------------- */
+.navmenu {
+    width: 0;
+
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+}
+.navpage {
+    width: 100%;
+    float: right;
+}
+/*
+  -------------------------------------------------- */
 .view .container {
     padding: 55px 5px 0;
 }

@@ -5,6 +5,27 @@ define(['angular'], function () {
 
     module.controller('NavigationController', ['$scope', 'navigationService', function($scope, navigationService) {
         $scope.getTransition = navigationService.getCurrentTransition;
+
+
+
+        $scope.menu = {
+            show: false,
+            toggle: function() {
+                console.log('Toggle');
+                $scope.menu.show = !$scope.menu.show;
+            }
+        };
+    }]);
+
+    module.run(['$rootScope', function($rootScope) {
+        $rootScope.$on("$locationChangeStart", function(scope, future) {
+            if(future.indexOf('#nav-menu', future.length - '#nav-menu'.length) !== -1) {
+                scope.preventDefault();
+            }
+            if(future.indexOf('#nav-page', future.length - '#nav-page'.length) !== -1) {
+                scope.preventDefault();
+            }
+        });
     }]);
 
     module.service('navigationService', ['$location', function($location) {
@@ -48,7 +69,7 @@ define(['angular'], function () {
         };
     });
 
-    module.directive('navigationPage', function($compile) {
+    module.directive('navigationPage', function() {
         return {
             restrict: 'E',
             replace: true,
