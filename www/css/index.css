@@ -31,6 +31,9 @@
 }
 /*
   -------------------------------------------------- */
+section.view {
+    background-color: #fff;
+}
 .view .container {
     padding: 55px 5px 0;
 }
@@ -66,7 +69,6 @@
   -------------------------------------------------- */
 .animate .navbar {
     position: absolute;
-    top: 0;
 }
 
 .navbar-inner {

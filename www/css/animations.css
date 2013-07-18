@@ -34,85 +34,81 @@ html, body {
 
 /* Slide */
 .slide-enter {
-    left: 95%;
-    opacity: 1;
+    transform: translateX(95%);
+    -webkit-transform: translateX(95%);
 }
 
 .slide-leave {
-    opacity: 1;
 }
 
 .slide-enter.slide-enter-active {
-    left: 0;
-    opacity: 1;
+    transform: translateX(0);
+    -webkit-transform: translateX(0);
 }
 
 .slide-leave.slide-leave-active {
-    left: -100%;
-    opacity: 1;
+    transform: translateX(-100%);
+    -webkit-transform: translateX(-100%);
 }
 
 /* Slide Reverse */
 .slide-reverse-enter {
-    left: -95%;
-    opacity: 1;
+    transform: translateX(-95%);
+    -webkit-transform: translateX(-95%);
 }
 
 .slide-reverse-leave {
-    opacity: 1;
 }
 
 .slide-reverse-enter.slide-reverse-enter-active {
-    left: 0;
-    opacity: 1;
+    transform: translateX(0);
+    -webkit-transform: translateX(0);
 }
 
 .slide-reverse-leave.slide-reverse-leave-active {
-    left: 100%;
-    opacity: 1;
+    transform: translateX(100%);
+    -webkit-transform: translateX(100%);
 }
 
 /* Modal */
 .modal-enter {
-    top: 100%;
-    opacity: 1;
+    transform: translateY(100%);
+    -webkit-transform: translateY(100%);
 }
 
 .modal-leave {
-    top: 0;
-    opacity: 1;
+    transform: translateY(0);
+    -webkit-transform: translateY(0);
 }
 
 .modal-enter.modal-enter-active {
-    top: 0;
-    opacity: 1;
+    transform: translateY(0);
+    -webkit-transform: translateY(0);
 }
 
 .modal-leave.modal-leave-active {
-    top: 0;
-    opacity: 1;
+    transform: translateY(0);
+    -webkit-transform: translateY(0);
 }
 
 /* Modal Reverse */
 .modal-reverse-enter {
-    top: 0;
-    opacity: 1;
-
+    transform: translateY(0);
+    -webkit-transform: translateY(0);
 }
 
 .modal-reverse-leave {
-    top: 0;
-    opacity: 1;
+    transform: translateY(0);
+    -webkit-transform: translateY(0);
     z-index: 1000;
 }
 
 .modal-reverse-enter.modal-reverse-enter-active {
-    top: 0;
-    opacity: 1;
+    transform: translateY(0);
+    -webkit-transform: translateY(0);
 }
 
 .modal-reverse-leave.modal-reverse-leave-active {
-    top: 100%;
-    opacity: 1;
-
+    transform: translateY(100%);
+    -webkit-transform: translateY(100%);
 }

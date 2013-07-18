@@ -1,12 +1,13 @@
 #nav-menu {
     width: 256px;
     overflow: hidden;
-    position: fixed;
+    position: absolute;
+    top: 0;
     height: 100%;
+    background-color: #568e14;
 }
 #nav-menu nav {
     display: block;
-    background: black;
     color: white;
     z-index: 5;
     height: 100%;
@@ -42,3 +43,6 @@
     transition: .3s linear all; /* Future Browsers */
 }
 
+body {
+    overflow-x: hidden;
+}
