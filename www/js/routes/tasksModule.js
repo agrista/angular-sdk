@@ -6,6 +6,9 @@ define(['app'], function (app) {
             title: 'Task',
             navigateLeft: function() {
                 navigationService.go('/activities', 'slide', true);
+            },
+            navigateRight: function() {
+                navigationService.go('/activities', 'modal', true);
             }
         }
     }]);

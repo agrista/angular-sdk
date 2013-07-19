@@ -8,9 +8,7 @@ requirejs.config({
     },
     paths: {
         'cordova': '../cordova',
-        'angular': '../components/angularjs/index',
-        'utilServices': 'utilServices',
-        'interfaceServices': 'phonegapServices'
+        'angular': '../components/angularjs/index'
     },
     baseUrl: 'js/'
 });

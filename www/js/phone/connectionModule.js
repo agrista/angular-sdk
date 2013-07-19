@@ -1,9 +1,9 @@
 'use strict';
 
 define(['cordova', 'angular'], function () {
-    var module = angular.module('connectivityModule', []);
+    var module = angular.module('connectionModule', []);
 
-    module.factory('connectivityService', ['$timeout', function ($timeout) {
+    module.factory('connectionService', ['$timeout', function ($timeout) {
         var _onConnectionChangeList = [];
         var _lastConnectionType = undefined;
 
