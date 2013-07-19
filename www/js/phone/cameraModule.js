@@ -4,8 +4,8 @@ define(['cordova', 'angular'], function () {
     var module = angular.module('cameraModule', []);
 
     module.factory('cameraService', ['promiseService', function (promiseService) {
-        var _pictureSourceTypes = navigator.camera.PictureSourceType;
-        var _destinationTypes = navigator.camera.DestinationType;
+        var _pictureSourceTypes = Camera.PictureSourceType;
+        var _destinationTypes = Camera.DestinationType;
 
         return {
             getPictureSourceTypes: _pictureSourceTypes,
@@ -43,7 +43,7 @@ define(['cordova', 'angular'], function () {
 
                 return defer.promise;
             },
-            retrieve: function(quality) {
+            retrieve: function(quality, source) {
                 var defer = promiseService.defer();
 
                 navigator.camera.getPicture(function(data) {
