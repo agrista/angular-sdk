@@ -1,14 +1,19 @@
 'use strict';
 
 define(['app'], function (app) {
-    app.lazyLoader.controller('TasksController', ['$scope', 'navigationService', function($scope, navigationService) {
+    app.lazyLoader.controller('TasksController', ['$scope', 'navigationService', 'cameraService', function($scope, navigationService, cameraService) {
         $scope.navbar = {
             title: 'Task',
             navigateLeft: function() {
                 navigationService.go('/activities', 'slide', true);
             },
-            navigateRight: function() {
-                navigationService.go('/activities', 'modal', true);
+            takePhoto: function() {
+                cameraService.capture(50).then(function(res) {
+                    console.log('Photo taken');
+                }, function(res) {
+                    console.log(res);
+                });
+
             }
         }
     }]);

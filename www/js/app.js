@@ -1,7 +1,7 @@
 'use strict';
 
-define(['angular', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule'], function() {
-    var app = angular.module('app', ['utilityModule', 'navigationModule', 'lazyLoaderModule']);
+define(['angular', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule', 'phone/cameraModule'], function() {
+    var app = angular.module('app', ['utilityModule', 'navigationModule', 'lazyLoaderModule', 'cameraModule']);
 
     app.config(['$routeProvider', 'lazyLoaderProvider', function ($routeProvider, lazyLoaderProvider) {
         $routeProvider
