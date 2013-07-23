@@ -79,7 +79,11 @@
     <preference name="MediaPlaybackRequiresUserAction" value="false" />
     <preference name="AllowInlineMediaPlayback" value="false" />
     <preference name="OpenAllWhitelistURLsInWebView" value="false" />
-    <preference name="BackupWebStorage" value="cloud" />
-    <preference name="fullscreen" value="true" />
+    <preference name="BackupWebStorage" value="none" />
     <preference name="webviewbounce" value="false" />
+    <preference name="loglevel" value="DEBUG" />
+    <preference name="orientation" value="default" />
+    <preference name="target-device" value="universal" />
+    <preference name="fullscreen" value="false" />
+    <preference name="keepRunning" value="true" />
 </widget>

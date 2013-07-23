@@ -8,7 +8,12 @@
         Apache Cordova Team
     </author>
     <access origin="*" />
-    <preference name="fullscreen" value="true" />
     <preference name="webviewbounce" value="false" />
     <preference name="UIWebViewBounce" value="false" />
+    <preference name="loglevel" value="DEBUG" />
+    <preference name="orientation" value="default" />
+    <preference name="target-device" value="universal" />
+    <preference name="fullscreen" value="false" />
+    <preference name="keepRunning" value="true" />
+    <preference name="BackupWebStorage" value="none" />
 </widget>

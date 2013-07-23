@@ -4,4 +4,6 @@ platforms/*/assets/
 platforms/*/build/
 platforms/*/www/
 platforms/ios/CordovaLib/build/
+platforms/android/gen/
+platforms/android/bin/
 www/components/
