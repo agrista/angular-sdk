@@ -82,7 +82,7 @@ define(['angular'], function () {
      *         navigate-left="navigateLeftFunction"
      *         right-button="{icon: 'ok', title: 'Save'}"
      *         navigate-right="navigateRightFunction"></navigation-bar>
-     *navigation-bar
+     *
      * @param title {string} The navigation bar title
      * @param left-button {object} Left button chrome settings {icon: string, title: string}
      * @param right-button {object} Right button chrome settings {icon: string, title: string}

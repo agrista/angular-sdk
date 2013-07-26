@@ -8,7 +8,11 @@
 
     <section class="view">
         <div class="container">
-            Tasks
+            <ul class="nav nav-tabs nav-stacked">
+                <li ng-repeat="item in tasks.land_classes.all">
+                    <a>{{item.land_class}}</a>
+                </li>
+            </ul>
         </div>
     </section>
 </div>

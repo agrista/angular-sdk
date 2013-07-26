@@ -6,13 +6,10 @@ define(['angular'], function() {
     module.provider('lazyLoader', ['$controllerProvider', '$compileProvider', '$filterProvider', '$provide',
         function ($controllerProvider, $compileProvider, $filterProvider, $provide) {
             function joinPaths(base, urls) {
-                console.log('LAZY: ' + base);
                 base = base.split('/');
-                console.log(base);
 
                 for(var i = 0; i < urls.length; i++) {
                     urls[i] = base.concat(urls[i].split('/')).join('/');
-                    console.log('LAZY: ' + urls[i]);
                 }
 
                 return urls;
@@ -36,6 +33,7 @@ define(['angular'], function() {
                     requirejs(dependencies, function () {
                         $rootScope.$apply(function () {
                             defer.resolve(defer, arguments);
+                            console.log('Injection');
                         });
                     });
 
@@ -43,7 +41,7 @@ define(['angular'], function() {
                 }];
             };
 
-            this.$get = function () {
+            this.$get = function() {
                 return {
                     controller: function (name, controller) {
                         $controllerProvider.register(name, controller);
