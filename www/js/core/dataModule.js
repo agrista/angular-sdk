@@ -7,12 +7,7 @@ define(['underscore', 'angular'], function (_) {
     module.provider('dataStore', function () {
         var _apiUrl = '/api';
         var _defaultOptions = {
-            timeout: 60,
-            pageLimit: 10,
-            readLocalOnly: false,
-            waitForRemote: false,
-            cacheRemoteData: true,
-            index: 'id'
+            pageLimit: 10
         };
 
         var _errors = {
@@ -24,9 +19,10 @@ define(['underscore', 'angular'], function (_) {
         };
 
         /**
-         * dataStoreProvider provider
-         * @param {String} The base API URL
-         * @param {Object} Additional API options
+         * @name dataStoreProvider.config
+         * @description dataStoreProvider provider
+         * @param url
+         * @param options
          */
         this.config = function (url, options) {
             _apiUrl = url.replace(/:(?!\/\/)/, '\\:');
@@ -56,7 +52,7 @@ define(['underscore', 'angular'], function (_) {
                  * Private variables
                  * @private
 
-                    config = {
+                 config = {
                         api: {
                             template: urlTemplate,
                             schema: schemaTemplate,
@@ -73,7 +69,18 @@ define(['underscore', 'angular'], function (_) {
                  */
                 var _config = _.defaults((config || {}), {
                     api: undefined,
-                    paging: undefined
+                    paging: undefined,
+
+                    read: {
+                        local: true,
+                        remote: true
+                    },
+                    write: {
+                        local: true,
+                        remote: true,
+                        force: false
+                    }
+
                 });
 
                 var _remoteStore = undefined;
@@ -94,8 +101,8 @@ define(['underscore', 'angular'], function (_) {
                         {
                             current: '',
                             process: function (tx) {
-                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
-                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = CURRENT_TIMESTAMP WHERE id = old.id AND key = old.key; END');
+                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)', _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = CURRENT_TIMESTAMP WHERE id = old.id AND key = old.key; END', _dataCallback, _errorCallback);
                             },
                             next: '1.0'
                         }
@@ -104,7 +111,7 @@ define(['underscore', 'angular'], function (_) {
                     function _processMigration(db) {
                         if (migrationSteps.length > 0) {
                             var migration = migrationSteps[0];
-                            migrationSteps.splice(0,1);
+                            migrationSteps.splice(0, 1);
 
                             if (migration.current === db.version) {
                                 console.log('Database (' + db.version + ') has a newer version ' + migration.next);
@@ -124,8 +131,21 @@ define(['underscore', 'angular'], function (_) {
                     _processMigration(window.openDatabase(name, '', name, 1000000));
                 };
 
+                function _traceCallback() {
+                    console.log('_traceCallback');
+                    console.log(arguments.join(', '));
+
+                    if (arguments.callee && arguments.callee.caller) {
+                        console.log(arguments.callee.caller);
+                    }
+                };
+
+                function _dataCallback(tx, res) {
+                    console.log('SQL complete: ' + res.rowsAffected);
+                };
+
                 function _errorCallback(tx, err) {
-                    console.log('Database Error: ' + err.message + '(' + err.code + ')');
+                    console.log('Error: ' + err.message + '(' + err.code + ')');
 
                     throw new Error(err.message);
                 };
@@ -134,7 +154,7 @@ define(['underscore', 'angular'], function (_) {
                     db.transaction(function (tx) {
                         tx.executeSql('SELECT COUNT(*) from data', [], function (tx, res) {
                             cdrCallback(res.rows.length == 1 ? res.rows.item(0) : 0);
-                       });
+                        }, _errorCallback);
                     });
                 }
 
@@ -142,7 +162,7 @@ define(['underscore', 'angular'], function (_) {
                  * Initialize
                  */
 
-                if(_config.api !== undefined && _config.api.template !== undefined) {
+                if (_config.api !== undefined && _config.api.template !== undefined) {
                     console.log(_apiUrl + _config.api.template);
                     _remoteStore = $resource(_apiUrl + _config.api.template, _config.api.schema);
                 }
@@ -162,8 +182,8 @@ define(['underscore', 'angular'], function (_) {
                  * @name DataReader
                  * @param schemaData
                  * @param options
-                 * @param callback
-                 * @returns {DataStore.DataReader}
+                 * @param drCallback
+                 * @returns {DataReader}
                  * @constructor
                  */
                 function DataReader(schemaData, options, drCallback) {
@@ -184,7 +204,7 @@ define(['underscore', 'angular'], function (_) {
                         throw new Error(_errors.NoReadParams.msg);
                     }
 
-                    options = _.defaults(options, {page: 1, limit: _defaultOptions.pageLimit});
+                    var _readOptions = _.defaults(options, {page: 1, limit: _defaultOptions.pageLimit});
 
                     // Process request
                     var _key = _.flatten(_.pairs(schemaData)).join('/');
@@ -192,7 +212,7 @@ define(['underscore', 'angular'], function (_) {
 
                     function _makeLocalRequest(mlrCallback) {
                         _localStore.db.transaction(function (tx) {
-                            tx.executeSql('SELECT * FROM data WHERE key = ?', [_key], function(tx, res) {
+                            tx.executeSql('SELECT * FROM data WHERE key = ?', [_key], function (tx, res) {
                                 var dataArray = [];
 
                                 for (var i = 0; i < res.rows.length; i++) {
@@ -202,52 +222,64 @@ define(['underscore', 'angular'], function (_) {
                                 }
 
                                 mlrCallback(dataArray);
-                            }, function(err) {
+                            }, function (err) {
                                 mlrCallback(null, err);
                             });
                         });
                     };
 
                     function _storeLocalResponse(data) {
-                        if(typeof data === 'object') data = [data];
+                        console.log('_makeRemoteRequest');
 
-                        _localStore.db.transaction(function(tx) {
-                            _.each(data, function(element, index) {
+                        if (typeof data === 'object') data = [data];
+
+                        _localStore.db.transaction(function (tx) {
+                            _.each(data, function (element, index) {
                                 var id = element._id || '';
-                                var dataArray = [id, _key, JSON.stringify(element)];
+                                var dataString = JSON.stringify(element);
 
-                                tx.executeSql("REPLACE INTO data (id, key, data) VALUES (?, ?, ?)", dataArray);
+                                tx.executeSql("INSERT INTO data (id, key, data) VALUES (?, ?, ?)", [id, _key, dataString], _traceCallback, function (tx, err) {
+                                    // Insert failed
+                                    console.log('Insert failed');
+                                    if (_config.write.force) {
+                                        tx.executeSql('UPDATE data SET data = ?, dirty = 0 WHERE id = ?', [dataString, id], _dataCallback, _errorCallback);
+                                    } else {
+                                        tx.executeSql('UPDATE data SET data = ? WHERE id = ? AND dirty = 0', [dataString, id], _dataCallback, _errorCallback);
+                                    }
+                                });
                             });
                         });
+
                     };
 
                     function _makeRemoteRequest(mrrCallback) {
-                        _remoteStore.get(schemaData).$then(function(res) {
+                        _remoteStore.get(schemaData).$then(function (res) {
                             mrrCallback(res.data);
-                        }, function(err) {
+                        }, function (err) {
                             mrrCallback(null, err);
                         });
                     };
 
                     function _makeRequest(mrCallback) {
-                        _makeLocalRequest(function(res, err) {
-                            console.log('_makeLocalRequest');
-                            mrCallback(res, err);
-                        });
+                        if (_config.read.local) {
+                            _makeLocalRequest(function (res, err) {
+                                console.log('_makeLocalRequest');
+                                mrCallback(res, err);
+                            });
+                        }
 
-                        _makeRemoteRequest(function(res, err) {
-                            if(res !== undefined) {
-                                _storeLocalResponse(res);
-                           }
+                        if (_config.read.remote && _config.api !== undefined) {
+                            _makeRemoteRequest(function (res, err) {
+                                console.log('_makeRemoteRequest');
 
-                            console.log('_makeRemoteRequest');
-                            mrCallback(res, err);
-                        })
+                                if (_config.write.local === true) {
+                                    _storeLocalResponse(res);
+                                }
 
+                                mrCallback(res, err);
+                            })
+                        }
                     };
-
-
-
 
                     _makeRequest(drCallback);
                 };
@@ -264,123 +296,16 @@ define(['underscore', 'angular'], function (_) {
                     }
                 }
             };
-            /*
-
-
-
-
-
-
-
-             function EndPoint(endPointTemplate, querySchema) {
-             if (typeof endPointTemplate === 'object') {
-             querySchema = endPointTemplate;
-             endPointTemplate = '';
-             } else if (typeof endPointTemplate === 'undefined') {
-             querySchema = {};
-             endPointTemplate = '';
-             }
-
-             _apiUrl = _apiUrl + endPointTemplate.split('/').join('/');
-
-             this.resourceHandle = $resource(_apiUrl, querySchema);
-             };
-
-             EndPoint.prototype.read = function (queryData, options, callback) {
-             if (typeof queryData === 'function') {
-             callback = queryData;
-             options = {};
-             queryData = '';
-             } else if (typeof options === 'function') {
-             callback = options;
-             options = {};
-             } else if (typeof queryData === 'undefined') {
-             throw new Error(_errors.EmptyReadParams.msg);
-             }
-
-             options = _.defaults(options, _defaultOptions);
-
-             function Reader() {
-             var _page = 1;
-
-             function _readRequest() {
-             // TODO: Get local data
-
-             if (options.waitForRemote === false || options.readCacheOnly === true) {
-             //callback();
-             }
-
-             // Make remote API call
-
-
-             if (options.readCacheOnly === false) {
-             this.resourceHandle.get(queryData, function (res) {
-             if (options.cacheRemoteData === true) {
-             // TODO: Store to local
-             }
-
-             console.log(res);
-
-             callback(res.data);
-             }, function (err) {
-             callback(null, err);
-             });
-             }
-             }
-
-             return {
-             page: _page,
-             pageTo: function (page) {
-             _page = page;
-             _readRequest();
-             },
-             refresh: function () {
-             _readRequest();
-             }
-             }
-             }
-
-             return new Reader();
-
-
-             if (typeof queryData === 'object') {
-             callback = options;
-             options = queryData;
-             queryData = '';
-             } else if (typeof queryData === 'function') {
-             callback = queryData;
-             options = {};
-             queryData = '';
-             } else {
-             throw new Error(_errors.NoReadParams.msg);
-             }
-
-             options = _.defaults(options, _defaultOptions);
-
-
-             // Make remote API call
-             if (options.readCacheOnly === false) {
-             this.resourceHandle.get(queryData, function (res) {
-             if (options.cacheRemoteData === true) {
-             // TODO: Store to local
-             }
-
-             console.log(res);
-
-             callback(res.data);
-             }, function (err) {
-             callback(null, err);
-             });
-             }
-             };
-             */
 
             return {
                 /**
                  * @name data.createInstance
                  * @description Create a new EndPoint instance of the Data service
-                 * @param {String} endPointTemplate: The API end point (e.g. '/user/:id')
-                 * @param {Object} querySchema: The schema parameters used in the API template
+                 * @param name
+                 * @param config
+                 * @param callback
+                 * @returns {DataStore}
+                 * @constructor
                  */
                 DataStore: function (name, config, callback) {
                     return new DataStore(name, config, callback);
