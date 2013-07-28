@@ -101,8 +101,8 @@ define(['underscore', 'angular'], function (_) {
                         {
                             current: '',
                             process: function (tx) {
-                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)', _dataCallback, _errorCallback);
-                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = CURRENT_TIMESTAMP WHERE id = old.id AND key = old.key; END', _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)', [], _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = CURRENT_TIMESTAMP WHERE id = old.id AND key = old.key; END', [], _dataCallback, _errorCallback);
                             },
                             next: '1.0'
                         }
@@ -132,11 +132,11 @@ define(['underscore', 'angular'], function (_) {
                 };
 
                 function _traceCallback() {
-                    console.log('_traceCallback');
-                    console.log(arguments.join(', '));
+                    console.warn('_traceCallback');
+                    console.warn('Arguments: [' + arguments.join(', ') + ']');
 
-                    if (arguments.callee && arguments.callee.caller) {
-                        console.log(arguments.callee.caller);
+                    if (_trackCallback.caller && _trackCallback.caller.name) {
+                        console.warn('Called from: ' + _trackCallback.caller.name);
                     }
                 };
 
@@ -144,10 +144,8 @@ define(['underscore', 'angular'], function (_) {
                     console.log('SQL complete: ' + res.rowsAffected);
                 };
 
-                function _errorCallback(tx, err) {
-                    console.log('Error: ' + err.message + '(' + err.code + ')');
-
-                    throw new Error(err.message);
+                function _errorCallback(err) {
+                    console.error('Error: ' + err.message + '(' + err.code + ')');
                 };
 
                 function _countDatabaseRows(db, cdrCallback) {
@@ -297,19 +295,17 @@ define(['underscore', 'angular'], function (_) {
                 }
             };
 
-            return {
-                /**
-                 * @name data.createInstance
-                 * @description Create a new EndPoint instance of the Data service
-                 * @param name
-                 * @param config
-                 * @param callback
-                 * @returns {DataStore}
-                 * @constructor
-                 */
-                DataStore: function (name, config, callback) {
-                    return new DataStore(name, config, callback);
-                }
+            /**
+             * @name dataStore
+             * @description Create a new instance of the DataStore service
+             * @param name
+             * @param config
+             * @param callback
+             * @returns {DataStore}
+             * @constructor
+             */
+            return function (name, config, callback) {
+                return new DataStore(name, config, callback);
             };
         }];
     });
