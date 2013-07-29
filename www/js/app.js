@@ -28,7 +28,7 @@ define(['angular', 'core/dataModule', 'core/utilityModule', 'core/navigationModu
     app.run(['lazyLoader', 'dataStore', function(lazyLoader, dataStore) {
         app.lazyLoader = lazyLoader;
 
-        var valuationsStore = dataStore.DataStore('farm-valuations', {
+        var valuationsStore = dataStore('farm-valuations', {
             api: {
                 template: 'farm-valuations/:farmid',
                 schema: {farmid: '@id'}
