@@ -224,8 +224,16 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     });
                 };
 
-                var _deleteLocal = function(dataItems) {
+                var _deleteLocal = function (dataItems) {
                     console.log('_deleteLocal');
+
+                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
+
+                    _localStore.db.transaction(function (tx) {
+                        _.each(dataItems, function (item) {
+                            tx.executeSql("DELETE FROM data WHERE id = ? AND key = ?", [item.id, item.key], _traceCallback, _errorCallback);
+                        });
+                    });
 
                 };
 
@@ -253,27 +261,38 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     });
                 };
 
-                var _updateRemote = function (schemaData, dataItems) {
+                var _updateRemote = function (schemaData, dataItems, urCallback) {
                     console.log('_updateRemote');
 
                     if (_.isArray(dataItems) === false) dataItems = [dataItems];
 
-                    _.each(dataItems, function (item) {
+                    _.each(dataItems, function (item, index) {
                         if (item.dirty === true) {
-
                             _remoteStore.save(schemaData, item.data, function (res) {
                                 item.dirty = false;
+                                dataItems[index] = item;
 
                                 _updateLocal(item);
+
+                                if (urCallback) urCallback(dataItems, index);
                             });
                         }
                     });
                 };
 
-                var _deleteRemote = function(schemaData, dataItems) {
+                var _deleteRemote = function (schemaData, dataItems, drCallback) {
                     console.log('_deleteRemote');
 
                     if (_.isArray(dataItems) === false) dataItems = [dataItems];
+
+                    _.each(dataItems, function (item, index) {
+                        _remoteStore.delete(schemaData, function (res) {
+                            _deleteLocal(item);
+                            dataItems.splice(index, 1);
+
+                            if (drCallback) drCallback(dataItems);
+                        });
+                    });
                 };
 
 
@@ -286,8 +305,8 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                 function DataItem(item, schemaData) {
                     schemaData = schemaData || {};
                     item = _.defaults((item || {}), {
-                        id: '',
-                        key: '',
+                        id: undefined,
+                        key: undefined,
                         data: {},
                         dirty: false
                     });
@@ -303,17 +322,23 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
 
                     return {
                         data: item.data,
-                        update: function () {
+                        update: function (uCallback) {
                             console.log('Data updated');
 
                             if (_config.write.remote === true) {
-                                _updateRemote(schemaData, item);
+                                _updateRemote(schemaData, item, uCallback);
                             }
                         },
-                        delete: function () {
+                        delete: function (dCallback) {
                             console.log('Data deleted');
-                            _deleteLocal(item);
-                            _deleteRemote(schemaData, item);
+
+                            if (_config.write.local === true) {
+                                _deleteLocal(item);
+                            }
+
+                            if (_config.write.remote === true) {
+                                _deleteRemote(schemaData, item, dCallback);
+                            }
                         }
                     }
                 };
