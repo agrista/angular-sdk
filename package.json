@@ -24,7 +24,6 @@
     "karma-ng-scenario": "latest",
     "karma-requirejs": "latest",
     "chai": "1.4.0",
-    "karma-chai": "git+https://github.com/xdissent/karma-chai.git",
-    "grunt-contrib-less": "~0.6.4"
+    "karma-chai": "git+https://github.com/xdissent/karma-chai.git"
   }
 }

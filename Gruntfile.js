@@ -36,7 +36,6 @@ module.exports = function (grunt) {
                 'www/js/{,*/,*/}*.js',
                 'www/css/{,*/}*.css',
                 'www/lib/{,**/,*/}css/*.css',
-                'www/lib/{,**/,*/}less/*.less',
                 'www/img/{,*/}*.{png,jpg,jpeg,gif,webp,svg}'
             ]
         },
@@ -52,35 +51,23 @@ module.exports = function (grunt) {
             }
         },
         watch: {
-            less: {
-                files: ['www/lib/{,**/,*/}less/*.less'],
-                tasks: ['less']
-            },
             liveserve: {
                 options: {
                     livereload: true
                 },
                 files: ['<%=watchfiles.all %>'],
-                tasks: ['less', 'cordova-prepare']
+                tasks: ['cordova-prepare']
             },
             liveripple: {
                 options: {
                     livereload: true
                 },
                 files: ['<%=watchfiles.all %>'],
-                tasks: ['less', 'cordova-prepare']
+                tasks: ['cordova-prepare']
             },
             liveemulate: {
                 files: ['<%=watchfiles.all %>'],
-                tasks: ['cordova-emulate-end', 'less', 'cordova-buildemulate']
-            }
-        },
-        less: {
-            development: {
-                files: {
-                    'www/lib/bootstrap/3.0.0/css/bootstrap.css': "www/lib/bootstrap/3.0.0/less/bootstrap.less",
-                    'www/lib/bootstrap-glyphicons/css/bootstrap-glyphicons.css': "www/lib/bootstrap-glyphicons/less/bootstrap-glyphicons.less"
-                }
+                tasks: ['cordova-emulate-end', 'cordova-buildemulate']
             }
         },
         shell: {

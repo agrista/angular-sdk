@@ -1,8 +1,7 @@
 'use strict';
 
-define(['underscore', 'angular'], function (_) {
+define(['underscore', 'watch', 'angular'], function (_, watch) {
     var module = angular.module('dataModule', []);
-
 
     module.provider('dataStore', function () {
         var _apiUrl = '/api';
@@ -101,8 +100,8 @@ define(['underscore', 'angular'], function (_) {
                         {
                             current: '',
                             process: function (tx) {
-                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)', [], _dataCallback, _errorCallback);
-                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = CURRENT_TIMESTAMP WHERE id = old.id AND key = old.key; END', [], _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = datetime(\'now\') WHERE id = old.id AND key = old.key; END', [], _dataCallback, _errorCallback);
                             },
                             next: '1.0'
                         }
@@ -133,18 +132,19 @@ define(['underscore', 'angular'], function (_) {
 
                 function _traceCallback() {
                     console.warn('_traceCallback');
-                    console.warn('Arguments: [' + arguments.join(', ') + ']');
-
-                    if (_trackCallback.caller && _trackCallback.caller.name) {
-                        console.warn('Called from: ' + _trackCallback.caller.name);
-                    }
+                    console.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
                 };
 
                 function _dataCallback(tx, res) {
                     console.log('SQL complete: ' + res.rowsAffected);
                 };
 
-                function _errorCallback(err) {
+                function _errorCallback(tx, err) {
+                    if (typeof err === 'undefined') {
+                        err = tx;
+                        tx = undefined;
+                    }
+
                     console.error('Error: ' + err.message + '(' + err.code + ')');
                 };
 
@@ -155,6 +155,210 @@ define(['underscore', 'angular'], function (_) {
                         }, _errorCallback);
                     });
                 }
+
+                function _createDataItems(data) {
+                    if (_.isArray(data) === false) {
+                        data = [data];
+                    }
+
+                    var dataItems = [];
+
+                    _.each(data, function (item) {
+                        dataItems.push(new DataItem(item));
+                    });
+
+                    return dataItems;
+                };
+
+                /**
+                 * Local data storage
+                 */
+
+                var _getLocal = function (key, glCallback) {
+                    console.log('_getLocal');
+
+                    _localStore.db.transaction(function (tx) {
+                        tx.executeSql('SELECT * FROM data WHERE key = ?', [key], function (tx, res) {
+                            var dataItems = [];
+
+                            for (var i = 0; i < res.rows.length; i++) {
+                                var localData = res.rows.item(i);
+
+                                dataItems.push({
+                                    id: localData.id,
+                                    key: localData.key,
+                                    data: JSON.parse(localData.data),
+                                    dirty: localData.dirty
+                                });
+                            }
+
+                            glCallback(dataItems);
+                        }, function (err) {
+                            glCallback(null, err);
+                        });
+                    });
+                };
+
+
+                var _updateLocal = function (dataItems) {
+                    console.log('_updateLocal');
+
+                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
+
+                    _localStore.db.transaction(function (tx) {
+                        _.each(dataItems, function (item) {
+                            if (item.data !== null) {
+                                var dataString = JSON.stringify(item.data);
+
+                                tx.executeSql("INSERT INTO data (id, key, data, dirty) VALUES (?, ?, ?, ?)", [item.id, item.key, dataString, item.dirty], _traceCallback, function (tx, err) {
+                                    // Insert failed
+                                    console.log('Insert failed');
+                                    if (item.dirty === false && _config.write.force) {
+                                        tx.executeSql('UPDATE data SET data = ?, dirty = 0 WHERE id = ?', [dataString, item.id], _dataCallback, _errorCallback);
+                                    } else {
+                                        tx.executeSql('UPDATE data SET data = ?, dirty = ? WHERE id = ?', [dataString, item.dirty, item.id], _dataCallback, _errorCallback);
+                                    }
+                                });
+                            }
+                        });
+                    });
+                };
+
+                /**
+                 * Remote data storage
+                 */
+
+                var _getRemote = function (schemaData, key, grCallback) {
+                    console.log('_getRemote');
+
+                    _remoteStore.query(schemaData, function (res) {
+                        var dataItems = [];
+
+                        _.each(res, function (item) {
+                            dataItems.push({
+                                id: item._id,
+                                key: key,
+                                data: item
+                            });
+                        });
+
+                        grCallback(dataItems);
+                    }, function (err) {
+                        grCallback(null, err);
+                    });
+                };
+
+                var _updateRemote = function (dataItems) {
+                    console.log('_updateRemote');
+
+                    _.each(dataItems, function (item) {
+                        if (item.dirty === true) {
+
+                            _remoteStore.save(schemaData, item.data, function (res) {
+                                item.dirty = false;
+
+                                _updateLocal(item);
+                            });
+                        }
+                    });
+
+                };
+
+
+                /**
+                 *
+                 * @param data
+                 * @returns {{data: *, update: Function, delete: Function}}
+                 * @constructor
+                 */
+                function DataItem(item) {
+                    item = _.defaults((item || {}), {
+                        id: '',
+                        key: '',
+                        data: {},
+                        dirty: false
+                    });
+
+                    watch.watch(item.data, function () {
+                        console.log('Data changed');
+                        if (_config.write.local === true) {
+                            item.dirty = true;
+
+                            _updateLocal(item);
+                        }
+                    });
+
+                    return {
+                        data: item.data,
+                        update: function () {
+                            console.log('Data updated');
+
+                            if (_config.write.remote === true) {
+                                _updateRemote(item);
+                            }
+                        },
+                        delete: function () {
+                            console.log('Data deleted');
+                        }
+                    }
+                };
+
+                /**
+                 *
+                 * @param schemaData
+                 * @param options
+                 * @param drCallback
+                 * @returns {DataStore.DataReader}
+                 * @constructor
+                 */
+                function DataReader(schemaData, options, drCallback) {
+                    // Check if instance of DataReader
+                    if (!(this instanceof DataReader)) {
+                        return new DataReader(schemaData, options, drCallback);
+                    }
+
+                    // Validate parameters
+                    if (typeof schemaData === 'function') {
+                        drCallback = schemaData;
+                        options = {};
+                        schemaData = {};
+                    } else if (typeof options === 'function') {
+                        drCallback = options;
+                        options = {};
+                    } else if (typeof schemaData === 'undefined') {
+                        throw new Error(_errors.NoReadParams.msg);
+                    }
+
+                    var _readOptions = _.defaults(options, {page: 1, limit: _defaultOptions.pageLimit});
+                    var _key = _.flatten(_.pairs(schemaData)).join('/');
+
+                    // Process request
+                    if (_config.read.local) {
+                        _getLocal(_key, function (res, err) {
+                            if (res !== null) {
+                                drCallback(_createDataItems(res));
+                            } else {
+                                drCallback(null, err);
+                            }
+                        });
+                    }
+
+                    if (_config.read.remote && _config.api !== undefined) {
+                        _getRemote(schemaData, _key, function (res, err) {
+                            console.log('_makeRemoteRequest');
+
+                            if (res !== null) {
+                                if (_config.write.local === true) {
+                                    _updateLocal(res);
+                                }
+
+                                drCallback(_createDataItems(res));
+                            } else {
+                                drCallback(null, err);
+                            }
+                        })
+                    }
+                };
 
                 /**
                  * Initialize
@@ -177,112 +381,6 @@ define(['underscore', 'angular'], function (_) {
                 });
 
                 /**
-                 * @name DataReader
-                 * @param schemaData
-                 * @param options
-                 * @param drCallback
-                 * @returns {DataReader}
-                 * @constructor
-                 */
-                function DataReader(schemaData, options, drCallback) {
-                    // Check if instance of DataReader
-                    if (!(this instanceof DataReader)) {
-                        return new DataReader(schemaData, options, drCallback);
-                    }
-
-                    // Validate parameters
-                    if (typeof schemaData === 'function') {
-                        drCallback = schemaData;
-                        options = {};
-                        schemaData = {};
-                    } else if (typeof options === 'function') {
-                        drCallback = options;
-                        options = {};
-                    } else if (typeof schemaData === 'undefined') {
-                        throw new Error(_errors.NoReadParams.msg);
-                    }
-
-                    var _readOptions = _.defaults(options, {page: 1, limit: _defaultOptions.pageLimit});
-
-                    // Process request
-                    var _key = _.flatten(_.pairs(schemaData)).join('/');
-
-
-                    function _makeLocalRequest(mlrCallback) {
-                        _localStore.db.transaction(function (tx) {
-                            tx.executeSql('SELECT * FROM data WHERE key = ?', [_key], function (tx, res) {
-                                var dataArray = [];
-
-                                for (var i = 0; i < res.rows.length; i++) {
-                                    var localData = res.rows.item(i);
-
-                                    dataArray.push(JSON.parse(localData.data));
-                                }
-
-                                mlrCallback(dataArray);
-                            }, function (err) {
-                                mlrCallback(null, err);
-                            });
-                        });
-                    };
-
-                    function _storeLocalResponse(data) {
-                        console.log('_makeRemoteRequest');
-
-                        if (typeof data === 'object') data = [data];
-
-                        _localStore.db.transaction(function (tx) {
-                            _.each(data, function (element, index) {
-                                var id = element._id || '';
-                                var dataString = JSON.stringify(element);
-
-                                tx.executeSql("INSERT INTO data (id, key, data) VALUES (?, ?, ?)", [id, _key, dataString], _traceCallback, function (tx, err) {
-                                    // Insert failed
-                                    console.log('Insert failed');
-                                    if (_config.write.force) {
-                                        tx.executeSql('UPDATE data SET data = ?, dirty = 0 WHERE id = ?', [dataString, id], _dataCallback, _errorCallback);
-                                    } else {
-                                        tx.executeSql('UPDATE data SET data = ? WHERE id = ? AND dirty = 0', [dataString, id], _dataCallback, _errorCallback);
-                                    }
-                                });
-                            });
-                        });
-
-                    };
-
-                    function _makeRemoteRequest(mrrCallback) {
-                        _remoteStore.get(schemaData).$then(function (res) {
-                            mrrCallback(res.data);
-                        }, function (err) {
-                            mrrCallback(null, err);
-                        });
-                    };
-
-                    function _makeRequest(mrCallback) {
-                        if (_config.read.local) {
-                            _makeLocalRequest(function (res, err) {
-                                console.log('_makeLocalRequest');
-                                mrCallback(res, err);
-                            });
-                        }
-
-                        if (_config.read.remote && _config.api !== undefined) {
-                            _makeRemoteRequest(function (res, err) {
-                                console.log('_makeRemoteRequest');
-
-                                if (_config.write.local === true) {
-                                    _storeLocalResponse(res);
-                                }
-
-                                mrCallback(res, err);
-                            })
-                        }
-                    };
-
-                    _makeRequest(drCallback);
-                };
-
-                /**
                  * Public functions
                  */
                 return {
@@ -290,7 +388,7 @@ define(['underscore', 'angular'], function (_) {
                         return new DataReader(schemaData, options, callback);
                     },
                     create: function (data, callback) {
-
+                        return new DataItem({data: data});
                     }
                 }
             };

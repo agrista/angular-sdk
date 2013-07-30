@@ -12,7 +12,7 @@ requirejs.config({
         'angular': '../components/angularjs/index',
         'angular-resource': '../lib/angularjs/1.1.5/angular-resource',
         'underscore': '../components/underscore/underscore',
-        'pouchdb': '../components/pouchdb/dist/pouchdb-nightly'
+        'watch': '../components/watchjs/src/watch'
     },
     baseUrl: 'js/'
 });
