@@ -156,7 +156,7 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     });
                 }
 
-                function _createDataItems(data) {
+                function _createDataItems(data, schemaData) {
                     if (_.isArray(data) === false) {
                         data = [data];
                     }
@@ -164,7 +164,7 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     var dataItems = [];
 
                     _.each(data, function (item) {
-                        dataItems.push(new DataItem(item));
+                        dataItems.push(new DataItem(item, schemaData));
                     });
 
                     return dataItems;
@@ -224,6 +224,11 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     });
                 };
 
+                var _deleteLocal = function(dataItems) {
+                    console.log('_deleteLocal');
+
+                };
+
                 /**
                  * Remote data storage
                  */
@@ -248,8 +253,10 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     });
                 };
 
-                var _updateRemote = function (dataItems) {
+                var _updateRemote = function (schemaData, dataItems) {
                     console.log('_updateRemote');
+
+                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
 
                     _.each(dataItems, function (item) {
                         if (item.dirty === true) {
@@ -261,7 +268,12 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                             });
                         }
                     });
+                };
 
+                var _deleteRemote = function(schemaData, dataItems) {
+                    console.log('_deleteRemote');
+
+                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
                 };
 
 
@@ -271,7 +283,8 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                  * @returns {{data: *, update: Function, delete: Function}}
                  * @constructor
                  */
-                function DataItem(item) {
+                function DataItem(item, schemaData) {
+                    schemaData = schemaData || {};
                     item = _.defaults((item || {}), {
                         id: '',
                         key: '',
@@ -294,11 +307,13 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                             console.log('Data updated');
 
                             if (_config.write.remote === true) {
-                                _updateRemote(item);
+                                _updateRemote(schemaData, item);
                             }
                         },
                         delete: function () {
                             console.log('Data deleted');
+                            _deleteLocal(item);
+                            _deleteRemote(schemaData, item);
                         }
                     }
                 };
@@ -336,7 +351,7 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     if (_config.read.local) {
                         _getLocal(_key, function (res, err) {
                             if (res !== null) {
-                                drCallback(_createDataItems(res));
+                                drCallback(_createDataItems(res, schemaData));
                             } else {
                                 drCallback(null, err);
                             }
@@ -352,7 +367,7 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                                     _updateLocal(res);
                                 }
 
-                                drCallback(_createDataItems(res));
+                                drCallback(_createDataItems(res, schemaData));
                             } else {
                                 drCallback(null, err);
                             }
@@ -387,7 +402,7 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     read: function (schemaData, options, callback) {
                         return new DataReader(schemaData, options, callback);
                     },
-                    create: function (data, callback) {
+                    create: function (data) {
                         return new DataItem({data: data});
                     }
                 }
