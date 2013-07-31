@@ -25,35 +25,8 @@ define(['angular', 'core/dataModule', 'core/utilityModule', 'core/navigationModu
         dataStoreProvider.config('http://localhost:3006/api/');
     }]);
 
-    app.run(['lazyLoader', 'dataStore', function (lazyLoader, dataStore) {
+    app.run(['lazyLoader', function (lazyLoader) {
         app.lazyLoader = lazyLoader;
-
-        var valuationsStore = dataStore('farm-valuations', {
-            api: {
-                template: 'farm-valuations/:id',
-                schema: {id: '@id'}
-            }
-        }, function () {
-            var valuations = valuationsStore.read({id: '5182833c44e28913bea4619f'}, {limit: 50}, function (res, err) {
-
-                if (res !== null) {
-                    console.log('Data length: ' + res.length);
-
-                    if (res.length > 0) {
-                        var dataItem = res[0];
-
-                        console.log(dataItem);
-
-                        dataItem.data.farm_name = "Savage Farm";
-                        console.log(dataItem.data.farm_name);
-
-
-                        dataItem.data.farm_name = "Savage Farm 2";
-                        console.log(dataItem.data.farm_name);
-                    }
-                }
-            });
-        });
     }]);
 
     return app;
