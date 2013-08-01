@@ -54,19 +54,28 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                  * @private
 
                  config = {
-                        api: {
-                            template: urlTemplate,
-                            schema: schemaTemplate,
-                        },
-                        paging: {
-                            template: urlTemplate,
-                            schema: schemaTemplate,
-                            data: {
-                                page: 1,
-                                limit: pageLimit
-                            }
+                    api: {
+                        template: urlTemplate,
+                        schema: schemaTemplate,
+                    },
+                    paging: {
+                        template: urlTemplate,
+                        schema: schemaTemplate,
+                        data: {
+                            page: 1,
+                            limit: pageLimit
                         }
+                    },
+                    read: {
+                        local: true,
+                        remote: true
+                    },
+                    write: {
+                        local: true,
+                        remote: true,
+                        force: false
                     }
+                }
                  */
                 var _config = _.defaults((config || {}), {
                     api: undefined,
@@ -102,17 +111,10 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                         {
                             current: '',
                             process: function (tx) {
-                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], _dataCallback, _errorCallback);
                                 tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = datetime(\'now\') WHERE id = old.id AND key = old.key; END', [], _dataCallback, _errorCallback);
                             },
                             next: '1.0'
-                        },
-                        {
-                            current: '1.0',
-                            process: function (tx) {
-                                tx.executeSql('ALTER TABLE data ADD COLUMN local INT DEFAULT 0', [], _dataCallback, _errorCallback);
-                            },
-                            next: '2.0'
                         }
                     ];
 
@@ -181,8 +183,8 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                  */
 
                 function _createUniqueId() {
-                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                         return v.toString(16);
                     });
                 };
@@ -225,7 +227,8 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                                         id: localData.id,
                                         key: localData.key,
                                         data: JSON.parse(localData.data),
-                                        dirty: localData.dirty
+                                        dirty: (localData.dirty == 1 ? true : false),
+                                        local: (localData.local == 1 ? true : false)
                                     });
                                 }
 
@@ -240,29 +243,47 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     }
                 };
 
+                var _syncLocal = function (dataItems, key, slCallback) {
+                    console.log('_syncLocal');
+                    if (typeof slCallback !== 'function') slCallback = _voidCallback;
 
-                var _updateLocal = function (dataItems) {
+                    _deleteAllLocal(key, function () {
+                        _updateLocal(dataItems, function () {
+                            _getLocal(key, slCallback);
+                        });
+                    });
+                };
+
+                var _updateLocal = function (dataItems, options, ulCallback) {
                     console.log('_updateLocal');
+                    if (typeof options === 'function') {
+                        ulCallback = options;
+                        options = {};
+                    }
                     if (_.isArray(dataItems) === false) dataItems = [dataItems];
+                    if (typeof ulCallback !== 'function') ulCallback = _voidCallback;
+
+                    options = _.defaults((options || {}), {force: false});
+
+                    var asyncMon = new AysncMonitor(dataItems.length, ulCallback);
 
                     if (_config.write.local === true) {
                         _localStore.db.transaction(function (tx) {
                             _.each(dataItems, function (item) {
-                                if (item.id !== undefined && item.key !== undefined) {
-                                    var dataString = JSON.stringify(item.data);
+                                var dataString = JSON.stringify(item.data);
 
-                                    tx.executeSql("INSERT INTO data (id, key, data, dirty, local) VALUES (?, ?, ?, ?, ?)", [item.id, item.key, dataString, item.dirty, item.local], _traceCallback, function (tx, err) {
-                                        // Insert failed
-                                        console.log('Insert failed');
-                                        if (item.dirty === false && _config.write.force) {
-                                            tx.executeSql('UPDATE data SET data = ?, dirty = 0, local = ? WHERE id = ?', [dataString, item.local, item.id], _dataCallback, _errorCallback);
-                                        } else {
-                                            tx.executeSql('UPDATE data SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, item.dirty, item.local, item.id], _dataCallback, _errorCallback);
-                                        }
-                                    });
-                                }
+                                tx.executeSql("INSERT INTO data (id, key, data, dirty, local) VALUES (?, ?, ?, ?, ?)", [item.id, item.key, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
+                                    // Insert failed
+                                    if (item.dirty === true || item.local === true || (_config.write.force === true || options.force)) {
+                                        tx.executeSql('UPDATE data SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                    } else {
+                                        tx.executeSql('UPDATE data SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                    }
+                                });
                             });
                         });
+                    } else {
+                        ulCallback();
                     }
                 };
 
@@ -277,6 +298,22 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                             });
                         });
                     }
+                };
+
+                var _deleteAllLocal = function (key, dalCallback) {
+                    console.log('_deleteAllLocal');
+
+                    _localStore.db.transaction(function (tx) {
+                        if (_config.write.force === true) {
+                            tx.executeSql("DELETE FROM data WHERE key = ?", [key], function () {
+                                dalCallback();
+                            }, _errorCallback);
+                        } else {
+                            tx.executeSql("DELETE FROM data WHERE key = ? AND local = 0 AND dirty = 0", [key], function () {
+                                dalCallback();
+                            }, _errorCallback);
+                        }
+                    });
                 };
 
                 /**
@@ -294,19 +331,23 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     console.log('_getRemote');
                     if (typeof grCallback !== 'function') grCallback = _voidCallback;
 
-                    _remoteStore.get(schemaData).$then(function (res) {
+                    _remoteStore.query(schemaData).$then(function (res) {
                         var data = res.data;
                         var dataItems = [];
 
                         if (_.isArray(data) === false) data = [data];
 
-                        _.each(data, function (item) {
+                        for (var i = 0; i < data.length; i++) {
+                            var item = data[i];
+
                             dataItems.push({
-                                id: item._id,
+                                id: item._id || item.id,
                                 key: key,
-                                data: item
+                                data: item,
+                                dirty: false,
+                                local: false
                             });
-                        });
+                        }
 
                         grCallback(dataItems);
                     }, function (err) {
@@ -315,20 +356,11 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     });
                 };
 
-
-                var _createRemote = function (schemaData, dataItems, crCallback) {
-                    console.log('_createRemote');
-                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
-                    if (typeof crCallback !== 'function') crCallback = _voidCallback;
-
-
-                };
-
                 /**
                  *
                  * @param schemaData
                  * @param dataItems
-                 * @param urCallback(res, err)
+                 * @param urCallback()
                  * @private
                  */
                 var _updateRemote = function (schemaData, dataItems, urCallback) {
@@ -336,35 +368,41 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     if (_.isArray(dataItems) === false) dataItems = [dataItems];
                     if (typeof urCallback !== 'function') urCallback = _voidCallback;
 
-                    var _updateTotal = 0,
-                        _updateCount = 0;
+                    var asyncMon = new AysncMonitor(dataItems.length, function () {
+                        urCallback(dataItems);
+                    });
 
                     if (_config.write.remote === true && _config.api !== undefined) {
                         _.each(dataItems, function (item, index) {
                             if (item.dirty === true) {
-                                _updateTotal++;
-
                                 _remoteStore.save(schemaData, item.data).$then(function (res) {
-                                    _updateCount++;
-
-                                    item.dirty = false;
-                                    item.local = false;
-
-                                    dataItems[index] = item;
-
-                                    _updateLocal(item);
-
-                                    if (_updateCount == _updateTotal) {
-                                        urCallback(dataItems);
+                                    var remoteItem = {
+                                        id: res.data._id || res.data.id || item.id,
+                                        key: item.key,
+                                        data: item.data,
+                                        dirty: false,
+                                        local: false
                                     }
+
+                                    if (item.local == true) {
+                                        remoteItem.data._id = remoteItem.id;
+
+                                        _deleteLocal(item);
+                                    }
+
+                                    dataItems[index] = remoteItem;
+
+                                    _updateLocal(remoteItem, {force: true}, asyncMon.done);
                                 }, function (err) {
                                     _errorCallback(err);
-                                    urCallback(null, _errors.RemoteDataStoreError);
+                                    asyncMon.done();
                                 });
+                            } else {
+                                asyncMon.done();
                             }
                         });
                     } else {
-                        urCallback(null, _errors.NoConfigAPIParams);
+                        urCallback();
                     }
                 };
 
@@ -377,29 +415,48 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                  */
                 var _deleteRemote = function (schemaData, dataItems, drCallback) {
                     console.log('_deleteRemote');
-
                     if (_.isArray(dataItems) === false) dataItems = [dataItems];
                     if (typeof drCallback !== 'function') drCallback = _voidCallback;
 
+                    var asyncMon = new AysncMonitor(dataItems.length, drCallback);
+
                     if (_config.write.remote === true && _config.api !== undefined) {
                         _.each(dataItems, function (item, index) {
-                            _remoteStore.delete(schemaData).$then(function (res) {
-                                _deleteLocal(item);
-
-                                if (index == dataItems.length - 1) {
-                                    drCallback();
-                                }
+                            _remoteStore.delete(schemaData, item.data).$then(function (res) {
+                                _deleteLocal(item, asyncMon.done);
                             }, function (err) {
                                 _errorCallback(err);
-                                drCallback(null, _errors.RemoteDataStoreError);
+                                asyncMon.done();
                             });
                         });
                     } else {
-                        drCallback(null, _errors.NoConfigAPIParams);
+                        drCallback();
                     }
                 };
 
+                function AysncMonitor(size, callback) {
+                    if (!(this instanceof AysncMonitor)) {
+                        return new AysncMonitor(size, callback);
+                    }
 
+                    return {
+                        done: function () {
+                            size--;
+
+                            if (size == 0) {
+                                callback();
+                            }
+                        }
+                    }
+                }
+
+                /**
+                 * @name DataItem
+                 * @param item
+                 * @param schemaData
+                 * @returns {*}
+                 * @constructor
+                 */
                 function DataItem(item, schemaData) {
                     if (!(this instanceof DataItem)) {
                         return new DataItem(item, schemaData);
@@ -421,22 +478,35 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                         _updateLocal(item);
                     }
 
-                    watch.watch(item.data, function () {
-                        console.log('Data changed');
+                    function _watchData() {
+                        watch.watch(item.data, function () {
+                            console.log('Data changed');
 
-                        item.dirty = true;
-                        _updateLocal(item);
-                    });
+                            item.dirty = true;
+                            _updateLocal(item);
+                        });
+                    };
+
+                    _watchData();
 
                     return {
+                        id: item.id,
                         data: item.data,
                         /**
                          * @param uCallback(res, err)
                          */
                         update: function (uCallback) {
                             console.log('Data updated');
+                            if (typeof uCallback !== 'function') uCallback = _voidCallback;
 
-                            _updateRemote(schemaData, item, uCallback);
+                            _updateRemote(schemaData, item, function (res) {
+                                if (_.isArray(res) === true) {
+                                    item = res[0];
+                                    _watchData();
+                                }
+
+                                uCallback(res);
+                            });
                         },
                         /**
                          * @param dCallback(res, err)
@@ -499,19 +569,24 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
 
                             _getRemote(schemaData, _key, function (res, err) {
                                 if (res) {
-                                    _updateLocal(res);
-
-                                    rCallback(_createDataItems(res, schemaData));
+                                    _syncLocal(res, _key, function (res, err) {
+                                        rCallback(_createDataItems(res, schemaData));
+                                    });
                                 } else if (err) {
                                     rCallback(null, err);
                                 }
                             });
+
                         } else {
                             rCallback(null, _errors.NoReadParams);
                         }
                     },
                     create: function (data, schemaData) {
-                        return new DataItem({data: data, local: true}, schemaData);
+                        return new DataItem({
+                            data: data,
+                            dirty: true,
+                            local: true
+                        }, schemaData);
                     }
                 }
             };

@@ -3,7 +3,7 @@
                     title="{{navbar.title}}"
                     left-button="{icon: 'align-justify'}"
                     navigate-left="menu.toggle"
-                    right-button="{icon: 'plus'}"
+                    right-button="{icon: 'refresh'}"
                     navigate-right="navbar.navigateRight"></navigation-bar>
 
     <section class="view">
@@ -19,7 +19,6 @@
                     <a>
                         <input ng-model="item.data.name" type="text"/>
                         <button class="btn btn-primary btn-mini" ng-click="item.update()">Update</button>
-                        <button class="btn btn-mini" ng-click="item.delete()">Delete</button>
                     </a>
                 </li>
             </ul>
