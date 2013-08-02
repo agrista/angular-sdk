@@ -34,7 +34,8 @@ define(['app'], function (app) {
             title: 'Activities',
 
             navigateRight: function() {
-                _readData();
+                navigationService.go('/tasks', 'slide');
+                //_readData();
             }
         };
     }]);

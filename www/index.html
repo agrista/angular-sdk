@@ -6,27 +6,19 @@
     <meta name="viewport"
           content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, target-densitydpi=device-dpi"/>
     <link rel="stylesheet" type="text/css" href="css/index.css"/>
-    <link rel="stylesheet" href="components/agrista-bootstrap/dist/css/agrista-bootstrap.css"/>
-    <link rel="stylesheet" href="components/agrista-bootstrap/dist/css/agrista-glyphicons.css"/>
-    <link rel="stylesheet" href="css/animations.css"/>
+    <link rel="stylesheet" href="components/agrista-styles/dist/css/agrista-bootstrap.css"/>
+    <link rel="stylesheet" href="components/agrista-styles/dist/css/agrista-glyphicons.css"/>
     <link rel="stylesheet" href="css/nav.css"/>
+    <link rel="stylesheet" href="css/animations.css"/>
 
     <!-- Script resources -->
     <script type="text/javascript" data-main="js/config" src="components/requirejs/require.js"></script>
-    <script type="text/javascript" src="https://getfirebug.com/firebug-lite-debug.js"></script>
+    <!--<script type="text/javascript" src="https://getfirebug.com/firebug-lite-debug.js"></script>-->
 </head>
 <body ng-controller="NavigationController">
-    <div id="nav-menu">
-        <nav class="list-container">
-            <ul class="list">
-                <li class="item">Navigation Item 1</li>
-                <li class="item">Navigation Item 2</li>
-                <li class="item">Navigation Item 3</li>
-            </ul>
-        </nav>
-    </div>
-    <div id="nav-page" ng-class="{'show-menu': menu.show}">
+    <navigation-menu></navigation-menu>
+    <navigation-page>
         <div class="animate-container" ng-animate="getTransition()" ng-view></div>
-    </div>
+    </navigation-page>
 </body>
 </html>

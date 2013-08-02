@@ -12,6 +12,6 @@
         "requirejs": "https://github.com/jrburke/requirejs.git",
         "underscore": "https://github.com/documentcloud/underscore.git",
         "watchjs": "https://github.com/melanke/Watch.JS.git",
-        "agrista-bootstrap": "https://bitbucket.org/agrista/bootstrap.git"
+        "agrista-styles": "git@bitbucket.org:agrista/styles.git"
     }
 }

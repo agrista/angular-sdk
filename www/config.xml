@@ -8,6 +8,7 @@
         Apache Cordova Team
     </author>
     <access origin="*" />
+    <log level="DEBUG" />
     <preference name="webviewbounce" value="false" />
     <preference name="UIWebViewBounce" value="false" />
     <preference name="loglevel" value="DEBUG" />

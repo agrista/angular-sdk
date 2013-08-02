@@ -8,12 +8,15 @@ html, body {
 }
 
 .animate {
-    -webkit-transition: .4s linear all; /* Safari/Chrome */
-    -moz-transition: .4s linear all; /* Firefox */
-    -ms-transition: .4s linear all; /* IE10 */
-    -o-transition: .4s linear all; /* Opera */
-    transition: .4s linear all; /* Future Browsers */
+    -webkit-transition: .4s ease-in-out all; /* Safari/Chrome */
+    -moz-transition: .4s ease-in-out all; /* Firefox */
+    -ms-transition: .4s ease-in-out all; /* IE10 */
+    -o-transition: .4s ease-in-out all; /* Opera */
+    transition: .4s ease-in-out all; /* Future Browsers */
     overflow: hidden;
+
+    -webkit-perspective: 1000;
+    -webkit-backface-visibility: hidden;
 }
 
 .animate-container {
@@ -32,83 +35,145 @@ html, body {
     background-color: #fff;
 }
 
-/* Slide */
+/*
 .slide-enter {
-    transform: translateX(95%);
-    -webkit-transform: translateX(95%);
+    left: 96%;
 }
 
 .slide-leave {
 }
 
 .slide-enter.slide-enter-active {
-    transform: translateX(0);
-    -webkit-transform: translateX(0);
+    left: 0;
 }
 
 .slide-leave.slide-leave-active {
-    transform: translateX(-100%);
-    -webkit-transform: translateX(-100%);
+    left: -100%;
 }
 
-/* Slide Reverse */
 .slide-reverse-enter {
-    transform: translateX(-95%);
-    -webkit-transform: translateX(-95%);
+    left: -96%;
 }
 
 .slide-reverse-leave {
 }
 
 .slide-reverse-enter.slide-reverse-enter-active {
-    transform: translateX(0);
-    -webkit-transform: translateX(0);
+    left: 0;
 }
 
 .slide-reverse-leave.slide-reverse-leave-active {
-    transform: translateX(100%);
-    -webkit-transform: translateX(100%);
+    left: 100%;
 }
 
-/* Modal */
 .modal-enter {
-    transform: translateY(100%);
-    -webkit-transform: translateY(100%);
+    top: 100%;
 }
 
 .modal-leave {
-    transform: translateY(0);
-    -webkit-transform: translateY(0);
+    top: 0;
 }
 
 .modal-enter.modal-enter-active {
-    transform: translateY(0);
-    -webkit-transform: translateY(0);
+    top: 0;
 }
 
 .modal-leave.modal-leave-active {
-    transform: translateY(0);
-    -webkit-transform: translateY(0);
+    top: 0;
 }
 
-/* Modal Reverse */
 .modal-reverse-enter {
-    transform: translateY(0);
-    -webkit-transform: translateY(0);
+    top: 0;
 }
 
 .modal-reverse-leave {
-    transform: translateY(0);
-    -webkit-transform: translateY(0);
+    top: 0;
     z-index: 1000;
 }
 
 .modal-reverse-enter.modal-reverse-enter-active {
-    transform: translateY(0);
-    -webkit-transform: translateY(0);
+    top: 0;
 }
 
 .modal-reverse-leave.modal-reverse-leave-active {
-    transform: translateY(100%);
-    -webkit-transform: translateY(100%);
+    top: 100%;
+}
+*/
+
+
+.slide-enter {
+    transform: translate3d(96%, 0, 0);
+    -webkit-transform: translate3d(96%, 0, 0);
+}
+
+.slide-leave {
+}
+
+.slide-enter.slide-enter-active {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+.slide-leave.slide-leave-active {
+    transform: translate3d(-100%, 0, 0);
+    -webkit-transform: translate3d(-100%, 0, 0);
+}
+
+.slide-reverse-enter {
+    transform: translate3d(-96%, 0, 0);
+    -webkit-transform: translate3d(-96%, 0, 0);
+}
+
+.slide-reverse-leave {
+}
+
+.slide-reverse-enter.slide-reverse-enter-active {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+.slide-reverse-leave.slide-reverse-leave-active {
+    transform: translate3d(100%), 0, 0;
+    -webkit-transform: translate3d(100%, 0, 0);
+}
+
+.modal-enter {
+    transform: translate3d(0, 100%, 0);
+    -webkit-transform: translate3d(0, 100%, 0);
+}
+
+.modal-leave {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+.modal-enter.modal-enter-active {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(00, 0, 0);
+}
+
+.modal-leave.modal-leave-active {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+.modal-reverse-enter {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+.modal-reverse-leave {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    z-index: 1000;
+}
+
+.modal-reverse-enter.modal-reverse-enter-active {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+}
+
+.modal-reverse-leave.modal-reverse-leave-active {
+    transform: translate3d(0, 100%, 0);
+    -webkit-transform: translate3d(0, 100%, 0);
 }

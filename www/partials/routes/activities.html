@@ -21,6 +21,12 @@
                         <button class="btn btn-primary btn-mini" ng-click="item.update()">Update</button>
                     </a>
                 </li>
+                <li ng-repeat="item in items">
+                    <a>
+                        <input ng-model="item.data.name" type="text"/>
+                        <button class="btn btn-primary btn-mini" ng-click="item.update()">Update</button>
+                    </a>
+                </li>
             </ul>
         </div>
     </section>

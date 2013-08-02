@@ -1,10 +1,20 @@
+body {
+    overflow-y: hidden;
+}
+
 /**
  * Bootstrap adaption
  */
+.navbar {
+    border-radius: 0;
+}
+
 .navbar-fixed-top,
 .navbar-fixed-bottom {
     position: fixed;
     width: 100%;
+    left: auto;
+    right: auto;
     z-index: 1030;
     border-radius: 0;
 }
@@ -93,13 +103,13 @@
 }
 
 .btn-clear {
-    background-color: #222;
+    background-color: #5B4723;
     color: #fff;
 }
 
 .btn-clear:hover {
-    background-color: #444;
-    border-color: #333;
+    background-color: #876028;
+    border-color: #755426;
 }
 
 /**
@@ -109,47 +119,61 @@
     width: 256px;
     overflow: hidden;
     position: absolute;
-    top: 0;
     height: 100%;
-    background-color: #568e14;
+
+    -webkit-transition: .2s ease-in-out -webkit-transform;
+    transition: .2s ease-in-out transform;
+
+    -webkit-transform: translateX(-256px);
+    transform: translateX(-256px);
 }
+
+#nav-menu .navbar {
+    margin-bottom: 0;
+}
+
 #nav-menu nav {
     display: block;
     color: white;
     z-index: 5;
     height: 100%;
+    border-right: solid 1px #e2e2e2;
 }
 #nav-menu nav div {
     z-index: 5;
 }
+
+#nav-menu li a {
+    display: block;
+    padding: 15px;
+    border-bottom: solid 1px #457210;
+    color: #fff;
+    background-color: #568e14;
+}
+
+#nav-menu li a:hover {
+    background-color: #457210;
+}
+
+#nav-menu.show-menu {
+    display: block;
+
+    -webkit-transform: translateX(0px);
+    transform: translateX(0px);
+}
+
 #nav-page {
     position: absolute;
     width: 100%;
     height: 100%;
     z-index: 10;
-    left: 0;
-    top: 0;
-    -webkit-transition: .3s linear all; /* Safari/Chrome */
-    -moz-transition: .3s linear all; /* Firefox */
-    -ms-transition: .3s linear all; /* IE10 */
-    -o-transition: .3s linear all; /* Opera */
-    transition: .3s linear all; /* Future Browsers */
+    -webkit-transition: .2s ease-in-out -webkit-transform;
+    transition: .2s ease-in-out transform;
 }
 
-#nav-page.show-menu {
-    left: 256px;
-}
+#nav-menu.show-menu + #nav-page {
+    overflow: hidden;
 
-
-
-.nav-animate {
-    -webkit-transition: .3s linear all; /* Safari/Chrome */
-    -moz-transition: .3s linear all; /* Firefox */
-    -ms-transition: .3s linear all; /* IE10 */
-    -o-transition: .3s linear all; /* Opera */
-    transition: .3s linear all; /* Future Browsers */
-}
-
-body {
-    overflow-x: hidden;
+    -webkit-transform: translateX(256px);
+    transform: translateX(256px);
 }

@@ -1,12 +1,11 @@
 {
   "name": "agrista-mobile-core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "https://bitbucket.org/agrista/mobile-core"
   },
   "dependencies": {
-    "bower": "~1.0.0"
   },
   "devDependencies": {
     "cordova": "~3.0.0",
