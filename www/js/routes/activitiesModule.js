@@ -1,7 +1,50 @@
 'use strict';
 
 define(['app'], function (app) {
-    app.lazyLoader.controller('ActivitiesController', ['$scope', 'navigationService', 'dataStore', function($scope, navigationService, dataStore) {
+    app.lazyLoader.controller('ActivitiesController', ['$scope', 'navigationService', 'dataStore', function ($scope, navigationService, dataStore) {
+
+        $scope.items = [
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            },
+            {
+                id: 0,
+                name: 'Bob'
+            }
+        ]
 
         function _readData() {
             testStore.read({id: '000000'}, {limit: 50}, function (res, err) {
@@ -9,23 +52,23 @@ define(['app'], function (app) {
                 if (res) {
                     $scope.items = res;
 
-                    if(!$scope.$$phase) $scope.$apply();
+                    if (!$scope.$$phase) $scope.$apply();
                 }
             });
         }
 
-        var testStore = dataStore('test', {
+        /*var testStore = dataStore('test', {
             api: {
                 template: 'test/:id',
                 schema: {id: '@id'}
             }
-        }, _readData);
+        }, _readData);*/
 
-        $scope.addItem = function(itemData) {
+        $scope.addItem = function (itemData) {
             $scope.items.push(testStore.create({name: itemData}, {id: '000000'}));
         }
 
-        $scope.showItem = function(id) {
+        $scope.showItem = function (id) {
             navigationService.go('/tasks', 'modal');
         }
 
@@ -33,7 +76,7 @@ define(['app'], function (app) {
         $scope.navbar = {
             title: 'Activities',
 
-            navigateRight: function() {
+            navigateRight: function () {
                 navigationService.go('/tasks', 'slide');
                 //_readData();
             }

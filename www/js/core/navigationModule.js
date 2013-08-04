@@ -38,17 +38,6 @@ define(['angular'], function () {
         };
     }]);
 
-    module.run(['$rootScope', function ($rootScope) {
-        $rootScope.$on("$locationChangeStart", function (scope, future) {
-            if (future.indexOf('#nav-menu', future.length - '#nav-menu'.length) !== -1) {
-                scope.preventDefault();
-            }
-            if (future.indexOf('#nav-page', future.length - '#nav-page'.length) !== -1) {
-                scope.preventDefault();
-            }
-        });
-    }]);
-
     module.service('navigationService', ['$location', function ($location) {
         var _transitions = {
             slide: {
@@ -117,6 +106,7 @@ define(['angular'], function () {
             restrict: 'E',
             scope: {
                 title: '@',
+                menuShown: '=',
                 leftButton: '&',
                 rightButton: '&',
                 navigateLeft: '=',

@@ -9,7 +9,7 @@ requirejs.config({
     },
     paths: {
         'cordova': '../cordova',
-        'angular': '../components/angularjs/index',
+        'angular': '../lib/angularjs/1.1.5/angular',
         'angular-resource': '../lib/angularjs/1.1.5/angular-resource',
         'underscore': '../components/underscore/underscore',
         'watch': '../components/watchjs/src/watch'

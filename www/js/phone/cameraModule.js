@@ -1,8 +1,6 @@
 'use strict';
 
-define(['underscore', 'cordova', 'angular'], function (_) {
-    var module = angular.module('cameraModule', []);
-
+define(['app', 'underscore', 'cordova'], function (app, _) {
     /**
      * @name cameraModule.cameraService
      * @requires $q
@@ -16,7 +14,7 @@ define(['underscore', 'cordova', 'angular'], function (_) {
         });
 
      */
-    module.factory('cameraService', ['$q', function ($q) {
+    app.lazyLoader.factory('cameraService', ['$q', function ($q) {
         var _pictureSourceTypes = Camera.PictureSourceType;
         var _destinationTypes = Camera.DestinationType;
         var _encodingTypes = Camera.EncodingType;
