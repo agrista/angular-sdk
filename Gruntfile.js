@@ -68,6 +68,10 @@ module.exports = function (grunt) {
             liveemulate: {
                 files: ['<%=watchfiles.all %>'],
                 tasks: ['cordova-emulate-end', 'cordova-buildemulate']
+            },
+            livedevice: {
+                files: ['<%=watchfiles.all %>'],
+                tasks: ['cordova-buildrun']
             }
         },
         shell: {
@@ -117,6 +121,19 @@ module.exports = function (grunt) {
         } else {
             cordova.build(device.platform, done);
         }
+    });
+
+    grunt.registerTask('cordova-run', 'Cordova running tasks', function () {
+        var done = this.async();
+
+        if (device.platform === 'all') {
+            // Build all platforms
+            cordova.run();
+        } else {
+            cordova.run(device.platform);
+        }
+
+        done();
     });
 
     grunt.registerTask('cordova-emulate', 'Cordova emulation tasks', function () {
@@ -173,6 +190,11 @@ module.exports = function (grunt) {
         'cordova-emulate'
     ]);
 
+    grunt.registerTask('cordova-buildrun', [
+        'cordova-build',
+        'cordova-run'
+    ]);
+
     grunt.registerTask('cordova-prepareserve', [
         'cordova-prepare',
         'cordova-serve'
@@ -181,7 +203,8 @@ module.exports = function (grunt) {
     grunt.registerTask('serve', ['cordova-prepareserve', 'watch:liveserve'])
     grunt.registerTask('ripple', ['cordova-prepare', 'cordova-ripple', 'watch:liveripple'])
     grunt.registerTask('emulate', ['cordova-buildemulate']);
-    grunt.registerTask('liveemulate', ['cordova-buildemulate', 'watch:liveemulate'])
+    grunt.registerTask('live-emulate', ['cordova-buildemulate', 'watch:liveemulate'])
+    grunt.registerTask('live-device', ['cordova-buildrun', 'watch:livedevice'])
 
     grunt.registerTask('default', ['test']);
 };

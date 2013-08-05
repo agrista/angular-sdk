@@ -15,18 +15,27 @@ define(['app', 'underscore', 'cordova'], function (app, _) {
 
      */
     app.lazyLoader.factory('cameraService', ['$q', function ($q) {
+        if(typeof window.Camera === 'undefined') {
+            window.Camera = {};
+        }
+
         var _pictureSourceTypes = Camera.PictureSourceType;
         var _destinationTypes = Camera.DestinationType;
         var _encodingTypes = Camera.EncodingType;
 
+
         function _makeRequest(options) {
             var defer = $q.defer();
 
+            if(navigator.camera !== undefined) {
             navigator.camera.getPicture(function (data) {
                 defer.resolve(data);
             }, function (err) {
                 defer.reject(err);
             }, options);
+            } else {
+                defer.reject({code: 'NoCamera', message: 'No camera available'});
+            }
 
             return defer.promise;
         };
@@ -49,7 +58,9 @@ define(['app', 'underscore', 'cordova'], function (app, _) {
              * @returns {Promise} Promise of a data string containing data dependant on the DestinationType
              */
             capture: function (options) {
-                return _makeRequest(_.defaults((options || {}), {
+                if (typeof options !== 'object') options = {};
+
+                return _makeRequest(_.defaults(options, {
                     quality: 50,
                     destinationType: _destinationTypes.DATA_URL,
                     source: _pictureSourceTypes.CAMERA
@@ -68,7 +79,9 @@ define(['app', 'underscore', 'cordova'], function (app, _) {
              * @returns {Promise} Promise of a data string containing data dependant on the DestinationType
              */
             captureAndEdit: function (options) {
-                return _makeRequest(_.defaults((options || {}), {
+                if (typeof options !== 'object') options = {};
+
+                return _makeRequest(_.defaults(options, {
                     quality: 50,
                     allowEdit: true,
                     destinationType: _destinationTypes.DATA_URL,
@@ -88,7 +101,9 @@ define(['app', 'underscore', 'cordova'], function (app, _) {
              * @returns {Promise} Promise of a data string containing data dependant on the DestinationType
              */
             retrieve: function (options) {
-                return _makeRequest(_.defaults((options || {}), {
+                if (typeof options !== 'object') options = {};
+
+                return _makeRequest(_.defaults(options, {
                     quality: 50,
                     destinationType: _destinationTypes.FILE_URI,
                     source: _pictureSourceTypes.PHOTOLIBRARY

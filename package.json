@@ -8,8 +8,8 @@
   "dependencies": {
   },
   "devDependencies": {
-    "cordova": "~3.0.0",
-    "bower": "~1.0.0",
+    "cordova": "~3.0.4",
+    "bower": "~1.1.0",
     "grunt": "~0.4.1",
     "grunt-contrib-jshint": "~0.6.0",
     "grunt-contrib-watch": "~0.4.0",

@@ -1,7 +1,7 @@
 'use strict';
 
 define(['angular', 'core/dataModule', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule'], function () {
-    var app = angular.module('app', ['ngResource', 'dataModule', 'utilityModule', 'navigationModule', 'lazyLoaderModule']);
+    var app = angular.module('app', ['ngMobile', 'ngResource', 'dataModule', 'utilityModule', 'navigationModule', 'lazyLoaderModule']);
 
     app.config(['$routeProvider', 'lazyLoaderProvider', 'dataStoreProvider', function ($routeProvider, lazyLoaderProvider, dataStoreProvider) {
         $routeProvider

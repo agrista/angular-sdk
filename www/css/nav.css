@@ -7,9 +7,8 @@ body {
  */
 #nav-menu {
     width: 256px;
-    overflow: hidden;
-    position: absolute;
-    left: 0px;
+    position: fixed;
+    left: 0;
     top: 50px;
 }
 
@@ -36,39 +35,39 @@ body {
 #nav-menu li a:hover {
     background-color: #457210;
 }
-/*
+
 #nav-page {
     position: absolute;
     width: 100%;
     height: 100%;
+    background-color: #fff;
+}
+
+/*
+#nav-page {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
 }
 */
-
-#nav-page {
-    position: relative;
-}
-
 .page-slide {
     position: relative;
-    -webkit-transition: .2s ease-in-out all;
-    transition: .2s ease-in-out all;
+    -webkit-transition: .2s ease-in-out -webkit-transform;
+    transition: .2s ease-in-out transform;
+    overflow: hidden;
 }
 
 .show-menu.page-slide,
 .show-menu .page-slide {
     -webkit-transform: translate3d(256px, 0, 0);
     transform: translate3d(256px, 0, 0);
-
 }
 
-/*
-#nav-menu.show-menu ~ .page-slidable.page-slide,
-#nav-menu.show-menu ~ .page-slidable .page-slide
-{
-    -webkit-transform: translate3d(256px, 0, 0);
-    transform: translate3d(256px, 0, 0);
+.animate #nav-menu {
+    display: none;
 }
-*/
 
 #nav-page.show-menu  {
     overflow: hidden;
@@ -79,7 +78,9 @@ body {
  * Bootstrap adaption
  */
 .navbar {
+    margin-bottom: 0;
     border-radius: 0;
+    border: 0;
 }
 
 .navbar-fixed-top,

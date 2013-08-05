@@ -36,10 +36,6 @@ body {
 
 /* Navbar Mods
   -------------------------------------------------- */
-.animate .navbar {
-    position: absolute;
-}
-
 .navbar-inner {
     min-height: 40px;
 }
