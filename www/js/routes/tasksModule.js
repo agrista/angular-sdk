@@ -6,7 +6,7 @@ define(['app', 'phone/cameraModule'], function (app) {
             $scope.navbar = {
                 title: 'Task',
                 navigateLeft: function () {
-                    navigationService.go('/activities', 'slide', true);
+                    navigationService.go('/', 'slide', true);
                 },
                 takePhoto: function () {
                     cameraService.capture({quality: 50}).then(function (res) {

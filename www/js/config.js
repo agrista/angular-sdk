@@ -3,6 +3,7 @@ console.log('RequireJS started');
 requirejs.config({
     shim: {
         'angular': {exports: 'angular'},
+        'angular-cookie': {deps: ['angular']},
         'angular-resource': {deps: ['angular']},
         'angular-mobile': {deps: ['angular']},
         'underscore': {exports: '_'},
@@ -13,13 +14,14 @@ requirejs.config({
         'angular': '../lib/angularjs/1.1.5/angular',
         'angular-resource': '../lib/angularjs/1.1.5/angular-resource',
         'angular-mobile': '../lib/angularjs/1.1.5/angular-mobile',
+        'angular-cookie': '../lib/angularjs/1.1.5/angular-cookies',
         'underscore': '../components/underscore/underscore',
         'watch': '../components/watchjs/src/watch'
     },
     baseUrl: 'js/'
 });
 
-requirejs(['cordova', 'angular', 'angular-resource', 'angular-mobile', 'app'], function () {
+requirejs(['cordova', 'angular', 'angular-mobile', 'app'], function () {
     console.log('RequireJS loaded');
     /* Phonegap Bootstrap loader */
 

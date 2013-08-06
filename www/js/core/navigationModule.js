@@ -10,6 +10,10 @@ define(['angular'], function () {
             show: false,
             toggle: function () {
                 $scope.menu.show = !$scope.menu.show;
+
+                if($scope.menu.show === true) {
+                    $scope.menu.items = navigationService.menu();
+                }
             },
             title: 'Menu',
             click: function(index) {
@@ -20,21 +24,7 @@ define(['angular'], function () {
                 if (typeof item.click === 'function') {
                     item.click();
                 }
-            },
-            items: [
-                {
-                    title: 'Navigation Item 1',
-                    click: function() {
-                        navigationService.go('/tasks', 'modal');
-                    }
-                },
-                {
-                    title: 'Navigation Item 2',
-                    click: function() {
-                        navigationService.go('/tasks', 'slide');
-                    }
-                }
-            ]
+            }
         };
     }]);
 
@@ -51,6 +41,7 @@ define(['angular'], function () {
         }
 
         var _transition = undefined;
+        var _menu = [];
 
         return {
             addTransition: function (name, data) {
@@ -65,6 +56,13 @@ define(['angular'], function () {
                 _transition = (reverse !== true ? _transitions[type].transitionIn : _transitions[type].transitionOut);
 
                 $location.path(url);
+            },
+            menu: function(items) {
+                if(items !== undefined) {
+                    _menu = items;
+                }
+
+                return _menu;
             }
         }
     }]);

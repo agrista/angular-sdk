@@ -1,6 +1,6 @@
 'use strict';
 
-define(['angular'], function() {
+define(['angular'], function () {
     var module = angular.module('lazyLoaderModule', []);
 
     module.provider('lazyLoader', ['$controllerProvider', '$compileProvider', '$filterProvider', '$provide',
@@ -8,7 +8,7 @@ define(['angular'], function() {
             function joinPaths(base, urls) {
                 base = base.split('/');
 
-                for(var i = 0; i < urls.length; i++) {
+                for (var i = 0; i < urls.length; i++) {
                     urls[i] = base.concat(urls[i].split('/')).join('/');
                 }
 
@@ -16,11 +16,11 @@ define(['angular'], function() {
             };
 
             this.inject = function (dependencies, options) {
-                if(typeof dependencies === 'string') dependencies = dependencies.split(',');
+                if (typeof dependencies === 'string') dependencies = dependencies.split(',');
 
                 console.log(dependencies);
 
-                if(options.path) {
+                if (options.path) {
                     console.log(options.path);
                     dependencies = joinPaths(options.path, dependencies);
                 }
@@ -41,7 +41,7 @@ define(['angular'], function() {
                 }];
             };
 
-            this.$get = function() {
+            this.$get = function () {
                 return {
                     controller: function (name, controller) {
                         $controllerProvider.register(name, controller);

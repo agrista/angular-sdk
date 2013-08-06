@@ -1,7 +1,7 @@
 'use strict';
 
-define(['underscore', 'watch', 'angular'], function (_, watch) {
-    var module = angular.module('dataModule', []);
+define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watch) {
+    var module = angular.module('dataModule', ['ngResource']);
 
     module.provider('dataStore', function () {
         var _apiUrl = '/api';
@@ -331,7 +331,7 @@ define(['underscore', 'watch', 'angular'], function (_, watch) {
                     console.log('_getRemote');
                     if (typeof grCallback !== 'function') grCallback = _voidCallback;
 
-                    _remoteStore.query(schemaData).$then(function (res) {
+                    _remoteStore.query(schemaData, {withCredentials: true}).$then(function (res) {
                         var data = res.data;
                         var dataItems = [];
 
