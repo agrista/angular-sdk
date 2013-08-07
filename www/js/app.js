@@ -17,11 +17,11 @@ define(['angular', 'core/authorizationModule', 'core/dataModule', 'core/utilityM
 
             $routeProvider
                 .when('/', {
-                    templateUrl: 'partials/routes/activities.html',
-                    controller: 'ActivitiesController',
-                    authorization: authorizationProvider.accessLevel.open,
+                    templateUrl: 'partials/routes/customers.html',
+                    controller: 'CustomerListController',
+                    authorization: authorizationProvider.accessLevel.user,
                     resolve: {
-                        require: lazyLoaderProvider.inject(['activitiesModule'], {path: 'routes'})
+                        require: lazyLoaderProvider.inject(['customersModule'], {path: 'routes'})
                     }
                 })
                 .when('/login', {
@@ -42,8 +42,8 @@ define(['angular', 'core/authorizationModule', 'core/dataModule', 'core/utilityM
                 })
                 .otherwise({redirectTo: '/'});
 
-            authorizationProvider.config({url: 'http://localhost:3006/'});
-            dataStoreProvider.config('http://localhost:3006/api/');
+            authorizationProvider.config({url: 'http://localhost:3005/'});
+            dataStoreProvider.config('http://localhost:3005/api/');
         }]);
 
     app.run(['lazyLoader', function (lazyLoader) {

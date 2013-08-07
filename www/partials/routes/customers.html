@@ -1,0 +1,18 @@
+<div>
+    <navigation-menu></navigation-menu>
+    <navigation-bar class="navbar-fixed-top navbar-force-fixed"
+                    title="{{navbar.title}}"
+                    menu-shown="menu.show"
+                    left-button="{icon: 'align-justify'}"
+                    navigate-left="menu.toggle"
+                    right-button="{icon: 'refresh'}"
+                    navigate-right="syncData"></navigation-bar>
+
+    <navigation-page>
+        <ul class="nav nav-tabs nav-stacked">
+            <li ng-repeat="customer in customers">
+                <a ng-click="showCustomer(customer.data._id)">{{customer.data.name}}</a>
+            </li>
+        </ul>
+    </navigation-page>
+</div>
