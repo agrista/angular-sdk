@@ -93,6 +93,24 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
 
                 });
 
+                if(_config.api !== undefined) {
+                    _config.api = _.defaults(_config.api, {
+                        template: '',
+                        schema: {}
+                    });
+                }
+
+                if(_config.paging !== undefined) {
+                    _config.paging = _.defaults(_config.paging, {
+                        template: '',
+                        schema: {},
+                        data: {
+                            page: 1,
+                            limit: _defaultOptions.pageLimit
+                        }
+                    });
+                }
+
                 var _remoteStore = undefined;
                 var _localStore = {
                     db: undefined,
