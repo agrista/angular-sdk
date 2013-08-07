@@ -105,17 +105,14 @@ define(['angular', 'core/utilityModule'], function () {
             scope: {
                 title: '@',
                 menuShown: '=',
-                leftButton: '&',
-                rightButton: '&',
+                leftButton: '=',
+                rightButton: '=',
                 navigateLeft: '=',
                 navigateRight: '='
             },
             replace: true,
             templateUrl: 'partials/core/navigationBar.html',
             controller: ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
-                $scope.leftButton = $scope.leftButton();
-                $scope.rightButton = $scope.rightButton();
-
                 $scope.showLeftButton = function () {
                     return (typeof $attrs.navigateLeft === 'string');
                 }
