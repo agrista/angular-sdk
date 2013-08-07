@@ -16,6 +16,7 @@ define(['app', 'core/authorizationModule'], function (app) {
 
             $scope.navbar = {
                 title: 'Agrista',
+                rightButton: {icon: 'check', title: 'Sign in'},
                 navigateRight: function () {
                     if($scope.user.email.length > 0 && $scope.user.password.length > 0) {
 

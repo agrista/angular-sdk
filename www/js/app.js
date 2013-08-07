@@ -24,6 +24,22 @@ define(['angular', 'core/authorizationModule', 'core/dataModule', 'core/utilityM
                         require: lazyLoaderProvider.inject(['customersModule'], {path: 'routes'})
                     }
                 })
+                .when('/customers', {
+                    templateUrl: 'partials/routes/customers.html',
+                    controller: 'CustomerListController',
+                    authorization: authorizationProvider.accessLevel.user,
+                    resolve: {
+                        require: lazyLoaderProvider.inject(['customersModule'], {path: 'routes'})
+                    }
+                })
+                .when('/customer/:id', {
+                    templateUrl: 'partials/routes/customer.html',
+                    controller: 'CustomerDetailController',
+                    authorization: authorizationProvider.accessLevel.user,
+                    resolve: {
+                        require: lazyLoaderProvider.inject(['customersModule'], {path: 'routes'})
+                    }
+                })
                 .when('/login', {
                     templateUrl: 'partials/routes/login.html',
                     controller: 'LoginController',
@@ -42,7 +58,7 @@ define(['angular', 'core/authorizationModule', 'core/dataModule', 'core/utilityM
                 })
                 .otherwise({redirectTo: '/'});
 
-            authorizationProvider.config({url: 'http://localhost:3005/'});
+            authorizationProvider.config({url: 'http://localhost:3005/', logoutPage: '/login'});
             dataStoreProvider.config('http://localhost:3005/api/');
         }]);
 

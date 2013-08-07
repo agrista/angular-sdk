@@ -66,15 +66,19 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
 
         $httpProvider.responseInterceptors.push('authorizationInterceptor');
 
+        var _setConfig = function(options) {
+            if (typeof options !== 'object') options = {};
+
+            _config = _.defaults(options, _config);
+
+            return _config;
+        };
+
         return {
             userRole: _userRoles,
             accessLevel: _accessLevels,
 
-            config: function (options) {
-                if (typeof options !== 'object') options = {};
-
-                _config = _.defaults(options, _config);
-            },
+            config: _setConfig,
 
             $get: ['$cookieStore', '$http', '$q', function ($cookieStore, $http, $q) {
                 var _user = $cookieStore.get('user') || _defaultUser;
@@ -93,6 +97,7 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
                     userRole: _userRoles,
                     accessLevel: _accessLevels,
                     currentUser: _user,
+                    config: _setConfig,
 
                     isAllowed: function (level) {
                         console.log('authorization.allowed: ' + level + ' ' + _user.role + ' = ' + (level & _user.role));
