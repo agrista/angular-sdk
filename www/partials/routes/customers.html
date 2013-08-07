@@ -3,16 +3,16 @@
     <navigation-bar class="navbar-fixed-top navbar-force-fixed"
                     title="{{navbar.title}}"
                     menu-shown="menu.show"
-                    left-button="{icon: 'align-justify'}"
+                    left-button="navbar.leftButton"
                     navigate-left="menu.toggle"
-                    right-button="{icon: 'refresh'}"
-                    navigate-right="syncData"></navigation-bar>
+                    right-button="navbar.rightButton"
+                    navigate-right="navbar.syncData"></navigation-bar>
 
     <navigation-page>
-        <ul class="nav nav-tabs nav-stacked">
-            <li ng-repeat="customer in customers">
-                <a ng-click="showCustomer(customer.data._id)">{{customer.data.name}}</a>
-            </li>
-        </ul>
+        <div class="list-group">
+            <a class="list-group-item" ng-click="showCustomer(customer.data._id)" ng-repeat="customer in customers">
+                {{customer.data.name}}
+            </a>
+        </div>
     </navigation-page>
 </div>
