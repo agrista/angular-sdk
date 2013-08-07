@@ -3,6 +3,15 @@
 define(['angular'], function () {
     var module = angular.module('utilityModule', []);
 
+    module.directive('stopPropagation', function() {
+        return function(scope, element, attrs) {
+            element.bind('click', function(event) {
+                console.log('click');
+                event.stopPropagation();
+            });
+        }
+    })
+
     module.factory('promiseService', ['$q', '$rootScope', function ($q, $rootScope) {
         return {
             defer: function () {

@@ -2,7 +2,7 @@
     <nav class="list-container">
         <ul class="nav">
             <li ng-repeat="item in menu.items">
-                <a ng-click="menu.click($index)">{{ item.title }}</a>
+                <a ng-click="menu.click($index)" stop-propagation>{{ item.title }}</a>
             </li>
         </ul>
     </nav>

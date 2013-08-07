@@ -9,7 +9,9 @@ body {
     width: 256px;
     position: fixed;
     left: 0;
-    top: 50px;
+    top: 0;
+    bottom: 0;
+    padding-top: 50px;
 }
 
 #nav-menu .navbar {
@@ -18,22 +20,22 @@ body {
 
 #nav-menu nav {
     display: block;
-    color: white;
+    background-color: #a5aba8;
     z-index: 5;
     height: 100%;
-    border-right: solid 1px #e2e2e2;
+    border-right: solid 2px #e2e2e2;
 }
 
 #nav-menu li a {
     display: block;
     padding: 15px;
-    border-bottom: solid 1px #457210;
+    border-bottom: solid 2px #a5aba8;
     color: #fff;
-    background-color: #568e14;
+    background-color: #919693;
 }
 
 #nav-menu li a:hover {
-    background-color: #457210;
+    background-color: #797d7a;
 }
 
 #nav-page {

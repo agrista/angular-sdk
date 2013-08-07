@@ -24,11 +24,11 @@ html, body {
 }
 
 .animate-container > * {
-    -webkit-transition: .4s ease-in-out -webkit-transform; /* Safari/Chrome */
-    -moz-transition: .4s ease-in-out -moz-transform; /* Firefox */
-    -ms-transition: .4s ease-in-out -ms-transform; /* IE10 */
-    -o-transition: .4s ease-in-out -o-transform; /* Opera */
-    transition: .4s ease-in-out transform; /* Future Browsers */
+    -webkit-transition: .4s -webkit-transform; /* Safari/Chrome */
+    -moz-transition: .4s -moz-transform; /* Firefox */
+    -ms-transition: .4s -ms-transform; /* IE10 */
+    -o-transition: .4s -o-transform; /* Opera */
+    transition: .4s transform; /* Future Browsers */
 
     position: absolute;
     width:100%;

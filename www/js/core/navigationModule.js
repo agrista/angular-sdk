@@ -1,7 +1,7 @@
 'use strict';
 
-define(['angular'], function () {
-    var module = angular.module('navigationModule', []);
+define(['angular', 'core/utilityModule'], function () {
+    var module = angular.module('navigationModule', ['utilityModule']);
 
     module.controller('NavigationController', ['$scope', 'navigationService', function ($scope, navigationService) {
         $scope.getTransition = navigationService.getCurrentTransition;
