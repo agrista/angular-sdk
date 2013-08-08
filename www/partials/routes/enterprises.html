@@ -1,0 +1,51 @@
+<div>
+    <navigation-menu></navigation-menu>
+    <navigation-bar class="navbar-fixed-top navbar-force-fixed"
+                    title="{{navbar.title}}"
+                    menu-shown="menu.show"
+                    left-button="navbar.leftButton"
+                    navigate-left="navbar.navigateLeft"
+                    right-button="navbar.rightButton"
+                    navigate-right="navbar.navigateRight"></navigation-bar>
+
+    <navigation-page>
+        <div class="row">
+            <div class="col-sm-12">
+                Select one or more enterprises to add
+            </div>
+            <br />
+            <div ng-repeat="type in enterpriseTypes">
+                <div class="col-sm-12">
+                    <strong>{{type.label}}</strong>
+                </div>
+                <div class="col-sm-4" ng-repeat="enterprise in type.commodities">
+                    <div class="selectable" id="{{$parent.$index}}_{{$index}}" ng-click="toggle($parent.$index + '_' + $index)">{{enterprise}}</div>
+                </div>
+                <br />
+                <br />
+            </div>
+        </div>
+    </navigation-page>
+</div>
+
+<style type="text/css">
+
+    div.selectable {
+        height: 40px;
+        line-height: 32px;
+        /*width: 50px;*/
+        background-color: #CCC;
+        border: 4px solid #CCC;
+        border-radius: 4px;
+        padding-left: 15px;
+        margin-bottom: 10px;
+    }
+
+    div.highlight {
+        background-color: #568e14;
+        border: 4px solid #000;
+        border-radius: 4px;
+        color: white;
+    }
+
+</style>

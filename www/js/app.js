@@ -40,6 +40,14 @@ define(['angular', 'core/authorizationModule', 'core/dataModule', 'core/utilityM
                         require: lazyLoaderProvider.inject(['customersModule'], {path: 'routes'})
                     }
                 })
+                .when('/customer/:id/enterprises', {
+                    templateUrl: 'partials/routes/enterprises.html',
+                    controller: 'CustomerEnterpriseController',
+                    authorization: authorizationProvider.accessLevel.user,
+                    resolve: {
+                        require: lazyLoaderProvider.inject(['customersModule'], {path: 'routes'})
+                    }
+                })
                 .when('/login', {
                     templateUrl: 'partials/routes/login.html',
                     controller: 'LoginController',

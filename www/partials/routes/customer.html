@@ -26,6 +26,83 @@
                             <span class="form-control" ng-switch-default>{{customer.data.legal_entity}}</span>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Type</label>
+
+                        <div class="col-sm-8" ng-switch on="mode">
+                            <span ng-switch-when="edit">
+                                <!--<input class="form-control" ng-model="customer.data.type"/>-->
+                                <select ng-model="customer.data.type" ng-options="option for option in typeOptions">
+                                </select>
+                            </span>
+                            <span class="form-control" ng-switch-default>{{customer.data.type}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Customer no.</label>
+
+                        <div class="col-sm-6" ng-switch on="mode">
+                            <input class="form-control" ng-model="customer.data.customer_number" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{customer.data.customer_number}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Enterprises</label>
+
+                        <div class="col-sm-8">
+                            <div ng-repeat="enterprise in customer.data.enterprises">
+                                <div class="col-sm-8">
+                                    {{enterprise}}
+                                </div>
+                                <div class="col-sm-4">
+                                    <button ng-click="deleteEnterprise($index)" ng-class="{hide: mode != 'edit'}" class='btn btn-default btn-xs'>
+                                        <i ng-class="{hide: mode != 'edit'}" class="glyphicon glyphicon-remove"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button ng-class="{hide: mode != 'edit'}" class="btn btn-success" ng-click="addEnterprise()">Add Enterprise</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Telephone</label>
+
+                        <div class="col-sm-6" ng-switch on="mode">
+                            <input class="form-control" ng-model="customer.data.phone" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{customer.data.phone}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Fax</label>
+
+                        <div class="col-sm-6" ng-switch on="mode">
+                            <input class="form-control" ng-model="customer.data.fax" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{customer.data.fax}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Mobile</label>
+
+                        <div class="col-sm-6" ng-switch on="mode">
+                            <input class="form-control" ng-model="customer.data.mobile" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{customer.data.mobile}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Email</label>
+
+                        <div class="col-sm-8" ng-switch on="mode">
+                            <input class="form-control" ng-model="customer.data.email" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{customer.data.email}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Postal address</label>
+
+                        <div class="col-sm-8" ng-switch on="mode">
+                            <textarea rows="4" class="form-control" ng-model="customer.data.address" ng-switch-when="edit"></textarea>
+                            <span class="form-control" ng-switch-default>{{customer.data.address}}</span>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="col-sm-4">

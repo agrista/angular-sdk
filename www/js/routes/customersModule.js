@@ -75,7 +75,6 @@ define(['app'], function (app) {
                             icon: 'edit',
                             title: 'Edit'
                         };
-
                         $scope.customer.update();
                     } else {
                         $scope.mode = 'edit';
@@ -104,6 +103,90 @@ define(['app'], function (app) {
                 });
             });
 
+            $scope.typeOptions = ['Smallholder', 'Commercial', 'Cooperative', 'Corporate'];
+
+            $scope.addEnterprise = function() {
+                navigationService.go('/customer/' + $routeParams.id + '/enterprises', 'modal');
+            };
+
+            $scope.deleteEnterprise = function(idx) {
+                $scope.customer.data.enterprises.splice(idx, 1);
+            };
+
+        }]);
+
+    app.lazyLoader.controller('CustomerEnterpriseController', ['$scope', '$routeParams', 'navigationService', 'dataStore',
+        function ($scope, $routeParams, navigationService, dataStore) {
+            $scope.navbar = {
+                title: 'Add Enterprise',
+                leftButton: {icon: 'chevron-left'},
+                navigateLeft: function () {
+                    navigationService.go('/customer/' + $routeParams.id, 'modal', true);
+                },
+                rightButton: {icon: 'check', title: 'Done'},
+                navigateRight: function() {
+                    for (var key in $scope.enterprises) {
+                        if ($scope.enterprises[key]) {
+                            var indexes = key.split('_');
+                            var enterprise = $scope.enterpriseTypes[indexes[0]].commodities[indexes[1]];
+                            console.log(enterprise);
+                            if ($scope.customer.data.enterprises.indexOf(enterprise) == -1) {
+                                $scope.customer.data.enterprises.push(enterprise);
+                            }
+                        }
+                    }
+                    $scope.customer.update();
+                    navigationService.go('/customer/' + $routeParams.id, 'modal', true);
+                }
+            };
+
+            $scope.mode = 'view';
+
+            var customerStore = dataStore('customer', {
+                api: {
+                    template: 'customer/:id',
+                    schema: {id: '@id'}
+                }
+            }, function () {
+                customerStore.read({id: $routeParams.id}, function (res, err) {
+                    if (res) {
+                        $scope.customer = res[0];
+                    }
+
+                    if (!$scope.$$phase) $scope.$apply();
+                });
+            });
+
+            $scope.enterpriseTypes = [
+                {
+                    label: "Field Crops",
+                    commodities: ['Barley','Cabbage','Canola','Chicory','Citrus (Hardpeel)','Cotton','Cow Peas','Dry Bean','Dry Grapes','Dry Peas','Garlic','Grain Sorghum','Green Bean','Ground Nut','Hybrid Maize Seed','Lentils','Lucerne','Maize (Fodder)','Maize (Green)','Maize (Seed)','Maize (White)','Maize (Yellow)','Oats','Onion','Onion (Seed)','Popcorn','Potato','Pumpkin','Rye','Soya Bean','Sugar Cane','Sunflower','Sweetcorn','Tobacco','Tobacco (Oven dry)','Tomatoes','Watermelon','Wheat']
+                },
+                {
+                    label: "Horticulture",
+                    commodities: ['Almonds','Apples','Apricots','Avo','Avocado','Bananas','Cherries','Chilli','Citrus (Hardpeel Class 1)','Citrus (Softpeel)','Coffee','Figs','Grapes (Table)','Grapes (Wine)','Guavas','Hops','Kiwi Fruit','Lemons','Macadamia Nut','Mango','Mangos','Melons','Nectarines','Olives','Oranges','Papaya','Peaches','Peanut','Pears','Pecan Nuts','Persimmons','Pineapples','Pistachio Nuts','Plums','Pomegranates','Prunes','Quinces','Rooibos','Strawberries','Triticale','Watermelons']
+                },
+                {
+                    label: "Livestock",
+                    commodities: ['Cattle (Extensive)','Cattle (Feedlot)','Cattle (Stud)','Chicken (Broilers)','Chicken (Layers)','Dairy','Game','Goats','Horses','Ostrich','Pigs','Sheep (Extensive)','Sheep (Feedlot)','Sheep (Stud)']
+                }
+            ];
+
+            $scope.enterprises = {};
+
+            $scope.toggle = function(id) {
+                var e = document.getElementById(id);
+                if ($scope.enterprises[id]) {
+                    console.log('toggleEnterprise off');
+                    $scope.enterprises[id] = false;
+                    e.className = 'selectable';
+                }
+                else {
+                    console.log('toggleEnterprise on');
+                    $scope.enterprises[id] = true;
+                    e.className = 'highlight selectable';
+                }
+            }
         }]);
 
     app.lazyLoader.filter('checkmark', function() {
