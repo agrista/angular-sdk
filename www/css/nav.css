@@ -11,7 +11,7 @@ body {
     left: 0;
     top: 0;
     bottom: 0;
-    padding-top: 50px;
+    z-index: 920;
 }
 
 #nav-menu .navbar {
@@ -23,7 +23,8 @@ body {
     background-color: #a5aba8;
     z-index: 5;
     height: 100%;
-    border-right: solid 2px #e2e2e2;
+    border-right: solid 2px #919693;
+    padding-top: 50px;
 }
 
 #nav-menu li a {
@@ -39,21 +40,24 @@ body {
 }
 
 #nav-page {
-    position: absolute;
+    position: fixed;
+    top: 0;
+    bottom: 0;
     width: 100%;
-    height: 100%;
-    background-color: #fff;
+    z-index: 930;
+    padding-top: 50px;
 }
 
-/*
-#nav-page {
-    position: absolute;
-    top: 50px;
-    left: 0;
-    width: 100%;
-    background-color: #fff;
+.toolbar + #nav-page {
+    padding-top: 90px;
 }
-*/
+
+#nav-page .container {
+    overflow: scroll;
+    height: 100%;
+    padding: 5px;
+}
+
 .page-slide {
     position: relative;
     -webkit-transition: .2s ease-in-out -webkit-transform;
@@ -71,10 +75,15 @@ body {
     display: none;
 }
 
+.animate #nav-page .container {
+    overflow: hidden;
+}
+
 #nav-page.show-menu  {
     overflow: hidden;
     pointer-events: none;
 }
+
 
 /**
  * Bootstrap adaption
@@ -83,6 +92,10 @@ body {
     margin-bottom: 0;
     border-radius: 0;
     border: 0;
+}
+
+.navbar-inner {
+    min-height: 40px;
 }
 
 .navbar-fixed-top,
@@ -105,14 +118,19 @@ body {
     font-size: 18px;
 }
 
-.navbar .toolbar {
-    position: absolute;
+.toolbar {
+    position: fixed;
     width: 100%;
-    right: 0;
     top: 51px;
-    background-color: #919693;
+    left: 0;
+    z-index: 1020;
+    background-color: #a5aba8;
+    padding: 5px 15px;
 }
 
+.list-group {
+    margin-bottom: 0;
+}
 
 /*
  * Buttons
@@ -129,4 +147,28 @@ body {
 .btn-clear:hover {
     background-color: #876028;
     border-color: #755426;
+}
+
+.btn-toolbar {
+    background-color: #919693;
+    color: #fff;
+}
+
+.btn-lg {
+    padding: 10px 16px;
+    font-size: 18px;
+    line-height: 1.33;
+    border-radius: 6px;
+}
+
+.btn-sm,
+.btn-xs {
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 3px;
+}
+
+.btn-xs {
+    padding: 3px 5px;
 }
