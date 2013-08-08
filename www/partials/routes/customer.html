@@ -32,7 +32,7 @@
                         <div class="col-sm-8" ng-switch on="mode">
                             <span ng-switch-when="edit">
                                 <!--<input class="form-control" ng-model="customer.data.type"/>-->
-                                <select ng-model="customer.data.type" ng-options="option for option in typeOptions">
+                                <select class="form-control" ng-model="customer.data.type" ng-options="option for option in typeOptions">
                                 </select>
                             </span>
                             <span class="form-control" ng-switch-default>{{customer.data.type}}</span>
