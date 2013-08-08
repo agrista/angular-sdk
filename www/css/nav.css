@@ -105,75 +105,18 @@ body {
     font-size: 18px;
 }
 
-.nav-tabs {
-    border-bottom: 1px solid #919693;
-}
-.nav-tabs > li {
-    float: left;
-    margin-bottom: -1px;
-}
-.nav-stacked > li + li {
-    margin-top: 0;
-}
-.nav-tabs > li > a {
-    margin-right: 2px;
-    line-height: 1.428571429;
-    border: 1px solid transparent;
-    border-radius: 4px 4px 0 0;
-}
-.nav-tabs > li > a:hover {
-    border-color: #eeeeee #eeeeee #919693;
-}
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:hover,
-.nav-tabs > li.active > a:focus {
-    color: #555555;
-    background-color: #ffffff;
-    border: 1px solid #919693;
-    border-bottom-color: transparent;
-    cursor: default;
-}
-.nav-tabs.nav-justified {
+.navbar .toolbar {
+    position: absolute;
     width: 100%;
-    border-bottom: 0;
-}
-.nav-tabs.nav-justified > li {
-    float: none;
-    display: table-cell;
-    width: 1%;
-}
-.nav-tabs.nav-justified > li > a {
-    text-align: center;
-}
-.nav-tabs.nav-justified > li > a {
-    border-bottom: 1px solid #919693;
-    margin-right: 0;
-}
-.nav-tabs.nav-justified > .active > a {
-    border-bottom-color: #ffffff;
-}
-.nav-tabs.nav-stacked {
-    margin-bottom: 5px;
-    border-bottom: 0;
-}
-.nav-tabs.nav-stacked > li {
-    float: none;
-    margin-bottom: 0;
-}
-.nav-tabs.nav-stacked > li:first-child > a {
-    border-radius: 6px 6px 0 0;
-}
-.nav-tabs.nav-stacked > li:last-child > a {
-    border-bottom: solid 1px #919693;
-    border-radius: 0 0 6px 6px;
-}
-.nav-tabs.nav-stacked > li > a {
-    margin: 0;
-    border-width: 1px 1px 0 1px;
-    border-color: #919693;
-    border-radius: 0;
+    right: 0;
+    top: 51px;
+    background-color: #919693;
 }
 
+
+/*
+ * Buttons
+ */
 .btn {
     padding: 9px 12px 8px 13px;
 }
