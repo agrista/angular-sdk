@@ -15,7 +15,7 @@ define(['angular', 'core/utilityModule'], function () {
                     $scope.menu.items = navigationService.menu();
                 }
             },
-            title: 'Menu',
+            title: 'Agrista Assets',
             click: function(index) {
                 $scope.menu.show = false;
 
