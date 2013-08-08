@@ -55,7 +55,7 @@
                                     {{enterprise}}
                                 </div>
                                 <div class="col-sm-4">
-                                    <button ng-click="deleteEnterprise($index)" ng-class="{hide: mode != 'edit'}" class='btn btn-default btn-xs'>
+                                    <button ng-click="deleteEnterprise($index)" ng-class="{hide: mode != 'edit'}" class='btn btn-default btn-sm'>
                                         <i ng-class="{hide: mode != 'edit'}" class="glyphicon glyphicon-remove"></i>
                                     </button>
                                 </div>
@@ -99,8 +99,24 @@
                         <label class="col-sm-4 control-label">Postal address</label>
 
                         <div class="col-sm-8" ng-switch on="mode">
-                            <textarea rows="4" class="form-control" ng-model="customer.data.address" ng-switch-when="edit"></textarea>
+                            <textarea rows="3" class="form-control" ng-model="customer.data.address" ng-switch-when="edit"></textarea>
                             <span class="form-control" ng-switch-default>{{customer.data.address}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Town</label>
+
+                        <div class="col-sm-8" ng-switch on="mode">
+                            <input class="form-control" ng-model="customer.data.town" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{customer.data.town}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Postal code</label>
+
+                        <div class="col-sm-6" ng-switch on="mode">
+                            <input class="form-control" ng-model="customer.data.postal_code" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{customer.data.postal_code}}</span>
                         </div>
                     </div>
                 </form>
