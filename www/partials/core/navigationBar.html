@@ -1,5 +1,5 @@
-<div class="navbar navbar-inverse" ng-class="{'show-menu': menuShown === true}">
-    <div class="container page-slide">
+<div class="navbar navbar-inverse page-slide" ng-class="{'show-menu': menuShown === true}" ng-transclude>
+    <div class="container">
         <p class="navbar-text">{{ title }}</p>
 
         <div class="pull-left" ng-show="showLeftButton()">

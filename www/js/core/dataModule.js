@@ -502,7 +502,7 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
 
                             item.dirty = true;
                             _updateLocal(item);
-                        });
+                        }, undefined, true);
                     };
 
                     _watchData();

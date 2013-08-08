@@ -1,27 +1,31 @@
 <div>
     <navigation-menu></navigation-menu>
+
     <navigation-bar class="navbar-fixed-top navbar-force-fixed"
                     title="{{navbar.title}}"
                     menu-shown="menu.show"
                     left-button="navbar.leftButton"
                     navigate-left="menu.toggle"
                     right-button="navbar.rightButton"
-                    navigate-right="navbar.navigateRight"></navigation-bar>
+                    navigate-right="navbar.navigateRight">
+    </navigation-bar>
+
+    <tool-bar>
+        <div class="btn btn-sm btn-toolbar">Tool 1</div>
+        <div class="btn btn-sm btn-toolbar">Tool 2</div>
+    </tool-bar>
 
     <navigation-page>
-        <ul class="nav nav-tabs nav-stacked">
-            <li>
-                <a>
-                    <input ng-model="addItemData" type="text"/>
-                    <button class="btn btn-primary btn-mini" ng-click="addItem(addItemData)">Add</button>
-                </a>
-            </li>
-            <li ng-repeat="item in items">
-                <a>
-                    <input ng-model="item.data.name" type="text"/>
-                    <button class="btn btn-primary btn-mini" ng-click="item.update()">Update</button>
-                </a>
-            </li>
-        </ul>
+        <div class="list-group">
+            <a class="list-group-item" ng-click="addItem(addItemData)">
+                <input ng-model="addItemData" type="text"/>
+                <button class="btn btn-primary btn-sm" ng-click="addItem(addItemData)">Add</button>
+            </a>
+
+            <a class="list-group-item" ng-click="item.update()" ng-repeat="item in items">
+                <input ng-model="item.data.name" type="text"/>
+                <button class="btn btn-primary btn-sm">Update</button>
+            </a>
+        </div>
     </navigation-page>
 </div>

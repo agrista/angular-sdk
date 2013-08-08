@@ -3,13 +3,40 @@
 define(['app'], function (app) {
     app.lazyLoader.controller('ActivitiesController', ['$scope', 'authorization', 'navigationService', 'dataStore',
         function ($scope, authorization, navigationService, dataStore) {
+            $scope.items = [
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''},
+                {name: ''}
+            ];
+
             // Navigation
             $scope.navbar = {
                 title: 'Activities',
                 leftButton: {icon: 'align-justify'},
                 rightButton: {icon: 'refresh', title: 'Sync'},
                 navigateRight: function () {
-                    _readData();
+                    navigationService.go('/tasks', 'slide');
                 }
             };
 
@@ -29,12 +56,12 @@ define(['app'], function (app) {
                 }
             ]);
 
-            var testStore = dataStore('farm-valuations', {
+            /*var testStore = dataStore('farm-valuations', {
                 api: {
                     template: 'farm-valuations/:id',
                     schema: {id: '@id'}
                 }
-            }, _readData);
+            }, _readData);*/
 
             function _readData() {
                 testStore.read({id: '5182833c44e28913bea4619f'}, {limit: 50}, function (res, err) {
