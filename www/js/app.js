@@ -1,10 +1,10 @@
 'use strict';
 
-define(['angular', 'core/authorizationModule', 'core/dataModule', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule'], function () {
-    var app = angular.module('app', ['ngMobile', 'authorizationModule', 'dataModule', 'utilityModule', 'navigationModule', 'lazyLoaderModule']);
+define(['angular', 'core/agristaModule', 'core/authorizationModule', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule'], function () {
+    var app = angular.module('app', ['ngMobile', 'agristaModule', 'authorizationModule', 'utilityModule', 'navigationModule', 'lazyLoaderModule']);
 
-    app.config(['$provide', '$routeProvider', 'lazyLoaderProvider', 'authorizationProvider', 'dataStoreProvider',
-        function ($provide, $routeProvider, lazyLoaderProvider, authorizationProvider, dataStoreProvider) {
+    app.config(['$provide', '$routeProvider', 'lazyLoaderProvider', 'authorizationModule',
+        function ($provide, $routeProvider, lazyLoaderProvider, authorizationModule) {
 
             // WORKAROUND: https://github.com/angular/angular.js/issues/2931
             $provide.decorator('$sniffer', ['$delegate', function ($delegate) {
@@ -41,9 +41,6 @@ define(['angular', 'core/authorizationModule', 'core/dataModule', 'core/utilityM
                     }
                 })
                 .otherwise({redirectTo: '/'});
-
-            authorizationProvider.config({url: 'http://localhost:3006/'});
-            dataStoreProvider.config('http://localhost:3006/api/');
         }]);
 
     app.run(['lazyLoader', function (lazyLoader) {
