@@ -79,7 +79,16 @@ define(['angular', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             replace: true,
-            templateUrl: 'partials/core/navigationPage.html',
+            template: '<div id="nav-page" class="page-slide" ng-class="{\'show-menu\': menu.show === true}"><div class="container" ng-transclude></div></div>',
+            transclude: true
+        };
+    });
+
+    module.directive('toolBar', function () {
+        return {
+            restrict: 'E',
+            replace: true,
+            template: '<div class="toolbar page-slide" ng-class="{\'show-menu\': menu.show === true}"><div class="container" ng-transclude></div></div>',
             transclude: true
         };
     });
@@ -111,6 +120,7 @@ define(['angular', 'core/utilityModule'], function () {
                 navigateRight: '='
             },
             replace: true,
+            transclude: true,
             templateUrl: 'partials/core/navigationBar.html',
             controller: ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
                 $scope.showLeftButton = function () {

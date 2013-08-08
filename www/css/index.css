@@ -15,16 +15,6 @@ body {
     background-color: #fff;
 }
 
-#nav-page .container {
-    padding: 55px 5px 0;
-}
-
-/* Navbar Mods
-  -------------------------------------------------- */
-.navbar-inner {
-    min-height: 40px;
-}
-
 /* Forms
   -------------------------------------------------- */
 span.form-control {

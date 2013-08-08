@@ -12,15 +12,14 @@ html, body {
     -webkit-backface-visibility: hidden;
 }
 
-.animate .navbar {
+.animate > * {
     position: absolute;
 }
 
 .animate-container {
-/*    position: absolute;
+    position: absolute;
     width: 100%;
     height: 100%;
-*/
 }
 
 .animate-container > * {
@@ -33,73 +32,8 @@ html, body {
     position: absolute;
     width:100%;
     height: 100%;
+    background-color: #fff;
 }
-
-/*
-.slide-enter {
-    left: 96%;
-}
-
-.slide-leave {
-}
-
-.slide-enter.slide-enter-active {
-    left: 0;
-}
-
-.slide-leave.slide-leave-active {
-    left: -100%;
-}
-
-.slide-reverse-enter {
-    left: -96%;
-}
-
-.slide-reverse-leave {
-}
-
-.slide-reverse-enter.slide-reverse-enter-active {
-    left: 0;
-}
-
-.slide-reverse-leave.slide-reverse-leave-active {
-    left: 100%;
-}
-
-.modal-enter {
-    top: 100%;
-}
-
-.modal-leave {
-    top: 0;
-}
-
-.modal-enter.modal-enter-active {
-    top: 0;
-}
-
-.modal-leave.modal-leave-active {
-    top: 0;
-}
-
-.modal-reverse-enter {
-    top: 0;
-}
-
-.modal-reverse-leave {
-    top: 0;
-    z-index: 1000;
-}
-
-.modal-reverse-enter.modal-reverse-enter-active {
-    top: 0;
-}
-
-.modal-reverse-leave.modal-reverse-leave-active {
-    top: 100%;
-}
-*/
-
 
 .slide-enter {
     transform: translate3d(100%, 0, 0);
