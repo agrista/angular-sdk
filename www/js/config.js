@@ -15,8 +15,7 @@ requirejs.config({
         'angular-resource': '../lib/angularjs/1.1.5/angular-resource',
         'angular-mobile': '../lib/angularjs/1.1.5/angular-mobile',
         'angular-cookie': '../lib/angularjs/1.1.5/angular-cookies',
-        'underscore': '../components/underscore/underscore',
-        'watch': '../components/watchjs/src/watch'
+        'underscore': '../components/underscore/underscore'
     },
     baseUrl: 'js/'
 });

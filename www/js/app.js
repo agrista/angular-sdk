@@ -3,8 +3,8 @@
 define(['angular', 'core/agristaModule', 'core/authorizationModule', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule'], function () {
     var app = angular.module('app', ['ngMobile', 'agristaModule', 'authorizationModule', 'utilityModule', 'navigationModule', 'lazyLoaderModule']);
 
-    app.config(['$provide', '$routeProvider', 'lazyLoaderProvider', 'authorizationModule',
-        function ($provide, $routeProvider, lazyLoaderProvider, authorizationModule) {
+    app.config(['$provide', '$routeProvider', 'lazyLoaderProvider', 'authorizationProvider',
+        function ($provide, $routeProvider, lazyLoaderProvider, authorizationProvider) {
 
             // WORKAROUND: https://github.com/angular/angular.js/issues/2931
             $provide.decorator('$sniffer', ['$delegate', function ($delegate) {

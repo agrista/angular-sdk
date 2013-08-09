@@ -1,8 +1,23 @@
 'use strict';
 
-define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watch) {
-    var module = angular.module('dataModule', ['ngResource']);
+define(['underscore', 'angular'], function (_) {
+    var module = angular.module('dataModule', []);
 
+    /**
+     * @name dataStore
+     * @example
+
+     var testStore = dataStore('test', {apiTemplate: 'test/:id'});
+
+     ...
+
+     testStore.transaction(function(tx) {
+        tx.read({id: '123xyz'}, function(res, err) {
+            // Handle read data
+        });
+     });
+
+     */
     module.provider('dataStore', function () {
         var _apiUrl = '/api';
         var _defaultOptions = {
@@ -26,7 +41,7 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
          * @param options
          */
         this.config = function (url, options) {
-            _apiUrl = url.replace(/:(?!\/\/)/, '\\:');
+            _apiUrl = url;
             _defaultOptions = _.defaults((options || {}), _defaultOptions);
         };
 
@@ -34,18 +49,23 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
          * dataStore service
          * @type {Array}
          */
-        this.$get = ['$q', '$resource', '$http', function ($q, $resource, $http) {
-            function DataStore(name, config, dsCallback) {
+        this.$get = ['$q', '$http', '$rootScope', function ($q, $http, $rootScope) {
+            /**
+             * @name DataStore
+             * @param name
+             * @param config
+             * @returns {*} DataStore
+             * @constructor
+             * @function transaction
+             */
+            function DataStore(name, config) {
                 // Check if instance of DataStore
                 if (!(this instanceof DataStore)) {
-                    return new DataStore(name, config, dsCallback);
+                    return new DataStore(name, config);
                 }
 
                 // Validate parameters
-                if (typeof config === 'function') {
-                    dsCallback = config;
-                    config = {};
-                } else if (typeof name === 'undefined') {
+                if (typeof name !== 'string') {
                     throw new Error(_errors.NoStoreParams.msg);
                 }
 
@@ -54,10 +74,7 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                  * @private
 
                  config = {
-                    api: {
-                        template: urlTemplate,
-                        schema: schemaTemplate,
-                    },
+                    apiTemplate: urlTemplate,
                     paging: {
                         template: urlTemplate,
                         schema: schemaTemplate,
@@ -78,7 +95,7 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                 }
                  */
                 var _config = _.defaults((config || {}), {
-                    api: undefined,
+                    apiTemplate: undefined,
                     paging: undefined,
 
                     read: {
@@ -90,17 +107,9 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                         remote: true,
                         force: false
                     }
-
                 });
 
-                if(_config.api !== undefined) {
-                    _config.api = _.defaults(_config.api, {
-                        template: '',
-                        schema: {}
-                    });
-                }
-
-                if(_config.paging !== undefined) {
+                if (_config.paging !== undefined) {
                     _config.paging = _.defaults(_config.paging, {
                         template: '',
                         schema: {},
@@ -111,7 +120,6 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                     });
                 }
 
-                var _remoteStore = undefined;
                 var _localStore = {
                     db: undefined,
                     name: name + 'Database',
@@ -129,8 +137,8 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                         {
                             current: '',
                             process: function (tx) {
-                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, key TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], _dataCallback, _errorCallback);
-                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = datetime(\'now\') WHERE id = old.id AND key = old.key; END', [], _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], _dataCallback, _errorCallback);
+                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [], _dataCallback, _errorCallback);
                             },
                             next: '1.0'
                         }
@@ -207,50 +215,58 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                     });
                 };
 
-                function _createSchemaKey(schemaData) {
-                    return _.flatten(_.pairs(schemaData)).join('/');
-                };
+                function _parseRequest(templateUrl, schemaData) {
+                    console.log('Unresolved: ' + templateUrl);
 
-                function _createDataItems(data, schemaData) {
-                    if (_.isArray(data) === false) {
-                        data = [data];
+                    if (templateUrl !== undefined) {
+                        for (var key in schemaData) {
+                            if (schemaData.hasOwnProperty(key)) {
+                                console.log('Property: ' + key);
+
+                                templateUrl = templateUrl.replace(':' + key, schemaData[key]);
+                            }
+                        }
                     }
 
-                    var dataItems = [];
+                    console.log('Resolved: ' + templateUrl);
 
-                    _.each(data, function (item) {
-                        dataItems.push(new DataItem(item, schemaData));
-                    });
+                    return templateUrl;
+                };
 
-                    return dataItems;
+                function _safeApply(scope, fn) {
+                    (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
                 };
 
                 /*
                  * Local data storage
                  */
 
-                var _getLocal = function (key, glCallback) {
+                var _getLocal = function (uri, glCallback) {
                     console.log('_getLocal');
                     if (typeof glCallback !== 'function') glCallback = _voidCallback;
 
                     if (_config.read.local === true) {
                         _localStore.db.transaction(function (tx) {
-                            tx.executeSql('SELECT * FROM data WHERE key = ?', [key], function (tx, res) {
-                                var dataItems = [];
+                            tx.executeSql('SELECT * FROM data WHERE uri = ?', [uri], function (tx, res) {
+                                if (res.rows.length == 1) {
+                                    glCallback(res.rows.item(1));
+                                } else {
+                                    var dataItems = [];
 
-                                for (var i = 0; i < res.rows.length; i++) {
-                                    var localData = res.rows.item(i);
+                                    for (var i = 0; i < res.rows.length; i++) {
+                                        var localData = res.rows.item(i);
 
-                                    dataItems.push({
-                                        id: localData.id,
-                                        key: localData.key,
-                                        data: JSON.parse(localData.data),
-                                        dirty: (localData.dirty == 1 ? true : false),
-                                        local: (localData.local == 1 ? true : false)
-                                    });
+                                        dataItems.push({
+                                            id: localData.id,
+                                            uri: localData.uri,
+                                            data: JSON.parse(localData.data),
+                                            dirty: (localData.dirty == 1 ? true : false),
+                                            local: (localData.local == 1 ? true : false)
+                                        });
+                                    }
+
+                                    glCallback(dataItems);
                                 }
-
-                                glCallback(dataItems);
                             }, function (tx, err) {
                                 _errorCallback(tx, err);
                                 glCallback(null, _errors.LocalDataStoreError);
@@ -261,13 +277,13 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                     }
                 };
 
-                var _syncLocal = function (dataItems, key, slCallback) {
+                var _syncLocal = function (dataItems, uri, slCallback) {
                     console.log('_syncLocal');
                     if (typeof slCallback !== 'function') slCallback = _voidCallback;
 
-                    _deleteAllLocal(key, function () {
+                    _deleteAllLocal(uri, function () {
                         _updateLocal(dataItems, function () {
-                            _getLocal(key, slCallback);
+                            _getLocal(uri, slCallback);
                         });
                     });
                 };
@@ -278,19 +294,20 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                         ulCallback = options;
                         options = {};
                     }
-                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
+                    if ((dataItems instanceof Array) === false) dataItems = [dataItems];
                     if (typeof ulCallback !== 'function') ulCallback = _voidCallback;
 
                     options = _.defaults((options || {}), {force: false});
 
-                    var asyncMon = new AysncMonitor(dataItems.length, ulCallback);
+                    var asyncMon = new AsyncMonitor(dataItems.length, ulCallback);
 
                     if (_config.write.local === true) {
                         _localStore.db.transaction(function (tx) {
-                            _.each(dataItems, function (item) {
+                            for (var i = 0; i < dataItems.length; i++) {
+                                var item = dataItems[i];
                                 var dataString = JSON.stringify(item.data);
 
-                                tx.executeSql("INSERT INTO data (id, key, data, dirty, local) VALUES (?, ?, ?, ?, ?)", [item.id, item.key, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
+                                tx.executeSql("INSERT INTO data (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)", [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
                                     // Insert failed
                                     if (item.dirty === true || item.local === true || (_config.write.force === true || options.force)) {
                                         tx.executeSql('UPDATE data SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
@@ -298,36 +315,43 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                                         tx.executeSql('UPDATE data SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
                                     }
                                 });
-                            });
+                            }
                         });
                     } else {
                         ulCallback();
                     }
                 };
 
-                var _deleteLocal = function (dataItems) {
+                var _deleteLocal = function (dataItems, dlCallback) {
                     console.log('_deleteLocal');
-                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
+                    if ((dataItems instanceof Array) === false) dataItems = [dataItems];
+
+                    var asyncMon = new AsyncMonitor(dataItems.length, dlCallback);
 
                     if (_config.write.local === true) {
                         _localStore.db.transaction(function (tx) {
-                            _.each(dataItems, function (item) {
-                                tx.executeSql("DELETE FROM data WHERE id = ? AND key = ?", [item.id, item.key], _traceCallback, _errorCallback);
-                            });
+                            for (var i = 0; i < dataItems.length; i++) {
+                                var item = dataItems[i];
+
+                                tx.executeSql("DELETE FROM data WHERE id = ? AND uri = ?", [item.id, item.uri], asyncMon.done, function (err) {
+                                    _errorCallback(err);
+                                    asyncMon.done();
+                                });
+                            }
                         });
                     }
                 };
 
-                var _deleteAllLocal = function (key, dalCallback) {
+                var _deleteAllLocal = function (uri, dalCallback) {
                     console.log('_deleteAllLocal');
 
                     _localStore.db.transaction(function (tx) {
                         if (_config.write.force === true) {
-                            tx.executeSql("DELETE FROM data WHERE key = ?", [key], function () {
+                            tx.executeSql("DELETE FROM data WHERE uri = ?", [uri], function () {
                                 dalCallback();
                             }, _errorCallback);
                         } else {
-                            tx.executeSql("DELETE FROM data WHERE key = ? AND local = 0 AND dirty = 0", [key], function () {
+                            tx.executeSql("DELETE FROM data WHERE uri = ? AND local = 0 AND dirty = 0", [uri], function () {
                                 dalCallback();
                             }, _errorCallback);
                         }
@@ -338,65 +362,72 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                  * Remote data storage
                  */
 
-                /**
-                 *
-                 * @param schemaData
-                 * @param key
-                 * @param grCallback(res, err)
-                 * @private
-                 */
-                var _getRemote = function (schemaData, key, grCallback) {
+                var _getRemote = function (uri, grCallback) {
                     console.log('_getRemote');
                     if (typeof grCallback !== 'function') grCallback = _voidCallback;
 
-                    _remoteStore.query(schemaData, {withCredentials: true}).$then(function (res) {
-                        var data = res.data;
-                        var dataItems = [];
+                    if (_config.read.remote === true && _config.apiTemplate !== undefined) {
+                        _safeApply($rootScope, function () {
+                            $http.get(_apiUrl + uri, {withCredentials: true}).then(function (res) {
+                                var data = res.data;
 
-                        if (_.isArray(data) === false) data = [data];
+                                if ((data instanceof Array) === false) {
+                                    grCallback({
+                                        id: data._id || data.id,
+                                        uri: uri,
+                                        data: data,
+                                        dirty: false,
+                                        local: false
+                                    });
+                                } else {
+                                    var dataItems = [];
 
-                        for (var i = 0; i < data.length; i++) {
-                            var item = data[i];
+                                    for (var i = 0; i < data.length; i++) {
+                                        var item = data[i];
 
-                            dataItems.push({
-                                id: item._id || item.id,
-                                key: key,
-                                data: item,
-                                dirty: false,
-                                local: false
+                                        dataItems.push({
+                                            id: item._id || item.id,
+                                            uri: uri,
+                                            data: item,
+                                            dirty: false,
+                                            local: false
+                                        });
+                                    }
+
+                                    grCallback(dataItems);
+                                }
+                            }, function (err) {
+                                _errorCallback(err);
+                                grCallback(null, _errors.RemoteDataStoreError);
                             });
-                        }
-
-                        grCallback(dataItems);
-                    }, function (err) {
-                        _errorCallback(err);
-                        grCallback(null, _errors.RemoteDataStoreError);
-                    });
+                        });
+                    } else {
+                        grCallback();
+                    }
                 };
 
                 /**
-                 *
-                 * @param schemaData
+                 * @name _updateRemote
                  * @param dataItems
-                 * @param urCallback()
+                 * @param urCallback
                  * @private
                  */
-                var _updateRemote = function (schemaData, dataItems, urCallback) {
+                var _updateRemote = function (dataItems, urCallback) {
                     console.log('_updateRemote');
-                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
+                    if ((dataItems instanceof Array) === false) dataItems = [dataItems];
                     if (typeof urCallback !== 'function') urCallback = _voidCallback;
 
-                    var asyncMon = new AysncMonitor(dataItems.length, function () {
-                        urCallback(dataItems);
-                    });
+                    if (dataItems.length > 0 && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                        var asyncMon = new AsyncMonitor(dataItems.length, function () {
+                            urCallback(dataItems);
+                        });
 
-                    if (_config.write.remote === true && _config.api !== undefined) {
-                        _.each(dataItems, function (item, index) {
-                            if (item.dirty === true) {
-                                _remoteStore.save(schemaData, item.data).$then(function (res) {
+                        var _makePost = function (item) {
+                            _safeApply($rootScope, function () {
+                                $http.post(_apiUrl + item.uri, item.data, {withCredentials: true}).then(function (res) {
                                     var remoteItem = {
                                         id: res.data._id || res.data.id || item.id,
-                                        key: item.key,
+                                        uri: item.uri,
                                         data: item.data,
                                         dirty: false,
                                         local: false
@@ -408,206 +439,230 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                                         _deleteLocal(item);
                                     }
 
-                                    dataItems[index] = remoteItem;
-
                                     _updateLocal(remoteItem, {force: true}, asyncMon.done);
                                 }, function (err) {
                                     _errorCallback(err);
                                     asyncMon.done();
                                 });
+                            });
+                        };
+
+                        for (var i = 0; i < dataItems.length; i++) {
+                            var item = dataItems[i];
+
+                            if (item.dirty === true) {
+                                _makePost(item);
                             } else {
                                 asyncMon.done();
                             }
-                        });
+                        }
                     } else {
                         urCallback();
                     }
                 };
 
                 /**
-                 *
-                 * @param schemaData
+                 * @name _deleteRemote
                  * @param dataItems
                  * @param drCallback()
                  * @private
                  */
-                var _deleteRemote = function (schemaData, dataItems, drCallback) {
+                var _deleteRemote = function (dataItems, drCallback) {
                     console.log('_deleteRemote');
-                    if (_.isArray(dataItems) === false) dataItems = [dataItems];
+                    if ((data instanceof Array) === false) dataItems = [dataItems];
                     if (typeof drCallback !== 'function') drCallback = _voidCallback;
 
-                    var asyncMon = new AysncMonitor(dataItems.length, drCallback);
+                    if (dataItems.length > 0 && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                        var asyncMon = new AsyncMonitor(dataItems.length, drCallback);
 
-                    if (_config.write.remote === true && _config.api !== undefined) {
-                        _.each(dataItems, function (item, index) {
-                            _remoteStore.delete(schemaData, item.data).$then(function (res) {
-                                _deleteLocal(item, asyncMon.done);
-                            }, function (err) {
-                                _errorCallback(err);
-                                asyncMon.done();
+                        var _makeDelete = function (item) {
+                            _safeApply($rootScope, function () {
+                                $http.delete(_apiUrl + item.uri, {withCredentials: true}).then(function (res) {
+                                    _deleteLocal(item, asyncMon.done);
+                                }, function (err) {
+                                    _errorCallback(err);
+                                    asyncMon.done();
+                                });
                             });
-                        });
+                        };
+
+                        for (var i = 0; i < dataItems.length; i++) {
+                            _makeDelete(dataItems[i]);
+                        }
                     } else {
                         drCallback();
                     }
                 };
 
-                function AysncMonitor(size, callback) {
-                    if (!(this instanceof AysncMonitor)) {
-                        return new AysncMonitor(size, callback);
+                /**
+                 *
+                 * @param size
+                 * @param callback
+                 * @returns {*} AsyncMonitor
+                 * @constructor
+                 * @funtion done
+                 * */
+                function AsyncMonitor(size, callback) {
+                    if (!(this instanceof AsyncMonitor)) {
+                        return new AsyncMonitor(size, callback);
                     }
 
                     return {
                         done: function () {
                             size--;
 
-                            if (size == 0) {
+                            if (size == 0 && callback) {
                                 callback();
                             }
+                        }
+                    }
+                };
+
+
+                /**
+                 * Transactions
+                 */
+                var _dataStoreInitialized = false;
+                var _transactionQueue = [];
+
+                var _processTransactionQueue = function () {
+                    if (_localStore.db !== undefined) {
+                        while (_transactionQueue.length > 0) {
+                            var transactionItem = _transactionQueue[0];
+
+                            transactionItem(new DataTransaction());
+
+                            _transactionQueue.splice(0, 1);
                         }
                     }
                 }
 
                 /**
-                 * @name DataItem
-                 * @param item
-                 * @param schemaData
-                 * @returns {*}
+                 * @name DataTransaction
+                 * @returns {*} DataTransaction
                  * @constructor
+                 * @function create
+                 * @function read
+                 * @function update
+                 * @function sync
+                 * @function delete
                  */
-                function DataItem(item, schemaData) {
-                    if (!(this instanceof DataItem)) {
-                        return new DataItem(item, schemaData);
+                function DataTransaction() {
+                    if (!(this instanceof DataTransaction)) {
+                        return new DataTransaction();
                     }
-
-                    schemaData = schemaData || {};
-                    item = _.defaults((item || {}), {
-                        id: undefined,
-                        key: undefined,
-                        data: {},
-                        dirty: false,
-                        local: false
-                    });
-
-                    if (item.local === true) {
-                        item.id = item.id || _createUniqueId();
-                        item.key = item.key || _createSchemaKey(schemaData);
-
-                        _updateLocal(item);
-                    }
-
-                    function _watchData() {
-                        watch.watch(item.data, function () {
-                            console.log('Data changed');
-
-                            item.dirty = true;
-                            _updateLocal(item);
-                        }, undefined, true);
-                    };
-
-                    _watchData();
 
                     return {
-                        id: item.id,
-                        data: item.data,
-                        /**
-                         * @param uCallback(res, err)
-                         */
-                        update: function (uCallback) {
-                            console.log('Data updated');
-                            if (typeof uCallback !== 'function') uCallback = _voidCallback;
+                        create: function (schemaData, data, cCallback) {
+                            if (typeof data === 'function') {
+                                cCallback = data;
+                                data = {};
+                            }
+                            else if (typeof schemaData === 'undefined') {
+                                cCallback = schemaData;
+                                data = {};
+                                schemaData = {};
+                            }
 
-                            _updateRemote(schemaData, item, function (res) {
-                                if (_.isArray(res) === true) {
-                                    item = res[0];
-                                    _watchData();
-                                }
-
-                                uCallback(res);
+                            cCallback({
+                                id: _createUniqueId(),
+                                uri: _parseRequest(_config.apiTemplate, schemaData),
+                                data: data,
+                                dirty: true,
+                                local: true
                             });
                         },
-                        /**
-                         * @param dCallback(res, err)
-                         */
-                        delete: function (dCallback) {
-                            console.log('Data deleted');
+                        read: function (schemaData, options, rCallback) {
+                            // Validate parameters
+                            if (typeof options === 'function') {
+                                rCallback = options;
+                                options = {};
+                            } else if (typeof schemaData === 'function') {
+                                rCallback = schemaData;
+                                options = {};
+                                schemaData = {};
+                            }
 
-                            _deleteRemote(schemaData, item, dCallback);
+                            if (typeof schemaData === 'object') {
+                                var _readOptions = _.defaults(options, {page: 1, limit: _defaultOptions.pageLimit});
+                                var _uri = _parseRequest(_config.apiTemplate, schemaData);
+
+                                // Process request
+                                _getLocal(_uri, rCallback);
+
+                                _getRemote(_uri, function (res, err) {
+                                    if (res) {
+                                        _syncLocal(res, _uri, function (res, err) {
+                                            rCallback(res);
+                                        });
+                                    } else if (err) {
+                                        rCallback(null, err);
+                                    }
+                                });
+                            } else {
+                                rCallback(null, _errors.NoReadParams);
+                            }
+                        },
+                        update: function (dataItems, uCallback) {
+                            if ((dataItems instanceof Array) === false) {
+                                dataItems = [dataItems];
+                            }
+
+                            for (var i = 0; i < dataItems.length; i++) {
+                                dataItems[i].dirty = true;
+                            }
+
+                            _updateLocal(dataItems, uCallback);
+                        },
+                        sync: function (schemaData, sCallback) {
+                            // Validate parameters
+                            if (typeof schemaData === 'undefined') {
+                                sCallback = _voidCallback;
+                            }
+
+                            var _uri = _parseRequest(_config.apiTemplate, schemaData);
+
+                            _getLocal(_uri, function (res, err) {
+                                _updateRemote(res, function (res, err) {
+                                    _getRemote(_uri, function (res, err) {
+                                        if (res) {
+                                            _syncLocal(res, _uri, sCallback);
+                                        } else if (err) {
+                                            sCallback(null, err);
+                                        }
+                                    });
+                                });
+                            });
+                        },
+                        delete: function (dataItems, dCallback) {
+                            _deleteRemote(dataItems, dCallback);
                         }
                     }
                 };
+
 
                 /**
                  * Initialize
                  */
 
-                if (_config.api !== undefined && _config.api.template !== undefined) {
-                    console.log(_apiUrl + _config.api.template);
-                    _remoteStore = $resource(_apiUrl + _config.api.template, _config.api.schema);
-                }
-
                 // Initialize database
                 _initializeDatabase(_localStore.name, function (db) {
                     _localStore.db = db;
 
-                    _countDatabaseRows(_localStore.db, function (count) {
-                        _localStore.size = count;
-
-                        dsCallback();
-                    });
+                    _dataStoreInitialized = true;
+                    _processTransactionQueue();
                 });
 
                 /**
                  * Public functions
                  */
                 return {
-                    create: function (data, schemaData) {
-                        return new DataItem({
-                            data: data,
-                            dirty: true,
-                            local: true
-                        }, schemaData);
-                    },
-                    read: function (schemaData, options, rCallback) {
-                        // Validate parameters
-                        if (typeof schemaData === 'function') {
-                            rCallback = schemaData;
-                            options = {};
-                            schemaData = {};
-                        } else if (typeof options === 'function') {
-                            rCallback = options;
-                            options = {};
+                    transaction: function (tCallback) {
+                        if (typeof tCallback === 'function') {
+                            _transactionQueue.push(tCallback);
+
+                            _processTransactionQueue();
                         }
-
-                        if (typeof schemaData === 'object') {
-                            var _readOptions = _.defaults(options, {page: 1, limit: _defaultOptions.pageLimit});
-                            var _key = _createSchemaKey(schemaData);
-
-                            // Process request
-                            _getLocal(_key, function (res, err) {
-                                if (res) {
-                                    rCallback(_createDataItems(res, schemaData));
-                                } else if (err) {
-                                    rCallback(null, err);
-                                }
-                            });
-
-                            _getRemote(schemaData, _key, function (res, err) {
-                                if (res) {
-                                    _syncLocal(res, _key, function (res, err) {
-                                        rCallback(_createDataItems(res, schemaData));
-                                    });
-                                } else if (err) {
-                                    rCallback(null, err);
-                                }
-                            });
-
-                        } else {
-                            rCallback(null, _errors.NoReadParams);
-                        }
-                    },
-                    update: function(dataItems, uCallback) {
-
                     }
                 }
             };
@@ -617,12 +672,11 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
              * @description Create a new instance of the DataStore service
              * @param name
              * @param config
-             * @param callback
              * @returns {DataStore}
              * @constructor
              */
-            return function (name, config, callback) {
-                return new DataStore(name, config, callback);
+            return function (name, config) {
+                return new DataStore(name, config);
             };
         }];
     });

@@ -17,14 +17,14 @@
 
     <navigation-page>
         <div class="list-group">
-            <a class="list-group-item" ng-click="addItem(addItemData)">
+            <a class="list-group-item">
                 <input ng-model="addItemData" type="text"/>
                 <button class="btn btn-primary btn-sm" ng-click="addItem(addItemData)">Add</button>
             </a>
 
-            <a class="list-group-item" ng-click="item.update()" ng-repeat="item in items">
+            <a class="list-group-item" ng-repeat="item in items">
                 <input ng-model="item.data.name" type="text"/>
-                <button class="btn btn-primary btn-sm">Update</button>
+                <button class="btn btn-primary btn-sm" ng-click="updateItem(item)">Update</button>
             </a>
         </div>
     </navigation-page>
