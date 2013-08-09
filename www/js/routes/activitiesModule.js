@@ -1,34 +1,8 @@
 'use strict';
 
 define(['app'], function (app) {
-    app.lazyLoader.controller('ActivitiesController', ['$scope', 'authorization', 'navigationService', 'dataStore',
-        function ($scope, authorization, navigationService, dataStore) {
-            $scope.items = [
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''},
-                {name: ''}
-            ];
+    app.lazyLoader.controller('ActivitiesController', ['$scope', 'authorization', 'navigationService', 'testService',
+        function ($scope, authorization, navigationService, testService) {
 
             // Navigation
             $scope.navbar = {
@@ -36,7 +10,7 @@ define(['app'], function (app) {
                 leftButton: {icon: 'align-justify'},
                 rightButton: {icon: 'refresh', title: 'Sync'},
                 navigateRight: function () {
-                    navigationService.go('/tasks', 'slide');
+                    testService.sync('000000', _handleData);
                 }
             };
 
@@ -56,23 +30,24 @@ define(['app'], function (app) {
                 }
             ]);
 
-            /*var testStore = dataStore('farm-valuations', {
-                api: {
-                    template: 'farm-valuations/:id',
-                    schema: {id: '@id'}
-                }
-            }, _readData);*/
+            var _handleData = function(res, err) {
+                $scope.items = res;
 
-            function _readData() {
-                testStore.read({id: '5182833c44e28913bea4619f'}, {limit: 50}, function (res, err) {
+                if(!$scope.$$phase) $scope.$apply();
+            };
 
-                    if (res) {
-                        $scope.items = res;
+            testService.get('000000', _handleData);
 
-                        if (!$scope.$$phase) $scope.$apply();
-                    }
+            $scope.addItem = function(name) {
+                testService.add('000000', {name: name}, function(item) {
+                    $scope.items.splice(0, 0, item);
                 });
-            }
+            };
+
+            $scope.updateItem = function(item) {
+                console.log(item);
+                testService.set(item);
+            };
 
             $scope.showItem = function (id) {
                 navigationService.go('/tasks', 'modal');

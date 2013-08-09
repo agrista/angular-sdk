@@ -1,7 +1,6 @@
 {
     "name": "agrista-mobile-core",
-    "version": "0.0.1",
-    "ignore": ["**/.*"],
+    "version": "0.0.2",
     "devDependencies": {
         "angularjs": "http://code.angularjs.org/1.1.5/angular.js",
         "angular-mocks": "http://code.angularjs.org/1.1.5/angular-mocks.js",
@@ -10,8 +9,7 @@
     "dependencies": {
         "angularjs": "http://code.angularjs.org/1.1.5/angular.js",
         "requirejs": "https://github.com/jrburke/requirejs.git",
-        "underscore": "https://github.com/documentcloud/underscore.git",
-        "watchjs": "https://github.com/melanke/Watch.JS.git",
+        "underscore": "https://github.com/documentcloud/underscore.git"
         "agrista-styles": "git@bitbucket.org:agrista/styles.git"
     }
 }
