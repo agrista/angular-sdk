@@ -1,13 +1,15 @@
 'use strict';
 
 define(['app'], function (app) {
-    app.lazyLoader.controller('CustomerListController', ['$scope', 'navigationService', 'authorization', 'dataStore',
-        function ($scope, navigationService, authorization, dataStore) {
+    app.lazyLoader.controller('CustomerListController', ['$scope', 'navigationService', 'authorization', 'customersService',
+        function ($scope, navigationService, authorization, customersService) {
             $scope.navbar = {
                 title: 'Customers',
                 leftButton: {icon: 'align-justify'},
                 rightButton: {icon: 'refresh'},
-                syncData: _readFromStore
+                syncData: function () {
+                    customersService.syncCustomers(_handleData);
+                }
             }
 
             navigationService.menu([
@@ -33,25 +35,13 @@ define(['app'], function (app) {
             ]);
 
 
-            var customersStore = dataStore('customers', {
-                api: {
-                    template: 'customers'
-                }
-            }, _readFromStore);
+            var _handleData = function (res, err) {
+                $scope.customers = res;
 
-            function _readFromStore() {
-                customersStore.read(function (res, err) {
-                    if (res) {
-                        $scope.customers = res;
-                    }
-
-                    if (!$scope.$$phase) $scope.$apply();
-                });
+                if (!$scope.$$phase) $scope.$apply();
             };
 
-            $scope.syncData = function() {
-
-            };
+            customersService.getCustomers(_handleData);
 
             $scope.showCustomer = function (id) {
                 navigationService.go('/customer/' + id, 'slide');
@@ -59,8 +49,16 @@ define(['app'], function (app) {
         }]);
 
 
-    app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'dataStore',
-        function ($scope, $routeParams, navigationService, dataStore) {
+    app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService',
+        function ($scope, $routeParams, navigationService, farmerService) {
+            var _handleData = function (res, err) {
+                $scope.farmer = res;
+
+                if (!$scope.$$phase) $scope.$apply();
+            };
+
+            farmerService.getFarmer($routeParams.id, _handleData);
+
             $scope.navbar = {
                 title: 'Customer',
                 leftButton: {icon: 'chevron-left'},
@@ -68,14 +66,18 @@ define(['app'], function (app) {
                     navigationService.go('/customers', 'slide', true);
                 },
                 rightButton: {icon: 'edit', title: 'Edit'},
-                navigateRight: function() {
-                    if($scope.mode == 'edit') {
+                navigateRight: function () {
+                    if ($scope.mode == 'edit') {
                         $scope.mode = 'view';
                         $scope.navbar.rightButton = {
                             icon: 'edit',
                             title: 'Edit'
                         };
-                        $scope.customer.update();
+
+                        farmerService.updateFarmer($scope.farmer, function() {
+                            farmerService.syncFarmer($routeParams.id);
+                        });
+
                     } else {
                         $scope.mode = 'edit';
                         $scope.navbar.rightButton = {
@@ -88,29 +90,14 @@ define(['app'], function (app) {
 
             $scope.mode = 'view';
 
-            var customerStore = dataStore('customer', {
-                api: {
-                    template: 'customer/:id',
-                    schema: {id: '@id'}
-                }
-            }, function () {
-                customerStore.read({id: $routeParams.id}, function (res, err) {
-                    if (res) {
-                        $scope.customer = res[0];
-                    }
-
-                    if (!$scope.$$phase) $scope.$apply();
-                });
-            });
-
             $scope.typeOptions = ['Smallholder', 'Commercial', 'Cooperative', 'Corporate'];
 
-            $scope.addEnterprise = function() {
+            $scope.addEnterprise = function () {
                 navigationService.go('/customer/' + $routeParams.id + '/enterprises', 'modal');
             };
 
-            $scope.deleteEnterprise = function(idx) {
-                $scope.customer.data.enterprises.splice(idx, 1);
+            $scope.deleteEnterprise = function (idx) {
+                $scope.farmer.data.enterprises.splice(idx, 1);
             };
 
         }]);
@@ -124,7 +111,7 @@ define(['app'], function (app) {
                     navigationService.go('/customer/' + $routeParams.id, 'modal', true);
                 },
                 rightButton: {icon: 'check', title: 'Done'},
-                navigateRight: function() {
+                navigateRight: function () {
                     for (var key in $scope.enterprises) {
                         if ($scope.enterprises[key]) {
                             var indexes = key.split('_');
@@ -160,21 +147,21 @@ define(['app'], function (app) {
             $scope.enterpriseTypes = [
                 {
                     label: "Field Crops",
-                    commodities: ['Barley','Cabbage','Canola','Chicory','Citrus (Hardpeel)','Cotton','Cow Peas','Dry Bean','Dry Grapes','Dry Peas','Garlic','Grain Sorghum','Green Bean','Ground Nut','Hybrid Maize Seed','Lentils','Lucerne','Maize (Fodder)','Maize (Green)','Maize (Seed)','Maize (White)','Maize (Yellow)','Oats','Onion','Onion (Seed)','Popcorn','Potato','Pumpkin','Rye','Soya Bean','Sugar Cane','Sunflower','Sweetcorn','Tobacco','Tobacco (Oven dry)','Tomatoes','Watermelon','Wheat']
+                    commodities: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat']
                 },
                 {
                     label: "Horticulture",
-                    commodities: ['Almonds','Apples','Apricots','Avo','Avocado','Bananas','Cherries','Chilli','Citrus (Hardpeel Class 1)','Citrus (Softpeel)','Coffee','Figs','Grapes (Table)','Grapes (Wine)','Guavas','Hops','Kiwi Fruit','Lemons','Macadamia Nut','Mango','Mangos','Melons','Nectarines','Olives','Oranges','Papaya','Peaches','Peanut','Pears','Pecan Nuts','Persimmons','Pineapples','Pistachio Nuts','Plums','Pomegranates','Prunes','Quinces','Rooibos','Strawberries','Triticale','Watermelons']
+                    commodities: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons']
                 },
                 {
                     label: "Livestock",
-                    commodities: ['Cattle (Extensive)','Cattle (Feedlot)','Cattle (Stud)','Chicken (Broilers)','Chicken (Layers)','Dairy','Game','Goats','Horses','Ostrich','Pigs','Sheep (Extensive)','Sheep (Feedlot)','Sheep (Stud)']
+                    commodities: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
                 }
             ];
 
             $scope.enterprises = {};
 
-            $scope.toggle = function(id) {
+            $scope.toggle = function (id) {
                 var e = document.getElementById(id);
                 if ($scope.enterprises[id]) {
                     console.log('toggleEnterprise off');
@@ -189,18 +176,18 @@ define(['app'], function (app) {
             }
         }]);
 
-    app.lazyLoader.filter('checkmark', function() {
-        return function(input) {
+    app.lazyLoader.filter('checkmark', function () {
+        return function (input) {
             return input === true ? '\u2713' : '\u2718';
         };
     });
 
-    app.lazyLoader.filter('progress', function() {
-        return function(input) {
+    app.lazyLoader.filter('progress', function () {
+        return function (input) {
             var completeCount = 0;
 
-            for(var i = 0; i < input.length; i++) {
-                if(input[i].complete) completeCount++;
+            for (var i = 0; i < input.length; i++) {
+                if (input[i].complete) completeCount++;
             }
 
             return (completeCount / input.length) * 100;

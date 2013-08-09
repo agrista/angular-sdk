@@ -10,7 +10,7 @@
 
     <navigation-page>
         <div class="list-group">
-            <a class="list-group-item" ng-click="showCustomer(customer.data._id)" ng-repeat="customer in customers">
+            <a class="list-group-item" ng-click="showCustomer(customer.data.fid)" ng-repeat="customer in customers">
                 {{customer.data.name}}
             </a>
         </div>

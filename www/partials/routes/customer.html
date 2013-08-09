@@ -14,16 +14,16 @@
                         <label class="col-sm-4 control-label">Name</label>
 
                         <div class="col-sm-8" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.name" ng-switch-when="edit"/>
-                            <span  class="form-control" ng-switch-default>{{customer.data.name}}</span>
+                            <input class="form-control" ng-model="farmer.data.farmer_name" ng-switch-when="edit"/>
+                            <span  class="form-control" ng-switch-default>{{farmer.data.farmer_name}}</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Legal entity</label>
 
                         <div class="col-sm-8" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.legal_entity" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.legal_entity}}</span>
+                            <input class="form-control" ng-model="farmer.data.legal_entity" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.legal_entity}}</span>
                         </div>
                     </div>
                     <div class="form-group">
@@ -31,26 +31,26 @@
 
                         <div class="col-sm-8" ng-switch on="mode">
                             <span ng-switch-when="edit">
-                                <!--<input class="form-control" ng-model="customer.data.type"/>-->
-                                <select class="form-control" ng-model="customer.data.type" ng-options="option for option in typeOptions">
+                                <!--<input class="form-control" ng-model="farmer.data.type"/>-->
+                                <select class="form-control" ng-model="farmer.data.farm_type" ng-options="option for option in typeOptions">
                                 </select>
                             </span>
-                            <span class="form-control" ng-switch-default>{{customer.data.type}}</span>
+                            <span class="form-control" ng-switch-default>{{farmer.data.farm_type}}</span>
                         </div>
                     </div>
-                    <div class="form-group">
+<!--                    <div class="form-group">
                         <label class="col-sm-4 control-label">Customer no.</label>
 
                         <div class="col-sm-6" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.customer_number" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.customer_number}}</span>
+                            <input class="form-control" ng-model="farmer.data.customer_number" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.customer_number}}</span>
                         </div>
-                    </div>
+                    </div>-->
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Enterprises</label>
 
                         <div class="col-sm-8">
-                            <div ng-repeat="enterprise in customer.data.enterprises">
+                            <div ng-repeat="enterprise in farmer.data.enterprises">
                                 <div class="col-sm-8">
                                     {{enterprise}}
                                 </div>
@@ -67,75 +67,75 @@
                         <label class="col-sm-4 control-label">Telephone</label>
 
                         <div class="col-sm-6" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.phone" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.phone}}</span>
+                            <input class="form-control" ng-model="farmer.data.phone.home" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.phone.home}}</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Fax</label>
 
                         <div class="col-sm-6" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.fax" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.fax}}</span>
+                            <input class="form-control" ng-model="farmer.data.phone.fax" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.phone.fax}}</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Mobile</label>
 
                         <div class="col-sm-6" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.mobile" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.mobile}}</span>
+                            <input class="form-control" ng-model="farmer.data.phone.mobile" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.phone.mobile}}</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Email</label>
 
                         <div class="col-sm-8" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.email" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.email}}</span>
+                            <input class="form-control" ng-model="farmer.data.email" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.email}}</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Postal address</label>
 
                         <div class="col-sm-8" ng-switch on="mode">
-                            <textarea rows="3" class="form-control" ng-model="customer.data.address" ng-switch-when="edit"></textarea>
-                            <span class="form-control" ng-switch-default>{{customer.data.address}}</span>
+                            <textarea rows="3" class="form-control" ng-model="farmer.data.address.street" ng-switch-when="edit"></textarea>
+                            <span class="form-control" ng-switch-default>{{farmer.data.address.street}}</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Town</label>
 
                         <div class="col-sm-8" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.town" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.town}}</span>
+                            <input class="form-control" ng-model="farmer.data.address.city" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.address.city}}</span>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-sm-4 control-label">Postal code</label>
 
                         <div class="col-sm-6" ng-switch on="mode">
-                            <input class="form-control" ng-model="customer.data.postal_code" ng-switch-when="edit"/>
-                            <span class="form-control" ng-switch-default>{{customer.data.postal_code}}</span>
+                            <input class="form-control" ng-model="farmer.data.address.code" ng-switch-when="edit"/>
+                            <span class="form-control" ng-switch-default>{{farmer.data.address.code}}</span>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="col-sm-4">
+ <!--           <div class="col-sm-4">
                 <div class="panel">
                     <div class="panel-heading">
                         <h3 class="panel-title">Customer task list</h3>
                     </div>
                     <div class="progress">
-                        <div class="progress-bar progress-bar-success" style="width: {{customer.data.tasks | progress}}%"></div>
+                        <div class="progress-bar progress-bar-success" style="width: {{farmer.data.tasks | progress}}%"></div>
                     </div>
                     <div>
-                        <div ng-repeat="task in customer.data.tasks">
+                        <div ng-repeat="task in farmer.data.tasks">
                             {{task.complete | checkmark}}&nbsp{{task.name}}
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div>-->
     </navigation-page>
 </div>
