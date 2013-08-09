@@ -561,13 +561,6 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                  * Public functions
                  */
                 return {
-                    create: function (data, schemaData) {
-                        return new DataItem({
-                            data: data,
-                            dirty: true,
-                            local: true
-                        }, schemaData);
-                    },
                     read: function (schemaData, options, rCallback) {
                         // Validate parameters
                         if (typeof schemaData === 'function') {
@@ -606,8 +599,12 @@ define(['underscore', 'watch', 'angular', 'angular-resource'], function (_, watc
                             rCallback(null, _errors.NoReadParams);
                         }
                     },
-                    update: function(dataItems, uCallback) {
-
+                    create: function (data, schemaData) {
+                        return new DataItem({
+                            data: data,
+                            dirty: true,
+                            local: true
+                        }, schemaData);
                     }
                 }
             };
