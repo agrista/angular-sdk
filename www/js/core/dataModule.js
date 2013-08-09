@@ -249,7 +249,16 @@ define(['underscore', 'angular'], function (_) {
                         _localStore.db.transaction(function (tx) {
                             tx.executeSql('SELECT * FROM data WHERE uri = ?', [uri], function (tx, res) {
                                 if (res.rows.length == 1) {
-                                    glCallback(res.rows.item(1));
+                                    var localData = res.rows.item(0);
+
+                                    glCallback({
+                                        id: localData.id,
+                                        uri: localData.uri,
+                                        data: JSON.parse(localData.data),
+                                        dirty: (localData.dirty == 1 ? true : false),
+                                        local: (localData.local == 1 ? true : false)
+                                    });
+
                                 } else {
                                     var dataItems = [];
 
@@ -645,7 +654,7 @@ define(['underscore', 'angular'], function (_) {
                  * Initialize
                  */
 
-                // Initialize database
+                    // Initialize database
                 _initializeDatabase(_localStore.name, function (db) {
                     _localStore.db = db;
 
