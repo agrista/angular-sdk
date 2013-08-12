@@ -44,6 +44,74 @@ define(['app', 'core/mapboxModule'], function (app) {
                 }
             ]);
 
+            var _handleData = function (res, err) {
+                $scope.customers = res;
+
+                if (!$scope.$$phase) $scope.$apply();
+            };
+
+            customersService.getCustomers(_handleData);
+
+            $scope.toolbar = "list";
+            $('#listdiv').show();
+            $('#wallmap').hide();
+
+            $scope.toolList = function() {
+                $scope.toolbar = "list";
+                $('#listdiv').show();
+                $('#wallmap').hide();
+            };
+
+            $scope.toolMap = function() {
+                $scope.toolbar = "map";
+                $('#listdiv').hide();
+                $('#wallmap').show();
+                showMap();
+            };
+
+            function showMap() {
+                if (!$scope.map) {
+                    $scope.map = L.mapbox.map('map', 'agrista.map-65ftbmpi').setView([-28.964584, 23.914759], 6);
+                }
+                /**
+                 * Load farm centroids of each customer for the wall map
+                 */
+                var markers = new L.MarkerClusterGroup();
+                var markerFeatures = {"type": "FeatureCollection", "features": []};
+                for (var i = 0; i < $scope.customers.length; i++) {
+                    var customer = $scope.customers[i].data;
+//                    console.log(customer);
+
+                    if (customer.loc && customer.loc.coordinates && customer.loc.coordinates.length == 2) {
+                        var feature = {
+                            "type": "Feature",
+                            "properties": {
+                                "cid": customer.cid,
+                                "fid": customer.fid,
+                                "name": customer.name
+                            },
+                            "geometry": customer.loc
+                        }
+                        markerFeatures.features.push(feature);
+                    }
+                }
+                var geoJsonLayer = L.geoJson(markerFeatures, {onEachFeature: markerClick});
+                markers.addLayer(geoJsonLayer);
+                $scope.map.addLayer(markers);
+
+                function markerClick(feature, layer) {
+                    layer.on('click', function(e) {
+//                        $scope.showCustomer(e.target.feature.properties.fid);
+//                        console.log(e.target.feature.properties.fid);
+//                        navigationService.go('/customer/' + e.target.feature.properties.fid, 'slide');
+                        e.target.bindPopup('<strong>Customer </strong><br/><span>' + e.target.feature.properties.name + '</span>');
+                    });
+                }
+//                var physical = L.mapbox.tileLayer('agrista.map-65ftbmpi');
+//                map.addLayer(physical);
+
+            }
+
             $scope.showCustomer = function (id) {
                 navigationService.go('/customer/' + id, 'slide');
             };
@@ -120,8 +188,8 @@ define(['app', 'core/mapboxModule'], function (app) {
 
         }]);
 
-    app.lazyLoader.controller('CustomerEnterpriseController', ['$scope', '$routeParams', 'navigationService', 'dataStore',
-        function ($scope, $routeParams, navigationService, dataStore) {
+    app.lazyLoader.controller('CustomerEnterpriseController', ['$scope', '$routeParams', 'navigationService', 'farmerService',
+        function ($scope, $routeParams, navigationService, farmerService) {
             $scope.navbar = {
                 title: 'Add Enterprise',
                 leftButton: {icon: 'chevron-left'},
@@ -134,33 +202,25 @@ define(['app', 'core/mapboxModule'], function (app) {
                         if ($scope.enterprises[key]) {
                             var indexes = key.split('_');
                             var enterprise = $scope.enterpriseTypes[indexes[0]].commodities[indexes[1]];
-                            console.log(enterprise);
-                            if ($scope.customer.data.enterprises.indexOf(enterprise) == -1) {
-                                $scope.customer.data.enterprises.push(enterprise);
+                            if ($scope.farmer.data.enterprises.indexOf(enterprise) == -1) {
+                                $scope.farmer.data.enterprises.push(enterprise);
                             }
                         }
                     }
-                    $scope.customer.update();
+                    farmerService.updateFarmer($scope.farmer, function() {
+                        farmerService.syncFarmer($routeParams.id);
+                    });
                     navigationService.go('/customer/' + $routeParams.id, 'modal', true);
                 }
             };
 
-            $scope.mode = 'view';
+            var _handleData = function (res, err) {
+                $scope.farmer = res;
 
-            var customerStore = dataStore('customer', {
-                api: {
-                    template: 'customer/:id',
-                    schema: {id: '@id'}
-                }
-            }, function () {
-                customerStore.read({id: $routeParams.id}, function (res, err) {
-                    if (res) {
-                        $scope.customer = res[0];
-                    }
+                if (!$scope.$$phase) $scope.$apply();
+            };
 
-                    if (!$scope.$$phase) $scope.$apply();
-                });
-            });
+            farmerService.getFarmer($routeParams.id, _handleData);
 
             $scope.enterpriseTypes = [
                 {
@@ -182,12 +242,10 @@ define(['app', 'core/mapboxModule'], function (app) {
             $scope.toggle = function (id) {
                 var e = document.getElementById(id);
                 if ($scope.enterprises[id]) {
-                    console.log('toggleEnterprise off');
                     $scope.enterprises[id] = false;
                     e.className = 'selectable';
                 }
                 else {
-                    console.log('toggleEnterprise on');
                     $scope.enterprises[id] = true;
                     e.className = 'highlight selectable';
                 }
