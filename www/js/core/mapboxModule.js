@@ -3,45 +3,73 @@
 define(['app'], function (app) {
 
     app.lazyLoader.factory('mapboxService', ['$rootScope', function ($rootScope) {
+        var _view = undefined;
+        var _geojsonData = [],
+            _layers = [];
 
         return {
+            reset: function() {
+                _geojsonData = [];
+            },
+            getView: function () {
+                return _view;
+            },
             setView: function (coordinates, zoom) {
                 if (coordinates instanceof Array) {
-                    $rootScope.$emit('mapbox::set-view', {
+                    _view = {
                         coordinates: coordinates,
-                        zoom: zoom || 6
-                    });
+                        zoom: zoom || 11
+                    };
+
+                    $rootScope.$emit('mapbox::set-view', _view);
                 }
             },
+            addLayer: function(layer, callback) {
+                var data = {
+                    layer: layer,
+                    callback: callback
+                };
+
+                _layers.push(data);
+                $rootScope.$emit('mapbox::add-layer', data);
+            },
             addGeoJSON: function (group, geojson, options) {
-                if (polygon instanceof Array) {
-                    $rootScope.$emit('mapbox::add-geojson', {
+                if (typeof geojson === 'object') {
+                    var data = {
                         group: group,
                         geojson: geojson,
                         options: options
-                    });
+                    };
+
+                    _geojsonData.push(data);
+                    $rootScope.$emit('mapbox::add-geojson', data);
                 }
             },
-            addMarker: function (group, position, options) {
-                if (polygon instanceof Array) {
-                    $rootScope.$emit('mapbox::add-marker', {
-                        group: group,
-                        position: position,
-                        options: options
-                    });
-                }
+            getGeoJSONData: function () {
+                return _geojsonData;
             }
         }
     }]);
 
-    app.lazyLoader.directive('mapbox', ['mapboxService', function (mapboxService) {
-
-        var map = undefined;
-
+    app.lazyLoader.directive('mapbox', ['mapboxService', 'geolocationService', function (mapboxService, geolocationService) {
+        var map;
         var featureGroups = {
             land: undefined,
-            portion: undefined
-        }
+            portion: undefined,
+            marker: undefined
+        };
+
+        var location = {};
+
+        geolocationService.watchPosition(function(res, err) {
+            if(res) {
+                if(location.marker === undefined) {
+                    location.marker = L.marker([res.coords.latitude, res.coords.longitude]).addTo(map);
+                } else {
+                    location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
+                }
+            }
+        });
 
         /**
          * Swap lat and lng in a feature object.
@@ -71,6 +99,36 @@ define(['app'], function (app) {
             return [twoThings[1], twoThings[0]];
         }
 
+        function addLayer(data) {
+            if ((data instanceof Array) === false) data = [data];
+
+            for (var x = 0; x < data.length; x++) {
+                var item = data[x];
+
+                map.addLayer(item.layer);
+            }
+        }
+
+        function addGeoJSON(data) {
+            if ((data instanceof Array) === false) data = [data];
+
+            for (var x = 0; x < data.length; x++) {
+                var item = data[x];
+
+                if (item.geojson.type === 'Polygon') {
+                    L.polygon(swapLatLng(item.geojson.coordinates), item.options).addTo(featureGroups[item.group]);
+                } else if (item.geojson.type === 'Point') {
+                    L.marker(swapLatLng(item.geojson.coordinates), item.options).addTo(featureGroups[item.group]);
+                }
+            }
+        }
+
+        function setView(view) {
+            if (view !== undefined) {
+                map.setView(view.coordinates, view.zoom);
+            }
+        }
+
         return {
             restrict: 'E',
             template: '<div></div>',
@@ -80,26 +138,17 @@ define(['app'], function (app) {
 
                 featureGroups.land = L.featureGroup().addTo(map);
                 featureGroups.portion = L.featureGroup().addTo(map);
+                featureGroups.marker = L.featureGroup().addTo(map);
+                featureGroups.location = L.featureGroup().addTo(map);
 
-                map.setView([-28.964584, 23.914759], 6);
+                setView(mapboxService.getView());
+                addLayer(mapboxService.getLayers());
+                addGeoJSON(mapboxService.getGeoJSONData());
             },
             controller: function ($scope, $attrs) {
-                $scope.$on('mapbox::set-view', function (view) {
-                    map.setView(view.coordinates, view.zoom);
-                });
-
-                $scope.$on('mapbox::add-geojson', function (geojson) {
-                    if (geojson.type === 'Polygon') {
-                        L.polygon(swapLatLng(geojson.coordinates), polygon.options).addTo(featureGroups[polygon.group]);
-                    }
-
-
-                });
-
-                $scope.$on('mapbox::add-marker', function (marker) {
-                    L.marker(marker.position, marker.options).addTo(featureGroups[marker.group]);
-                });
-
+                $scope.$on('mapbox::set-view', setView);
+                $scope.$on('mapbox::add-geojson', addGeoJSON);
+                $scope.$on('mapbox::add-layer', addLayer);
             }
         }
     }]);
