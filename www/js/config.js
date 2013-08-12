@@ -6,8 +6,7 @@ requirejs.config({
         'angular-cookie': {deps: ['angular']},
         'angular-resource': {deps: ['angular']},
         'angular-mobile': {deps: ['angular']},
-        'underscore': {exports: '_'},
-        'pouchdb': {exports: 'Pouch'}
+        'underscore': {exports: '_'}
     },
     paths: {
         'cordova': '../cordova',
@@ -15,8 +14,12 @@ requirejs.config({
         'angular-resource': '../lib/angularjs/1.1.5/angular-resource',
         'angular-mobile': '../lib/angularjs/1.1.5/angular-mobile',
         'angular-cookie': '../lib/angularjs/1.1.5/angular-cookies',
+<<<<<<< HEAD
         'underscore': '../components/underscore/underscore',
         'mapbox': '../components/mapbox.js/dist/mapbox.standalone'
+=======
+        'underscore': '../components/underscore/underscore'
+>>>>>>> 11af46a... Remove mapbox from config and add to index directly
     },
     baseUrl: 'js/'
 });
