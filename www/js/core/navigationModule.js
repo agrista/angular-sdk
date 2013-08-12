@@ -112,7 +112,7 @@ define(['angular', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             scope: {
-                title: '@',
+                title: '=',
                 menuShown: '=',
                 leftButton: '=',
                 rightButton: '=',
