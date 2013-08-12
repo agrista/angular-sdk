@@ -3,14 +3,49 @@
 define(['app', 'core/mapboxModule'], function (app) {
     app.lazyLoader.controller('CustomerListController', ['$scope', 'navigationService', 'authorization', 'customersService', 'mapboxService',
         function ($scope, navigationService, authorization, customersService, mapboxService) {
+            customersService.getCustomers(_handleData);
+
             // Data service
-            var _handleData = function (res, err) {
+            function _handleData (res, err) {
                 $scope.customers = res;
 
-                if (!$scope.$$phase) $scope.$apply();
-            };
+                _initializeMap();
 
-            customersService.getCustomers(_handleData);
+                if (!$scope.$$phase) $scope.$apply();
+            }
+
+            // Map
+            function _initializeMap() {
+                var markerFeatures = {"type": "FeatureCollection", "features": []};
+                for (var i = 0; i < $scope.customers.length; i++) {
+                    var customer = $scope.customers[i].data;
+
+                    if (customer.loc && customer.loc.coordinates && customer.loc.coordinates.length == 2) {
+                        var feature = {
+                            "type": "Feature",
+                            "properties": {
+                                "cid": customer.cid,
+                                "fid": customer.fid,
+                                "name": customer.name
+                            },
+                            "geometry": customer.loc
+                        }
+                        markerFeatures.features.push(feature);
+                    }
+                }
+
+                var markers = new L.MarkerClusterGroup();
+                markers.addLayer(L.geoJson(markerFeatures, {
+                    onEachFeature: function (feature, layer) {
+                        layer.on('click', function (e) {
+                            e.target.bindPopup('<strong>Customer </strong><br/><span>' + e.target.feature.properties.name + '</span>');
+                        });
+                    }
+                }));
+
+                mapboxService.reset();
+                mapboxService.addLayer(markers);
+            }
 
             // Navigation
             $scope.navbar = {
@@ -44,71 +79,12 @@ define(['app', 'core/mapboxModule'], function (app) {
                 }
             ]);
 
-            var _handleData = function (res, err) {
-                $scope.customers = res;
+            // Toolbar
+            $scope.toolbar = 'list';
 
-                if (!$scope.$$phase) $scope.$apply();
+            $scope.setToolbar = function (name) {
+                $scope.toolbar = name;
             };
-
-            customersService.getCustomers(_handleData);
-
-            $scope.toolbar = "list";
-
-            $scope.toolList = function() {
-                $scope.toolbar = "list";
-
-            };
-
-            $scope.toolMap = function() {
-                $scope.toolbar = "map";
-
-                mapboxService.reset();
-
-
-            };
-
-            function showMap() {
-                if (!$scope.map) {
-                    $scope.map = L.mapbox.map('map', 'agrista.map-65ftbmpi').setView([-28.964584, 23.914759], 6);
-                }
-                /**
-                 * Load farm centroids of each customer for the wall map
-                 */
-                var markers = new L.MarkerClusterGroup();
-                var markerFeatures = {"type": "FeatureCollection", "features": []};
-                for (var i = 0; i < $scope.customers.length; i++) {
-                    var customer = $scope.customers[i].data;
-//                    console.log(customer);
-
-                    if (customer.loc && customer.loc.coordinates && customer.loc.coordinates.length == 2) {
-                        var feature = {
-                            "type": "Feature",
-                            "properties": {
-                                "cid": customer.cid,
-                                "fid": customer.fid,
-                                "name": customer.name
-                            },
-                            "geometry": customer.loc
-                        }
-                        markerFeatures.features.push(feature);
-                    }
-                }
-                var geoJsonLayer = L.geoJson(markerFeatures, {onEachFeature: markerClick});
-                markers.addLayer(geoJsonLayer);
-                $scope.map.addLayer(markers);
-
-                function markerClick(feature, layer) {
-                    layer.on('click', function(e) {
-//                        $scope.showCustomer(e.target.feature.properties.fid);
-//                        console.log(e.target.feature.properties.fid);
-//                        navigationService.go('/customer/' + e.target.feature.properties.fid, 'slide');
-                        e.target.bindPopup('<strong>Customer </strong><br/><span>' + e.target.feature.properties.name + '</span>');
-                    });
-                }
-//                var physical = L.mapbox.tileLayer('agrista.map-65ftbmpi');
-//                map.addLayer(physical);
-
-            }
 
             $scope.showCustomer = function (id) {
                 navigationService.go('/customer/' + id, 'slide');
@@ -118,29 +94,33 @@ define(['app', 'core/mapboxModule'], function (app) {
 
     app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService', 'mapboxService',
         function ($scope, $routeParams, navigationService, farmerService, mapboxService) {
+            farmerService.getFarmer($routeParams.id, _handleData);
+
             // Data service
-            var _handleData = function (res, err) {
+            function _handleData (res, err) {
                 if (res) {
                     $scope.farmer = res;
-
                     $scope.navbar.title = $scope.farmer.data.farmer_name;
 
-                    mapboxService.reset();
-                    mapboxService.setView([$scope.farmer.data.farmer_loc.coordinates[1], $scope.farmer.data.farmer_loc.coordinates[0]]);
-
-                    for (var farmIndex = 0; farmIndex < $scope.farmer.data.farms.length; farmIndex++) {
-                        var farm = $scope.farmer.data.farms[farmIndex];
-
-                        for (var boundaryIndex = 0; boundaryIndex < farm.boundaries.length; boundaryIndex++) {
-                            mapboxService.addGeoJSON('land', farm.boundaries[boundaryIndex].loc);
-                        }
-                    }
+                    _initializeMap();
                 }
 
                 if (!$scope.$$phase) $scope.$apply();
-            };
+            }
 
-            farmerService.getFarmer($routeParams.id, _handleData);
+            // Map
+            function _initializeMap() {
+                mapboxService.reset();
+                mapboxService.setView([$scope.farmer.data.farmer_loc.coordinates[1], $scope.farmer.data.farmer_loc.coordinates[0]]);
+
+                for (var farmIndex = 0; farmIndex < $scope.farmer.data.farms.length; farmIndex++) {
+                    var farm = $scope.farmer.data.farms[farmIndex];
+
+                    for (var boundaryIndex = 0; boundaryIndex < farm.boundaries.length; boundaryIndex++) {
+                        mapboxService.addGeoJSON('land', farm.boundaries[boundaryIndex].loc);
+                    }
+                }
+            }
 
             // Navigation
             $scope.navbar = {
@@ -215,7 +195,7 @@ define(['app', 'core/mapboxModule'], function (app) {
                             }
                         }
                     }
-                    farmerService.updateFarmer($scope.farmer, function() {
+                    farmerService.updateFarmer($scope.farmer, function () {
                         farmerService.syncFarmer($routeParams.id);
                     });
                     navigationService.go('/customer/' + $routeParams.id, 'modal', true);
