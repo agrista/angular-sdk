@@ -1,8 +1,18 @@
 'use strict';
 
-define(['app'], function (app) {
+define(['app', 'core/mapboxModule'], function (app) {
     app.lazyLoader.controller('CustomerListController', ['$scope', 'navigationService', 'authorization', 'customersService',
         function ($scope, navigationService, authorization, customersService) {
+            // Data service
+            var _handleData = function (res, err) {
+                $scope.customers = res;
+
+                if (!$scope.$$phase) $scope.$apply();
+            };
+
+            customersService.getCustomers(_handleData);
+
+            // Navigation
             $scope.navbar = {
                 title: 'Customers',
                 leftButton: {icon: 'align-justify'},
@@ -34,31 +44,31 @@ define(['app'], function (app) {
                 }
             ]);
 
-
-            var _handleData = function (res, err) {
-                $scope.customers = res;
-
-                if (!$scope.$$phase) $scope.$apply();
-            };
-
-            customersService.getCustomers(_handleData);
-
             $scope.showCustomer = function (id) {
                 navigationService.go('/customer/' + id, 'slide');
             };
         }]);
 
 
-    app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService',
-        function ($scope, $routeParams, navigationService, farmerService) {
+    app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService', 'mapboxService',
+        function ($scope, $routeParams, navigationService, farmerService, mapboxService) {
+            // Data service
             var _handleData = function (res, err) {
-                $scope.farmer = res;
+                if (res) {
+                    $scope.farmer = res;
+
+                    $scope.navbar.title = $scope.farmer.data.farmer_name;
+
+                    mapboxService.addPolygon('');
+
+                }
 
                 if (!$scope.$$phase) $scope.$apply();
             };
 
             farmerService.getFarmer($routeParams.id, _handleData);
 
+            // Navigation
             $scope.navbar = {
                 title: 'Customer',
                 leftButton: {icon: 'chevron-left'},
@@ -74,7 +84,7 @@ define(['app'], function (app) {
                             title: 'Edit'
                         };
 
-                        farmerService.updateFarmer($scope.farmer, function() {
+                        farmerService.updateFarmer($scope.farmer, function () {
                             farmerService.syncFarmer($routeParams.id);
                         });
 
@@ -88,6 +98,14 @@ define(['app'], function (app) {
                 }
             };
 
+            // Toolbar
+            $scope.toolbar = 'profile';
+
+            $scope.setToolbar = function (name) {
+                $scope.toolbar = name;
+            };
+
+            // Editing
             $scope.mode = 'view';
 
             $scope.typeOptions = ['Smallholder', 'Commercial', 'Cooperative', 'Corporate'];
@@ -184,6 +202,8 @@ define(['app'], function (app) {
 
     app.lazyLoader.filter('progress', function () {
         return function (input) {
+            if (input instanceof Array === false) return 0;
+
             var completeCount = 0;
 
             for (var i = 0; i < input.length; i++) {
