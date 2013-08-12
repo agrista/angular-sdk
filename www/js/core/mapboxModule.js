@@ -4,12 +4,12 @@ define(['app'], function (app) {
 
     app.lazyLoader.factory('mapboxService', ['$rootScope', function ($rootScope) {
         var _view = undefined;
-        var _geojsonData = [],
+        var _geoJsonData = [],
             _layers = [];
 
         return {
             reset: function() {
-                _geojsonData = [];
+                _geoJsonData = [];
                 _layers = []
             },
             getView: function () {
@@ -32,20 +32,20 @@ define(['app'], function (app) {
             getLayers: function() {
                 return _layers;
             },
-            addGeoJSON: function (group, geojson, options) {
-                if (typeof geojson === 'object') {
+            addGeoJson: function (group, geoJson, options) {
+                if (typeof geoJson === 'object') {
                     var data = {
                         group: group,
-                        geojson: geojson,
+                        geoJson: geoJson,
                         options: options
                     };
 
-                    _geojsonData.push(data);
+                    _geoJsonData.push(data);
                     $rootScope.$emit('mapbox::add-geojson', data);
                 }
             },
-            getGeoJSONData: function () {
-                return _geojsonData;
+            getGeoJsonData: function () {
+                return _geoJsonData;
             }
         }
     }]);
@@ -106,16 +106,16 @@ define(['app'], function (app) {
             }
         }
 
-        function addGeoJSON(data) {
+        function addGeoJson(data) {
             if ((data instanceof Array) === false) data = [data];
 
             for (var x = 0; x < data.length; x++) {
                 var item = data[x];
 
-                if (item.geojson.type === 'Polygon') {
-                    L.polygon(swapLatLng(item.geojson.coordinates), item.options).addTo(featureGroups[item.group]);
-                } else if (item.geojson.type === 'Point') {
-                    L.marker(swapLatLng(item.geojson.coordinates), item.options).addTo(featureGroups[item.group]);
+                if (item.geoJson.type === 'Polygon') {
+                    L.polygon(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
+                } else if (item.geoJson.type === 'Point') {
+                    L.marker(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
                 }
             }
         }
@@ -140,11 +140,11 @@ define(['app'], function (app) {
 
                 setView(mapboxService.getView());
                 addLayer(mapboxService.getLayers());
-                addGeoJSON(mapboxService.getGeoJSONData());
+                addGeoJson(mapboxService.getGeoJsonData());
             },
             controller: function ($scope, $attrs) {
                 $scope.$on('mapbox::set-view', setView);
-                $scope.$on('mapbox::add-geojson', addGeoJSON);
+                $scope.$on('mapbox::add-geojson', addGeoJson);
                 $scope.$on('mapbox::add-layer', addLayer);
             }
         }
