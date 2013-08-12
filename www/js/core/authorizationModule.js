@@ -3,10 +3,6 @@
 define(['underscore', 'angular', 'angular-cookie'], function (_) {
     var module = angular.module('authorizationModule', ['ngCookies']);
 
-    module.config(['$httpProvider', function($httpProvider) {
-
-    }]);
-
     module.run(['$rootScope', 'authorization', 'navigationService', function ($rootScope, authorization, navigationService) {
         $rootScope.$on('$routeChangeStart', function (event, next, current) {
 
@@ -62,8 +58,6 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
         }
 
         // Intercept any HTTP responses that are not authorized
-        $httpProvider.defaults.withCredentials = true;
-
         $httpProvider.responseInterceptors.push('authorizationInterceptor');
 
         var _setConfig = function(options) {
