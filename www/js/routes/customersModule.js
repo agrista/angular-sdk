@@ -117,7 +117,7 @@ define(['app', 'core/mapboxModule'], function (app) {
                     var farm = $scope.farmer.data.farms[farmIndex];
 
                     for (var boundaryIndex = 0; boundaryIndex < farm.boundaries.length; boundaryIndex++) {
-                        mapboxService.addGeoJSON('land', farm.boundaries[boundaryIndex].loc);
+                        mapboxService.addGeoJson('land', farm.boundaries[boundaryIndex].loc);
                     }
                 }
             }
