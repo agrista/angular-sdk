@@ -151,8 +151,16 @@ body {
 }
 
 .btn-toolbar {
+    background-color: #a5aba8;
+    border-color: #919693;
+    color: #444;
+}
+
+.btn-toolbar.active {
     background-color: #919693;
     color: #fff;
+    -webkit-box-shadow: none;
+    box-shadow: none;
 }
 
 .btn-lg {
