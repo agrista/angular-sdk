@@ -1,15 +1,16 @@
 {
-    "name": "agrista-mobile-core",
-    "version": "0.0.2",
-    "devDependencies": {
-        "angularjs": "http://code.angularjs.org/1.1.5/angular.js",
-        "angular-mocks": "http://code.angularjs.org/1.1.5/angular-mocks.js",
-        "ngMidwayTester": "https://github.com/yearofmoo/ngMidwayTester.git"
-    },
-    "dependencies": {
-        "angularjs": "http://code.angularjs.org/1.1.5/angular.js",
-        "requirejs": "https://github.com/jrburke/requirejs.git",
-        "underscore": "https://github.com/documentcloud/underscore.git"
-        "agrista-styles": "git@bitbucket.org:agrista/styles.git"
-    }
+  "name": "agrista-mobile-core",
+  "version": "0.0.2",
+  "devDependencies": {
+    "angularjs": "http://code.angularjs.org/1.1.5/angular.js",
+    "angular-mocks": "http://code.angularjs.org/1.1.5/angular-mocks.js",
+    "ngMidwayTester": "https://github.com/yearofmoo/ngMidwayTester.git"
+  },
+  "dependencies": {
+    "angularjs": "http://code.angularjs.org/1.1.5/angular.js",
+    "requirejs": "https://github.com/jrburke/requirejs.git",
+    "underscore": "https://github.com/documentcloud/underscore.git",
+    "agrista-styles": "git@bitbucket.org:agrista/styles.git",
+    "mapbox.js": "~1.3.1"
+  }
 }
