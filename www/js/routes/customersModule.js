@@ -1,8 +1,8 @@
 'use strict';
 
 define(['app', 'core/mapboxModule'], function (app) {
-    app.lazyLoader.controller('CustomerListController', ['$scope', 'navigationService', 'authorization', 'customersService',
-        function ($scope, navigationService, authorization, customersService) {
+    app.lazyLoader.controller('CustomerListController', ['$scope', 'navigationService', 'authorization', 'customersService', 'mapboxService',
+        function ($scope, navigationService, authorization, customersService, mapboxService) {
             // Data service
             var _handleData = function (res, err) {
                 $scope.customers = res;
@@ -53,20 +53,18 @@ define(['app', 'core/mapboxModule'], function (app) {
             customersService.getCustomers(_handleData);
 
             $scope.toolbar = "list";
-            $('#listdiv').show();
-            $('#wallmap').hide();
 
             $scope.toolList = function() {
                 $scope.toolbar = "list";
-                $('#listdiv').show();
-                $('#wallmap').hide();
+
             };
 
             $scope.toolMap = function() {
                 $scope.toolbar = "map";
-                $('#listdiv').hide();
-                $('#wallmap').show();
-                showMap();
+
+                mapboxService.reset();
+
+
             };
 
             function showMap() {
@@ -127,8 +125,16 @@ define(['app', 'core/mapboxModule'], function (app) {
 
                     $scope.navbar.title = $scope.farmer.data.farmer_name;
 
-                    mapboxService.addPolygon('');
+                    mapboxService.reset();
+                    mapboxService.setView([$scope.farmer.data.farmer_loc.coordinates[1], $scope.farmer.data.farmer_loc.coordinates[0]]);
 
+                    for (var farmIndex = 0; farmIndex < $scope.farmer.data.farms.length; farmIndex++) {
+                        var farm = $scope.farmer.data.farms[farmIndex];
+
+                        for (var boundaryIndex = 0; boundaryIndex < farm.boundaries.length; boundaryIndex++) {
+                            mapboxService.addGeoJSON('land', farm.boundaries[boundaryIndex].loc);
+                        }
+                    }
                 }
 
                 if (!$scope.$$phase) $scope.$apply();
@@ -158,6 +164,8 @@ define(['app', 'core/mapboxModule'], function (app) {
 
                     } else {
                         $scope.mode = 'edit';
+                        $scope.toolbar = 'profile';
+
                         $scope.navbar.rightButton = {
                             icon: 'check',
                             title: 'Done'

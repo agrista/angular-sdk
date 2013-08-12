@@ -13,14 +13,14 @@
         <div ng-click="toolMap()" ng-class="{active: toolbar == 'map'}" class="btn btn-sm btn-toolbar">Wall map</div>
     </tool-bar>
 
-    <navigation-page>
-        <div class="list-group" id="listdiv">
+    <navigation-page ng-switch on="toolbar">
+        <div class="map-container" ng-switch-when="map">
+            <mapbox id="map"></mapbox>
+        </div>
+        <div class="list-group" ng-switch-default>
             <a class="list-group-item" ng-click="showCustomer(customer.data.fid)" ng-repeat="customer in customers">
                 {{customer.data.name}}
             </a>
-        </div>
-        <div id="wallmap" class="map-container">
-            <div id="map"></div>
         </div>
     </navigation-page>
 </div>

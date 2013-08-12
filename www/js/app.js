@@ -1,7 +1,7 @@
 'use strict';
 
-define(['angular', 'core/agristaModule', 'core/authorizationModule', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule'], function () {
-    var app = angular.module('app', ['ngMobile', 'agristaModule', 'authorizationModule', 'utilityModule', 'navigationModule', 'lazyLoaderModule']);
+define(['angular', 'core/agristaModule', 'core/authorizationModule', 'core/utilityModule', 'core/navigationModule', 'core/lazyLoaderModule', 'phone/geolocationModule'], function () {
+    var app = angular.module('app', ['ngMobile', 'agristaModule', 'authorizationModule', 'utilityModule', 'navigationModule', 'lazyLoaderModule', 'geolocationModule']);
 
     app.config(['$provide', '$routeProvider', 'lazyLoaderProvider', 'authorizationProvider',
         function ($provide, $routeProvider, lazyLoaderProvider, authorizationProvider) {
