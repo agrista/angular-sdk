@@ -10,6 +10,7 @@ define(['app'], function (app) {
         return {
             reset: function() {
                 _geojsonData = [];
+                _layers = []
             },
             getView: function () {
                 return _view;
@@ -24,14 +25,12 @@ define(['app'], function (app) {
                     $rootScope.$emit('mapbox::set-view', _view);
                 }
             },
-            addLayer: function(layer, callback) {
-                var data = {
-                    layer: layer,
-                    callback: callback
-                };
-
-                _layers.push(data);
-                $rootScope.$emit('mapbox::add-layer', data);
+            addLayer: function(layer) {
+                _layers.push(layer);
+                $rootScope.$emit('mapbox::add-layer', layer);
+            },
+            getLayers: function() {
+                return _layers;
             },
             addGeoJSON: function (group, geojson, options) {
                 if (typeof geojson === 'object') {
@@ -99,13 +98,11 @@ define(['app'], function (app) {
             return [twoThings[1], twoThings[0]];
         }
 
-        function addLayer(data) {
-            if ((data instanceof Array) === false) data = [data];
+        function addLayer(layer) {
+            if ((layer instanceof Array) === false) layer = [layer];
 
-            for (var x = 0; x < data.length; x++) {
-                var item = data[x];
-
-                map.addLayer(item.layer);
+            for (var x = 0; x < layer.length; x++) {
+                map.addLayer(layer[x]);
             }
         }
 

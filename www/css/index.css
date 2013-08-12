@@ -31,3 +31,9 @@ span.form-control {
     position: relative;
     height: 100%;
 }
+
+.map-container {
+    position: relative;
+    height: 100%;
+    /*border: 5px solid blue;*/
+}
