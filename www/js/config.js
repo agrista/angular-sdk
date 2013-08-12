@@ -6,8 +6,7 @@ requirejs.config({
         'angular-cookie': {deps: ['angular']},
         'angular-resource': {deps: ['angular']},
         'angular-mobile': {deps: ['angular']},
-        'underscore': {exports: '_'},
-        'pouchdb': {exports: 'Pouch'}
+        'underscore': {exports: '_'}
     },
     paths: {
         'cordova': '../cordova',
@@ -15,9 +14,7 @@ requirejs.config({
         'angular-resource': '../lib/angularjs/1.1.5/angular-resource',
         'angular-mobile': '../lib/angularjs/1.1.5/angular-mobile',
         'angular-cookie': '../lib/angularjs/1.1.5/angular-cookies',
-        'underscore': '../components/underscore/underscore',
-        'mapbox': '../components/mapbox.js/dist/mapbox.standalone',
-        'markercluster': '../components/leaflet.markerclusterer/dist/leaflet.markercluster'
+        'underscore': '../components/underscore/underscore'
     },
     baseUrl: 'js/'
 });
