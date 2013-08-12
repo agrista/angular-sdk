@@ -16,7 +16,8 @@ requirejs.config({
         'angular-mobile': '../lib/angularjs/1.1.5/angular-mobile',
         'angular-cookie': '../lib/angularjs/1.1.5/angular-cookies',
         'underscore': '../components/underscore/underscore',
-        'mapbox': '../components/mapbox.js/dist/mapbox.standalone'
+        'mapbox': '../components/mapbox.js/dist/mapbox.standalone',
+        'markercluster': '../components/leaflet.markerclusterer/dist/leaflet.markercluster'
     },
     baseUrl: 'js/'
 });
