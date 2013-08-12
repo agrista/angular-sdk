@@ -8,11 +8,32 @@
                     right-button="navbar.rightButton"
                     navigate-right="navbar.syncData"></navigation-bar>
 
+    <tool-bar>
+        <div ng-click="toolList()" ng-class="{active: toolbar == 'list'}" class="btn btn-sm btn-toolbar">List</div>
+        <div ng-click="toolMap()" ng-class="{active: toolbar == 'map'}" class="btn btn-sm btn-toolbar">Wall map</div>
+    </tool-bar>
+
     <navigation-page>
-        <div class="list-group">
+        <div class="list-group" id="listdiv">
             <a class="list-group-item" ng-click="showCustomer(customer.data.fid)" ng-repeat="customer in customers">
                 {{customer.data.name}}
             </a>
         </div>
+        <div id="wallmap" class="map-container">
+            <div id="map"></div>
+        </div>
     </navigation-page>
 </div>
+
+<style>
+    .map-container {
+        position: relative;
+        height: 100%;
+        /*border: 5px solid blue;*/
+    }
+
+    #map {
+        width: 100%;
+        height: 100%;
+    }
+</style>
