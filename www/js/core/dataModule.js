@@ -97,6 +97,7 @@ define(['underscore', 'angular'], function (_) {
                 var _config = _.defaults((config || {}), {
                     apiTemplate: undefined,
                     paging: undefined,
+                    indexerProperty: '_id',
 
                     read: {
                         local: true,
@@ -236,6 +237,16 @@ define(['underscore', 'angular'], function (_) {
                 function _safeApply(scope, fn) {
                     (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
                 };
+
+
+                function _getItemIndex(item) {
+                    if(item[_config.indexerProperty] === undefined) {
+                        console.warn('Configured indexer property not defined');
+                    }
+
+                    return (item[_config.indexerProperty] || item._id || item.id);
+                };
+
 
                 /*
                  * Local data storage
@@ -382,7 +393,7 @@ define(['underscore', 'angular'], function (_) {
 
                                 if ((data instanceof Array) === false) {
                                     grCallback({
-                                        id: data._id || data.id,
+                                        id: _getItemIndex(data),
                                         uri: uri,
                                         data: data,
                                         dirty: false,
@@ -395,7 +406,7 @@ define(['underscore', 'angular'], function (_) {
                                         var item = data[i];
 
                                         dataItems.push({
-                                            id: item._id || item.id,
+                                            id: _getItemIndex(item),
                                             uri: uri,
                                             data: item,
                                             dirty: false,
@@ -435,7 +446,7 @@ define(['underscore', 'angular'], function (_) {
                             _safeApply($rootScope, function () {
                                 $http.post(_apiUrl + item.uri, item.data, {withCredentials: true}).then(function (res) {
                                     var remoteItem = {
-                                        id: res.data._id || res.data.id || item.id,
+                                        id:  _getItemIndex(res.data),
                                         uri: item.uri,
                                         data: item.data,
                                         dirty: false,
