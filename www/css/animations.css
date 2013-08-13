@@ -8,6 +8,12 @@ html, body {
 }
 
 .animate {
+    -webkit-transition: .4s -webkit-transform; /* Safari/Chrome */
+    -moz-transition: .4s -moz-transform; /* Firefox */
+    -ms-transition: .4s -ms-transform; /* IE10 */
+    -o-transition: .4s -o-transform; /* Opera */
+    transition: .4s transform; /* Future Browsers */
+
     -webkit-perspective: 1000;
     -webkit-backface-visibility: hidden;
 }
@@ -23,12 +29,6 @@ html, body {
 }
 
 .animate-container > * {
-    -webkit-transition: .4s -webkit-transform; /* Safari/Chrome */
-    -moz-transition: .4s -moz-transform; /* Firefox */
-    -ms-transition: .4s -ms-transform; /* IE10 */
-    -o-transition: .4s -o-transform; /* Opera */
-    transition: .4s transform; /* Future Browsers */
-
     position: absolute;
     width:100%;
     height: 100%;
