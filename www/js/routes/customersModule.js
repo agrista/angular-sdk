@@ -5,15 +5,10 @@ define(['app', 'core/mapboxModule'], function (app) {
         function ($scope, navigationService, authorization, customersService, mapboxService) {
             customersService.getCustomers(_handleData);
 
-            mapboxService.reset();
-            mapboxService.setView([-28.964584, 23.914759], 6);
-
             // Data service
             function _handleData(res, err) {
                 if (res) {
                     $scope.customers = res;
-
-                    _initializeMap();
                 }
 
                 if (!$scope.$$phase) $scope.$apply();
@@ -21,34 +16,39 @@ define(['app', 'core/mapboxModule'], function (app) {
 
             // Map
             function _initializeMap() {
-                var markerFeatures = {"type": "FeatureCollection", "features": []};
-                for (var i = 0; i < $scope.customers.length; i++) {
-                    var customer = $scope.customers[i].data;
+                mapboxService.reset();
+                mapboxService.setView([-28.964584, 23.914759], 6);
 
-                    if (customer.loc && customer.loc.coordinates && customer.loc.coordinates.length == 2) {
-                        var feature = {
-                            "type": "Feature",
-                            "properties": {
-                                "cid": customer.cid,
-                                "fid": customer.fid,
-                                "name": customer.name
-                            },
-                            "geometry": customer.loc
+                if ($scope.customers) {
+                    var markerFeatures = {"type": "FeatureCollection", "features": []};
+                    for (var i = 0; i < $scope.customers.length; i++) {
+                        var customer = $scope.customers[i].data;
+
+                        if (customer.loc && customer.loc.coordinates && customer.loc.coordinates.length == 2) {
+                            var feature = {
+                                "type": "Feature",
+                                "properties": {
+                                    "cid": customer.cid,
+                                    "fid": customer.fid,
+                                    "name": customer.name
+                                },
+                                "geometry": customer.loc
+                            }
+                            markerFeatures.features.push(feature);
                         }
-                        markerFeatures.features.push(feature);
                     }
+
+                    var markers = new L.MarkerClusterGroup();
+                    markers.addLayer(L.geoJson(markerFeatures, {
+                        onEachFeature: function (feature, layer) {
+                            layer.on('click', function (e) {
+                                e.target.bindPopup('<strong>Customer </strong><br/><span>' + e.target.feature.properties.name + '</span>');
+                            });
+                        }
+                    }));
+
+                    mapboxService.addLayer(markers);
                 }
-
-                var markers = new L.MarkerClusterGroup();
-                markers.addLayer(L.geoJson(markerFeatures, {
-                    onEachFeature: function (feature, layer) {
-                        layer.on('click', function (e) {
-                            e.target.bindPopup('<strong>Customer </strong><br/><span>' + e.target.feature.properties.name + '</span>');
-                        });
-                    }
-                }));
-
-                mapboxService.addLayer(markers);
             }
 
             // Navigation
@@ -88,6 +88,10 @@ define(['app', 'core/mapboxModule'], function (app) {
 
             $scope.setToolbar = function (name) {
                 $scope.toolbar = name;
+
+                if ($scope.toolbar == 'map') {
+                    _initializeMap();
+                }
             };
 
             $scope.showCustomer = function (id) {
@@ -99,14 +103,12 @@ define(['app', 'core/mapboxModule'], function (app) {
     app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService', 'mapboxService',
         function ($scope, $routeParams, navigationService, farmerService, mapboxService) {
             farmerService.getFarmer($routeParams.id, _handleData);
-            mapboxService.reset();
+
             // Data service
             function _handleData(res, err) {
                 if (res) {
                     $scope.farmer = res;
                     $scope.navbar.title = $scope.farmer.data.farmer_name;
-
-                    _initializeMap();
                 }
 
                 if (!$scope.$$phase) $scope.$apply();
@@ -114,13 +116,17 @@ define(['app', 'core/mapboxModule'], function (app) {
 
             // Map
             function _initializeMap() {
-                mapboxService.setView([$scope.farmer.data.farmer_loc.coordinates[1], $scope.farmer.data.farmer_loc.coordinates[0]]);
+                mapboxService.reset();
 
-                for (var farmIndex = 0; farmIndex < $scope.farmer.data.farms.length; farmIndex++) {
-                    var farm = $scope.farmer.data.farms[farmIndex];
+                if ($scope.farmer) {
+                    mapboxService.setView([$scope.farmer.data.farmer_loc.coordinates[1], $scope.farmer.data.farmer_loc.coordinates[0]]);
 
-                    for (var boundaryIndex = 0; boundaryIndex < farm.boundaries.length; boundaryIndex++) {
-                        mapboxService.addGeoJson('land', farm.boundaries[boundaryIndex].loc);
+                    for (var farmIndex = 0; farmIndex < $scope.farmer.data.farms.length; farmIndex++) {
+                        var farm = $scope.farmer.data.farms[farmIndex];
+
+                        for (var boundaryIndex = 0; boundaryIndex < farm.boundaries.length; boundaryIndex++) {
+                            mapboxService.addGeoJson('land', farm.boundaries[boundaryIndex].loc);
+                        }
                     }
                 }
             }
@@ -162,6 +168,10 @@ define(['app', 'core/mapboxModule'], function (app) {
 
             $scope.setToolbar = function (name) {
                 $scope.toolbar = name;
+
+                if ($scope.toolbar == 'farmland') {
+                    _initializeMap();
+                }
             };
 
             // Editing
