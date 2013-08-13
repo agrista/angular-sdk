@@ -60,16 +60,6 @@ define(['app'], function (app) {
 
         var location = {};
 
-        geolocationService.watchPosition(function(res, err) {
-            if(res) {
-                if(location.marker === undefined) {
-                    location.marker = L.marker([res.coords.latitude, res.coords.longitude]).addTo(map);
-                } else {
-                    location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
-                }
-            }
-        });
-
         /**
          * Swap lat and lng in a feature object.
          * @param feature
@@ -146,6 +136,36 @@ define(['app'], function (app) {
                 $scope.$on('mapbox::set-view', setView);
                 $scope.$on('mapbox::add-geojson', addGeoJson);
                 $scope.$on('mapbox::add-layer', addLayer);
+
+                var watcher = geolocationService.watchPosition(function(res, err) {
+                    if(res) {
+                        if(location.marker === undefined) {
+                            location.marker = L.marker([res.coords.latitude, res.coords.longitude]).addTo(map);
+                        } else {
+                            location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
+                        }
+                    }
+                });
+
+                $scope.$on('$destroy', function() {
+                    for(var layer in map._layers) {
+                        if (map._layers.hasOwnProperty(layer)) {
+                            map.removeLayer(map._layers[layer]);
+                        }
+                    }
+
+                    featureGroups.land.clearLayers();
+                    featureGroups.portion.clearLayers();
+                    featureGroups.marker.clearLayers();
+                    featureGroups.location.clearLayers();
+
+                    map.remove();
+
+                    map = undefined;
+                    location.marker = undefined;
+
+                    watcher.cancel();
+                });
             }
         }
     }]);

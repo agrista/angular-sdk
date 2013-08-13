@@ -13,14 +13,18 @@ define(['angular', 'core/authorizationModule', 'core/dataModule'], function () {
 
 
     module.factory('customersService', ['dataStore', function(dataStore) {
-        var customersStore = dataStore('customers', {apiTemplate: 'customers'});
+        var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'});
 
         return {
             getCustomers: function(gcCallback) {
                 customersStore.transaction(function(tx) {
                     tx.read(function(res, err) {
-                        if(res && (res instanceof Array) === false) {
-                            res = [res];
+                        if(res) {
+                            if ((res instanceof Array) === false) {
+                                res = [res];
+                            }
+                        } else {
+                            res = [];
                         }
 
                         gcCallback(res, err);

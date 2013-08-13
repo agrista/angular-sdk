@@ -5,11 +5,16 @@ define(['app', 'core/mapboxModule'], function (app) {
         function ($scope, navigationService, authorization, customersService, mapboxService) {
             customersService.getCustomers(_handleData);
 
-            // Data service
-            function _handleData (res, err) {
-                $scope.customers = res;
+            mapboxService.reset();
+            mapboxService.setView([-28.964584, 23.914759], 6);
 
-                _initializeMap();
+            // Data service
+            function _handleData(res, err) {
+                if (res) {
+                    $scope.customers = res;
+
+                    _initializeMap();
+                }
 
                 if (!$scope.$$phase) $scope.$apply();
             }
@@ -43,7 +48,6 @@ define(['app', 'core/mapboxModule'], function (app) {
                     }
                 }));
 
-                mapboxService.reset();
                 mapboxService.addLayer(markers);
             }
 
@@ -95,9 +99,9 @@ define(['app', 'core/mapboxModule'], function (app) {
     app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService', 'mapboxService',
         function ($scope, $routeParams, navigationService, farmerService, mapboxService) {
             farmerService.getFarmer($routeParams.id, _handleData);
-
+            mapboxService.reset();
             // Data service
-            function _handleData (res, err) {
+            function _handleData(res, err) {
                 if (res) {
                     $scope.farmer = res;
                     $scope.navbar.title = $scope.farmer.data.farmer_name;
@@ -110,7 +114,6 @@ define(['app', 'core/mapboxModule'], function (app) {
 
             // Map
             function _initializeMap() {
-                mapboxService.reset();
                 mapboxService.setView([$scope.farmer.data.farmer_loc.coordinates[1], $scope.farmer.data.farmer_loc.coordinates[0]]);
 
                 for (var farmIndex = 0; farmIndex < $scope.farmer.data.farms.length; farmIndex++) {
