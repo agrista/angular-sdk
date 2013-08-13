@@ -74,8 +74,8 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
 
             config: _setConfig,
 
-            $get: ['$cookieStore', '$http', '$q', function ($cookieStore, $http, $q) {
-                var _user = $cookieStore.get('user') || _defaultUser;
+            $get: ['$rootScope', '$cookieStore', '$http', '$q', function ($rootScope, $cookieStore, $http, $q) {
+                var _user = $cookieStore.get('agristauser') || _defaultUser;
 
                 function _setUser(user) {
                     _user = user;
@@ -84,8 +84,13 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
                         _user.role = (_user.admin ? _userRoles.admin : _userRoles.user);
                     }
 
-                    $cookieStore.put('user', _user);
+                    $cookieStore.put('agristauser', _user);
                 }
+
+                function _safeApply(scope, fn) {
+                    (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
+                };
+
 
                 return {
                     userRole: _userRoles,
@@ -107,26 +112,36 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
                     login: function (email, password) {
                         var defer = $q.defer();
 
-                        $http.post(_config.url + _config.login, {email: email, password: password}, {withCredentials: true}).then(function (res) {
-                            if (res.data.user !== null) {
-                                _setUser(res.data.user);
-                                defer.resolve(_user);
-                            } else {
+                        console.log('login');
+
+                        //_safeApply($rootScope, function() {
+                            $http.post(_config.url + _config.login, {email: email, password: password}).then(function (res) {
+                                console.log('login response');
+
+                                if (res.data.user !== null) {
+                                    _setUser(res.data.user);
+                                    defer.resolve(_user);
+                                } else {
+                                    _setUser(_defaultUser);
+                                    defer.reject();
+                                }
+
+                            }, function (err) {
                                 _setUser(_defaultUser);
                                 defer.reject();
-                            }
-
-                        }, function (err) {
-                            _setUser(_defaultUser);
-                            defer.reject();
-                        });
+                            });
+                       // });
 
                         return defer.promise;
                     },
                     logout: function () {
-                        $http.post(_config.url + _config.logout, {email: _user.email}, {withCredentials: true});
+                        //_safeApply($rootScope, function() {
+                            $http.post(_config.url + _config.logout).then(function() {
+                                console.log('logout received');
+                            });
 
-                        _setUser(_defaultUser);
+                            _setUser(_defaultUser);
+                        //});
                     }
                 }
             }]

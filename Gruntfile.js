@@ -200,11 +200,14 @@ module.exports = function (grunt) {
         'cordova-serve'
     ]);
 
-    grunt.registerTask('serve', ['cordova-prepareserve', 'watch:liveserve'])
-    grunt.registerTask('ripple', ['cordova-prepare', 'cordova-ripple', 'watch:liveripple'])
+    grunt.registerTask('serve', ['cordova-prepareserve', 'watch:liveserve']);
+    grunt.registerTask('ripple', ['cordova-prepare', 'cordova-ripple', 'watch:liveripple']);
+
     grunt.registerTask('emulate', ['cordova-buildemulate']);
-    grunt.registerTask('live-emulate', ['cordova-buildemulate', 'watch:liveemulate'])
-    grunt.registerTask('live-device', ['cordova-buildrun', 'watch:livedevice'])
+    grunt.registerTask('live-emulate', ['cordova-buildemulate', 'watch:liveemulate']);
+
+    grunt.registerTask('device', ['cordova-buildrun']);
+    grunt.registerTask('live-device', ['cordova-buildrun', 'watch:livedevice']);
 
     grunt.registerTask('default', ['test']);
 };

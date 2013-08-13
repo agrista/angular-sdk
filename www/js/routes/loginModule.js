@@ -21,7 +21,7 @@ define(['app', 'core/authorizationModule'], function (app) {
                     if($scope.user.email.length > 0 && $scope.user.password.length > 0) {
 
                         authorization.login($scope.user.email, $scope.user.password).then(function(res) {
-                            navigationService.go('/', 'slide');
+                            navigationService.go('/', 'modal', true);
                         }, function(err) {
                             $scope.user.password = '';
                             $scope.error.authorization = true;
