@@ -7,6 +7,7 @@ platforms/*/www/
 platforms/ios/CordovaLib/build/
 platforms/android/gen/
 platforms/android/bin/
+platforms/android/out/
 www/components/
 platforms/ios/AgristaCore.xcodeproj/project.xcworkspace/
 platforms/ios/AgristaCore.xcodeproj/xcuserdata/
