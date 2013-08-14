@@ -35,10 +35,31 @@ define(['app', 'core/mapboxModule'], function (app) {
                 }
 
                 var markers = new L.MarkerClusterGroup();
+
+                var baseballIcon = L.icon({
+                    iconUrl: 'baseball-marker.png',
+                    iconSize: [32, 37],
+                    iconAnchor: [16, 37],
+                    popupAnchor: [0, -28]
+                });
+
                 markers.addLayer(L.geoJson(markerFeatures, {
+                    pointToLayer: function (feature, latlng) {
+                        return L.marker(latlng, {icon: baseballIcon});
+                    },
                     onEachFeature: function (feature, layer) {
-                        layer.on('click', function (e) {
-                            e.target.bindPopup('<strong>Customer </strong><br/><span>' + e.target.feature.properties.name + '</span>');
+                        layer.on('click', function(e) {
+                            var div_popup = L.DomUtil.create('div', 'abcpopup');
+
+                            div_popup.innerHTML = '<strong>Customer </strong><br/><a class="customer">' + e.target.feature.properties.name + '</a>';
+                            $('a.customer', div_popup).on('click', function() {
+                                console.log(e.layer.feature.properties.name + ' - ' + e.layer.feature.properties.fid);
+                                $scope.$apply(function() {
+                                    $scope.showCustomer(e.layer.feature.properties.fid);
+                                });
+                            });
+
+                            e.target.bindPopup(div_popup);
                         });
                     }
                 }));
@@ -89,6 +110,8 @@ define(['app', 'core/mapboxModule'], function (app) {
             $scope.showCustomer = function (id) {
                 navigationService.go('/customer/' + id, 'slide');
             };
+
+
         }]);
 
 
@@ -119,6 +142,19 @@ define(['app', 'core/mapboxModule'], function (app) {
                     for (var boundaryIndex = 0; boundaryIndex < farm.boundaries.length; boundaryIndex++) {
                         mapboxService.addGeoJson('land', farm.boundaries[boundaryIndex].loc);
                     }
+                    /*
+                    if(farm && farm.farm_gate && farm.farm_gate.length > 0) {
+                        var gate = angular.copy(farm.farm_gate[1]);
+                        var myIcon = L.divIcon({className: 'my-div-icon', html: '<strong>' + farm.farm_name + '</strong>'});
+                        mapboxService.addLayer(L.marker([gate.coordinates[1], gate.coordinates[0]], {icon: myIcon}));
+                    } else {
+                        if (farm.portion_centroid) {
+                            var position = angular.copy(farm.portion_centroid[1]);
+                            var myIcon = L.divIcon({className: 'my-div-icon', html: '<strong>' + farm.farm_name + '</strong>'});
+                            mapboxService.addLayer(L.marker([gate.coordinates[1], gate.coordinates[0]], {icon: myIcon}));
+                        }
+                    }
+                    */
                 }
             }
 

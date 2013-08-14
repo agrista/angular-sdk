@@ -9,15 +9,18 @@
     <link rel="stylesheet" href="components/agrista-styles/dist/css/agrista-bootstrap.css"/>
     <link rel="stylesheet" href="components/agrista-styles/dist/css/agrista-glyphicons.css"/>
     <link rel="stylesheet" href="components/mapbox.js/dist/mapbox.css"/>
+    <link rel="stylesheet" href="lib/leaflet.label/leaflet.label.css.css"/>
     <link rel="stylesheet" href="components/leaflet.markerclusterer/dist/MarkerCluster.Default.css"/>
     <link rel="stylesheet" href="css/animations.css"/>
     <link rel="stylesheet" href="css/nav.css"/>
 
     <!-- Script resources -->
-    <script type="text/javascript" data-main="js/config" src="components/requirejs/require.js"></script>
     <script type="text/javascript" src="components/mapbox.js/dist/mapbox.js"></script>
     <script type="text/javascript" src="components/leaflet.markerclusterer/dist/leaflet.markercluster.js"></script>
-    <!--<script type="text/javascript" src="https://getfirebug.com/firebug-lite-debug.js"></script>-->
+    <script type="text/javascript" src="https://getfirebug.com/firebug-lite-debug.js"></script>
+    <script type="text/javascript" src="components/jquery/jquery.min.js"></script>
+    <script type="text/javascript" data-main="js/config" src="lib/leaflet.label/leaflet.label.js"></script>
+    <script type="text/javascript" data-main="js/config" src="components/requirejs/require.js"></script>
 </head>
 <body ng-controller="NavigationController">
     <div class="animate-container" ng-animate="getTransition()" ng-view></div>
