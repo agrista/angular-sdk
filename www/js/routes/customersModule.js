@@ -11,6 +11,8 @@ define(['app', 'core/mapboxModule'], function (app) {
                     $scope.customers = res;
                 }
 
+                _initializeMap();
+
                 if (!$scope.$$phase) $scope.$apply();
             }
 
@@ -38,14 +40,35 @@ define(['app', 'core/mapboxModule'], function (app) {
                         }
                     }
 
-                    var markers = new L.MarkerClusterGroup();
-                    markers.addLayer(L.geoJson(markerFeatures, {
-                        onEachFeature: function (feature, layer) {
-                            layer.on('click', function (e) {
-                                e.target.bindPopup('<strong>Customer </strong><br/><span>' + e.target.feature.properties.name + '</span>');
+                var markers = new L.MarkerClusterGroup();
+
+                var baseballIcon = L.icon({
+                    iconUrl: 'baseball-marker.png',
+                    iconSize: [32, 37],
+                    iconAnchor: [16, 37],
+                    popupAnchor: [0, -28]
+                });
+
+                markers.addLayer(L.geoJson(markerFeatures, {
+                    pointToLayer: function (feature, latlng) {
+                        return L.marker(latlng, {icon: baseballIcon});
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on('click', function(e) {
+                            var div_popup = L.DomUtil.create('div', 'abcpopup');
+
+                            div_popup.innerHTML = '<strong>Customer </strong><br/><a class="customer">' + e.target.feature.properties.name + '</a>';
+                            $('a.customer', div_popup).on('click', function() {
+                                console.log(e.layer.feature.properties.name + ' - ' + e.layer.feature.properties.fid);
+                                $scope.$apply(function() {
+                                    $scope.showCustomer(e.layer.feature.properties.fid);
+                                });
                             });
-                        }
-                    }));
+
+                            e.target.bindPopup(div_popup);
+                        });
+                    }
+                }));
 
                     mapboxService.addLayer(markers);
                 }
