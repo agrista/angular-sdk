@@ -354,7 +354,7 @@ define(['underscore', 'angular'], function (_) {
                                 var item = dataItems[i];
 
                                 tx.executeSql("DELETE FROM data WHERE id = ? AND uri = ?", [item.id, item.uri], asyncMon.done, function (err) {
-                                    _errorCallback(err);
+                                    _errorCallback(tx, err);
                                     asyncMon.done();
                                 });
                             }
@@ -365,17 +365,34 @@ define(['underscore', 'angular'], function (_) {
                 var _deleteAllLocal = function (uri, dalCallback) {
                     console.log('_deleteAllLocal');
 
+                    var asyncMon = new AsyncMonitor(1, dalCallback);
+
+                    var handleSuccess = function() {
+                        console.log('handleSuccess');
+                        asyncMon.done();
+                    };
+
+                    var handleError = function(tx, err) {
+                        console.log('handleError');
+                        _errorCallback(tx, err);
+                        asyncMon.done();
+                    };
+
+                    console.log(uri);
+
                     _localStore.db.transaction(function (tx) {
+                        console.log('_deleteAllLocal transaction');
+
                         if (_config.write.force === true) {
-                            tx.executeSql("DELETE FROM data WHERE uri = ?", [uri], function () {
-                                dalCallback();
-                            }, _errorCallback);
+                            console.log('_deleteAllLocal force');
+                            tx.executeSql("DELETE FROM data WHERE uri = ?", [uri], handleSuccess, handleError);
                         } else {
-                            tx.executeSql("DELETE FROM data WHERE uri = ? AND local = 0 AND dirty = 0", [uri], function () {
-                                dalCallback();
-                            }, _errorCallback);
+                            console.log('_deleteAllLocal not force');
+                            tx.executeSql("DELETE FROM data WHERE uri = ? AND local = 0 AND dirty = 0", [uri], handleSuccess, handleError);
                         }
                     });
+
+                    console.log('_deleteAllLocal end');
                 };
 
                 /**
