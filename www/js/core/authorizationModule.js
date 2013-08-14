@@ -18,12 +18,12 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
         });
     }]);
 
-    module.factory('authorizationInterceptor', ['$q', 'navigationService', function($q, navigationService) {
-        return function(promise) {
-            return promise.then(function(res) {
+    module.factory('authorizationInterceptor', ['$q', 'navigationService', function ($q, navigationService) {
+        return function (promise) {
+            return promise.then(function (res) {
                 return res;
-            }, function(err) {
-                if(err.status === 401) {
+            }, function (err) {
+                if (err.status === 401) {
                     console.warn('Not authorized');
                     navigationService.go('/login', 'modal');
                 }
@@ -60,7 +60,7 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
         // Intercept any HTTP responses that are not authorized
         $httpProvider.responseInterceptors.push('authorizationInterceptor');
 
-        var _setConfig = function(options) {
+        var _setConfig = function (options) {
             if (typeof options !== 'object') options = {};
 
             _config = _.defaults(options, _config);
@@ -74,23 +74,24 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
 
             config: _setConfig,
 
-            $get: ['$rootScope', '$cookieStore', '$http', '$q', function ($rootScope, $cookieStore, $http, $q) {
-                var _user = $cookieStore.get('agristauser') || _defaultUser;
+            $get: ['$http', '$q', function ($http, $q) {
+                var _user = _getUser();
 
-                function _setUser(user) {
-                    _user = user;
+                function _getUser() {
+                    var user = window.localStorage.getItem('user');
 
-                    if (_user.role === undefined) {
-                        _user.role = (_user.admin ? _userRoles.admin : _userRoles.user);
-                    }
-
-                    $cookieStore.put('agristauser', _user);
+                    return (user !== null ? JSON.parse(user) : _defaultUser);
                 }
 
-                function _safeApply(scope, fn) {
-                    (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
-                };
+                function _setUser(user) {
+                    if (user.role === undefined) {
+                        user.role = (user.admin ? _userRoles.admin : _userRoles.user);
+                    }
 
+                    window.localStorage.setItem('user', JSON.stringify(user));
+
+                    return user;
+                }
 
                 return {
                     userRole: _userRoles,
@@ -114,34 +115,30 @@ define(['underscore', 'angular', 'angular-cookie'], function (_) {
 
                         console.log('login');
 
-                        //_safeApply($rootScope, function() {
-                            $http.post(_config.url + _config.login, {email: email, password: password}).then(function (res) {
-                                console.log('login response');
+                        $http.post(_config.url + _config.login, {email: email, password: password}).then(function (res) {
+                            console.log('login response');
 
-                                if (res.data.user !== null) {
-                                    _setUser(res.data.user);
-                                    defer.resolve(_user);
-                                } else {
-                                    _setUser(_defaultUser);
-                                    defer.reject();
-                                }
-
-                            }, function (err) {
-                                _setUser(_defaultUser);
+                            if (res.data.user !== null) {
+                                _user = _setUser(res.data.user);
+                                defer.resolve(_user);
+                            } else {
+                                _user = _setUser(_defaultUser);
                                 defer.reject();
-                            });
-                       // });
+                            }
+
+                        }, function (err) {
+                            _user = _setUser(_defaultUser);
+                            defer.reject();
+                        });
 
                         return defer.promise;
                     },
                     logout: function () {
-                        //_safeApply($rootScope, function() {
-                            $http.post(_config.url + _config.logout).then(function() {
-                                console.log('logout received');
-                            });
+                        $http.post(_config.url + _config.logout).then(function () {
+                            console.log('logout received');
+                        });
 
-                            _setUser(_defaultUser);
-                        //});
+                        _user = _setUser(_defaultUser);
                     }
                 }
             }]
