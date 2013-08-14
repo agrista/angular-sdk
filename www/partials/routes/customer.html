@@ -145,11 +145,11 @@
                         </div>
                         <div class="progress">
                             <div class="progress-bar progress-bar-success"
-                                 style="width: {{farmer.data.tasks | progress}}%"></div>
+                                 style="width: {{tasks | progress}}%"></div>
                         </div>
                         <div>
-                            <div ng-repeat="task in farmer.data.tasks">
-                                {{task.complete | checkmark}}&nbsp{{task.name}}
+                            <div ng-repeat="task in tasks">
+                                {{task.complete | checkmark}}&nbsp{{task.label}}
                             </div>
                         </div>
                     </div>

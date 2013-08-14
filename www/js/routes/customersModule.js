@@ -109,6 +109,34 @@ define(['app', 'core/mapboxModule'], function (app) {
                 if (res) {
                     $scope.farmer = res;
                     $scope.navbar.title = $scope.farmer.data.farmer_name;
+
+                    $scope.tasks = [
+                        {
+                            label: "capture customer details",
+                            complete: true
+                        },
+                        {
+                            label: "map farm boundaries",
+                            state: "map",
+                            complete: false
+                        },
+                        {
+                            label: "map land use",
+                            complete: false
+                        },
+                        {
+                            label: "register assets",
+                            complete: false
+                        }
+                    ];
+
+                    if ($scope.farmer.data.farms) {
+                        for (var i = 0; i < $scope.farmer.data.farms.length; i++) {
+                            if ($scope.farmer.data.farms[i].boundaries.length > 0) {
+                                $scope.tasks[1].complete = true;
+                            }
+                        }
+                    }
                 }
 
                 if (!$scope.$$phase) $scope.$apply();
