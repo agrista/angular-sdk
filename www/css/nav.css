@@ -60,6 +60,8 @@ body {
 }
 
 .page-slide {
+    position: relative;
+    left: 0;
     -webkit-transition: .2s ease-in-out -webkit-transform;
     transition: .2s ease-in-out transform;
     overflow: hidden;
@@ -67,7 +69,6 @@ body {
 
 .show-menu.page-slide,
 .show-menu .page-slide {
-    position: relative;
     -webkit-transform: translate3d(256px, 0, 0);
     transform: translate3d(256px, 0, 0);
 }
@@ -123,7 +124,6 @@ body {
     position: fixed;
     width: 100%;
     top: 51px;
-    left: 0;
     z-index: 1020;
     background-color: #a5aba8;
     padding: 5px 15px;
