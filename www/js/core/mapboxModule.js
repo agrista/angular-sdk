@@ -121,7 +121,15 @@ define(['app'], function (app) {
             template: '<div></div>',
             replace: true,
             link: function (scope, element, attrs) {
-                map = L.mapbox.map(attrs.id, 'agrista.map-65ftbmpi');
+                map = L.mapbox.map(attrs.id);
+
+                var physical = L.mapbox.tileLayer('agrista.map-65ftbmpi').addTo(map);
+                var satellite = new L.Google();
+
+                map.addControl(new L.Control.Layers({
+                    'Physical':physical,
+                    'Satellite':satellite
+                }));
 
                 featureGroups.land = L.featureGroup().addTo(map);
                 featureGroups.portion = L.featureGroup().addTo(map);
