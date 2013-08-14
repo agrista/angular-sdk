@@ -21,7 +21,8 @@ define(['underscore', 'angular'], function (_) {
     module.provider('dataStore', function () {
         var _apiUrl = '/api';
         var _defaultOptions = {
-            pageLimit: 10
+            pageLimit: 10,
+            dbName: 'appDatabase'
         };
 
         var _errors = {
@@ -33,6 +34,8 @@ define(['underscore', 'angular'], function (_) {
             LocalDataStoreError: {code: 'LocalDataStoreError', message: 'Can not perform action on local data store'},
             RemoteDataStoreError: {code: 'RemoteDataStoreError', message: 'Can not perform action on remote data store'}
         };
+
+        var _localDatabase;
 
         /**
          * @name dataStoreProvider.config
@@ -50,6 +53,41 @@ define(['underscore', 'angular'], function (_) {
          * @type {Array}
          */
         this.$get = ['$q', '$http', '$rootScope', function ($q, $http, $rootScope) {
+
+            /**
+             * @name _initializeDatabase
+             * @param name
+             * @returns {Database}
+             * @private
+             */
+            function _initializeDatabase(idCallback) {
+                var migrationSteps = [];
+
+                function _processMigration(db) {
+                    console.log('_processMigration');
+
+                    if (migrationSteps.length > 0) {
+                        var migration = migrationSteps[0];
+                        migrationSteps.splice(0, 1);
+
+                        if (migration.current === db.version) {
+                            console.log('Database (' + db.version + ') has a newer version ' + migration.next);
+
+                            db.changeVersion(migration.current, migration.next, migration.process, _errorCallback, function () {
+                                console.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
+                                _processMigration(db);
+                            });
+                        } else {
+                            _processMigration(db);
+                        }
+                    } else {
+                        idCallback(db);
+                    }
+                };
+
+                _processMigration(window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 1000000));
+            };
+
             /**
              * @name DataStore
              * @param name
@@ -121,52 +159,27 @@ define(['underscore', 'angular'], function (_) {
                     });
                 }
 
-                var _localStore = {
-                    db: undefined,
-                    name: name + 'Database',
-                    size: 0
+                function _initializeTable(itCallback) {
+                    var asyncMon = new AsyncMonitor(2, itCallback);
+
+                    _localDatabase.transaction(function (tx) {
+                        tx.executeSql('CREATE TABLE IF NOT EXISTS ' + name + ' (id TEXT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], asyncMon.done, _errorCallback);
+                        tx.executeSql('CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [], asyncMon.done, _errorCallback);
+                    });
                 };
 
-                /**
-                 * @name _initializeDatabase
-                 * @param name
-                 * @returns {Database}
-                 * @private
+                function _countTableRows(cdrCallback) {
+                    _localDatabase.transaction(function (tx) {
+                        tx.executeSql('SELECT COUNT(*) from ' + name, [], function (tx, res) {
+                            cdrCallback(res.rows.length == 1 ? res.rows.item(0) : 0);
+                        }, _errorCallback);
+                    });
+                }
+
+
+                /*
+                 * Utility functions
                  */
-                function _initializeDatabase(name, idCallback) {
-                    var migrationSteps = [
-                        {
-                            current: '',
-                            process: function (tx) {
-                                tx.executeSql('CREATE TABLE IF NOT EXISTS data (id TEXT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], _dataCallback, _errorCallback);
-                                tx.executeSql('CREATE TRIGGER IF NOT EXISTS data_timestamp AFTER UPDATE ON data BEGIN UPDATE data SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [], _dataCallback, _errorCallback);
-                            },
-                            next: '1.0'
-                        }
-                    ];
-
-                    function _processMigration(db) {
-                        if (migrationSteps.length > 0) {
-                            var migration = migrationSteps[0];
-                            migrationSteps.splice(0, 1);
-
-                            if (migration.current === db.version) {
-                                console.log('Database (' + db.version + ') has a newer version ' + migration.next);
-
-                                db.changeVersion(migration.current, migration.next, migration.process, _errorCallback, function () {
-                                    console.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
-                                    _processMigration(db);
-                                });
-                            } else {
-                                _processMigration(db);
-                            }
-                        } else {
-                            idCallback(db);
-                        }
-                    };
-
-                    _processMigration(window.openDatabase(name, '', name, 1000000));
-                };
 
                 function _voidCallback() {
                 };
@@ -195,19 +208,6 @@ define(['underscore', 'angular'], function (_) {
                         console.error(err);
                     }
                 };
-
-                function _countDatabaseRows(db, cdrCallback) {
-                    db.transaction(function (tx) {
-                        tx.executeSql('SELECT COUNT(*) from data', [], function (tx, res) {
-                            cdrCallback(res.rows.length == 1 ? res.rows.item(0) : 0);
-                        }, _errorCallback);
-                    });
-                }
-
-
-                /*
-                 * Utility functions
-                 */
 
                 function _createUniqueId() {
                     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -240,7 +240,7 @@ define(['underscore', 'angular'], function (_) {
 
 
                 function _getItemIndex(item) {
-                    if(item[_config.indexerProperty] === undefined) {
+                    if (item[_config.indexerProperty] === undefined) {
                         console.warn('Configured indexer property not defined');
                     }
 
@@ -257,8 +257,8 @@ define(['underscore', 'angular'], function (_) {
                     if (typeof glCallback !== 'function') glCallback = _voidCallback;
 
                     if (_config.read.local === true) {
-                        _localStore.db.transaction(function (tx) {
-                            tx.executeSql('SELECT * FROM data WHERE uri = ?', [uri], function (tx, res) {
+                        _localDatabase.transaction(function (tx) {
+                            tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
                                 if (res.rows.length == 1) {
                                     var localData = res.rows.item(0);
 
@@ -301,6 +301,14 @@ define(['underscore', 'angular'], function (_) {
                     console.log('_syncLocal');
                     if (typeof slCallback !== 'function') slCallback = _voidCallback;
 
+                    _localDatabase.transaction(function (tx) {
+                        tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], function (tx, res) {
+                            console.log('select success: ' + res.rows.length);
+                        }, function (tx, err) {
+                            console.log('select error: ' + err.message);
+                        });
+                    });
+
                     _deleteAllLocal(uri, function () {
                         _updateLocal(dataItems, function () {
                             _getLocal(uri, slCallback);
@@ -322,17 +330,17 @@ define(['underscore', 'angular'], function (_) {
                     var asyncMon = new AsyncMonitor(dataItems.length, ulCallback);
 
                     if (_config.write.local === true) {
-                        _localStore.db.transaction(function (tx) {
+                        _localDatabase.transaction(function (tx) {
                             for (var i = 0; i < dataItems.length; i++) {
                                 var item = dataItems[i];
                                 var dataString = JSON.stringify(item.data);
 
-                                tx.executeSql("INSERT INTO data (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)", [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
+                                tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
                                     // Insert failed
                                     if (item.dirty === true || item.local === true || (_config.write.force === true || options.force)) {
-                                        tx.executeSql('UPDATE data SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                        tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
                                     } else {
-                                        tx.executeSql('UPDATE data SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                        tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
                                     }
                                 });
                             }
@@ -349,11 +357,11 @@ define(['underscore', 'angular'], function (_) {
                     var asyncMon = new AsyncMonitor(dataItems.length, dlCallback);
 
                     if (_config.write.local === true) {
-                        _localStore.db.transaction(function (tx) {
+                        _localDatabase.transaction(function (tx) {
                             for (var i = 0; i < dataItems.length; i++) {
                                 var item = dataItems[i];
 
-                                tx.executeSql("DELETE FROM data WHERE id = ? AND uri = ?", [item.id, item.uri], asyncMon.done, function (err) {
+                                tx.executeSql('DELETE FROM ' + name + ' WHERE id = ? AND uri = ?', [item.id, item.uri], asyncMon.done, function (err) {
                                     _errorCallback(tx, err);
                                     asyncMon.done();
                                 });
@@ -367,12 +375,12 @@ define(['underscore', 'angular'], function (_) {
 
                     var asyncMon = new AsyncMonitor(1, dalCallback);
 
-                    var handleSuccess = function() {
+                    var handleSuccess = function () {
                         console.log('handleSuccess');
                         asyncMon.done();
                     };
 
-                    var handleError = function(tx, err) {
+                    var handleError = function (tx, err) {
                         console.log('handleError');
                         _errorCallback(tx, err);
                         asyncMon.done();
@@ -380,15 +388,15 @@ define(['underscore', 'angular'], function (_) {
 
                     console.log(uri);
 
-                    _localStore.db.transaction(function (tx) {
+                    _localDatabase.transaction(function (tx) {
                         console.log('_deleteAllLocal transaction');
 
                         if (_config.write.force === true) {
                             console.log('_deleteAllLocal force');
-                            tx.executeSql("DELETE FROM data WHERE uri = ?", [uri], handleSuccess, handleError);
+                            tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ?', [uri], handleSuccess, handleError);
                         } else {
                             console.log('_deleteAllLocal not force');
-                            tx.executeSql("DELETE FROM data WHERE uri = ? AND local = 0 AND dirty = 0", [uri], handleSuccess, handleError);
+                            tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], handleSuccess, handleError);
                         }
                     });
 
@@ -463,7 +471,7 @@ define(['underscore', 'angular'], function (_) {
                             _safeApply($rootScope, function () {
                                 $http.post(_apiUrl + item.uri, item.data, {withCredentials: true}).then(function (res) {
                                     var remoteItem = {
-                                        id:  _getItemIndex(res.data),
+                                        id: _getItemIndex(res.data),
                                         uri: item.uri,
                                         data: item.data,
                                         dirty: false,
@@ -555,7 +563,6 @@ define(['underscore', 'angular'], function (_) {
                     }
                 };
 
-
                 /**
                  * Transactions
                  */
@@ -563,7 +570,7 @@ define(['underscore', 'angular'], function (_) {
                 var _transactionQueue = [];
 
                 var _processTransactionQueue = function () {
-                    if (_localStore.db !== undefined) {
+                    if (_localDatabase !== undefined) {
                         while (_transactionQueue.length > 0) {
                             var transactionItem = _transactionQueue[0];
 
@@ -625,9 +632,13 @@ define(['underscore', 'angular'], function (_) {
                                 var _uri = _parseRequest(_config.apiTemplate, schemaData);
 
                                 // Process request
-                                _getLocal(_uri, rCallback);
+                                _getLocal(_uri, function(res, err) {
+                                    console.log('_getLocal complete');
+                                    rCallback(res, err);
+                                });
 
                                 _getRemote(_uri, function (res, err) {
+                                    console.log('_getRemote complete');
                                     if (res) {
                                         _syncLocal(res, _uri, function (res, err) {
                                             rCallback(res);
@@ -677,18 +688,16 @@ define(['underscore', 'angular'], function (_) {
                     }
                 };
 
-
                 /**
-                 * Initialize
+                 * Initialize table
                  */
 
-                    // Initialize database
-                _initializeDatabase(_localStore.name, function (db) {
-                    _localStore.db = db;
+                _initializeTable(function() {
+                    console.log('table initialized');
 
                     _dataStoreInitialized = true;
                     _processTransactionQueue();
-                });
+                })
 
                 /**
                  * Public functions
@@ -703,6 +712,16 @@ define(['underscore', 'angular'], function (_) {
                     }
                 }
             };
+
+            /**
+             * Initialize database
+             */
+
+            _initializeDatabase(function (db) {
+                _localDatabase = db;
+
+                console.log('database initialized');
+            });
 
             /**
              * @name dataStore
