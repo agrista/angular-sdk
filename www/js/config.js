@@ -3,8 +3,6 @@ console.log('RequireJS started');
 requirejs.config({
     shim: {
         'angular': {exports: 'angular'},
-        'angular-cookie': {deps: ['angular']},
-        'angular-resource': {deps: ['angular']},
         'angular-mobile': {deps: ['angular']},
         'underscore': {exports: '_'}
     },
@@ -13,7 +11,6 @@ requirejs.config({
         'angular': '../lib/angularjs/1.1.5/angular',
         'angular-resource': '../lib/angularjs/1.1.5/angular-resource',
         'angular-mobile': '../lib/angularjs/1.1.5/angular-mobile',
-        'angular-cookie': '../lib/angularjs/1.1.5/angular-cookies',
         'underscore': '../components/underscore/underscore'
     },
     baseUrl: 'js/'

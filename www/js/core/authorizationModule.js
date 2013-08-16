@@ -1,6 +1,6 @@
 'use strict';
 
-define(['underscore', 'angular', 'angular-cookie'], function (_) {
+define(['underscore', 'angular'], function (_) {
     var module = angular.module('authorizationModule', ['ngCookies']);
 
     module.run(['$rootScope', 'authorization', 'navigationService', function ($rootScope, authorization, navigationService) {
