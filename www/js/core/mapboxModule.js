@@ -4,6 +4,7 @@ define(['app'], function (app) {
 
     app.lazyLoader.factory('mapboxService', ['$rootScope', function ($rootScope) {
         var _view = undefined;
+        var _boundsView = undefined;
         var _geoJsonData = [],
             _layers = [];
 
@@ -24,6 +25,16 @@ define(['app'], function (app) {
 
                     $rootScope.$emit('mapbox::set-view', _view);
                 }
+            },
+            fitBounds: function(bounds, options) {
+                if (bounds instanceof Array) {
+                    _boundsView = {
+                        bounds: bounds,
+                        options: options || {reset: false}
+                    }
+                }
+
+                $rootScope.$emit('mapbox::fit-bounds', _boundsView);
             },
             addLayer: function(layer) {
                 _layers.push(layer);
@@ -50,7 +61,7 @@ define(['app'], function (app) {
         }
     }]);
 
-    app.lazyLoader.directive('mapbox', ['mapboxService', 'geolocationService', function (mapboxService, geolocationService) {
+    app.lazyLoader.directive('mapbox', ['mapboxService', 'geolocationService', '$rootScope', function (mapboxService, geolocationService, $rootScope) {
         var map;
         var featureGroups = {
             land: undefined,
@@ -116,6 +127,12 @@ define(['app'], function (app) {
             }
         }
 
+        function fitBounds(view) {
+            if (view !== undefined) {
+                map.fitBounds(view.bounds, view.options);
+            }
+        }
+
         return {
             restrict: 'E',
             template: '<div></div>',
@@ -141,9 +158,18 @@ define(['app'], function (app) {
                 addGeoJson(mapboxService.getGeoJsonData());
             },
             controller: function ($scope, $attrs) {
-                $scope.$on('mapbox::set-view', setView);
-                $scope.$on('mapbox::add-geojson', addGeoJson);
-                $scope.$on('mapbox::add-layer', addLayer);
+                $rootScope.$on('mapbox::set-view', function (event, args) {
+                    setView(args);
+                });
+                $rootScope.$on('mapbox::fit-bounds', function (event, args) {
+                    fitBounds(args);
+                });
+                $rootScope.$on('mapbox::add-geojson', function (event, args) {
+                    addGeoJson(args);
+                });
+                $rootScope.$on('mapbox::add-layer', function (event, args) {
+                    addLayer(args);
+                });
 
                 var watcher = geolocationService.watchPosition(function(res, err) {
                     if(res) {
