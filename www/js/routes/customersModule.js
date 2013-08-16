@@ -121,8 +121,8 @@ define(['app', 'core/mapboxModule'], function (app) {
         }]);
 
 
-    app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService', 'mapboxService',
-        function ($scope, $routeParams, navigationService, farmerService, mapboxService) {
+    app.lazyLoader.controller('CustomerDetailController', ['$scope', '$routeParams', 'navigationService', 'farmerService', 'mapboxService', 'geolocationService',
+        function ($scope, $routeParams, navigationService, farmerService, mapboxService, geolocationService) {
             farmerService.getFarmer($routeParams.id, _handleData);
 
             // Data service
@@ -220,6 +220,19 @@ define(['app', 'core/mapboxModule'], function (app) {
 
                 if ($scope.toolbar == 'farmland') {
                     _initializeMap();
+                }
+            };
+
+            $scope.fitBounds = function () {
+                mapboxService.reset();
+                if ($scope.farmer) {
+                    var locationPromise = geolocationService.getPosition();
+                    locationPromise.then(function (location) {
+                        var farmerLocation = [$scope.farmer.data.farmer_loc.coordinates[1], $scope.farmer.data.farmer_loc.coordinates[0]];
+                        var userLocation = [location.coords.latitude, location.coords.longitude];
+                        var bounds = [farmerLocation, userLocation];
+                        mapboxService.fitBounds(bounds);
+                    });
                 }
             };
 

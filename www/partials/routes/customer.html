@@ -14,6 +14,10 @@
              ng-click="setToolbar('farmland')">
             Farmland
         </div>
+        <div class="btn btn-sm btn-toolbar" ng-class="{hide: toolbar != 'farmland'}"
+             ng-click="fitBounds()">
+            Where am I?
+        </div>
     </tool-bar>
 
     <navigation-page>
