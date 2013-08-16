@@ -40,8 +40,8 @@ define(['app', 'core/mapboxModule'], function (app) {
 
                     var markers = new L.MarkerClusterGroup();
 
-                    var baseballIcon = L.icon({
-                        iconUrl: 'img/icons/baseball-marker.png',
+                    var homeIcon = L.icon({
+                        iconUrl: 'img/icons/home-marker.png',
                         iconSize: [32, 37],
                         iconAnchor: [16, 37],
                         popupAnchor: [0, -28]
@@ -49,7 +49,7 @@ define(['app', 'core/mapboxModule'], function (app) {
 
                     markers.addLayer(L.geoJson(markerFeatures, {
                         pointToLayer: function (feature, latlng) {
-                            return L.marker(latlng, {icon: baseballIcon});
+                            return L.marker(latlng, {icon: homeIcon});
                         },
                         onEachFeature: function (feature, layer) {
                             layer.on('click', function (e) {
