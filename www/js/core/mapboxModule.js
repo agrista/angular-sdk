@@ -4,6 +4,7 @@ define(['app'], function (app) {
 
     app.lazyLoader.factory('mapboxService', ['$rootScope', function ($rootScope) {
         var _view = undefined;
+        var _boundsView = undefined;
         var _geoJsonData = [],
             _layers = [];
 
@@ -24,6 +25,16 @@ define(['app'], function (app) {
 
                     $rootScope.$emit('mapbox::set-view', _view);
                 }
+            },
+            fitBounds: function(bounds, options) {
+                if (bounds instanceof Array) {
+                    _boundsView = {
+                        bounds: bounds,
+                        options: options || {reset: false}
+                    }
+                }
+
+                $rootScope.$emit('mapbox::fit-bounds', _boundsView);
             },
             addLayer: function(layer) {
                 _layers.push(layer);
@@ -50,7 +61,7 @@ define(['app'], function (app) {
         }
     }]);
 
-    app.lazyLoader.directive('mapbox', ['mapboxService', 'geolocationService', function (mapboxService, geolocationService) {
+    app.lazyLoader.directive('mapbox', ['mapboxService', 'geolocationService', '$rootScope', function (mapboxService, geolocationService, $rootScope) {
         var map;
         var featureGroups = {
             land: undefined,
@@ -59,16 +70,6 @@ define(['app'], function (app) {
         };
 
         var location = {};
-
-        geolocationService.watchPosition(function(res, err) {
-            if(res) {
-                if(location.marker === undefined) {
-                    location.marker = L.marker([res.coords.latitude, res.coords.longitude]).addTo(map);
-                } else {
-                    location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
-                }
-            }
-        });
 
         /**
          * Swap lat and lng in a feature object.
@@ -126,12 +127,26 @@ define(['app'], function (app) {
             }
         }
 
+        function fitBounds(view) {
+            if (view !== undefined) {
+                map.fitBounds(view.bounds, view.options);
+            }
+        }
+
         return {
             restrict: 'E',
             template: '<div></div>',
             replace: true,
             link: function (scope, element, attrs) {
-                map = L.mapbox.map(attrs.id, 'agrista.map-65ftbmpi');
+                map = L.mapbox.map(attrs.id);
+
+                var physical = L.mapbox.tileLayer('agrista.map-65ftbmpi').addTo(map);
+                var satellite = new L.Google();
+
+                map.addControl(new L.Control.Layers({
+                    'Physical':physical,
+                    'Satellite':satellite
+                }));
 
                 featureGroups.land = L.featureGroup().addTo(map);
                 featureGroups.portion = L.featureGroup().addTo(map);
@@ -143,9 +158,48 @@ define(['app'], function (app) {
                 addGeoJson(mapboxService.getGeoJsonData());
             },
             controller: function ($scope, $attrs) {
-                $scope.$on('mapbox::set-view', setView);
-                $scope.$on('mapbox::add-geojson', addGeoJson);
-                $scope.$on('mapbox::add-layer', addLayer);
+                $rootScope.$on('mapbox::set-view', function (event, args) {
+                    setView(args);
+                });
+                $rootScope.$on('mapbox::fit-bounds', function (event, args) {
+                    fitBounds(args);
+                });
+                $rootScope.$on('mapbox::add-geojson', function (event, args) {
+                    addGeoJson(args);
+                });
+                $rootScope.$on('mapbox::add-layer', function (event, args) {
+                    addLayer(args);
+                });
+
+                var watcher = geolocationService.watchPosition(function(res, err) {
+                    if(res) {
+                        if(location.marker === undefined) {
+                            location.marker = L.marker([res.coords.latitude, res.coords.longitude]).addTo(map);
+                        } else {
+                            location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
+                        }
+                    }
+                });
+
+                $scope.$on('$destroy', function() {
+                    for(var layer in map._layers) {
+                        if (map._layers.hasOwnProperty(layer)) {
+                            map.removeLayer(map._layers[layer]);
+                        }
+                    }
+
+                    featureGroups.land.clearLayers();
+                    featureGroups.portion.clearLayers();
+                    featureGroups.marker.clearLayers();
+                    featureGroups.location.clearLayers();
+
+                    map.remove();
+
+                    map = undefined;
+                    location.marker = undefined;
+
+                    watcher.cancel();
+                });
             }
         }
     }]);
