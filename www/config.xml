@@ -2,9 +2,7 @@
 <widget id="com.agrista.framework" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/1.0" xmlns:cdv="http://cordova.apache.org/ns/1.0">
     <name>AgristaCore</name>
     <description>The mobile application for Agrista Enterprise</description>
-    <author email="developer@agrista.com" href="http://agrista.com">
-        Agrista
-    </author>
+    <author email="developer@agrista.com" href="http://agrista.com">Agrista</author>
     <access origin="*" />
     <log level="DEBUG" />
     <content src="index.html" />
@@ -34,7 +32,10 @@
     <gap:splash src="res/screen/android/screen-mdpi-landscape.png" gap:platform="android" gap:density="mdpi" />
     <gap:splash src="res/screen/android/screen-hdpi-landscape.png" gap:platform="android" gap:density="hdpi" />
     <gap:splash src="res/screen/android/screen-xhdpi-landscape.png" gap:platform="android" gap:density="xhdpi" />
-    
+    <gap:splash src="res/screen/blackberry/blackberry-screen-255.png" gap:platform="blackberry" />
+    <gap:splash src="res/screen/windows-phone/screen-portrait.jpg" gap:platform="winphone" />
+
+    <!-- Preferences -->
     <preference name="webviewbounce" value="false" />
     <preference name="UIWebViewBounce" value="false" />
     <preference name="loglevel" value="DEBUG" />
@@ -43,5 +44,7 @@
     <preference name="fullscreen" value="false" />
     <preference name="keepRunning" value="true" />
     <preference name="BackupWebStorage" value="none" />
+
+    <!-- Features -->
 
 </widget>
