@@ -1,7 +1,7 @@
 'use strict';
 
-define(['./../', 'angular', 'angular-cookie'], function (_) {
-    var module = angular.module('authorizationModule', ['ngCookies']);
+define(['underscore', 'angular'], function (_) {
+    var module = angular.module('authorizationModule', []);
 
     module.run(['$rootScope', 'authorization', 'navigationService', function ($rootScope, authorization, navigationService) {
         $rootScope.$on('$routeChangeStart', function (event, next, current) {

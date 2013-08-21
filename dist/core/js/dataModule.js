@@ -1,6 +1,6 @@
 'use strict';
 
-define(['./../', 'angular'], function (_) {
+define(['underscore', 'angular'], function (_) {
     var module = angular.module('dataModule', []);
 
     /**

@@ -1,6 +1,6 @@
 'use strict';
 
-define(['./../', 'cordova', 'angular'], function (_) {
+define(['underscore', 'cordova', 'angular'], function (_) {
     var module = angular.module('geolocationModule', []);
 
     /**

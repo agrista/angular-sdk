@@ -1,6 +1,6 @@
 'use strict';
 
-define(['app', './../', 'cordova'], function (app, _) {
+define(['app', 'underscore', 'cordova'], function (app, _) {
     /**
      * @name cameraModule.cameraService
      * @requires $q
