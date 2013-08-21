@@ -1,9 +1,9 @@
 {
-  "name": "agrista-mobile-core",
+  "name": "agrista-mobile-framework",
   "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": "https://bitbucket.org/agrista/mobile-core"
+    "url": "https://bitbucket.org/agrista/mobile-framework"
   },
   "dependencies": {
   },
