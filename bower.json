@@ -1,6 +1,6 @@
 {
     "name": "agrista-mobile-framework",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "dependencies": {
         "angularjs": "http://code.angularjs.org/1.1.5/angular.js",
         "requirejs": "https://github.com/jrburke/requirejs.git",
