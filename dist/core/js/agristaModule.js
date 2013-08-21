@@ -5,15 +5,6 @@ define(['angular', 'core/authorizationModule', 'core/dataModule'], function () {
 
     var _voidCallback = function() {};
 
-    module.config(['authorizationProvider', 'dataStoreProvider', function(authorizationProvider, dataStoreProvider) {
-        authorizationProvider.config({url: 'http://beta.agrista.com/'});
-        dataStoreProvider.config('http://beta.agrista.com/api/');
-//        authorizationProvider.config({url: 'http://localhost:3006/'});
-//        dataStoreProvider.config('http://localhost:3006/api/');
-    }]);
-
-
-
     module.factory('customersService', ['dataStore', function(dataStore) {
         var customersStore = dataStore('customers', {apiTemplate: 'customers'});
 
