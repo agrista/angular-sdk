@@ -71,7 +71,7 @@ define(['angular', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             replace: true,
-            templateUrl: 'partials/core/navigationMenu.html'
+            template: '<div id="nav-menu" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="navbar">\n        <div class="container">\n            <p class="navbar-text">{{ menu.title }}</p>\n        </div>\n    </div>\n    <nav class="list-container">\n        <ul class="nav">\n            <li ng-repeat="item in menu.items">\n                <a ng-click="menu.click($index)" stop-propagation>{{ item.title }}</a>\n            </li>\n        </ul>\n    </nav>\n</div>'
         };
     });
 
@@ -79,7 +79,7 @@ define(['angular', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             replace: true,
-            template: '<div id="nav-page" class="page-slide" ng-class="{\'show-menu\': menu.show === true}"><div class="container" ng-transclude></div></div>',
+            template: '<div id="nav-page" class="page-slide" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="container" ng-transclude></div>\n</div>',
             transclude: true
         };
     });
@@ -88,7 +88,7 @@ define(['angular', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             replace: true,
-            template: '<div class="toolbar page-slide" ng-class="{\'show-menu\': menu.show === true}"><div class="container" ng-transclude></div></div>',
+            template: '<div class="toolbar page-slide" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="container" ng-transclude></div>\n</div>',
             transclude: true
         };
     });
@@ -121,7 +121,7 @@ define(['angular', 'core/utilityModule'], function () {
             },
             replace: true,
             transclude: true,
-            templateUrl: 'partials/core/navigationBar.html',
+            template: '<div class="navbar navbar-inverse page-slide" ng-class="{\'show-menu\': menuShown === true}" ng-transclude>\n    <div class="container">\n        <p class="navbar-text">{{ title }}</p>\n\n        <div class="pull-left" ng-show="showLeftButton()">\n            <div class="btn navbar-btn btn-clear" ng-click="navigateLeft()">\n                <i class="glyphicon glyphicon-{{leftButton.icon}}" ng-show="leftButton.icon"></i>\n                <span ng-show="leftButton.title">&nbsp;{{leftButton.title}}</span>\n            </div>\n        </div>\n        <div class="pull-right" ng-show="showRightButton()">\n            <div class="btn navbar-btn btn-primary" ng-click="navigateRight()">\n                <i class="glyphicon glyphicon-{{rightButton.icon}}" ng-show="rightButton.icon"></i>\n                <span ng-show="rightButton.title">&nbsp;{{rightButton.title}}</span>\n            </div>\n        </div>\n    </div>\n</div>\n',
             controller: ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
                 $scope.showLeftButton = function () {
                     return (typeof $attrs.navigateLeft === 'string');
