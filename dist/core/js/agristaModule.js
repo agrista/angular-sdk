@@ -6,7 +6,7 @@ define(['angular', 'core/authorizationModule', 'core/dataModule'], function () {
     var _voidCallback = function() {};
 
     module.factory('customersService', ['dataStore', function(dataStore) {
-        var customersStore = dataStore('customers', {apiTemplate: 'customers'});
+        var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'});
 
         return {
             getCustomers: function(gcCallback) {
