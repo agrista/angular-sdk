@@ -15,7 +15,7 @@ define(['angular', 'core/utilityModule'], function () {
                     $scope.menu.items = navigationService.menu();
                 }
             },
-            title: 'Agrista Assets',
+            title: 'Agrista',
             click: function(index) {
                 $scope.menu.show = false;
 
@@ -71,7 +71,7 @@ define(['angular', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             replace: true,
-            template: '<div id="nav-menu" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="navbar">\n        <div class="container">\n            <p class="navbar-text">{{ menu.title }}</p>\n        </div>\n    </div>\n    <nav class="list-container">\n        <ul class="nav">\n            <li ng-repeat="item in menu.items">\n                <a ng-click="menu.click($index)" stop-propagation>{{ item.title }}</a>\n            </li>\n        </ul>\n    </nav>\n</div>'
+            template: '<div id="nav-menu" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="navbar">\n        <div class="container">\n            <p class="navbar-text">{{ menu.title }}</p>\n        </div>\n    </div>\n    <nav class="list-container">\n        <ul class="nav">\n            <li ng-repeat="item in menu.items">\n                <a ng-click="menu.click($index)" ng-class="{active: item.active}" stop-propagation>{{ item.title }}</a>\n            </li>\n        </ul>\n    </nav>\n</div>'
         };
     });
 

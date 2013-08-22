@@ -35,7 +35,8 @@ body {
     background-color: #919693;
 }
 
-#nav-menu li a:hover {
+#nav-menu li a:hover,
+#nav-menu li a.active {
     background-color: #797d7a;
 }
 
