@@ -247,6 +247,16 @@ define(['underscore', 'angular'], function (_) {
                     return (item[_config.indexerProperty] || item._id || item.id);
                 };
 
+                function _createDataItem(item) {
+                    return {
+                        id: item.id,
+                        uri: item.uri,
+                        data: JSON.parse(item.data),
+                        dirty: (item.dirty == 1 ? true : false),
+                        local: (item.local == 1 ? true : false)
+                    };
+                };
+
 
                 /*
                  * Local data storage
@@ -260,32 +270,18 @@ define(['underscore', 'angular'], function (_) {
                         _localDatabase.transaction(function (tx) {
                             tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
                                 if (res.rows.length == 1) {
-                                    var localData = res.rows.item(0);
+                                    glCallback(_createDataItem(res.rows.item(0)));
 
-                                    glCallback({
-                                        id: localData.id,
-                                        uri: localData.uri,
-                                        data: JSON.parse(localData.data),
-                                        dirty: (localData.dirty == 1 ? true : false),
-                                        local: (localData.local == 1 ? true : false)
-                                    });
-
-                                } else {
+                                } else if (res.rows.length > 0) {
                                     var dataItems = [];
 
                                     for (var i = 0; i < res.rows.length; i++) {
-                                        var localData = res.rows.item(i);
-
-                                        dataItems.push({
-                                            id: localData.id,
-                                            uri: localData.uri,
-                                            data: JSON.parse(localData.data),
-                                            dirty: (localData.dirty == 1 ? true : false),
-                                            local: (localData.local == 1 ? true : false)
-                                        });
+                                        dataItems.push(_createDataItem(res.rows.item(i)));
                                     }
 
                                     glCallback(dataItems);
+                                } else {
+                                    glCallback();
                                 }
                             }, function (tx, err) {
                                 _errorCallback(tx, err);
@@ -295,6 +291,24 @@ define(['underscore', 'angular'], function (_) {
                     } else {
                         glCallback();
                     }
+                };
+
+                var _findLocal = function(id, uri, flCallback) {
+                    console.log('_findLocal');
+                    if (typeof flCallback !== 'function') flCallback = _voidCallback;
+
+                    _localDatabase.transaction(function (tx) {
+                        tx.executeSql('SELECT * FROM ' + name + ' WHERE id = ? AND uri = ? LIMIT 1', [id, uri], function (tx, res) {
+                            if (res.rows.length == 1) {
+                                flCallback(_createDataItem(res.rows.item(0)));
+
+                            } else {
+                                flCallback();
+                            }
+                        }, function (tx, err) {
+                            flCallback();
+                        });
+                    });
                 };
 
                 var _syncLocal = function (dataItems, uri, slCallback) {
@@ -632,10 +646,7 @@ define(['underscore', 'angular'], function (_) {
                                 var _uri = _parseRequest(_config.apiTemplate, schemaData);
 
                                 // Process request
-                                _getLocal(_uri, function(res, err) {
-                                    console.log('_getLocal complete');
-                                    rCallback(res, err);
-                                });
+                                _getLocal(_uri, rCallback);
 
                                 _getRemote(_uri, function (res, err) {
                                     console.log('_getRemote complete');
@@ -650,6 +661,16 @@ define(['underscore', 'angular'], function (_) {
                             } else {
                                 rCallback(null, _errors.NoReadParams);
                             }
+                        },
+                        find: function(id, schemaData, fCallback) {
+                            if (typeof schemaData === 'function') {
+                                fCallback = schemaData;
+                                schemaData = {};
+                            }
+
+                            var _uri = _parseRequest(_config.apiTemplate, schemaData);
+
+                            _findLocal(id, _uri, fCallback);
                         },
                         update: function (dataItems, uCallback) {
                             if ((dataItems instanceof Array) === false) {

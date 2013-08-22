@@ -1,18 +1,17 @@
 'use strict';
 
-define(['angular', 'core/authorizationModule', 'core/dataModule'], function () {
-    var module = angular.module('agristaModule', ['authorizationModule', 'dataModule']);
+define(['angular', 'core/dataModule'], function () {
+    var module = angular.module('agristaModule', ['dataModule']);
 
-    var _voidCallback = function() {};
-
-    module.factory('customersService', ['dataStore', function(dataStore) {
-        var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'});
+    module.factory('customerService', ['dataStore', function (dataStore) {
+        var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
 
         return {
-            getCustomers: function(gcCallback) {
-                customersStore.transaction(function(tx) {
-                    tx.read(function(res, err) {
-                        if(res && (res instanceof Array) === false) {
+            // Customers
+            getCustomers: function (gcCallback) {
+                customersStore.transaction(function (tx) {
+                    tx.read(function (res, err) {
+                        if (res && (res instanceof Array) === false) {
                             res = [res];
                         }
 
@@ -20,66 +19,62 @@ define(['angular', 'core/authorizationModule', 'core/dataModule'], function () {
                     });
                 });
             },
-            syncCustomers: function(scCallback) {
-                customersStore.transaction(function(tx) {
+            findCustomer: function (cid, fcCallback) {
+                customersStore.transaction(function (tx) {
+                    tx.find(cid, fcCallback);
+                });
+            },
+            syncCustomers: function (scCallback) {
+                customersStore.transaction(function (tx) {
                     tx.sync(scCallback);
+                });
+            },
+
+            // Customer
+            getCustomer: function (cid, gcCallback) {
+                dataStore('customer', {apiTemplate: 'customer/:id'})
+                    .transaction(function (tx) {
+                        tx.read({id: cid}, gcCallback);
+                    });
+            },
+            getCustomerAssets: function (cid, gcaCallback) {
+                dataStore('assets', {apiTemplate: 'customer/:id/assets'})
+                    .transaction(function (tx) {
+                        tx.read({id: cid}, gcaCallback);
+                    });
+            }
+        };
+    }]);
+
+    module.factory('assetService', ['dataStore', function (dataStore) {
+        var assetStore = dataStore('asset', {apiTemplate: 'asset/:id'});
+
+        return {
+            getAsset: function (id, gfCallback) {
+                assetStore.transaction(function (tx) {
+                    tx.read({id: id}, gfCallback);
                 });
             }
         };
     }]);
 
-    module.factory('farmerService', ['dataStore', function(dataStore) {
+    module.factory('farmerService', ['dataStore', function (dataStore) {
         var farmerStore = dataStore('farmer', {apiTemplate: 'farmer/:id'});
 
         return {
-            getFarmer: function(id, gfCallback) {
-                farmerStore.transaction(function(tx) {
+            getFarmer: function (id, gfCallback) {
+                farmerStore.transaction(function (tx) {
                     tx.read({id: id}, gfCallback);
                 });
             },
-            updateFarmer: function(farmerItem, ufCallback) {
-                farmerStore.transaction(function(tx) {
+            updateFarmer: function (farmerItem, ufCallback) {
+                farmerStore.transaction(function (tx) {
                     tx.update(farmerItem, ufCallback);
                 });
             },
-            syncFarmer: function(id, scCallback) {
-                farmerStore.transaction(function(tx) {
+            syncFarmer: function (id, scCallback) {
+                farmerStore.transaction(function (tx) {
                     tx.sync({id: id}, scCallback);
-                });
-            }
-        };
-    }]);
-
-    module.factory('testService', ['dataStore', function(dataStore) {
-        var testStore = dataStore('test', {apiTemplate: 'test/:id'});
-
-        return {
-            get: function(id, gCallback) {
-                if(typeof gCallback !== 'function') gCallback = _voidCallback;
-
-                testStore.transaction(function(tx) {
-                    tx.read({id: id}, gCallback);
-                });
-            },
-            set: function(items, sCallback) {
-                if(typeof sCallback !== 'function') sCallback = _voidCallback;
-
-                testStore.transaction(function(tx) {
-                    tx.update(items, sCallback);
-                });
-            },
-            add: function(id, data, aCallback) {
-                if(typeof aCallback !== 'function') aCallback = _voidCallback;
-
-                testStore.transaction(function(tx) {
-                    tx.create({id: id}, data, aCallback);
-                });
-            },
-            sync: function(id, sCallback) {
-                if(typeof sCallback !== 'function') sCallback = _voidCallback;
-
-                testStore.transaction(function(tx) {
-                    tx.sync({id: id}, sCallback);
                 });
             }
         };

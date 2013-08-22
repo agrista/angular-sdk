@@ -9,7 +9,7 @@ define(['app'], function (app) {
             _layers = [];
 
         return {
-            reset: function() {
+            reset: function () {
                 _geoJsonData = [];
                 _layers = []
             },
@@ -26,7 +26,7 @@ define(['app'], function (app) {
                     $rootScope.$emit('mapbox::set-view', _view);
                 }
             },
-            fitBounds: function(bounds, options) {
+            fitBounds: function (bounds, options) {
                 if (bounds instanceof Array) {
                     _boundsView = {
                         bounds: bounds,
@@ -36,11 +36,11 @@ define(['app'], function (app) {
 
                 $rootScope.$emit('mapbox::fit-bounds', _boundsView);
             },
-            addLayer: function(layer) {
+            addLayer: function (layer) {
                 _layers.push(layer);
                 $rootScope.$emit('mapbox::add-layer', layer);
             },
-            getLayers: function() {
+            getLayers: function () {
                 return _layers;
             },
             addGeoJson: function (group, geoJson, options) {
@@ -102,8 +102,10 @@ define(['app'], function (app) {
         function addLayer(layer) {
             if ((layer instanceof Array) === false) layer = [layer];
 
-            for (var x = 0; x < layer.length; x++) {
-                map.addLayer(layer[x]);
+            if (map) {
+                for (var x = 0; x < layer.length; x++) {
+                    map.addLayer(layer[x]);
+                }
             }
         }
 
@@ -122,13 +124,13 @@ define(['app'], function (app) {
         }
 
         function setView(view) {
-            if (view !== undefined) {
+            if (map && view !== undefined) {
                 map.setView(view.coordinates, view.zoom);
             }
         }
 
         function fitBounds(view) {
-            if (view !== undefined) {
+            if (map && view !== undefined) {
                 map.fitBounds(view.bounds, view.options);
             }
         }
@@ -144,8 +146,8 @@ define(['app'], function (app) {
                 var satellite = new L.Google();
 
                 map.addControl(new L.Control.Layers({
-                    'Physical':physical,
-                    'Satellite':satellite
+                    'Physical': physical,
+                    'Satellite': satellite
                 }));
 
                 featureGroups.land = L.featureGroup().addTo(map);
@@ -171,9 +173,9 @@ define(['app'], function (app) {
                     addLayer(args);
                 });
 
-                var watcher = geolocationService.watchPosition(function(res, err) {
-                    if(res) {
-                        if(location.marker === undefined) {
+                var watcher = geolocationService.watchPosition(function (res, err) {
+                    if (res) {
+                        if (location.marker === undefined) {
                             location.marker = L.marker([res.coords.latitude, res.coords.longitude]).addTo(map);
                         } else {
                             location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
@@ -181,8 +183,8 @@ define(['app'], function (app) {
                     }
                 });
 
-                $scope.$on('$destroy', function() {
-                    for(var layer in map._layers) {
+                $scope.$on('$destroy', function () {
+                    for (var layer in map._layers) {
                         if (map._layers.hasOwnProperty(layer)) {
                             map.removeLayer(map._layers[layer]);
                         }

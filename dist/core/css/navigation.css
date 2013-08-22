@@ -127,7 +127,7 @@ body {
     top: 51px;
     z-index: 1020;
     background-color: #a5aba8;
-    padding: 5px 15px;
+    padding: 5px 0;
 }
 
 .list-group {
@@ -137,9 +137,6 @@ body {
 /*
  * Buttons
  */
-.btn {
-    padding: 9px 12px 8px 13px;
-}
 
 .btn-clear {
     background-color: #5B4723;
@@ -162,25 +159,6 @@ body {
     color: #fff;
     -webkit-box-shadow: none;
     box-shadow: none;
-}
-
-.btn-lg {
-    padding: 10px 16px;
-    font-size: 18px;
-    line-height: 1.33;
-    border-radius: 6px;
-}
-
-.btn-sm,
-.btn-xs {
-    padding: 5px 10px;
-    font-size: 12px;
-    line-height: 1.5;
-    border-radius: 3px;
-}
-
-.btn-xs {
-    padding: 3px 5px;
 }
 
 @media (min-width: 768px) {
