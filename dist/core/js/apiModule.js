@@ -1,9 +1,9 @@
 'use strict';
 
 define(['angular', 'core/dataModule'], function () {
-    var module = angular.module('agristaModule', ['dataModule']);
+    var module = angular.module('apiModule', ['dataModule']);
 
-    module.factory('customerService', ['dataStore', function (dataStore) {
+    module.factory('customerApiService', ['dataStore', function (dataStore) {
         var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
 
         return {
@@ -46,19 +46,29 @@ define(['angular', 'core/dataModule'], function () {
         };
     }]);
 
-    module.factory('assetService', ['dataStore', function (dataStore) {
+    module.factory('assetApiService', ['dataStore', function (dataStore) {
         var assetStore = dataStore('asset', {apiTemplate: 'asset/:id'});
 
         return {
-            getAsset: function (id, gfCallback) {
+            getAsset: function (id, gaCallback) {
                 assetStore.transaction(function (tx) {
-                    tx.read({id: id}, gfCallback);
+                    tx.read({id: id}, gaCallback);
+                });
+            },
+            updateAsset: function (assetItem, uaCallback) {
+                assetStore.transaction(function (tx) {
+                    tx.update(assetItem, uaCallback);
+                });
+            },
+            syncAsset: function (id, saCallback) {
+                assetStore.transaction(function (tx) {
+                    tx.sync({id: id}, saCallback);
                 });
             }
         };
     }]);
 
-    module.factory('farmerService', ['dataStore', function (dataStore) {
+    module.factory('farmerApiService', ['dataStore', function (dataStore) {
         var farmerStore = dataStore('farmer', {apiTemplate: 'farmer/:id'});
 
         return {
@@ -72,9 +82,9 @@ define(['angular', 'core/dataModule'], function () {
                     tx.update(farmerItem, ufCallback);
                 });
             },
-            syncFarmer: function (id, scCallback) {
+            syncFarmer: function (id, sfCallback) {
                 farmerStore.transaction(function (tx) {
-                    tx.sync({id: id}, scCallback);
+                    tx.sync({id: id}, sfCallback);
                 });
             }
         };

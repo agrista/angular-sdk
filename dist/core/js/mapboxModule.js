@@ -1,8 +1,9 @@
 'use strict';
 
-define(['app'], function (app) {
+define(['angular'], function () {
+    var module = angular.module('mapboxModule', []);
 
-    app.lazyLoader.factory('mapboxService', ['$rootScope', function ($rootScope) {
+    module.factory('mapboxService', ['$rootScope', function ($rootScope) {
         var _view = undefined;
         var _boundsView = undefined;
         var _geoJsonData = [],
@@ -61,15 +62,16 @@ define(['app'], function (app) {
         }
     }]);
 
-    app.lazyLoader.directive('mapbox', ['mapboxService', 'geolocationService', '$rootScope', function (mapboxService, geolocationService, $rootScope) {
+    module.directive('mapbox', ['mapboxService', 'geolocationService', '$rootScope', function (mapboxService, geolocationService, $rootScope) {
         var map;
-        var featureGroups = {
-            land: undefined,
-            portion: undefined,
-            marker: undefined
-        };
-
+        var featureGroups = {};
         var location = {};
+
+        function _checkFeatureGroup(name) {
+            if (featureGroups[name] === undefined) {
+                featureGroups[name] = L.featureGroup().addTo(map);
+            }
+        }
 
         /**
          * Swap lat and lng in a feature object.
@@ -115,6 +117,8 @@ define(['app'], function (app) {
             for (var x = 0; x < data.length; x++) {
                 var item = data[x];
 
+                _checkFeatureGroup(item.group);
+
                 if (item.geoJson.type === 'Polygon') {
                     L.polygon(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
                 } else if (item.geoJson.type === 'Point') {
@@ -149,11 +153,6 @@ define(['app'], function (app) {
                     'Physical': physical,
                     'Satellite': satellite
                 }));
-
-                featureGroups.land = L.featureGroup().addTo(map);
-                featureGroups.portion = L.featureGroup().addTo(map);
-                featureGroups.marker = L.featureGroup().addTo(map);
-                featureGroups.location = L.featureGroup().addTo(map);
 
                 setView(mapboxService.getView());
                 addLayer(mapboxService.getLayers());
@@ -190,10 +189,12 @@ define(['app'], function (app) {
                         }
                     }
 
-                    featureGroups.land.clearLayers();
-                    featureGroups.portion.clearLayers();
-                    featureGroups.marker.clearLayers();
-                    featureGroups.location.clearLayers();
+                    for (var group in featureGroups) {
+                        if(featureGroups.hasOwnProperty(group)) {
+                            featureGroups[group].clearLayers();
+                            delete featureGroups[group];
+                        }
+                    }
 
                     map.remove();
 

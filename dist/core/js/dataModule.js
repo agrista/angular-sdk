@@ -293,7 +293,7 @@ define(['underscore', 'angular'], function (_) {
                     }
                 };
 
-                var _findLocal = function(id, uri, flCallback) {
+                var _findLocal = function (id, uri, flCallback) {
                     console.log('_findLocal');
                     if (typeof flCallback !== 'function') flCallback = _voidCallback;
 
@@ -473,10 +473,11 @@ define(['underscore', 'angular'], function (_) {
                  */
                 var _updateRemote = function (dataItems, urCallback) {
                     console.log('_updateRemote');
-                    if ((dataItems instanceof Array) === false) dataItems = [dataItems];
                     if (typeof urCallback !== 'function') urCallback = _voidCallback;
 
-                    if (dataItems.length > 0 && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                    if (dataItems !== undefined && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                        if ((dataItems instanceof Array) === false) dataItems = [dataItems];
+
                         var asyncMon = new AsyncMonitor(dataItems.length, function () {
                             urCallback(dataItems);
                         });
@@ -518,6 +519,7 @@ define(['underscore', 'angular'], function (_) {
                     } else {
                         urCallback();
                     }
+
                 };
 
                 /**
@@ -528,10 +530,11 @@ define(['underscore', 'angular'], function (_) {
                  */
                 var _deleteRemote = function (dataItems, drCallback) {
                     console.log('_deleteRemote');
-                    if ((data instanceof Array) === false) dataItems = [dataItems];
                     if (typeof drCallback !== 'function') drCallback = _voidCallback;
 
-                    if (dataItems.length > 0 && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                    if (dataItems !== undefined && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                        if ((dataItems instanceof Array) === false) dataItems = [dataItems];
+
                         var asyncMon = new AsyncMonitor(dataItems.length, drCallback);
 
                         var _makeDelete = function (item) {
@@ -662,7 +665,7 @@ define(['underscore', 'angular'], function (_) {
                                 rCallback(null, _errors.NoReadParams);
                             }
                         },
-                        find: function(id, schemaData, fCallback) {
+                        find: function (id, schemaData, fCallback) {
                             if (typeof schemaData === 'function') {
                                 fCallback = schemaData;
                                 schemaData = {};
@@ -713,7 +716,7 @@ define(['underscore', 'angular'], function (_) {
                  * Initialize table
                  */
 
-                _initializeTable(function() {
+                _initializeTable(function () {
                     console.log('table initialized');
 
                     _dataStoreInitialized = true;
