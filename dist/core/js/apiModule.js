@@ -3,8 +3,53 @@
 define(['angular', 'core/dataModule'], function () {
     var module = angular.module('apiModule', ['dataModule']);
 
+    var _errors = {
+        TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'}
+    };
+
+    module.factory('taskApiService', ['dataStore', function (dataStore) {
+        var tasksStore = dataStore('tasks', {apiTemplate: 'tasks?type=:type'});
+        var taskStore = dataStore('task', {apiTemplate: 'task/:id'});
+
+        return {
+            // Tasks
+            getTasks: function (type, gtCallback) {
+                if (arguments.length != 2) {
+                    gtCallback(null, _errors.TypeParamRequired);
+                } else {
+                    tasksStore.transaction(function (tx) {
+                        tx.read({type: type}, function (res, err) {
+                            if (res && (res instanceof Array) === false) {
+                                res = [res];
+                            }
+
+                            gtCallback(res, err);
+                        });
+                    });
+                }
+            },
+
+            // Tasks
+            getTask: function (tid, gtCallback) {
+                taskStore.transaction(function (tx) {
+                    tx.read({id: tid}, gaCallback);
+                });
+            },
+            updateTask: function (taskItem, utCallback) {
+                taskStore.transaction(function (tx) {
+                    tx.update(taskItem, utCallback);
+                });
+            },
+            syncTask: function (tid, stCallback) {
+                taskStore.transaction(function (tx) {
+                    tx.sync({id: tid}, stCallback);
+                });
+            }
+        };
+    }]);
+
     module.factory('customerApiService', ['dataStore', function (dataStore) {
-        var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
+        var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'});
 
         return {
             // Customers
