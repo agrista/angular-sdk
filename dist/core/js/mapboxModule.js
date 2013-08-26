@@ -24,7 +24,7 @@ define(['angular'], function () {
                         zoom: zoom || 11
                     };
 
-                    $rootScope.$emit('mapbox::set-view', _view);
+                    $rootScope.$broadcast('mapbox::set-view', _view);
                 }
             },
             fitBounds: function (bounds, options) {
@@ -35,11 +35,11 @@ define(['angular'], function () {
                     }
                 }
 
-                $rootScope.$emit('mapbox::fit-bounds', _boundsView);
+                $rootScope.$broadcast('mapbox::fit-bounds', _boundsView);
             },
             addLayer: function (layer) {
                 _layers.push(layer);
-                $rootScope.$emit('mapbox::add-layer', layer);
+                $rootScope.$broadcast('mapbox::add-layer', layer);
             },
             getLayers: function () {
                 return _layers;
@@ -53,7 +53,7 @@ define(['angular'], function () {
                     };
 
                     _geoJsonData.push(data);
-                    $rootScope.$emit('mapbox::add-geojson', data);
+                    $rootScope.$broadcast('mapbox::add-geojson', data);
                 }
             },
             getGeoJsonData: function () {
@@ -159,16 +159,16 @@ define(['angular'], function () {
                 addGeoJson(mapboxService.getGeoJsonData());
             },
             controller: function ($scope, $attrs) {
-                $rootScope.$on('mapbox::set-view', function (event, args) {
+                $scope.$on('mapbox::set-view', function (event, args) {
                     setView(args);
                 });
-                $rootScope.$on('mapbox::fit-bounds', function (event, args) {
+                $scope.$on('mapbox::fit-bounds', function (event, args) {
                     fitBounds(args);
                 });
-                $rootScope.$on('mapbox::add-geojson', function (event, args) {
+                $scope.$on('mapbox::add-geojson', function (event, args) {
                     addGeoJson(args);
                 });
-                $rootScope.$on('mapbox::add-layer', function (event, args) {
+                $scope.$on('mapbox::add-layer', function (event, args) {
                     addLayer(args);
                 });
 
