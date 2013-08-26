@@ -649,18 +649,22 @@ define(['underscore', 'angular'], function (_) {
                                 var _uri = _parseRequest(_config.apiTemplate, schemaData);
 
                                 // Process request
-                                _getLocal(_uri, rCallback);
+                                if (_config.read.local === true && _config.read.remote === false) {
+                                    _getLocal(_uri, rCallback);
+                                }
 
-                                _getRemote(_uri, function (res, err) {
-                                    console.log('_getRemote complete');
-                                    if (res) {
-                                        _syncLocal(res, _uri, function (res, err) {
-                                            rCallback(res);
-                                        });
-                                    } else if (err) {
-                                        rCallback(null, err);
-                                    }
-                                });
+                                if (_config.read.remote === true) {
+                                    _getRemote(_uri, function (res, err) {
+                                        console.log('_getRemote complete');
+                                        if (res) {
+                                            _syncLocal(res, _uri, function (res, err) {
+                                                rCallback(res);
+                                            });
+                                        } else if (err) {
+                                            rCallback(null, err);
+                                        }
+                                    });
+                                }
                             } else {
                                 rCallback(null, _errors.NoReadParams);
                             }

@@ -8,17 +8,30 @@ define(['angular', 'core/dataModule'], function () {
     };
 
     module.factory('taskApiService', ['dataStore', function (dataStore) {
-        var tasksStore = dataStore('tasks', {apiTemplate: 'tasks?type=:type'});
         var taskStore = dataStore('task', {apiTemplate: 'task/:id'});
 
         return {
             // Tasks
-            getTasks: function (type, gtCallback) {
+            getTasksByType: function (type, gtCallback) {
                 if (arguments.length != 2) {
                     gtCallback(null, _errors.TypeParamRequired);
                 } else {
-                    tasksStore.transaction(function (tx) {
-                        tx.read({type: type}, function (res, err) {
+                    dataStore('task', {apiTemplate: 'tasks?type=:type'})
+                        .transaction(function (tx) {
+                            tx.read({type: type}, function (res, err) {
+                                if (res && (res instanceof Array) === false) {
+                                    res = [res];
+                                }
+
+                                gtCallback(res, err);
+                            });
+                        });
+                }
+            },
+            getTasksById: function (tid, gtCallback) {
+                dataStore('task', {apiTemplate: 'task/:id/tasks'})
+                    .transaction(function (tx) {
+                        tx.read({id: tid}, function (res, err) {
                             if (res && (res instanceof Array) === false) {
                                 res = [res];
                             }
@@ -26,24 +39,46 @@ define(['angular', 'core/dataModule'], function () {
                             gtCallback(res, err);
                         });
                     });
-                }
             },
 
-            // Tasks
-            getTask: function (tid, gtCallback) {
+            // Task
+            findTask: function (tid, ftCallback) {
                 taskStore.transaction(function (tx) {
-                    tx.read({id: tid}, gaCallback);
+                    tx.find(tid, ftCallback);
                 });
             },
             updateTask: function (taskItem, utCallback) {
                 taskStore.transaction(function (tx) {
-                    tx.update(taskItem, utCallback);
-                });
+                        tx.update(taskItem, utCallback);
+                    });
             },
             syncTask: function (tid, stCallback) {
                 taskStore.transaction(function (tx) {
-                    tx.sync({id: tid}, stCallback);
+                        tx.sync({id: tid}, stCallback);
+                    });
+            }
+        };
+    }]);
+
+    module.factory('documentApiService', ['dataStore', function (dataStore) {
+        var documentStore = dataStore('document', {apiTemplate: 'document/:id'});
+
+        return {
+            // Document
+            getDocument: function (did, gdCallback) {
+                documentStore.transaction(function (tx) {
+                    tx.read({id: did}, gdCallback);
                 });
+            },
+            updateDocument: function (documentItem, udCallback) {
+                documentStore.transaction(function (tx) {
+                        tx.update(documentItem, udCallback);
+                    });
+            },
+            syncDocument: function (did, sdCallback) {
+                documentStore.transaction(function (tx) {
+                        tx.sync({id: did}, sdCallback);
+                    });
             }
         };
     }]);
@@ -95,9 +130,9 @@ define(['angular', 'core/dataModule'], function () {
         var assetStore = dataStore('asset', {apiTemplate: 'asset/:id'});
 
         return {
-            getAsset: function (id, gaCallback) {
+            getAsset: function (aid, gaCallback) {
                 assetStore.transaction(function (tx) {
-                    tx.read({id: id}, gaCallback);
+                    tx.read({id: aid}, gaCallback);
                 });
             },
             updateAsset: function (assetItem, uaCallback) {
@@ -105,9 +140,9 @@ define(['angular', 'core/dataModule'], function () {
                     tx.update(assetItem, uaCallback);
                 });
             },
-            syncAsset: function (id, saCallback) {
+            syncAsset: function (aid, saCallback) {
                 assetStore.transaction(function (tx) {
-                    tx.sync({id: id}, saCallback);
+                    tx.sync({id: aid}, saCallback);
                 });
             }
         };
@@ -117,9 +152,9 @@ define(['angular', 'core/dataModule'], function () {
         var farmerStore = dataStore('farmer', {apiTemplate: 'farmer/:id'});
 
         return {
-            getFarmer: function (id, gfCallback) {
+            getFarmer: function (fid, gfCallback) {
                 farmerStore.transaction(function (tx) {
-                    tx.read({id: id}, gfCallback);
+                    tx.read({id: fid}, gfCallback);
                 });
             },
             updateFarmer: function (farmerItem, ufCallback) {
@@ -127,9 +162,9 @@ define(['angular', 'core/dataModule'], function () {
                     tx.update(farmerItem, ufCallback);
                 });
             },
-            syncFarmer: function (id, sfCallback) {
+            syncFarmer: function (fid, sfCallback) {
                 farmerStore.transaction(function (tx) {
-                    tx.sync({id: id}, sfCallback);
+                    tx.sync({id: fid}, sfCallback);
                 });
             }
         };
