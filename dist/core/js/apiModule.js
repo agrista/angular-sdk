@@ -49,13 +49,13 @@ define(['angular', 'core/dataModule'], function () {
             },
             updateTask: function (taskItem, utCallback) {
                 taskStore.transaction(function (tx) {
-                        tx.update(taskItem, utCallback);
-                    });
+                    tx.update(taskItem, utCallback);
+                });
             },
             syncTask: function (tid, stCallback) {
                 taskStore.transaction(function (tx) {
-                        tx.sync({id: tid}, stCallback);
-                    });
+                    tx.sync({id: tid}, stCallback);
+                });
             }
         };
     }]);
@@ -72,13 +72,13 @@ define(['angular', 'core/dataModule'], function () {
             },
             updateDocument: function (documentItem, udCallback) {
                 documentStore.transaction(function (tx) {
-                        tx.update(documentItem, udCallback);
-                    });
+                    tx.update(documentItem, udCallback);
+                });
             },
             syncDocument: function (did, sdCallback) {
                 documentStore.transaction(function (tx) {
-                        tx.sync({id: did}, sdCallback);
-                    });
+                    tx.sync({id: did}, sdCallback);
+                });
             }
         };
     }]);

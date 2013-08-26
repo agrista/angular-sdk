@@ -293,12 +293,12 @@ define(['underscore', 'angular'], function (_) {
                     }
                 };
 
-                var _findLocal = function (id, uri, flCallback) {
+                var _findLocal = function (id, flCallback) {
                     console.log('_findLocal');
                     if (typeof flCallback !== 'function') flCallback = _voidCallback;
 
                     _localDatabase.transaction(function (tx) {
-                        tx.executeSql('SELECT * FROM ' + name + ' WHERE id = ? AND uri = ? LIMIT 1', [id, uri], function (tx, res) {
+                        tx.executeSql('SELECT * FROM ' + name + ' WHERE id = ? LIMIT 1', [id], function (tx, res) {
                             if (res.rows.length == 1) {
                                 flCallback(_createDataItem(res.rows.item(0)));
 
@@ -669,15 +669,8 @@ define(['underscore', 'angular'], function (_) {
                                 rCallback(null, _errors.NoReadParams);
                             }
                         },
-                        find: function (id, schemaData, fCallback) {
-                            if (typeof schemaData === 'function') {
-                                fCallback = schemaData;
-                                schemaData = {};
-                            }
-
-                            var _uri = _parseRequest(_config.apiTemplate, schemaData);
-
-                            _findLocal(id, _uri, fCallback);
+                        find: function (id, fCallback) {
+                            _findLocal(id, fCallback);
                         },
                         update: function (dataItems, uCallback) {
                             if ((dataItems instanceof Array) === false) {
@@ -764,6 +757,4 @@ define(['underscore', 'angular'], function (_) {
             };
         }];
     });
-
 });
-
