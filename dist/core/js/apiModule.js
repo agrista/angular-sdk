@@ -118,7 +118,7 @@ define(['angular', 'core/dataModule'], function () {
                     });
             },
             getCustomerAssets: function (cid, gcaCallback) {
-                dataStore('assets', {apiTemplate: 'customer/:id/assets'})
+                dataStore('asset', {apiTemplate: 'customer/:id/assets'})
                     .transaction(function (tx) {
                         tx.read({id: cid}, gcaCallback);
                     });
@@ -133,6 +133,11 @@ define(['angular', 'core/dataModule'], function () {
             getAsset: function (aid, gaCallback) {
                 assetStore.transaction(function (tx) {
                     tx.read({id: aid}, gaCallback);
+                });
+            },
+            findAsset: function (aid, faCallback) {
+                assetStore.transaction(function (tx) {
+                    tx.find(aid, faCallback);
                 });
             },
             updateAsset: function (assetItem, uaCallback) {
