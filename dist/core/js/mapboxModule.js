@@ -44,12 +44,13 @@ define(['angular'], function () {
             getLayers: function () {
                 return _layers;
             },
-            addGeoJson: function (group, geoJson, options) {
+            addGeoJson: function (group, geoJson, options, onAddCallback) {
                 if (typeof geoJson === 'object') {
                     var data = {
                         group: group,
                         geoJson: geoJson,
-                        options: options
+                        options: options,
+                        onAdd: onAddCallback
                     };
 
                     _geoJsonData.push(data);
@@ -75,17 +76,23 @@ define(['angular'], function () {
 
         /**
          * Swap lat and lng in a feature object.
-         * @param feature
-         * @returns feature
+         * @param coordinates
+         * @returns []
          */
         function swapLatLng(coordinates) {
             var swapped = [];
 
-            for (var i = 0; i < coordinates.length; i++) {
-                var polygon = coordinates[i];
+            if ((coordinates instanceof Array) === true) {
+                if (coordinates.length > 0 && (coordinates[0] instanceof Array) === true) {
+                    for (var i = 0; i < coordinates.length; i++) {
+                        var polygon = coordinates[i];
 
-                for (var x = 0; x < polygon.length; x++) {
-                    swapped.push(swap(polygon[x]));
+                        for (var x = 0; x < polygon.length; x++) {
+                            swapped.push(swap(polygon[x]));
+                        }
+                    }
+                } else if (coordinates.length == 2) {
+                    swapped = swap(coordinates);
                 }
             }
 
@@ -116,13 +123,20 @@ define(['angular'], function () {
 
             for (var x = 0; x < data.length; x++) {
                 var item = data[x];
+                var feature = undefined;
 
                 _checkFeatureGroup(item.group);
 
                 if (item.geoJson.type === 'Polygon') {
-                    L.polygon(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
+                    feature = L.polygon(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
                 } else if (item.geoJson.type === 'Point') {
-                    L.marker(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
+                    feature = L.marker(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
+                } else if (item.geoJson.type === 'Feature') {
+                    feature = L.geoJson(item.geoJson, item.options).addTo(featureGroups[item.group]);
+                }
+
+                if(feature !== undefined && typeof item.onAdd === 'function') {
+                    item.onAdd(feature);
                 }
             }
         }
