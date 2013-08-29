@@ -136,11 +136,11 @@ define(['angular', 'core/utilityModule'], function () {
                 };
 
                 $scope.showLeftButton = function () {
-                    return (typeof $scope.leftButton !== undefined);
+                    return (typeof $attrs.navigateLeft === 'string' && typeof $scope.leftButton === 'object');
                 };
 
                 $scope.showRightButton = function () {
-                    return (typeof $scope.rightButton !== undefined);
+                    return (typeof $attrs.navigateRight === 'string' && typeof $scope.rightButton === 'object');
                 };
             }]
         };
