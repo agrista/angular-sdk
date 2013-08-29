@@ -80,7 +80,10 @@ define(['angular', 'core/utilityModule'], function () {
             restrict: 'E',
             replace: true,
             template: '<div id="nav-page" class="page-slide" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="container" ng-transclude></div>\n</div>',
-            transclude: true
+            transclude: true,
+            controller: function($scope) {
+                window.$scope = $scope;
+            }
         };
     });
 
@@ -136,11 +139,11 @@ define(['angular', 'core/utilityModule'], function () {
                 };
 
                 $scope.showLeftButton = function () {
-                    return (typeof $attrs.navigateLeft === 'string');
+                    return (typeof $scope.leftButton !== undefined);
                 };
 
                 $scope.showRightButton = function () {
-                    return (typeof $attrs.navigateRight === 'string');
+                    return (typeof $scope.rightButton !== undefined);
                 };
             }]
         };

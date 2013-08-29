@@ -1,6 +1,8 @@
 'use strict';
 
-define(['app', 'underscore', 'cordova'], function (app, _) {
+define(['underscore', 'cordova', 'angular'], function (_) {
+    var module = angular.module('cameraModule', []);
+    
     /**
      * @name cameraModule.cameraService
      * @requires $q
@@ -14,7 +16,7 @@ define(['app', 'underscore', 'cordova'], function (app, _) {
         });
 
      */
-    app.lazyLoader.factory('cameraService', ['$q', function ($q) {
+    module.factory('cameraService', ['$q', function ($q) {
         if(typeof window.Camera === 'undefined') {
             window.Camera = {};
         }

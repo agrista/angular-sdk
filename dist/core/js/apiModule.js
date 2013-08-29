@@ -19,15 +19,15 @@ define(['angular', 'core/dataModule'], function () {
                 }
 
                 dataStore('task', {apiTemplate: 'tasks?type=:type'})
-                        .transaction(function (tx) {
-                            tx.read({type: type}, options, function (res, err) {
-                                if (res && (res instanceof Array) === false) {
-                                    res = [res];
-                                }
+                    .transaction(function (tx) {
+                        tx.read({type: type}, options, function (res, err) {
+                            if (res && (res instanceof Array) === false) {
+                                res = [res];
+                            }
 
-                                gtCallback(res, err);
-                            });
+                            gtCallback(res, err);
                         });
+                    });
 
             },
             getTasksById: function (tid, options, gtCallback) {
@@ -49,6 +49,11 @@ define(['angular', 'core/dataModule'], function () {
             },
 
             // Task
+            getTask: function (tid, options, gtCallback) {
+                taskStore.transaction(function (tx) {
+                    tx.read({id: tid}, options, gtCallback);
+                });
+            },
             findTask: function (tid, ftCallback) {
                 taskStore.transaction(function (tx) {
                     tx.find(tid, ftCallback);
@@ -85,6 +90,52 @@ define(['angular', 'core/dataModule'], function () {
             syncDocument: function (did, sdCallback) {
                 documentStore.transaction(function (tx) {
                     tx.sync({id: did}, sdCallback);
+                });
+            }
+        };
+    }]);
+
+    module.factory('photoApiService', ['dataStore', function (dataStore) {
+        var photoStore = dataStore('photo', {apiTemplate: 'photo/:id'});
+
+        return {
+            // Photos
+            getPhotos: function (pid, options, gpCallback) {
+                if (typeof options === 'function') {
+                    gpCallback = options;
+                    options = {};
+                }
+
+                photoStore.transaction(function (tx) {
+                    tx.read({id: pid}, options, function (res, err) {
+                        if (res && (res instanceof Array) === false) {
+                            res = [res];
+                        }
+
+                        gpCallback(res, err);
+                    });
+                });
+            },
+
+            // Photo
+            createPhoto: function (documentId, photoItem, cpCallback) {
+                photoStore.transaction(function (tx) {
+                    tx.create({id: documentId}, photoItem, cpCallback);
+                });
+            },
+            findPhoto: function (pid, fpCallback) {
+                photoStore.transaction(function (tx) {
+                    tx.find(pid, fpCallback);
+                });
+            },
+            updatePhoto: function (photoItem, upCallback) {
+                photoStore.transaction(function (tx) {
+                    tx.update(documentItem, upCallback);
+                });
+            },
+            syncPhoto: function (pid, spCallback) {
+                photoStore.transaction(function (tx) {
+                    tx.sync({id: pid}, spCallback);
                 });
             }
         };

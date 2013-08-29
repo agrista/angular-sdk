@@ -114,7 +114,10 @@ define(['underscore', 'angular'], function (_) {
                  * @private
 
                  config = {
-                    apiTemplate: urlTemplate,
+                    api: {
+                        get: get,
+                        post: post
+                    },
                     paging: {
                         template: urlTemplate,
                         schema: schemaTemplate,
