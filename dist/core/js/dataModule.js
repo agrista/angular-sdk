@@ -19,10 +19,12 @@ define(['underscore', 'angular'], function (_) {
 
      */
     module.provider('dataStore', function () {
-        var _apiUrl = '/api';
         var _defaultOptions = {
+            url: '/api',
             pageLimit: 10,
-            dbName: 'appDatabase'
+            dbName: 'appDatabase',
+            readLocal: true,
+            readRemote: true
         };
 
         var _errors = {
@@ -32,7 +34,8 @@ define(['underscore', 'angular'], function (_) {
             NoReadParams: {code: 'NoReadParams', message: 'No DataRead parameters defined'},
             NoPagingDefined: {code: 'NoPagingDefined', message: 'No Paging parameters have been defined in config'},
             LocalDataStoreError: {code: 'LocalDataStoreError', message: 'Can not perform action on local data store'},
-            RemoteDataStoreError: {code: 'RemoteDataStoreError', message: 'Can not perform action on remote data store'}
+            RemoteDataStoreError: {code: 'RemoteDataStoreError', message: 'Can not perform action on remote data store'},
+            RemoteNoDataError: {code: 'RemoteNoDataError', message: 'No data response from remote store'}
         };
 
         var _localDatabase;
@@ -43,8 +46,7 @@ define(['underscore', 'angular'], function (_) {
          * @param url
          * @param options
          */
-        this.config = function (url, options) {
-            _apiUrl = url;
+        this.config = function (options) {
             _defaultOptions = _.defaults((options || {}), _defaultOptions);
         };
 
@@ -121,15 +123,8 @@ define(['underscore', 'angular'], function (_) {
                             limit: pageLimit
                         }
                     },
-                    read: {
-                        local: true,
-                        remote: true
-                    },
-                    write: {
-                        local: true,
-                        remote: true,
-                        force: false
-                    }
+                    readLocal: true,
+                    readRemote: true
                 }
                  */
                 var _config = _.defaults((config || {}), {
@@ -137,15 +132,8 @@ define(['underscore', 'angular'], function (_) {
                     paging: undefined,
                     indexerProperty: '_id',
 
-                    read: {
-                        local: true,
-                        remote: true
-                    },
-                    write: {
-                        local: true,
-                        remote: true,
-                        force: false
-                    }
+                    readLocal: _defaultOptions.readLocal,
+                    readRemote: _defaultOptions.readRemote
                 });
 
                 if (_config.paging !== undefined) {
@@ -266,7 +254,6 @@ define(['underscore', 'angular'], function (_) {
                     console.log('_getLocal');
                     if (typeof glCallback !== 'function') glCallback = _voidCallback;
 
-                    if (_config.read.local === true) {
                         _localDatabase.transaction(function (tx) {
                             tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
                                 if (res.rows.length == 1) {
@@ -288,9 +275,6 @@ define(['underscore', 'angular'], function (_) {
                                 glCallback(null, _errors.LocalDataStoreError);
                             });
                         });
-                    } else {
-                        glCallback();
-                    }
                 };
 
                 var _findLocal = function (id, flCallback) {
@@ -337,13 +321,11 @@ define(['underscore', 'angular'], function (_) {
                         options = {};
                     }
                     if ((dataItems instanceof Array) === false) dataItems = [dataItems];
-                    if (typeof ulCallback !== 'function') ulCallback = _voidCallback;
 
                     options = _.defaults((options || {}), {force: false});
 
                     var asyncMon = new AsyncMonitor(dataItems.length, ulCallback);
 
-                    if (_config.write.local === true) {
                         _localDatabase.transaction(function (tx) {
                             for (var i = 0; i < dataItems.length; i++) {
                                 var item = dataItems[i];
@@ -351,7 +333,7 @@ define(['underscore', 'angular'], function (_) {
 
                                 tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
                                     // Insert failed
-                                    if (item.dirty === true || item.local === true || (_config.write.force === true || options.force)) {
+                                    if (item.dirty === true || item.local === true || options.force) {
                                         tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
                                     } else {
                                         tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
@@ -359,9 +341,6 @@ define(['underscore', 'angular'], function (_) {
                                 });
                             }
                         });
-                    } else {
-                        ulCallback();
-                    }
                 };
 
                 var _deleteLocal = function (dataItems, dlCallback) {
@@ -370,7 +349,6 @@ define(['underscore', 'angular'], function (_) {
 
                     var asyncMon = new AsyncMonitor(dataItems.length, dlCallback);
 
-                    if (_config.write.local === true) {
                         _localDatabase.transaction(function (tx) {
                             for (var i = 0; i < dataItems.length; i++) {
                                 var item = dataItems[i];
@@ -381,11 +359,16 @@ define(['underscore', 'angular'], function (_) {
                                 });
                             }
                         });
-                    }
                 };
 
-                var _deleteAllLocal = function (uri, dalCallback) {
+                var _deleteAllLocal = function (uri, options, dalCallback) {
                     console.log('_deleteAllLocal');
+                    if (typeof options === 'function') {
+                        dalCallback = options;
+                        options = {};
+                    }
+
+                    options = _.defaults((options || {}), {force: false});
 
                     var asyncMon = new AsyncMonitor(1, dalCallback);
 
@@ -405,7 +388,7 @@ define(['underscore', 'angular'], function (_) {
                     _localDatabase.transaction(function (tx) {
                         console.log('_deleteAllLocal transaction');
 
-                        if (_config.write.force === true) {
+                        if (options.force === true) {
                             console.log('_deleteAllLocal force');
                             tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ?', [uri], handleSuccess, handleError);
                         } else {
@@ -425,35 +408,39 @@ define(['underscore', 'angular'], function (_) {
                     console.log('_getRemote');
                     if (typeof grCallback !== 'function') grCallback = _voidCallback;
 
-                    if (_config.read.remote === true && _config.apiTemplate !== undefined) {
+                    if (_config.apiTemplate !== undefined) {
                         _safeApply($rootScope, function () {
-                            $http.get(_apiUrl + uri, {withCredentials: true}).then(function (res) {
-                                var data = res.data;
+                            $http.get(_defaultOptions.url + uri, {withCredentials: true}).then(function (res) {
+                                if (res.data != null && res.data !== 'null') {
+                                    var data = res.data;
 
-                                if ((data instanceof Array) === false) {
-                                    grCallback({
-                                        id: _getItemIndex(data),
-                                        uri: uri,
-                                        data: data,
-                                        dirty: false,
-                                        local: false
-                                    });
-                                } else {
-                                    var dataItems = [];
-
-                                    for (var i = 0; i < data.length; i++) {
-                                        var item = data[i];
-
-                                        dataItems.push({
-                                            id: _getItemIndex(item),
+                                    if ((data instanceof Array) === false) {
+                                        grCallback({
+                                            id: _getItemIndex(data),
                                             uri: uri,
-                                            data: item,
+                                            data: data,
                                             dirty: false,
                                             local: false
                                         });
-                                    }
+                                    } else {
+                                        var dataItems = [];
 
-                                    grCallback(dataItems);
+                                        for (var i = 0; i < data.length; i++) {
+                                            var item = data[i];
+
+                                            dataItems.push({
+                                                id: _getItemIndex(item),
+                                                uri: uri,
+                                                data: item,
+                                                dirty: false,
+                                                local: false
+                                            });
+                                        }
+
+                                        grCallback(dataItems);
+                                    }
+                                } else {
+                                    grCallback(null, _errors.RemoteNoDataError);
                                 }
                             }, function (err) {
                                 _errorCallback(err);
@@ -475,7 +462,7 @@ define(['underscore', 'angular'], function (_) {
                     console.log('_updateRemote');
                     if (typeof urCallback !== 'function') urCallback = _voidCallback;
 
-                    if (dataItems !== undefined && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                    if (dataItems !== undefined && _config.apiTemplate !== undefined) {
                         if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                         var asyncMon = new AsyncMonitor(dataItems.length, function () {
@@ -484,7 +471,7 @@ define(['underscore', 'angular'], function (_) {
 
                         var _makePost = function (item) {
                             _safeApply($rootScope, function () {
-                                $http.post(_apiUrl + item.uri, item.data, {withCredentials: true}).then(function (res) {
+                                $http.post(_defaultOptions.url + item.uri, item.data, {withCredentials: true}).then(function (res) {
                                     var remoteItem = {
                                         id: _getItemIndex(res.data),
                                         uri: item.uri,
@@ -532,14 +519,14 @@ define(['underscore', 'angular'], function (_) {
                     console.log('_deleteRemote');
                     if (typeof drCallback !== 'function') drCallback = _voidCallback;
 
-                    if (dataItems !== undefined && _config.write.remote === true && _config.apiTemplate !== undefined) {
+                    if (dataItems !== undefined && _config.apiTemplate !== undefined) {
                         if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                         var asyncMon = new AsyncMonitor(dataItems.length, drCallback);
 
                         var _makeDelete = function (item) {
                             _safeApply($rootScope, function () {
-                                $http.delete(_apiUrl + item.uri, {withCredentials: true}).then(function (res) {
+                                $http.delete(_defaultOptions.url + item.uri, {withCredentials: true}).then(function (res) {
                                     _deleteLocal(item, asyncMon.done);
                                 }, function (err) {
                                     _errorCallback(err);
@@ -645,17 +632,22 @@ define(['underscore', 'angular'], function (_) {
                             }
 
                             if (typeof schemaData === 'object') {
-                                var _readOptions = _.defaults(options, {page: 1, limit: _defaultOptions.pageLimit});
+                                var _readOptions = _.defaults(options, {
+                                    page: 1,
+                                    limit: _defaultOptions.pageLimit,
+                                    readLocal: _config.readLocal,
+                                    readRemote: _config.readRemote
+                                });
+
                                 var _uri = _parseRequest(_config.apiTemplate, schemaData);
 
                                 // Process request
-                                if (_config.read.local === true && _config.read.remote === false) {
+                                if (_readOptions.readLocal === true) {
                                     _getLocal(_uri, rCallback);
                                 }
 
-                                if (_config.read.remote === true) {
+                                if (_readOptions.readRemote === true) {
                                     _getRemote(_uri, function (res, err) {
-                                        console.log('_getRemote complete');
                                         if (res) {
                                             _syncLocal(res, _uri, function (res, err) {
                                                 rCallback(res);

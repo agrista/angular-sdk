@@ -121,15 +121,27 @@ define(['angular', 'core/utilityModule'], function () {
             },
             replace: true,
             transclude: true,
-            template: '<div class="navbar navbar-inverse page-slide" ng-class="{\'show-menu\': menuShown === true}" ng-transclude>\n    <div class="container">\n        <div class="pull-left" ng-show="showLeftButton()">\n            <div class="btn navbar-btn btn-clear" ng-click="navigateLeft()">\n                <i class="glyphicon glyphicon-{{leftButton.icon}}" ng-show="leftButton.icon"></i>\n                <span ng-show="leftButton.title">&nbsp;{{leftButton.title}}</span>\n            </div>\n        </div>\n        <p class="navbar-text">{{ title }}</p>\n        <div class="pull-right" ng-show="showRightButton()">\n            <div class="btn navbar-btn btn-primary" ng-click="navigateRight()">\n                <i class="glyphicon glyphicon-{{rightButton.icon}}" ng-show="rightButton.icon"></i>\n                <span ng-show="rightButton.title">&nbsp;{{rightButton.title}}</span>\n            </div>\n        </div>\n    </div>\n</div>\n',
+            template: '<div class="navbar navbar-inverse page-slide" ng-class="{\'show-menu\': menuShown === true}" ng-transclude>\n    <div class="container">\n        <div class="pull-left" ng-show="showLeftButton()">\n            <div class="btn navbar-btn btn-clear" ng-click="triggerLeftNav()">\n                <i class="glyphicon glyphicon-{{leftButton.icon}}" ng-show="leftButton.icon"></i>\n                <span ng-show="leftButton.title">&nbsp;{{leftButton.title}}</span>\n            </div>\n        </div>\n        <p class="navbar-text">{{ title }}</p>\n        <div class="pull-right" ng-show="showRightButton()">\n            <div class="btn navbar-btn btn-primary" ng-click="triggerRightNav()">\n                <i class="glyphicon glyphicon-{{rightButton.icon}}" ng-show="rightButton.icon"></i>\n                <span ng-show="rightButton.title">&nbsp;{{rightButton.title}}</span>\n            </div>\n        </div>\n    </div>\n</div>\n',
             controller: ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
+                $scope.triggerLeftNav = function() {
+                    $scope.navigateLeft();
+
+                    return true;
+                };
+
+                $scope.triggerRightNav = function() {
+                    $scope.navigateRight();
+
+                    return true;
+                };
+
                 $scope.showLeftButton = function () {
                     return (typeof $attrs.navigateLeft === 'string');
-                }
+                };
 
                 $scope.showRightButton = function () {
                     return (typeof $attrs.navigateRight === 'string');
-                }
+                };
             }]
         };
     })
