@@ -217,6 +217,18 @@ define(['angular', 'core/dataModule'], function () {
         };
     }]);
 
+    module.factory('cultivarApiService', ['dataStore', function (dataStore) {
+        var cultivarStore = dataStore('farmer', {apiTemplate: 'cultivar/:crop'});
+
+        return {
+            getCultivar: function (crop, options, gcCallback) {
+                cultivarStore.transaction(function (tx) {
+                    tx.read({crop: crop}, options, gcCallback);
+                });
+            }
+        };
+    }]);
+
     module.factory('farmerApiService', ['dataStore', function (dataStore) {
         var farmerStore = dataStore('farmer', {apiTemplate: 'farmer/:id'});
 
