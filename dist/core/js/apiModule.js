@@ -64,10 +64,11 @@ define(['angular', 'core/dataModule'], function () {
                     tx.update(taskItem, utCallback);
                 });
             },
-            syncTask: function (tid, stCallback) {
-                taskStore.transaction(function (tx) {
-                    tx.sync({id: tid}, stCallback);
-                });
+            syncTask: function (readUri, schema, writeUri, stCallback) {
+                dataStore('task', {apiTemplate: readUri})
+                    .transaction(function (tx) {
+                        tx.sync(schema, writeUri, stCallback);
+                    });
             }
         };
     }]);

@@ -80,10 +80,7 @@ define(['angular', 'core/utilityModule'], function () {
             restrict: 'E',
             replace: true,
             template: '<div id="nav-page" class="page-slide" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="container" ng-transclude></div>\n</div>',
-            transclude: true,
-            controller: function($scope) {
-                window.$scope = $scope;
-            }
+            transclude: true
         };
     });
 
