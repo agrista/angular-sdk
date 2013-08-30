@@ -298,6 +298,41 @@ define(['underscore', 'angular'], function (_) {
                     });
                 };
 
+                var _searchLocal = function (col, data, slCallback) {
+                    console.log('_searchLocal');
+                    if (typeof data === 'function') {
+                        slCallback = data;
+                        data = col;
+                        col = 'data';
+                    } else if (typeof col === 'function') {
+                        slCallback = col;
+                        data = '';
+                        col = 'data'
+                    }
+                    if (typeof slCallback !== 'function') slCallback = _voidCallback;
+
+                    _localDatabase.transaction(function (tx) {
+                        tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + col + ' LIKE ?', ["%" + data + "%"], function (tx, res) {
+                            if (res.rows.length == 1) {
+                                slCallback(_createDataItem(res.rows.item(0)));
+
+                            } else if (res.rows.length > 0) {
+                                var dataItems = [];
+
+                                for (var i = 0; i < res.rows.length; i++) {
+                                    dataItems.push(_createDataItem(res.rows.item(i)));
+                                }
+
+                                slCallback(dataItems);
+                            } else {
+                                slCallback(null);
+                            }
+                        }, function (tx, err) {
+                            slCallback(null, err);
+                        });
+                    });
+                }
+
                 var _syncLocal = function (dataItems, uri, slCallback) {
                     console.log('_syncLocal');
                     if (typeof slCallback !== 'function') slCallback = _voidCallback;
@@ -613,12 +648,12 @@ define(['underscore', 'angular'], function (_) {
                     }
 
                     return {
-                        create: function (schemaData, data, cCallback) {
+                        make: function (schemaData, data, cCallback) {
                             if (typeof data === 'function') {
                                 cCallback = data;
                                 data = {};
                             }
-                            else if (typeof schemaData === 'undefined') {
+                            else if (typeof schemaData === 'function') {
                                 cCallback = schemaData;
                                 data = {};
                                 schemaData = {};
@@ -675,6 +710,9 @@ define(['underscore', 'angular'], function (_) {
                         },
                         find: function (id, fCallback) {
                             _findLocal(id, fCallback);
+                        },
+                        search: function(col, data, sCallback) {
+                            _searchLocal(col, data, sCallback);
                         },
                         update: function (dataItems, uCallback) {
                             if ((dataItems instanceof Array) === false) {

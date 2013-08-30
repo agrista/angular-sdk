@@ -121,7 +121,7 @@ define(['angular', 'core/dataModule'], function () {
             // Photo
             createPhoto: function (documentId, photoItem, cpCallback) {
                 photoStore.transaction(function (tx) {
-                    tx.create({id: documentId}, photoItem, cpCallback);
+                    tx.make({id: documentId}, photoItem, cpCallback);
                 });
             },
             findPhoto: function (pid, fpCallback) {
@@ -131,7 +131,7 @@ define(['angular', 'core/dataModule'], function () {
             },
             updatePhoto: function (photoItem, upCallback) {
                 photoStore.transaction(function (tx) {
-                    tx.update(documentItem, upCallback);
+                    tx.update(photoItem, upCallback);
                 });
             },
             syncPhoto: function (pid, spCallback) {
@@ -218,12 +218,23 @@ define(['angular', 'core/dataModule'], function () {
     }]);
 
     module.factory('cultivarApiService', ['dataStore', function (dataStore) {
-        var cultivarStore = dataStore('farmer', {apiTemplate: 'cultivar/:crop'});
+        var cultivarsStore = dataStore('cultivars', {apiTemplate: 'cultivars/:crop'});
 
         return {
-            getCultivar: function (crop, options, gcCallback) {
-                cultivarStore.transaction(function (tx) {
+            getCultivars: function (crop, options, gcCallback) {
+                cultivarsStore.transaction(function (tx) {
                     tx.read({crop: crop}, options, gcCallback);
+                });
+            },
+            searchCultivars: function (data, scCallback) {
+                cultivarsStore.transaction(function (tx) {
+                    tx.search(data, function (res, err) {
+                        if (res && (res instanceof Array) === false) {
+                            res = [res];
+                        }
+
+                        scCallback(res, err);
+                    });
                 });
             }
         };

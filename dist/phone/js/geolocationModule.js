@@ -5,28 +5,27 @@ define(['underscore', 'cordova', 'angular'], function (_) {
 
     /**
      * @name geolocationModule.geolocationService
-     * @requires promiseService
      * @description Creates a AngularJS service to provide geolocation data
      * @example
 
-        function onLocation(res) {
+     function onLocation(res) {
             console.log('Success: geolocationService.watchPosition');
             console.log(res);
         }
 
-        function onError(err) {
+     function onError(err) {
             console.log('Error: geolocationService.watchPosition');
             console.log(err);
         }
 
-        var watch = geolocationService.watchPosition(onLocation, onError);
+     var watch = geolocationService.watchPosition(onLocation, onError);
 
-        ...
+     ...
 
-        watch.cancel();
+     watch.cancel();
 
      */
-    module.factory('geolocationService', ['promiseService', function (promiseService) {
+    module.factory('geolocationService', ['$q', '$rootScope', function ($q, $rootScope) {
         var _geolocation = navigator.geolocation;
         var _defaultOptions = {enableHighAccuracy: true};
         var _errors = {
@@ -49,6 +48,10 @@ define(['underscore', 'cordova', 'angular'], function (_) {
             }
         }
 
+        function _safeApply(scope, fn) {
+            (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
+        }
+
         return {
             /**
              * @name geolocationService.getPosition
@@ -66,12 +69,16 @@ define(['underscore', 'cordova', 'angular'], function (_) {
 
                 options = _.defaults(options, _defaultOptions);
 
-                var defer = promiseService.defer();
+                var defer = $q.defer();
 
                 _geolocation.getCurrentPosition(function (res) {
-                    promiseService.resolve(defer, res);
+                    _safeApply($rootScope, function() {
+                        defer.resolve(res);
+                    });
                 }, function (err) {
-                    promiseService.reject(defer, _resolveError(err.code, err.msg));
+                    _safeApply($rootScope, function() {
+                        defer.reject(_resolveError(err.code, err.msg));
+                    });
                 }, options);
 
                 return defer.promise;
