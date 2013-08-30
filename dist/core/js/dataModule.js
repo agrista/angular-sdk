@@ -360,25 +360,30 @@ define(['underscore', 'angular'], function (_) {
                     }
                     if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                    options = _.defaults((options || {}), {force: false});
+                    if (dataItems.length > 0) {
 
-                    var asyncMon = new AsyncMonitor(dataItems.length, ulCallback);
+                        options = _.defaults((options || {}), {force: false});
 
-                    _localDatabase.transaction(function (tx) {
-                        for (var i = 0; i < dataItems.length; i++) {
-                            var item = dataItems[i];
-                            var dataString = JSON.stringify(item.data);
+                        var asyncMon = new AsyncMonitor(dataItems.length, ulCallback);
 
-                            tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
-                                // Insert failed
-                                if (item.dirty === true || item.local === true || options.force) {
-                                    tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
-                                } else {
-                                    tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
-                                }
-                            });
-                        }
-                    });
+                        _localDatabase.transaction(function (tx) {
+                            for (var i = 0; i < dataItems.length; i++) {
+                                var item = dataItems[i];
+                                var dataString = JSON.stringify(item.data);
+
+                                tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
+                                    // Insert failed
+                                    if (item.dirty === true || item.local === true || options.force) {
+                                        tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                    } else {
+                                        tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                    }
+                                });
+                            }
+                        });
+                    } else {
+                        ulCallback(dataItems);
+                    }
                 };
 
                 var _deleteLocal = function (dataItems, dlCallback) {
@@ -711,7 +716,7 @@ define(['underscore', 'angular'], function (_) {
                         find: function (id, fCallback) {
                             _findLocal(id, fCallback);
                         },
-                        search: function(col, data, sCallback) {
+                        search: function (col, data, sCallback) {
                             _searchLocal(col, data, sCallback);
                         },
                         update: function (dataItems, uCallback) {
