@@ -1,11 +1,11 @@
 'use strict';
 
-define(['underscore', 'cordova', 'angular'], function (_) {
-    var module = angular.module('cameraModule', []);
+define(['underscore', 'cordova', 'angular', 'core/utilityModule'], function (_) {
+    var module = angular.module('cameraModule', ['utilityModule']);
 
     /**
      * @name cameraModule.cameraService
-     * @requires $q
+     * @requires promiseService
      * @description Creates a AngularJS service to provide camera data
      * @example
 
@@ -16,7 +16,7 @@ define(['underscore', 'cordova', 'angular'], function (_) {
         });
 
      */
-    module.factory('cameraService', ['$q', '$rootScope', function ($q, $rootScope) {
+    module.factory('cameraService', ['promiseService', function (promiseService) {
         if (typeof window.Camera === 'undefined') {
             window.Camera = {};
         }
@@ -25,22 +25,14 @@ define(['underscore', 'cordova', 'angular'], function (_) {
         var _destinationTypes = Camera.DestinationType;
         var _encodingTypes = Camera.EncodingType;
 
-        function _safeApply(scope, fn) {
-            (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
-        }
-
         function _makeRequest(options) {
-            var defer = $q.defer();
+            var defer = promiseService.defer();
 
             if (navigator.camera !== undefined) {
                 navigator.camera.getPicture(function (data) {
-                    _safeApply($rootScope, function() {
-                        defer.resolve(data);
-                    });
+                    defer.resolve(data);
                 }, function (err) {
-                    _safeApply($rootScope, function() {
-                        defer.reject(err);
-                    });
+                    defer.reject(err);
                 }, options);
             } else {
                 defer.reject({code: 'NoCamera', message: 'No camera available'});

@@ -1,17 +1,19 @@
 'use strict';
 
-define(['cordova', 'angular'], function () {
-    var module = angular.module('storageModule', []);
+define(['cordova', 'angular', 'core/utilityModule'], function () {
+    var module = angular.module('storageModule', ['utilityModule']);
 
     /**
      * @name storageModule.fileStorageService
+     * @requires promiseService
      * @description File Storage Service
      * @return {object} Angular Service
      **/
-    module.factory('fileStorageService', ['$q', function ($q) {
+    module.factory('fileStorageService', ['promiseService', function (promiseService) {
         var _fileSystem = undefined;
         var _errors = {
             noFileSystem: {err: 'NoFileSystem', msg: 'Could not initialize file system'},
+            directoryNotFound: {err: 'directoryNotFound', msg: 'Could not find requested directory'},
             fileNotFound: {err: 'FileNotFound', msg: 'Could not find requested file'},
             fileNotReadable: {err: 'FileNotReadable', msg: 'Could not read from file'},
             fileNotWritable: {err: 'FileNotWritable', msg: 'Could not write to file'}
@@ -41,16 +43,25 @@ define(['cordova', 'angular'], function () {
          * @return {object} Promise for deferred result
          **/
         var _getFileEntry = function (fileURI, options) {
-            var defer = $q.defer();
+            var defer = promiseService.defer();
+
+            var _resolve = function (fileEntry) {
+                defer.resolve(fileEntry);
+            };
+
+            var _reject = function () {
+                defer.reject(_errors.fileNotFound);
+            };
 
             // Initialize the file system
             _initFileSystem(function () {
                 // Request the file entry
-                _fileSystem.root.getFile(fileURI, options, function (fileEntry) {
-                    defer.resolve(fileEntry);
-                }, function () {
-                    defer.reject(_errors.fileNotFound);
-                });
+                if (options.local === true) {
+                    window.resolveLocalFileSystemURI(fileURI, _resolve, _reject);
+                } else {
+
+                    _fileSystem.root.getFile(fileURI, options, _resolve, _reject);
+                }
             }, function () {
                 defer.reject(_errors.noFileSystem);
             });
@@ -67,7 +78,7 @@ define(['cordova', 'angular'], function () {
              * @return {object} Promise for deferred result
              **/
             exists: function (fileURI) {
-                var defer = $q.defer();
+                var defer = promiseService.defer();
 
                 // Initialize & request the file entry
                 _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
@@ -86,11 +97,11 @@ define(['cordova', 'angular'], function () {
              * @param {string} fileURI The file to read
              * @return {object} Promise for deferred result
              **/
-            read: function (fileURI) {
-                var defer = $q.defer();
+            read: function (fileURI, options) {
+                var defer = promiseService.defer();
 
                 // Initialize & request the file entry
-                _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
+                _getFileEntry(fileURI, {create: false, local: options.local}).then(function (fileEntry) {
                     // Request the file
                     fileEntry.file(function (file) {
                         // Read the file
@@ -106,7 +117,11 @@ define(['cordova', 'angular'], function () {
                             defer.reject(_errors.fileNotReadable);
                         };
 
-                        _fileReader.readAsText(file);
+                        if (options.asDataUrl === true) {
+                            _fileReader.readAsDataURL(file);
+                        } else {
+                            _fileReader.readAsText(file);
+                        }
                     }, function () {
                         defer.reject(_errors.fileNotFound);
                     });
@@ -116,6 +131,32 @@ define(['cordova', 'angular'], function () {
 
                 return defer.promise;
             },
+            move: function (fileURI, options, directory) {
+                var defer = promiseService.defer();
+
+                // Initialize & request the file entry
+                _getFileEntry(fileURI, options).then(function (fileEntry) {
+
+                    _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function(directoryEntry) {
+                        fileEntry.moveTo(directoryEntry, fileEntry.name, function(newFileEntry) {
+                            defer.resolve({
+                                move: true,
+                                file: newFileEntry.name,
+                                path: newFileEntry.fullPath
+                            });
+                        }, function () {
+                            defer.reject(_errors.fileNotFound);
+                        });
+                    }, function() {
+                        defer.reject(_errors.directoryNotFound);
+                    });
+                }, function (res) {
+                    defer.reject(res);
+                });
+
+                return defer.promise;
+            },
+
             /**
              * Write a file
              * @param {string} fileURI The file to write
@@ -123,7 +164,7 @@ define(['cordova', 'angular'], function () {
              * @return {object} Promise for deferred result
              **/
             write: function (fileURI, content) {
-                var defer = $q.defer();
+                var defer = promiseService.defer();
 
                 // Initialize & request the file entry
                 _getFileEntry(fileURI, {create: true}).then(function (fileEntry) {
@@ -156,7 +197,7 @@ define(['cordova', 'angular'], function () {
              * @return {object} Promise for deferred result
              **/
             remove: function (fileURI) {
-                var defer = $q.defer();
+                var defer = promiseService.defer();
 
                 // Initialize & request the file entry
                 _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {

@@ -1,10 +1,11 @@
 'use strict';
 
-define(['underscore', 'cordova', 'angular'], function (_) {
-    var module = angular.module('geolocationModule', []);
+define(['underscore', 'cordova', 'angular', 'core/utilityModule'], function (_) {
+    var module = angular.module('geolocationModule', ['utilityModule']);
 
     /**
      * @name geolocationModule.geolocationService
+     * @requires promiseService
      * @description Creates a AngularJS service to provide geolocation data
      * @example
 
@@ -25,7 +26,7 @@ define(['underscore', 'cordova', 'angular'], function (_) {
      watch.cancel();
 
      */
-    module.factory('geolocationService', ['$q', '$rootScope', function ($q, $rootScope) {
+    module.factory('geolocationService', ['promiseService', function (promiseService) {
         var _geolocation = navigator.geolocation;
         var _defaultOptions = {enableHighAccuracy: true};
         var _errors = {
@@ -48,10 +49,6 @@ define(['underscore', 'cordova', 'angular'], function (_) {
             }
         }
 
-        function _safeApply(scope, fn) {
-            (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
-        }
-
         return {
             /**
              * @name geolocationService.getPosition
@@ -69,16 +66,12 @@ define(['underscore', 'cordova', 'angular'], function (_) {
 
                 options = _.defaults(options, _defaultOptions);
 
-                var defer = $q.defer();
+                var defer = promiseService.defer();
 
                 _geolocation.getCurrentPosition(function (res) {
-                    _safeApply($rootScope, function() {
-                        defer.resolve(res);
-                    });
+                    defer.resolve(res);
                 }, function (err) {
-                    _safeApply($rootScope, function() {
-                        defer.reject(_resolveError(err.code, err.msg));
-                    });
+                    defer.reject(_resolveError(err.code, err.msg));
                 }, options);
 
                 return defer.promise;
