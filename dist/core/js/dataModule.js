@@ -114,10 +114,7 @@ define(['underscore', 'angular'], function (_) {
                  * @private
 
                  config = {
-                    api: {
-                        get: get,
-                        post: post
-                    },
+                    api: undefined,
                     paging: {
                         template: urlTemplate,
                         schema: schemaTemplate,
@@ -271,7 +268,7 @@ define(['underscore', 'angular'], function (_) {
 
                                 glCallback(dataItems);
                             } else {
-                                glCallback();
+                                glCallback([]);
                             }
                         }, function (tx, err) {
                             _errorCallback(tx, err);
@@ -358,13 +355,17 @@ define(['underscore', 'angular'], function (_) {
                         ulCallback = options;
                         options = {};
                     }
+
+                    if (typeof ulCallback !== 'function') ulCallback = _voidCallback;
                     if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                     if (dataItems.length > 0) {
 
                         options = _.defaults((options || {}), {force: false});
 
-                        var asyncMon = new AsyncMonitor(dataItems.length, ulCallback);
+                        var asyncMon = new AsyncMonitor(dataItems.length, function() {
+                            ulCallback(dataItems);
+                        });
 
                         _localDatabase.transaction(function (tx) {
                             for (var i = 0; i < dataItems.length; i++) {
@@ -653,24 +654,31 @@ define(['underscore', 'angular'], function (_) {
                     }
 
                     return {
-                        make: function (schemaData, data, cCallback) {
+                        make: function (uriTemplate, schemaData, data, cCallback) {
                             if (typeof data === 'function') {
                                 cCallback = data;
-                                data = {};
-                            }
-                            else if (typeof schemaData === 'function') {
+                                data = schemaData;
+                                schemaData = uriTemplate;
+                                uriTemplate = _config.apiTemplate;
+                            } else if (typeof schemaData === 'function') {
+                                cCallback = schemaData;
+                                data = uriTemplate;
+                                schemaData = {};
+                                uriTemplate = _config.apiTemplate;
+                            } else if (typeof uriTemplate === 'function') {
                                 cCallback = schemaData;
                                 data = {};
                                 schemaData = {};
+                                uriTemplate = _config.apiTemplate;
                             }
 
-                            cCallback({
+                            _updateLocal({
                                 id: _createUniqueId(),
-                                uri: _parseRequest(_config.apiTemplate, schemaData),
+                                uri: _parseRequest(uriTemplate, schemaData),
                                 data: data,
                                 dirty: true,
                                 local: true
-                            });
+                            }, cCallback);
                         },
                         read: function (schemaData, options, rCallback) {
                             // Validate parameters
@@ -755,8 +763,20 @@ define(['underscore', 'angular'], function (_) {
                                 });
                             });
                         },
-                        delete: function (dataItems, dCallback) {
-                            _deleteRemote(dataItems, dCallback);
+                        remove: function (dataItems, dCallback) {
+                            if ((dataItems instanceof Array) === false) {
+                                dataItems = [dataItems];
+                            }
+
+                            var asyncMon = new AsyncMonitor(dataItems.length, dCallback);
+
+                            for (var i = 0; i < dataItems.length; i++) {
+                                if (dataItems[i].local === true) {
+                                    _deleteLocal(dataItems, asyncMon.done);
+                                } else {
+                                    _deleteRemote(dataItems, asyncMon.done);
+                                }
+                            }
                         }
                     }
                 };
@@ -776,6 +796,7 @@ define(['underscore', 'angular'], function (_) {
                  * Public functions
                  */
                 return {
+                    defaults: _defaultOptions,
                     transaction: function (tCallback) {
                         if (typeof tCallback === 'function') {
                             _transactionQueue.push(tCallback);
