@@ -1,10 +1,11 @@
 'use strict';
 
-define(['angular', 'core/dataModule'], function () {
-    var module = angular.module('apiModule', ['dataModule']);
+define(['angular', 'core/dataModule', 'phone/storageModule'], function () {
+    var module = angular.module('apiModule', ['dataModule', 'storageModule']);
 
     var _errors = {
-        TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'}
+        TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
+        UploadPhotoError: {code: 'UploadPhotoError', message: 'Error occured uploading photo'}
     };
 
     module.factory('taskApiService', ['dataStore', function (dataStore) {
@@ -92,36 +93,35 @@ define(['angular', 'core/dataModule'], function () {
                 documentStore.transaction(function (tx) {
                     tx.sync({id: did}, sdCallback);
                 });
+            },
+            getDocumentPhotos: function (did, options, gdpCallback) {
+                if (typeof options === 'function') {
+                    gdpCallback = options;
+                    options = {};
+                }
+
+                dataStore('photo', {apiTemplate: 'document/:id/photo'})
+                    .transaction(function (tx) {
+                        tx.read({id: did}, options, function (res, err) {
+                            if (res && (res instanceof Array) === false) {
+                                res = [res];
+                            }
+
+                            gdpCallback(res, err);
+                        });
+                    });
             }
         };
     }]);
 
-    module.factory('photoApiService', ['dataStore', function (dataStore) {
+    module.factory('photoApiService', ['$http', 'dataStore', 'fileStorageService', function ($http, dataStore, fileStorageService) {
         var photoStore = dataStore('photo', {apiTemplate: 'photo/:id'});
 
         return {
-            // Photos
-            getPhotos: function (pid, options, gpCallback) {
-                if (typeof options === 'function') {
-                    gpCallback = options;
-                    options = {};
-                }
-
-                photoStore.transaction(function (tx) {
-                    tx.read({id: pid}, options, function (res, err) {
-                        if (res && (res instanceof Array) === false) {
-                            res = [res];
-                        }
-
-                        gpCallback(res, err);
-                    });
-                });
-            },
-
             // Photo
-            createPhoto: function (documentId, photoItem, cpCallback) {
+            createPhoto: function (uriTemplate, schema, photoItem, cpCallback) {
                 photoStore.transaction(function (tx) {
-                    tx.make({id: documentId}, photoItem, cpCallback);
+                    tx.make(uriTemplate, schema, photoItem, cpCallback);
                 });
             },
             findPhoto: function (pid, fpCallback) {
@@ -134,9 +134,60 @@ define(['angular', 'core/dataModule'], function () {
                     tx.update(photoItem, upCallback);
                 });
             },
-            syncPhoto: function (pid, spCallback) {
+            uploadPhoto: function (photoItem, upCallback) {
+                if (photoItem.local === true) {
+                    console.log('photoItem local');
+
+                    var photoData = {
+                        loc: photoItem.data.loc
+                    };
+
+                    var _uploadAndUpdatePhoto = function (photoData) {
+                        console.log('start upload');
+
+                        $http
+                            .post(photoStore.defaults.url + photoItem.uri, photoData, {withCredentials: true})
+                            .then(function () {
+                                console.log('finish upload');
+                                photoItem.local = false;
+
+                                photoStore.transaction(function (tx) {
+                                    console.log('update upload');
+
+                                    tx.update(photoItem, upCallback);
+                                });
+                            }, function () {
+                                upCallback(null, _errors.UploadPhotoError);
+                            });
+                    };
+
+                    if (photoItem.data.image.src !== undefined) {
+                        console.log('start read');
+
+                        fileStorageService.read(photoItem.data.image.src, {asDataUrl: true}).then(function (fileData) {
+                            console.log('finish read');
+
+                            photoData.image = {
+                                data: fileData,
+                                type: photoItem.data.image.type
+                            };
+
+                            _uploadAndUpdatePhoto(photoData);
+                        }, function (err) {
+                            upCallback(null, err);
+                        });
+                    } else {
+                        photoData.image = photoItem.data.image;
+
+                        _uploadAndUpdatePhoto(photoData);
+                    }
+                } else {
+                    upCallback(photoItem);
+                }
+            },
+            deletePhoto: function (photoItem, dpCallback) {
                 photoStore.transaction(function (tx) {
-                    tx.sync({id: pid}, spCallback);
+                    tx.remove(photoItem, dpCallback);
                 });
             }
         };
