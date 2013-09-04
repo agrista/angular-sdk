@@ -437,10 +437,6 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
     module.factory('photoApiService', ['$http', 'dataStore', 'fileStorageService', 'safeApply', function ($http, dataStore, fileStorageService, safeApply) {
         var photoStore = dataStore('photo', {apiTemplate: 'photo/:id'});
 
-        function _safeApply(scope, fn) {
-            (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
-        };
-
         return {
             // Photo
             createPhoto: function (uriTemplate, schema, photoItem, cpCallback) {
