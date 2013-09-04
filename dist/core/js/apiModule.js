@@ -1,13 +1,339 @@
 'use strict';
 
-define(['angular', 'core/dataModule', 'phone/storageModule'], function () {
-    var module = angular.module('apiModule', ['dataModule', 'storageModule']);
+define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule'], function () {
+    var module = angular.module('apiModule', ['utilityModule', 'dataModule', 'storageModule']);
 
     var _errors = {
         TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
         UploadPhotoError: {code: 'UploadPhotoError', message: 'Error occured uploading photo'}
     };
 
+    // Syncronization
+    module.provider('dataSyncronizationService', function () {
+
+        this.$get = ['queueService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'cultivarApiService', 'assetApiService', 'farmerApiService',
+            function (queueService, taskApiService, documentApiService, photoApiService, customerApiService, cultivarApiService, assetApiService, farmerApiService) {
+                var _queue = null;
+                var _syncList = null;
+                var _inProgress = false;
+
+                var _readOptions = {readLocal: false, readRemote: true};
+
+                function _getTasksByType(taskType) {
+                    if (_inProgress === true) {
+                        _queue.pushPromise(function (defer) {
+                            taskApiService.getTasksByType(taskType, _readOptions, function (res, err) {
+                                if (res) {
+                                    for (var i = 0; i < res.length; i++) {
+                                        var item = res[i];
+
+                                        if (item.id !== undefined) {
+                                            var sync = (item.dirty === true && item.data.status === 'complete');
+
+                                            _getTask(item.id, sync);
+
+                                            if (sync) {
+                                                _postTask('tasks?type=:type', {type: taskType}, 'task/:id');
+                                            }
+                                        }
+                                    }
+
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getTask(tid, sync) {
+                    if (_inProgress === true && tid !== undefined) {
+                        _queue.pushPromise(function (defer) {
+                            taskApiService.getTasksById(tid, _readOptions, function (res, err) {
+                                if (res) {
+                                    for (var i = 0; i < res.length; i++) {
+                                        var item = res[i].data;
+
+                                        if (item.object && item.object.id) {
+                                            _getDocument(item.object.id);
+                                        }
+
+                                        if (sync) {
+                                            _postDocument(item.object.id);
+                                            _postTask('task/:id/tasks', {id: tid}, 'task/:id');
+                                            _postPhotos(item.object.id);
+                                        }
+                                    }
+
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _postTask(readUri, schema, writeUri) {
+                    if (_inProgress === true) {
+                        _queue.pushPromise(function (defer) {
+                            taskApiService.syncTask(readUri, schema, writeUri, function (res, err) {
+                                if (res) {
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getDocument(did) {
+                    if (_inProgress === true && did !== undefined) {
+                        _queue.pushPromise(function (defer) {
+                            documentApiService.getDocument(did, _readOptions, function (res, err) {
+                                if (res) {
+                                    _getCustomer(res.data.customerID);
+                                    _getCultivars(res.data.crop);
+
+                                    for (var i = 0; i < res.data.land_assets.length; i++) {
+                                        _getAsset(res.data.land_assets[i]);
+                                    }
+
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _postDocument(did) {
+                    if (_inProgress === true && did !== undefined) {
+                        _queue.pushPromise(function (defer) {
+                            documentApiService.syncDocument(did, function (res, err) {
+                                if (res) {
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _postPhotos(did) {
+                    if (_inProgress === true && did !== undefined) {
+                        _queue.pushPromise(function (defer) {
+                            documentApiService.getDocumentPhotos(did, function (res, err) {
+                                if (res) {
+                                    for (var i = 0; i < res.length; i++) {
+                                        _postPhoto(res[i]);
+                                    }
+
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _postPhoto(photoItem) {
+                    if (_inProgress === true) {
+                        _queue.pushPromise(function (defer) {
+                            photoApiService.uploadPhoto(photoItem, function (res, err) {
+                                if (res) {
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getCustomers() {
+                    if (_inProgress === true) {
+                        _queue.pushPromise(function (defer) {
+                            customerApiService.getCustomers(_readOptions, function (res, err) {
+                                if (res) {
+                                    for (var i = 0; i < res.length; i++) {
+                                        _getCustomerAssets(res[i].data.cid);
+                                        _getFarmer(res[i].data.fid);
+                                    }
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getCustomer(cid) {
+                    if (_inProgress === true && cid !== undefined && _syncList.customers[cid] === undefined) {
+                        _syncList.customers[cid] = true;
+
+                        _queue.pushPromise(function (defer) {
+                            customerApiService.getCustomer(cid, _readOptions, function (res, err) {
+                                if (res) {
+                                    _getFarmer(res.data.farmerID);
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getCustomerAssets(cid) {
+                    if (_inProgress === true && cid !== undefined && _syncList.customerAssets[cid] === undefined) {
+                        _syncList.customerAssets[cid] = true;
+
+                        _queue.pushPromise(function (defer) {
+                            customerApiService.getCustomerAssets(cid, _readOptions, function (res, err) {
+                                if (res) {
+                                    for (var i = 0; i < res.length; i++) {
+                                        if (res[i].dirty === true) {
+                                            _postAsset('customer/:id/assets', {id: taskType}, 'asset/:id');
+                                        }
+                                    }
+
+
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getCultivars(crop) {
+                    if (_inProgress === true && crop !== undefined && _syncList.cultivars[crop] === undefined) {
+                        _syncList.cultivars[crop] = true;
+
+                        _queue.pushPromise(function (defer) {
+                            cultivarApiService.getCultivars(crop, _readOptions, function (res, err) {
+                                if (res) {
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getAsset(aid) {
+                    if (_inProgress === true && aid !== undefined && _syncList.assets[aid] === undefined) {
+                        _syncList.assets[aid] = true;
+
+                        _queue.pushPromise(function (defer) {
+                            assetApiService.getAsset(aid, _readOptions, function (res, err) {
+                                if (res) {
+                                    if (res.dirty === true) {
+                                        _postAsset('asset/:id', {id: aid}, 'asset/:id');
+                                    }
+
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _postAsset(readUri, schema, writeUri) {
+                    if (_inProgress === true) {
+                        _queue.pushPromise(function (defer) {
+                            assetApiService.syncAsset(readUri, schema, writeUri, function (res, err) {
+                                if (res) {
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _getFarmer(fid) {
+                    if (_inProgress === true && fid !== undefined && _syncList.farmers[fid] === undefined) {
+                        _syncList.farmers[fid] = true;
+
+                        _queue.pushPromise(function (defer) {
+                            farmerApiService.getFarmer(fid, _readOptions, function (res, err) {
+                                if (res) {
+                                    if (res.dirty === true) {
+                                        _postFarmer(res.id);
+                                    }
+
+
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function _postFarmer(fid) {
+                    if (_inProgress === true && fid !== undefined) {
+                        _queue.pushPromise(function (defer) {
+                            farmerApiService.syncFarmer(fid, function (res, err) {
+                                if (res) {
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        });
+                    }
+                }
+
+                return {
+                    cancel: function () {
+                        if (_queue) {
+                            _inProgress = false;
+                            _queue.clear();
+                        }
+                    },
+                    sync: function (callback) {
+                        if (_inProgress === false) {
+                            _inProgress = true;
+                            _syncList = {
+                                customers: {},
+                                customerAssets: {},
+                                cultivars: {},
+                                farmers: {},
+                                assets: {}
+                            };
+
+                            _queue = queueService(function (data) {
+                                if (data.type === 'complete') {
+                                    _inProgress = false;
+                                }
+
+                                callback(data);
+                            });
+
+                            _getTasksByType('work-package');
+                            _getCustomers();
+                        }
+                    }
+                }
+            }]
+    });
+
+    // APIs
     module.factory('taskApiService', ['dataStore', function (dataStore) {
         var taskStore = dataStore('task', {apiTemplate: 'task/:id'});
 
@@ -260,10 +586,17 @@ define(['angular', 'core/dataModule', 'phone/storageModule'], function () {
                     tx.update(assetItem, uaCallback);
                 });
             },
-            syncAsset: function (aid, saCallback) {
-                assetStore.transaction(function (tx) {
-                    tx.sync({id: aid}, saCallback);
-                });
+            syncAsset: function (readUri, schema, writeUri, saCallback) {
+                if (readUri === assetStore.config.apiTemplate) {
+                    assetStore.transaction(function (tx) {
+                        tx.sync(schema, writeUri, saCallback);
+                    });
+                } else {
+                    dataStore('asset', {apiTemplate: readUri})
+                        .transaction(function (tx) {
+                            tx.sync(schema, writeUri, saCallback);
+                        });
+                }
             }
         };
     }]);

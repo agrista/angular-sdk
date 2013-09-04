@@ -797,6 +797,7 @@ define(['underscore', 'angular'], function (_) {
                  */
                 return {
                     defaults: _defaultOptions,
+                    config: _config,
                     transaction: function (tCallback) {
                         if (typeof tCallback === 'function') {
                             _transactionQueue.push(tCallback);
