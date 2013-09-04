@@ -135,7 +135,7 @@ define(['angular'], function () {
                     feature = L.geoJson(item.geoJson, item.options).addTo(featureGroups[item.group]);
                 }
 
-                if(feature !== undefined && typeof item.onAdd === 'function') {
+                if (feature !== undefined && typeof item.onAdd === 'function') {
                     item.onAdd(feature);
                 }
             }
@@ -189,7 +189,14 @@ define(['angular'], function () {
                 var watcher = geolocationService.watchPosition(function (res, err) {
                     if (res) {
                         if (location.marker === undefined) {
-                            location.marker = L.marker([res.coords.latitude, res.coords.longitude]).addTo(map);
+                            location.marker = L.marker([res.coords.latitude, res.coords.longitude], {
+                                icon: L.icon({
+                                    iconUrl: 'img/icons/navigation-marker.png',
+                                    iconSize: [32, 32],
+                                    iconAnchor: [16, 16],
+                                    popupAnchor: [16, -16]
+                                })
+                            }).addTo(map);
                         } else {
                             location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
                         }
@@ -204,7 +211,7 @@ define(['angular'], function () {
                     }
 
                     for (var group in featureGroups) {
-                        if(featureGroups.hasOwnProperty(group)) {
+                        if (featureGroups.hasOwnProperty(group)) {
                             featureGroups[group].clearLayers();
                             delete featureGroups[group];
                         }
