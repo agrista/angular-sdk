@@ -12,20 +12,27 @@ define(['angular'], function () {
         }
     });
 
-    module.directive('preValidate', ['$parse', function ($parse) {
+    module.directive('preValidate', function () {
         return {
             restrict: 'A',
             require: 'form',
-            scope: {
-                preValidate: '='
-            },
             link: function (scope, formElement, attributes, formController) {
-                scope.$watch(formController.$valid, function() {
+                scope.$watch(formController.$valid, function () {
                     console.log('validation ' + formController.$valid);
-                    scope.preValidate(formController);
+                    scope.$eval(attributes.preValidate)
                 });
             }
-        }
+        };
+    });
+
+    module.factory('safeApply', ['$rootScope', function ($rootScope) {
+        return function (fn) {
+            if ($rootScope.$$phase) {
+                fn();
+            } else {
+                $rootScope.$apply(fn);
+            }
+        };
     }]);
 
     module.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
@@ -54,7 +61,7 @@ define(['angular'], function () {
             var _next = function () {
                 _limit++;
 
-                if(_progress.complete < _progress.total) {
+                if (_progress.complete < _progress.total) {
                     _progress.complete++;
                 }
 
@@ -137,6 +144,9 @@ define(['angular'], function () {
         }
 
         return {
+            all: function (promises) {
+                return $q.all(promises);
+            },
             defer: function () {
                 var _defer = $q.defer();
 
