@@ -256,10 +256,7 @@ define(['underscore', 'angular'], function (_) {
 
                     _localDatabase.transaction(function (tx) {
                         tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
-                            if (res.rows.length == 1) {
-                                glCallback(_createDataItem(res.rows.item(0)));
-
-                            } else if (res.rows.length > 0) {
+                            if (res.rows.length > 0) {
                                 var dataItems = [];
 
                                 for (var i = 0; i < res.rows.length; i++) {
@@ -284,10 +281,10 @@ define(['underscore', 'angular'], function (_) {
                     _localDatabase.transaction(function (tx) {
                         tx.executeSql('SELECT * FROM ' + name + ' WHERE id = ? LIMIT 1', [id], function (tx, res) {
                             if (res.rows.length == 1) {
-                                flCallback(_createDataItem(res.rows.item(0)));
+                                flCallback([_createDataItem(res.rows.item(0))]);
 
                             } else {
-                                flCallback();
+                                flCallback([]);
                             }
                         }, function (tx, err) {
                             flCallback();
@@ -310,10 +307,7 @@ define(['underscore', 'angular'], function (_) {
 
                     _localDatabase.transaction(function (tx) {
                         tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + col + ' LIKE ?', ["%" + data + "%"], function (tx, res) {
-                            if (res.rows.length == 1) {
-                                slCallback(_createDataItem(res.rows.item(0)));
-
-                            } else if (res.rows.length > 0) {
+                            if (res.rows.length > 0) {
                                 var dataItems = [];
 
                                 for (var i = 0; i < res.rows.length; i++) {
@@ -322,7 +316,7 @@ define(['underscore', 'angular'], function (_) {
 
                                 slCallback(dataItems);
                             } else {
-                                slCallback(null);
+                                slCallback([]);
                             }
                         }, function (tx, err) {
                             slCallback(null, err);
@@ -459,13 +453,13 @@ define(['underscore', 'angular'], function (_) {
                                     var data = res.data;
 
                                     if ((data instanceof Array) === false) {
-                                        grCallback({
+                                        grCallback([{
                                             id: _getItemIndex(data),
                                             uri: uri,
                                             data: data,
                                             dirty: false,
                                             local: false
-                                        });
+                                        }]);
                                     } else {
                                         var dataItems = [];
 
