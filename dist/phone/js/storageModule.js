@@ -131,6 +131,31 @@ define(['cordova', 'angular', 'core/utilityModule'], function () {
 
                 return defer.promise;
             },
+            copy: function (fileURI, options, directory) {
+                var defer = promiseService.defer();
+
+                // Initialize & request the file entry
+                _getFileEntry(fileURI, options).then(function (fileEntry) {
+
+                    _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function(directoryEntry) {
+                        fileEntry.copyTo(directoryEntry, fileEntry.name, function(newFileEntry) {
+                            defer.resolve({
+                                copy: true,
+                                file: newFileEntry.name,
+                                path: newFileEntry.fullPath
+                            });
+                        }, function () {
+                            defer.reject(_errors.fileNotFound);
+                        });
+                    }, function() {
+                        defer.reject(_errors.directoryNotFound);
+                    });
+                }, function (res) {
+                    defer.reject(res);
+                });
+
+                return defer.promise;
+            },
             move: function (fileURI, options, directory) {
                 var defer = promiseService.defer();
 
