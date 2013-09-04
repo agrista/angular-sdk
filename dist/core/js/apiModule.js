@@ -10,7 +10,6 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
     // Syncronization
     module.provider('dataSyncronizationService', function () {
-
         this.$get = ['queueService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'cultivarApiService', 'assetApiService', 'farmerApiService',
             function (queueService, taskApiService, documentApiService, photoApiService, customerApiService, cultivarApiService, assetApiService, farmerApiService) {
                 var _queue = null;
@@ -93,12 +92,14 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     if (_inProgress === true && did !== undefined) {
                         _queue.pushPromise(function (defer) {
                             documentApiService.getDocument(did, _readOptions, function (res, err) {
-                                if (res) {
-                                    _getCustomer(res.data.customerID);
-                                    _getCultivars(res.data.crop);
+                                if (res && res.length == 1) {
+                                    var customer = res[0].data;
 
-                                    for (var i = 0; i < res.data.land_assets.length; i++) {
-                                        _getAsset(res.data.land_assets[i]);
+                                    _getCustomer(customer.customerID);
+                                    _getCultivars(customer.crop);
+
+                                    for (var i = 0; i < customer.land_assets.length; i++) {
+                                        _getAsset(customer.land_assets[i]);
                                     }
 
                                     defer.resolve();
@@ -180,8 +181,8 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
                         _queue.pushPromise(function (defer) {
                             customerApiService.getCustomer(cid, _readOptions, function (res, err) {
-                                if (res) {
-                                    _getFarmer(res.data.farmerID);
+                                if (res && res.length == 1) {
+                                    _getFarmer(res[0].data.farmerID);
                                     defer.resolve();
                                 } else {
                                     defer.reject();
@@ -203,7 +204,6 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                                             _postAsset('customer/:id/assets', {id: taskType}, 'asset/:id');
                                         }
                                     }
-
 
                                     defer.resolve();
                                 } else {
@@ -236,8 +236,8 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
                         _queue.pushPromise(function (defer) {
                             assetApiService.getAsset(aid, _readOptions, function (res, err) {
-                                if (res) {
-                                    if (res.dirty === true) {
+                                if (res && res.length == 1) {
+                                    if (res[0].dirty === true) {
                                         _postAsset('asset/:id', {id: aid}, 'asset/:id');
                                     }
 
@@ -270,11 +270,10 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
                         _queue.pushPromise(function (defer) {
                             farmerApiService.getFarmer(fid, _readOptions, function (res, err) {
-                                if (res) {
-                                    if (res.dirty === true) {
-                                        _postFarmer(res.id);
+                                if (res && res.length == 1) {
+                                    if (res[0].dirty === true) {
+                                        _postFarmer(res[0].id);
                                     }
-
 
                                     defer.resolve();
                                 } else {
@@ -306,7 +305,15 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                             _queue.clear();
                         }
                     },
-                    sync: function (callback) {
+                    sync: function (options, callback) {
+                        if (typeof options === 'function') {
+                            callback = options;
+                            options = {
+                                customers: true,
+                                tasks: true
+                            }
+                        }
+
                         if (_inProgress === false) {
                             _inProgress = true;
                             _syncList = {
@@ -325,8 +332,13 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                                 callback(data);
                             });
 
-                            _getTasksByType('work-package');
-                            _getCustomers();
+                            if (options.tasks === true) {
+                                _getTasksByType('work-package');
+                            }
+
+                            if (options.customers === true) {
+                                _getCustomers();
+                            }
                         }
                     }
                 }
@@ -347,13 +359,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
                 dataStore('task', {apiTemplate: 'tasks?type=:type'})
                     .transaction(function (tx) {
-                        tx.read({type: type}, options, function (res, err) {
-                            if (res && (res instanceof Array) === false) {
-                                res = [res];
-                            }
-
-                            gtCallback(res, err);
-                        });
+                        tx.read({type: type}, options, gtCallback);
                     });
 
             },
@@ -365,13 +371,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
                 dataStore('task', {apiTemplate: 'task/:id/tasks'})
                     .transaction(function (tx) {
-                        tx.read({id: tid}, options, function (res, err) {
-                            if (res && (res instanceof Array) === false) {
-                                res = [res];
-                            }
-
-                            gtCallback(res, err);
-                        });
+                        tx.read({id: tid}, options, gtCallback);
                     });
             },
 
@@ -428,20 +428,18 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
                 dataStore('photo', {apiTemplate: 'document/:id/photo'})
                     .transaction(function (tx) {
-                        tx.read({id: did}, options, function (res, err) {
-                            if (res && (res instanceof Array) === false) {
-                                res = [res];
-                            }
-
-                            gdpCallback(res, err);
-                        });
+                        tx.read({id: did}, options, gdpCallback);
                     });
             }
         };
     }]);
 
-    module.factory('photoApiService', ['$http', 'dataStore', 'fileStorageService', function ($http, dataStore, fileStorageService) {
+    module.factory('photoApiService', ['$http', 'dataStore', 'fileStorageService', 'safeApply', function ($http, dataStore, fileStorageService, safeApply) {
         var photoStore = dataStore('photo', {apiTemplate: 'photo/:id'});
+
+        function _safeApply(scope, fn) {
+            (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
+        };
 
         return {
             // Photo
@@ -471,20 +469,24 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     var _uploadAndUpdatePhoto = function (photoData) {
                         console.log('start upload');
 
-                        $http
-                            .post(photoStore.defaults.url + photoItem.uri, photoData, {withCredentials: true})
-                            .then(function () {
-                                console.log('finish upload');
-                                photoItem.local = false;
+                        safeApply(function() {
+                            console.log(photoData);
 
-                                photoStore.transaction(function (tx) {
-                                    console.log('update upload');
+                            $http
+                                .post(photoStore.defaults.url + photoItem.uri, photoData, {withCredentials: true})
+                                .then(function () {
+                                    console.log('finish upload');
+                                    photoItem.local = false;
 
-                                    tx.update(photoItem, upCallback);
+                                    photoStore.transaction(function (tx) {
+                                        console.log('update upload');
+
+                                        tx.update(photoItem, upCallback);
+                                    });
+                                }, function () {
+                                    upCallback(null, _errors.UploadPhotoError);
                                 });
-                            }, function () {
-                                upCallback(null, _errors.UploadPhotoError);
-                            });
+                        });
                     };
 
                     if (photoItem.data.image.src !== undefined) {
@@ -494,7 +496,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                             console.log('finish read');
 
                             photoData.image = {
-                                data: fileData,
+                                data: fileData.content.substring(fileData.content.indexOf(',') + 1),
                                 type: photoItem.data.image.type
                             };
 
@@ -531,13 +533,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                 }
 
                 customersStore.transaction(function (tx) {
-                    tx.read({}, options, function (res, err) {
-                        if (res && (res instanceof Array) === false) {
-                            res = [res];
-                        }
-
-                        gcCallback(res, err);
-                    });
+                    tx.read({}, options, gcCallback);
                 });
             },
             findCustomer: function (cid, fcCallback) {
@@ -612,13 +608,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
             },
             searchCultivars: function (data, scCallback) {
                 cultivarsStore.transaction(function (tx) {
-                    tx.search(data, function (res, err) {
-                        if (res && (res instanceof Array) === false) {
-                            res = [res];
-                        }
-
-                        scCallback(res, err);
-                    });
+                    tx.search(data, scCallback);
                 });
             }
         };
