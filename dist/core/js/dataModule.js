@@ -766,14 +766,18 @@ define(['underscore', 'angular'], function (_) {
 
                             for (var i = 0; i < dataItems.length; i++) {
                                 if (dataItems[i].local === true) {
-                                    _deleteLocal(dataItems, asyncMon.done);
+                                    _deleteLocal(dataItems, function() {
+                                        asyncMon.done();
+                                    });
                                 } else {
-                                    _deleteRemote(dataItems, asyncMon.done);
+                                    _deleteRemote(dataItems, function() {
+                                        asyncMon.done();
+                                    });
                                 }
                             }
                         }
                     }
-                };
+                }
 
                 /**
                  * Initialize table
@@ -800,7 +804,7 @@ define(['underscore', 'angular'], function (_) {
                         }
                     }
                 }
-            };
+            }
 
             /**
              * Initialize database

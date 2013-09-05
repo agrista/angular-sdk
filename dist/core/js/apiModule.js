@@ -52,16 +52,16 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                             taskApiService.getTasksById(tid, _readOptions, function (res, err) {
                                 if (res) {
                                     for (var i = 0; i < res.length; i++) {
-                                        var item = res[i].data;
+                                        var task = res[i].data;
 
-                                        if (item.object && item.object.id) {
-                                            _getDocument(item.object.id);
+                                        if (task.object && task.object.id) {
+                                            _getDocument(task.object.id, task);
                                         }
 
                                         if (sync) {
-                                            _postDocument(item.object.id);
+                                            _postDocument(task.object.id);
                                             _postTask('task/:id/tasks', {id: tid}, 'task/:id');
-                                            _postPhotos(item.object.id);
+                                            _postPhotos(task.object.id);
                                         }
                                     }
 
@@ -88,14 +88,14 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     }
                 }
 
-                function _getDocument(did) {
+                function _getDocument(did, task) {
                     if (_inProgress === true && did !== undefined) {
                         _queue.pushPromise(function (defer) {
                             documentApiService.getDocument(did, _readOptions, function (res, err) {
                                 if (res && res.length == 1) {
                                     var customer = res[0].data;
 
-                                    _getCustomer(customer.customerID);
+                                    _getCustomer(customer.customerID, task.ass_by);
                                     _getCultivars(customer.crop);
 
                                     for (var i = 0; i < customer.land_assets.length; i++) {
@@ -175,12 +175,12 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     }
                 }
 
-                function _getCustomer(cid) {
+                function _getCustomer(cid, assigner) {
                     if (_inProgress === true && cid !== undefined && _syncList.customers[cid] === undefined) {
                         _syncList.customers[cid] = true;
 
                         _queue.pushPromise(function (defer) {
-                            customerApiService.getCustomer(cid, _readOptions, function (res, err) {
+                            customerApiService.getCustomer(cid, assigner, _readOptions, function (res, err) {
                                 if (res && res.length == 1) {
                                     _getFarmer(res[0].data.farmerID);
                                     defer.resolve();
@@ -465,9 +465,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     var _uploadAndUpdatePhoto = function (photoData) {
                         console.log('start upload');
 
-                        safeApply(function() {
-                            console.log(photoData);
-
+                        safeApply(function () {
                             $http
                                 .post(photoStore.defaults.url + photoItem.uri, photoData, {withCredentials: true})
                                 .then(function () {
@@ -488,7 +486,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     if (photoItem.data.image.src !== undefined) {
                         console.log('start read');
 
-                        fileStorageService.read(photoItem.data.image.src, {asDataUrl: true}).then(function (fileData) {
+                        fileStorageService.read(photoItem.data.image.src, true).then(function (fileData) {
                             console.log('finish read');
 
                             photoData.image = {
@@ -518,7 +516,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
     }]);
 
     module.factory('customerApiService', ['dataStore', function (dataStore) {
-        var customersStore = dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'});
+        var customerStore = dataStore('customer', {apiTemplate: 'customer/:id'});
 
         return {
             // Customers
@@ -528,27 +526,35 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     options = {};
                 }
 
-                customersStore.transaction(function (tx) {
-                    tx.read({}, options, gcCallback);
-                });
-            },
-            findCustomer: function (cid, fcCallback) {
-                customersStore.transaction(function (tx) {
-                    tx.find(cid, fcCallback);
-                });
-            },
-            syncCustomers: function (scCallback) {
-                customersStore.transaction(function (tx) {
-                    tx.sync(scCallback);
-                });
+                dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
+                    .transaction(function (tx) {
+                        tx.read({}, options, gcCallback);
+                    });
             },
 
             // Customer
-            getCustomer: function (cid, options, gcCallback) {
-                dataStore('customer', {apiTemplate: 'customer/:id'})
-                    .transaction(function (tx) {
+            getCustomer: function (cid, assigner, options, gcCallback) {
+                if (typeof assigner === 'object') {
+                    gcCallback = options;
+                    options = assigner;
+                    assigner = undefined;
+                }
+
+                if (assigner !== undefined) {
+                    dataStore('customer', {apiTemplate: 'customer/:id?user=:assigner'})
+                        .transaction(function (tx) {
+                            tx.read({id: cid, assigner: assigner}, options, gcCallback);
+                        });
+                } else {
+                    customerStore.transaction(function (tx) {
                         tx.read({id: cid}, options, gcCallback);
                     });
+                }
+            },
+            findCustomer: function (cid, fcCallback) {
+                customerStore.transaction(function (tx) {
+                    tx.find(cid, fcCallback);
+                });
             },
             getCustomerAssets: function (cid, options, gcaCallback) {
                 dataStore('asset', {apiTemplate: 'customer/:id/assets'})
