@@ -56,10 +56,9 @@ define(['cordova', 'angular', 'core/utilityModule'], function () {
             // Initialize the file system
             _initFileSystem(function () {
                 // Request the file entry
-                if (options.local === true) {
+                if (fileURI.indexOf('file://') === 0) {
                     window.resolveLocalFileSystemURI(fileURI, _resolve, _reject);
                 } else {
-
                     _fileSystem.root.getFile(fileURI, options, _resolve, _reject);
                 }
             }, function () {
@@ -97,11 +96,11 @@ define(['cordova', 'angular', 'core/utilityModule'], function () {
              * @param {string} fileURI The file to read
              * @return {object} Promise for deferred result
              **/
-            read: function (fileURI, options) {
+            read: function (fileURI, asDataUrl) {
                 var defer = promiseService.defer();
 
                 // Initialize & request the file entry
-                _getFileEntry(fileURI, {create: false, local: options.local}).then(function (fileEntry) {
+                _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
                     // Request the file
                     fileEntry.file(function (file) {
                         // Read the file
@@ -117,7 +116,7 @@ define(['cordova', 'angular', 'core/utilityModule'], function () {
                             defer.reject(_errors.fileNotReadable);
                         };
 
-                        if (options.asDataUrl === true) {
+                        if (asDataUrl === true) {
                             _fileReader.readAsDataURL(file);
                         } else {
                             _fileReader.readAsText(file);
@@ -131,11 +130,11 @@ define(['cordova', 'angular', 'core/utilityModule'], function () {
 
                 return defer.promise;
             },
-            copy: function (fileURI, options, directory) {
+            copy: function (fileURI, directory) {
                 var defer = promiseService.defer();
 
                 // Initialize & request the file entry
-                _getFileEntry(fileURI, options).then(function (fileEntry) {
+                _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
 
                     _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function(directoryEntry) {
                         fileEntry.copyTo(directoryEntry, fileEntry.name, function(newFileEntry) {
@@ -156,11 +155,11 @@ define(['cordova', 'angular', 'core/utilityModule'], function () {
 
                 return defer.promise;
             },
-            move: function (fileURI, options, directory) {
+            move: function (fileURI, directory) {
                 var defer = promiseService.defer();
 
                 // Initialize & request the file entry
-                _getFileEntry(fileURI, options).then(function (fileEntry) {
+                _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
 
                     _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function(directoryEntry) {
                         fileEntry.moveTo(directoryEntry, fileEntry.name, function(newFileEntry) {
