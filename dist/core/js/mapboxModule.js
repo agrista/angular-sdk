@@ -124,13 +124,18 @@ define(['angular'], function () {
             for (var x = 0; x < data.length; x++) {
                 var item = data[x];
                 var feature = undefined;
+                var geojson = item.geoJson;
+
+                if (geojson.geometry !== undefined) {
+                    geojson = geojson.geometry;
+                }
 
                 _checkFeatureGroup(item.group);
 
-                if (item.geoJson.type === 'Polygon') {
-                    feature = L.polygon(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
-                } else if (item.geoJson.type === 'Point') {
-                    feature = L.marker(swapLatLng(item.geoJson.coordinates), item.options).addTo(featureGroups[item.group]);
+                if (geojson.type === 'Polygon') {
+                    feature = L.polygon(swapLatLng(geojson.coordinates), item.options).addTo(featureGroups[item.group]);
+                } else if (geojson.type === 'Point') {
+                    feature = L.marker(swapLatLng(geojson.coordinates), item.options).addTo(featureGroups[item.group]);
                 } else if (item.geoJson.type === 'Feature') {
                     feature = L.geoJson(item.geoJson, item.options).addTo(featureGroups[item.group]);
                 }
