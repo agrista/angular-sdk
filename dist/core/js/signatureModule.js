@@ -3,36 +3,35 @@
 define(['angular'], function () {
     var module = angular.module('signatureModule', []);
 
-    module.directive('signatureDiv', function () {
+    module.directive('signature', ['$compile', function ($compile) {
         return {
             restrict: 'E',
-            scope: {
-                signed: '='
-            },
             replace: true,
-            transclude: true,
-            template: '<div><h4>Signature from Farmer</h4><div id="signatureFarmer"></div> <br> <div class="btn" ng-click="resetFarmer()">Reset</div> <h4>Signature from Assessor</h4><div id="signatureAssessor"></div> <br> <div class="btn" ng-click="resetAssessor()">Reset</div> <br> <div class="btn btn-primary" ng-click="submit()">Submit</div></div>',
-            controller: ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
-                $scope.farmerDiv = $('#signatureFarmer');
-                $scope.assessorDiv = $('#signatureAssessor');
+            template: '<div class="panel panel-default signature"><div class="panel-heading">{{ title }}<div class="btn btn-default btn-sm pull-right" ng-click="reset()">Clear</div></div></div>',
+            scope: {
+                signed: '=',
+                title: '@'
+            },
+            link: function (scope, element, attrs) {
+                var sigElement = $compile('<div class="panel-body"></div>')(scope);
 
-                $scope.farmerDiv.jSignature({ 'height': 300, 'width': 700, 'UndoButton': false });
-                $scope.assessorDiv.jSignature({ 'height': 300, 'width': 700, 'UndoButton': false });
+                element.append(sigElement);
 
-                $scope.resetFarmer = function() {
-                    $scope.farmerDiv.jSignature('reset');
-                };
-                $scope.resetAssessor = function() {
-                    $scope.assessorDiv.jSignature('reset');
+                scope.reset = function() {
+                    sigElement.jSignature('reset');
+
+                    scope.signed(attrs.id, null);
                 };
 
-                $scope.submit = function() {
-                    var farmerSignatureData = $scope.farmerDiv.jSignature('getData', 'svgbase64');
-                    var assessorSignatureData = $scope.assessorDiv.jSignature('getData', 'svgbase64');
-                    $scope.signed(farmerSignatureData, assessorSignatureData);
-                };
-            }]
+                sigElement.jSignature({
+                    'width': attrs.width,
+                    'height': attrs.height,
+                    'showUndoButton': false});
+
+                sigElement.bind('change', function() {
+                    scope.signed(attrs.id, sigElement.jSignature('getData', 'svgbase64'));
+                });
+            }
         };
-    })
-
+    }]);
 });
