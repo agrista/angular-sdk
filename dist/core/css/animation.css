@@ -4,114 +4,114 @@
 */
 
 html, body {
+    position: relative;
     height: 100%;
-}
-
-.animate {
-    -webkit-transition: .4s -webkit-transform; /* Safari/Chrome */
-    -moz-transition: .4s -moz-transform; /* Firefox */
-    -ms-transition: .4s -ms-transform; /* IE10 */
-    -o-transition: .4s -o-transform; /* Opera */
-    transition: .4s transform; /* Future Browsers */
+    width: 100%;
 
     -webkit-perspective: 1000;
     -webkit-backface-visibility: hidden;
-}
-
-.animate > * {
-    position: absolute;
 }
 
 .animate-container {
     position: absolute;
     width: 100%;
     height: 100%;
+
 }
 
-.animate-container > * {
-    position: absolute;
-    width:100%;
-    height: 100%;
-    background-color: #fff;
+.animate-container.ng-leave,
+.animate-container.ng-enter {
+    -webkit-transition: 400ms -webkit-transform;
+    -moz-transition: 400ms -moz-transform;
+    -ms-transition: 400ms -ms-transform;
+    -o-transition: 400ms -o-transform;
+    transition: 400ms transform;
 }
 
-.slide-enter {
+.trans-slide.trans-push .animate-container.ng-enter {
     transform: translate3d(100%, 0, 0);
     -webkit-transform: translate3d(100%, 0, 0);
+    z-index: 1000;
 }
 
-.slide-leave {
+.trans-slide.trans-push .animate-container.ng-leave {
+    transform: translate3d(0%, 0, 0);
+    -webkit-transform: translate3d(0%, 0, 0);
+    z-index: 950;
+}
+
+.trans-slide.trans-push .animate-container.ng-enter.ng-enter-active {
     transform: translate3d(0%, 0, 0);
     -webkit-transform: translate3d(0%, 0, 0);
 }
 
-.slide-enter.slide-enter-active {
-    transform: translate3d(0%, 0, 0);
-    -webkit-transform: translate3d(0%, 0, 0);
-}
-
-.slide-leave.slide-leave-active {
+.trans-slide.trans-push .animate-container.ng-leave.ng-leave-active {
     transform: translate3d(-100%, 0, 0);
     -webkit-transform: translate3d(-100%, 0, 0);
 }
 
-.slide-reverse-enter {
+.trans-slide.trans-pop .animate-container.ng-enter {
     transform: translate3d(-100%, 0, 0);
     -webkit-transform: translate3d(-100%, 0, 0);
+    z-index: 1000;
 }
 
-.slide-reverse-leave {
+.trans-slide.trans-pop .animate-container.ng-leave {
+    transform: translate3d(0%, 0, 0);
+    -webkit-transform: translate3d(0%, 0, 0);
+    z-index: 950;
+}
+
+.trans-slide.trans-pop .animate-container.ng-enter.ng-enter-active {
     transform: translate3d(0%, 0, 0);
     -webkit-transform: translate3d(0%, 0, 0);
 }
 
-.slide-reverse-enter.slide-reverse-enter-active {
-    transform: translate3d(0%, 0, 0);
-    -webkit-transform: translate3d(0%, 0, 0);
-}
-
-.slide-reverse-leave.slide-reverse-leave-active {
+.trans-slide.trans-pop .animate-container.ng-leave.ng-leave-active {
     transform: translate3d(100%), 0, 0;
     -webkit-transform: translate3d(100%, 0, 0);
 }
 
-.modal-enter {
+.trans-modal.trans-push .animate-container.ng-enter {
     transform: translate3d(0, 100%, 0);
     -webkit-transform: translate3d(0, 100%, 0);
+    z-index: 1000;
 }
 
-.modal-leave {
+.trans-modal.trans-push .animate-container.ng-leave {
+    transform: translate3d(0, 0%, 0);
+    -webkit-transform: translate3d(0, 0%, 0);
+    z-index: 950;
+}
+
+.trans-modal.trans-push .animate-container.ng-enter.ng-enter-active {
     transform: translate3d(0, 0%, 0);
     -webkit-transform: translate3d(0, 0%, 0);
 }
 
-.modal-enter.modal-enter-active {
+.trans-modal.trans-push .animate-container.ng-leave.ng-leave-active {
     transform: translate3d(0, 0%, 0);
     -webkit-transform: translate3d(0, 0%, 0);
 }
 
-.modal-leave.modal-leave-active {
+.trans-modal.trans-pop .animate-container.ng-enter {
     transform: translate3d(0, 0%, 0);
     -webkit-transform: translate3d(0, 0%, 0);
+    z-index: 950;
 }
 
-.modal-reverse-enter {
-    transform: translate3d(0, 0%, 0);
-    -webkit-transform: translate3d(0, 0%, 0);
-}
-
-.modal-reverse-leave {
+.trans-modal.trans-pop .animate-container.ng-leave {
     transform: translate3d(0, 0%, 0);
     -webkit-transform: translate3d(0, 0%, 0);
     z-index: 1000;
 }
 
-.modal-reverse-enter.modal-reverse-enter-active {
+.trans-modal.trans-pop .animate-container.ng-enter.ng-enter-active {
     transform: translate3d(0, 0%, 0);
     -webkit-transform: translate3d(0, 0%, 0);
 }
 
-.modal-reverse-leave.modal-reverse-leave-active {
+.trans-modal.trans-pop .animate-container.ng-leave.ng-leave-active {
     transform: translate3d(0, 100%, 0);
     -webkit-transform: translate3d(0, 100%, 0);
 }

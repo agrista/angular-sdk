@@ -5,96 +5,112 @@ body {
 /**
  * Navigation menu
  */
-#nav-menu {
+.page-menu {
     width: 256px;
-    position: fixed;
+    position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
     z-index: 920;
 }
 
-#nav-menu .navbar {
+
+.page-menu .navbar {
     margin-bottom: 0;
-    background-color: #a5aba8;
+    background-color: #3a3a3a;
+    color: #d0d0d0;
 }
 
-#nav-menu nav {
-    display: block;
-    background-color: #a5aba8;
+.page-menu nav {
+    background-color: #3a3a3a;
     z-index: 5;
+    position: absolute;
     height: 100%;
-    border-right: solid 2px #919693;
+    width: 100%;
+    border-right: solid 2px #515151;
+    padding-top: 51px;
 }
 
-#nav-menu li a {
+.page-menu li {
+    margin-bottom: 2px;
+}
+
+.page-menu li a {
     display: block;
     padding: 15px;
-    border-bottom: solid 2px #a5aba8;
     color: #fff;
-    background-color: #919693;
+    background-color: #515151;
+    border-radius: 0;
 }
 
-#nav-menu li a:hover,
-#nav-menu li a.active {
-    background-color: #797d7a;
+.page-menu li a:hover,
+.page-menu li a.active {
+    background-color: #454545;
 }
 
-#nav-page {
-    position: fixed;
+.page-container {
+    position: absolute;
     top: 0;
     bottom: 0;
     width: 100%;
+    height: 100%;
     z-index: 930;
-    padding-top: 50px;
+
+    -webkit-transition: .2s ease-in-out -webkit-transform;
+    transition: .2s ease-in-out transform;
 }
 
-.toolbar + #nav-page {
+.page-content {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    padding-top: 50px;
+    background-color: #fff;
+}
+
+.toolbar + .page-content {
     padding-top: 99px;
 }
 
-#nav-page .container {
+.page-container .page-content .container {
     overflow-y: scroll;
     overflow-x: hidden;
     height: 100%;
-    padding: 5px;
 }
 
-.page-slide {
-    position: relative;
-    left: 0;
-    -webkit-transition: .2s ease-in-out -webkit-transform;
-    transition: .2s ease-in-out transform;
-    overflow: hidden;
-}
-
-.show-menu.page-slide,
-.show-menu .page-slide {
+.page-menu.show-menu + .page-container {
     -webkit-transform: translate3d(256px, 0, 0);
     transform: translate3d(256px, 0, 0);
-}
 
-.animate #nav-menu {
-    display: none;
-}
-
-.animate #nav-page .container {
     overflow: hidden;
 }
 
-#nav-page.show-menu  {
-    overflow: hidden;
+.page-menu.show-menu + .page-container .page-content {
     pointer-events: none;
 }
 
+.animate-container.ng-enter .page-menu {
+    display: none;
+}
 
 /**
  * Bootstrap adaption
  */
 .navbar {
+    position: absolute;
     margin-bottom: 0;
     border-radius: 0;
     border: 0;
+    width: 100%;
+    left: auto;
+    right: auto;
+    z-index: 1030;
+    border-radius: 0;
+}
+
+.navbar .container {
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .navbar-inner {
@@ -104,11 +120,6 @@ body {
 .navbar-fixed-top,
 .navbar-fixed-bottom {
     position: fixed;
-    width: 100%;
-    left: auto;
-    right: auto;
-    z-index: 1030;
-    border-radius: 0;
 }
 .navbar-fixed-bottom {
     margin-bottom: 0;
@@ -119,15 +130,15 @@ body {
     margin: 0;
     padding: 13px 10px;
     font-size: 18px;
+    color: #d0d0d0;
 }
 
 .toolbar {
-    position: fixed;
+    position: absolute;
     width: 100%;
     top: 51px;
     z-index: 1020;
     background-color: #a5aba8;
-    padding: 5px 0;
 }
 
 .list-group {
