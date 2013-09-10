@@ -12,14 +12,14 @@ define(['angular', 'core/utilityModule'], function () {
                 $scope.menu.show = !$scope.menu.show;
 
                 if($scope.menu.show === true) {
-                    $scope.menu.items = navigationService.menu();
+                    $scope.menu.sections = navigationService.menu();
                 }
             },
-            title: 'Agrista',
-            click: function(index) {
+            title: 'Menu',
+            click: function(section, index) {
                 $scope.menu.show = false;
 
-                var item = $scope.menu.items[index];
+                var item = $scope.menu.sections[section].items[index];
 
                 if (typeof item.click === 'function') {
                     item.click();
@@ -71,7 +71,7 @@ define(['angular', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             replace: true,
-            template: '<div id="nav-menu" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="navbar">\n        <div class="container">\n            <p class="navbar-text">{{ menu.title }}</p>\n        </div>\n    </div>\n    <nav class="list-container">\n        <ul class="nav">\n            <li ng-repeat="item in menu.items">\n                <a ng-click="menu.click($index)" ng-class="{active: item.active}" stop-propagation>{{ item.title }}</a>\n            </li>\n        </ul>\n    </nav>\n</div>'
+            template: '<div class="sidebar" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="navbar">\n        <div class="container">\n            <div class="navbar-title">\n                <p class="navbar-text">{{ menu.title }}</p>\n            </div>\n        </div>\n    </div>\n    <nav class="list-container">\n        <div class="section" ng-repeat="section in menu.sections">\n            <div class="section-header">{{ section.title }}</div>\n            <ul class="nav">\n                <li ng-repeat="item in section.items">\n                    <a ng-click="menu.click($parent.$index, $index)" ng-class="{active: item.active}">\n                        <span class="glyphicons {{ item.icon }}"></span>\n                        {{ item.title }}\n                    </a>\n                </li>\n            </ul>\n        </div>\n        \n    </nav>\n</div>'
         };
     });
 

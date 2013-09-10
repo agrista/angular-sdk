@@ -5,41 +5,6 @@ body {
 /**
  * Navigation menu
  */
-#nav-menu {
-    width: 256px;
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 920;
-}
-
-#nav-menu .navbar {
-    margin-bottom: 0;
-    background-color: #a5aba8;
-}
-
-#nav-menu nav {
-    display: block;
-    background-color: #a5aba8;
-    z-index: 5;
-    height: 100%;
-    border-right: solid 2px #919693;
-}
-
-#nav-menu li a {
-    display: block;
-    padding: 15px;
-    border-bottom: solid 2px #a5aba8;
-    color: #fff;
-    background-color: #919693;
-}
-
-#nav-menu li a:hover,
-#nav-menu li a.active {
-    background-color: #797d7a;
-}
-
 #nav-page {
     position: fixed;
     top: 0;
