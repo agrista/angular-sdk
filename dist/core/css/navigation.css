@@ -78,14 +78,14 @@ body {
     height: 100%;
 }
 
-.page-menu.show-menu + .page-container {
+.sidebar.show-menu + .page-container {
     -webkit-transform: translate3d(256px, 0, 0);
     transform: translate3d(256px, 0, 0);
 
     overflow: hidden;
 }
 
-.page-menu.show-menu + .page-container .page-content {
+.sidebar.show-menu + .page-container .page-content {
     pointer-events: none;
 }
 
