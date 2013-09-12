@@ -74,7 +74,7 @@ define(['underscore', 'angular'], function (_) {
 
             config: _setConfig,
 
-            $get: ['$http', '$q', function ($http, $q) {
+            $get: ['$http', '$q', '$rootScope', function ($http, $q, $rootScope) {
                 var _user = _getUser();
 
                 function _getUser() {
@@ -121,6 +121,8 @@ define(['underscore', 'angular'], function (_) {
                             if (res.data.user !== null) {
                                 _user = _setUser(res.data.user);
                                 defer.resolve(_user);
+
+                                $rootScope.$broadcast('authorization.login', _user);
                             } else {
                                 _user = _setUser(_defaultUser);
                                 defer.reject();
@@ -136,6 +138,8 @@ define(['underscore', 'angular'], function (_) {
                     logout: function () {
                         $http.post(_config.url + _config.logout).then(function () {
                             console.log('logout received');
+
+                            $rootScope.$broadcast('authorization.logout', _user);
                         });
 
                         _user = _setUser(_defaultUser);

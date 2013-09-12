@@ -14,7 +14,6 @@ body {
     z-index: 920;
 }
 
-
 .page-menu .navbar {
     margin-bottom: 0;
     background-color: #3a3a3a;
@@ -56,8 +55,8 @@ body {
     height: 100%;
     z-index: 930;
 
-    -webkit-transition: .2s ease-in-out -webkit-transform;
-    transition: .2s ease-in-out transform;
+    -webkit-transition: .2s ease-out -webkit-transform;
+    transition: .2s ease-out transform;
 }
 
 .page-content {
@@ -69,7 +68,7 @@ body {
 }
 
 .toolbar + .page-content {
-    padding-top: 99px;
+    padding-top: 98px;
 }
 
 .page-container .page-content .container {
@@ -96,6 +95,11 @@ body {
 /**
  * Bootstrap adaption
  */
+
+.container.container-list {
+    background-color: #f4f4f4;
+}
+
 .navbar {
     position: absolute;
     margin-bottom: 0;
@@ -131,12 +135,14 @@ body {
     padding: 13px 10px;
     font-size: 18px;
     color: #d0d0d0;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .toolbar {
     position: absolute;
     width: 100%;
-    top: 51px;
+    top: 50px;
     z-index: 1020;
     background-color: #a5aba8;
 }
@@ -160,16 +166,17 @@ body {
 }
 
 .btn-toolbar {
-    background-color: #a5aba8;
-    border-color: #919693;
-    color: #444;
+    background-color: #919693;
+    border-color: #6b6b6b;
+    color: #000;
 }
 
 .btn-toolbar.active {
-    background-color: #919693;
+    background-color: #6b6b6b;
     color: #fff;
     -webkit-box-shadow: none;
     box-shadow: none;
+    border-color: #6b6b6b;
 }
 
 @media (min-width: 768px) {
