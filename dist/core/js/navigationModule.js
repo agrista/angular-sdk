@@ -33,7 +33,7 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
         return {
             restrict: 'E',
             replace: true,
-            template: '<div class="sidebar" ng-class="{\'show-menu\': menu.show === true}">\n    <div class="navbar">\n        <div class="container">\n            <div class="navbar-header">\n                <p class="navbar-text">{{ menu.title }}</p>\n            </div>\n        </div>\n    </div>\n    <nav class="list-container">\n        <div ng-repeat="section in menu.sections">\n            <div ng-hide="section.hidden">\n                <div class="section-header">{{ section.title }}</div>\n                <ul class="nav">\n                    <li ng-repeat="item in section.items">\n                        <a ng-click="menu.click($parent.$index, $index)" ng-class="{active: item.active}"\n                           stop-propagation>\n                            <span class="glyphicons {{ item.icon }}"></span>\n                            {{ item.title }}\n                        </a>\n                    </li>\n                </ul>\n            </div>\n        </div>\n    </nav>\n</div>\n'
+            template: '<div class="sidebar">\n    <div class="navbar">\n        <div class="container">\n\n                <p class="navbar-text">{{ menu.title }}</p>\n\n        </div>\n    </div>\n    <nav class="list-container">\n        <div ng-repeat="section in menu.sections">\n            <div ng-hide="section.hidden">\n                <div class="section-header">{{ section.title }}</div>\n                <ul class="nav">\n                    <li ng-repeat="item in section.items">\n                        <a ng-click="menu.click($parent.$index, $index)" ng-class="{active: item.active}"\n                           stop-propagation>\n                            <span class="glyphicons {{ item.icon }}"></span>\n                            {{ item.title }}\n                        </a>\n                    </li>\n                </ul>\n            </div>\n        </div>\n    </nav>\n</div>\n'
         };
     });
 
@@ -51,7 +51,7 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
             restrict: 'E',
             replace: true,
             transclude: true,
-            template: '<div class="page-container" ng-transclude></div>'
+            template: '<div class="page-container" ng-class="{\'show-menu\': menu.show === true}" ng-transclude></div>'
         };
     });
 
