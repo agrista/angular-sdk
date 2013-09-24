@@ -16,9 +16,8 @@ define(['angular'], function () {
         return {
             restrict: 'A',
             require: 'form',
-            link: function (scope, formElement, attributes, formController) {
-                scope.$watch(formController.$valid, function () {
-                    console.log('validation ' + formController.$valid);
+            link: function (scope, formElement, attributes) {
+                scope.$watch(attributes.name + '.$valid', function () {
                     scope.$eval(attributes.preValidate)
                 });
             }
