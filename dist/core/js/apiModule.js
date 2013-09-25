@@ -8,7 +8,10 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
         UploadPhotoError: {code: 'UploadPhotoError', message: 'Error occured uploading photo'}
     };
 
-    // Syncronization
+
+    /*
+     * Syncronization
+     */
     module.provider('dataSyncronizationService', function () {
         this.$get = ['queueService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'cultivarApiService', 'assetApiService', 'farmerApiService',
             function (queueService, taskApiService, documentApiService, photoApiService, customerApiService, cultivarApiService, assetApiService, farmerApiService) {
@@ -345,7 +348,10 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
             }]
     });
 
-    // APIs
+
+    /*
+     * API
+     */
     module.factory('taskApiService', ['dataStore', function (dataStore) {
         var taskStore = dataStore('task', {apiTemplate: 'task/:id'});
 

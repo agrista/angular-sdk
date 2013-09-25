@@ -1,7 +1,46 @@
 'use strict';
 
-define(['underscore', 'angular'], function (_) {
-    var module = angular.module('dataModule', []);
+define(['underscore', 'angular', 'core/utilityModule'], function (_) {
+    var module = angular.module('dataModule', ['utilityModule']);
+
+    /**
+     * @name dataPurgeService
+     */
+    module.provider('dataPurge', function () {
+        this.$get = ['queueService', 'dataStore',
+            function (queueService, dataStore) {
+                var _queue = null;
+
+                function _purgeDataStore(name) {
+                    _queue.pushPromise(function (defer) {
+                        var store = dataStore(name);
+
+                        store.transaction(function(tx) {
+                            tx.purge(function (res) {
+                                if (res) {
+                                    defer.resolve();
+                                } else {
+                                    defer.reject();
+                                }
+                            });
+                        })
+                    });
+                }
+
+                return function purge(dataStoreList, pCallback) {
+                    if (typeof pCallback !== 'function') pCallback = angular.noop;
+
+                    if (dataStoreList instanceof Array) {
+                        _queue = queueService(pCallback);
+
+                        for (var i = 0; i < dataStoreList.length; i++) {
+                            _purgeDataStore(dataStoreList[i]);
+                        }
+                    }
+                }
+            }];
+    });
+
 
     /**
      * @name dataStore
@@ -161,6 +200,16 @@ define(['underscore', 'angular'], function (_) {
                         tx.executeSql('SELECT COUNT(*) from ' + name, [], function (tx, res) {
                             cdrCallback(res.rows.length == 1 ? res.rows.item(0) : 0);
                         }, _errorCallback);
+                    });
+                }
+
+                function _clearTable(ctCallback) {
+                    _localDatabase.transaction(function (tx) {
+                        tx.executeSql('DELETE FROM ' + name, [], function () {
+                            ctCallback(true);
+                        }, function () {
+                            ctCallback(false);
+                        });
                     });
                 }
 
@@ -357,7 +406,7 @@ define(['underscore', 'angular'], function (_) {
 
                         options = _.defaults((options || {}), {force: false});
 
-                        var asyncMon = new AsyncMonitor(dataItems.length, function() {
+                        var asyncMon = new AsyncMonitor(dataItems.length, function () {
                             ulCallback(dataItems);
                         });
 
@@ -453,13 +502,15 @@ define(['underscore', 'angular'], function (_) {
                                     var data = res.data;
 
                                     if ((data instanceof Array) === false) {
-                                        grCallback([{
-                                            id: _getItemIndex(data),
-                                            uri: uri,
-                                            data: data,
-                                            dirty: false,
-                                            local: false
-                                        }]);
+                                        grCallback([
+                                            {
+                                                id: _getItemIndex(data),
+                                                uri: uri,
+                                                data: data,
+                                                dirty: false,
+                                                local: false
+                                            }
+                                        ]);
                                     } else {
                                         var dataItems = [];
 
@@ -766,15 +817,18 @@ define(['underscore', 'angular'], function (_) {
 
                             for (var i = 0; i < dataItems.length; i++) {
                                 if (dataItems[i].local === true) {
-                                    _deleteLocal(dataItems, function() {
+                                    _deleteLocal(dataItems, function () {
                                         asyncMon.done();
                                     });
                                 } else {
-                                    _deleteRemote(dataItems, function() {
+                                    _deleteRemote(dataItems, function () {
                                         asyncMon.done();
                                     });
                                 }
                             }
+                        },
+                        purge: function (pCallback) {
+                            _clearTable(pCallback);
                         }
                     }
                 }

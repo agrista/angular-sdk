@@ -44,10 +44,10 @@ define(['angular'], function () {
             // Validate parameters
             if (typeof options === 'function') {
                 callback = options;
-                options = {
-                    limit: 1
-                }
+                options = { limit: 1 };
             }
+            if (typeof options !== 'object') options = { limit: 1 };
+            if (typeof callback !== 'function') callback = angular.noop;
 
             var _queue = [];
             var _limit = options.limit || 1;
