@@ -9,10 +9,21 @@ define(['angular'], function () {
         var _geoJsonData = [],
             _layers = [];
 
+        /**
+         *  Swap position of objects in an array of two.
+         * @param twoThings
+         * @returns {Array}
+         */
+        function swap(twoThings) {
+            return [twoThings[1], twoThings[0]];
+        }
+
         return {
             reset: function () {
                 _geoJsonData = [];
-                _layers = []
+                _layers = [];
+                _view = undefined;
+                _boundsView = undefined;
             },
             getView: function () {
                 return _view;
@@ -27,11 +38,17 @@ define(['angular'], function () {
                     $rootScope.$broadcast('mapbox::set-view', _view);
                 }
             },
+            getBounds: function () {
+                return _boundsView;
+            },
             fitBounds: function (bounds, options) {
                 if (bounds instanceof Array) {
                     _boundsView = {
                         bounds: bounds,
-                        options: options || {reset: false}
+                        options: options || {
+                            reset: false,
+                            includeLocation: false
+                        }
                     }
                 }
 
@@ -59,6 +76,31 @@ define(['angular'], function () {
             },
             getGeoJsonData: function () {
                 return _geoJsonData;
+            },
+
+            /**
+             * Swap lat and lng in a feature object.
+             * @param coordinates
+             * @returns []
+             */
+            swapLatLng: function (coordinates) {
+                var swapped = [];
+
+                if ((coordinates instanceof Array) === true) {
+                    if (coordinates.length > 0 && (coordinates[0] instanceof Array) === true) {
+                        for (var i = 0; i < coordinates.length; i++) {
+                            var polygon = coordinates[i];
+
+                            for (var x = 0; x < polygon.length; x++) {
+                                swapped.push(swap(polygon[x]));
+                            }
+                        }
+                    } else if (coordinates.length == 2) {
+                        swapped = swap(coordinates);
+                    }
+                }
+
+                return swapped;
             }
         }
     }]);
@@ -72,40 +114,6 @@ define(['angular'], function () {
             if (featureGroups[name] === undefined) {
                 featureGroups[name] = L.featureGroup().addTo(map);
             }
-        }
-
-        /**
-         * Swap lat and lng in a feature object.
-         * @param coordinates
-         * @returns []
-         */
-        function swapLatLng(coordinates) {
-            var swapped = [];
-
-            if ((coordinates instanceof Array) === true) {
-                if (coordinates.length > 0 && (coordinates[0] instanceof Array) === true) {
-                    for (var i = 0; i < coordinates.length; i++) {
-                        var polygon = coordinates[i];
-
-                        for (var x = 0; x < polygon.length; x++) {
-                            swapped.push(swap(polygon[x]));
-                        }
-                    }
-                } else if (coordinates.length == 2) {
-                    swapped = swap(coordinates);
-                }
-            }
-
-            return swapped;
-        }
-
-        /**
-         *  Swap position of objects in an array of two.
-         * @param twoThings
-         * @returns {Array}
-         */
-        function swap(twoThings) {
-            return [twoThings[1], twoThings[0]];
         }
 
         function addLayer(layer) {
@@ -133,9 +141,9 @@ define(['angular'], function () {
                 _checkFeatureGroup(item.group);
 
                 if (geojson.type === 'Polygon') {
-                    feature = L.polygon(swapLatLng(geojson.coordinates), item.options).addTo(featureGroups[item.group]);
+                    feature = L.polygon(mapboxService.swapLatLng(geojson.coordinates), item.options).addTo(featureGroups[item.group]);
                 } else if (geojson.type === 'Point') {
-                    feature = L.marker(swapLatLng(geojson.coordinates), item.options).addTo(featureGroups[item.group]);
+                    feature = L.marker(mapboxService.swapLatLng(geojson.coordinates), item.options).addTo(featureGroups[item.group]);
                 } else if (item.geoJson.type === 'Feature') {
                     feature = L.geoJson(item.geoJson, item.options).addTo(featureGroups[item.group]);
                 }
@@ -154,6 +162,12 @@ define(['angular'], function () {
 
         function fitBounds(view) {
             if (map && view !== undefined) {
+                if (view.options.includeLocation && location.coords !== undefined) {
+                    view.bounds = view.bounds.concat([
+                        [location.coords.latitude, location.coords.longitude]
+                    ]);
+                }
+
                 map.fitBounds(view.bounds, view.options);
             }
         }
@@ -174,6 +188,7 @@ define(['angular'], function () {
                 }));
 
                 setView(mapboxService.getView());
+                fitBounds(mapboxService.getBounds());
                 addLayer(mapboxService.getLayers());
                 addGeoJson(mapboxService.getGeoJsonData());
             },
@@ -193,6 +208,8 @@ define(['angular'], function () {
 
                 var watcher = geolocationService.watchPosition(function (res, err) {
                     if (res) {
+                        location.coords = res.coords;
+
                         if (location.marker === undefined) {
                             location.marker = L.marker([res.coords.latitude, res.coords.longitude], {
                                 icon: L.icon({
@@ -202,8 +219,25 @@ define(['angular'], function () {
                                     popupAnchor: [16, -16]
                                 })
                             }).addTo(map);
+
+                            location.circle = L.circle([res.coords.latitude, res.coords.longitude], res.coords.accuracy, {
+                                color: '#60AFD6',
+                                opacity: 0.5,
+                                weight: 3,
+                                fillOpacity: 0
+                            }).addTo(map);
                         } else {
                             location.marker.setLatLng([res.coords.latitude, res.coords.longitude]);
+                            location.circle.setLatLng([res.coords.latitude, res.coords.longitude]);
+                            location.circle.setRadius(res.coords.accuracy);
+                        }
+
+                        var boundsView = mapboxService.getBounds();
+
+                        if (boundsView.options && boundsView.options.includeLocation) {
+                            map.fitBounds(boundsView.bounds.concat([
+                                [res.coords.latitude, res.coords.longitude]
+                            ]), boundsView.options);
                         }
                     }
                 });
