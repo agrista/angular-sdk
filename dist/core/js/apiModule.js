@@ -535,7 +535,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                         tx.read({}, options, gcCallback);
                     });
             },
-            findCustomer: function (cid, fcCallback) {
+            findCustomers: function (cid, fcCallback) {
                 dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
                     .transaction(function (tx) {
                         tx.find(cid, fcCallback);
@@ -561,6 +561,12 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                             tx.read({id: cid}, options, gcCallback);
                         });
                 }
+            },
+            findCustomer: function (cid, fcCallback) {
+                dataStore('customer', {apiTemplate: 'customer'})
+                    .transaction(function (tx) {
+                        tx.find(cid, fcCallback);
+                    });
             },
             getCustomerAssets: function (cid, options, gcaCallback) {
                 dataStore('asset', {apiTemplate: 'customer/:id/assets'})
