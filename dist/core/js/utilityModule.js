@@ -12,42 +12,6 @@ define(['angular'], function () {
         }
     });
 
-    module.directive("dateFormatter", ['$filter', function($filter) {
-        return {
-            restrict: 'A',
-            require: 'ngModel',
-            link: function(scope, element, attrs, ngModel) {
-                ngModel.$formatters.push(function(value) {
-                    return $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd');
-                });
-            }
-        };
-    }]);
-
-    module.directive("dateParser", ['$filter', function($filter) {
-        return {
-            restrict: 'A',
-            require: 'ngModel',
-            link: function(scope, element, attrs, ngModel) {
-                ngModel.$parsers.push(function(value) {
-                    return $filter('date')(new Date(value), attrs['dateParser'] || 'yyyy-MM-dd');
-                });
-            }
-        };
-    }]);
-
-    module.directive('preValidate', function () {
-        return {
-            restrict: 'A',
-            require: 'form',
-            link: function (scope, element, attrs) {
-                scope.$watch(attrs.name + '.$valid', function () {
-                    scope.$eval(attrs.preValidate)
-                });
-            }
-        };
-    });
-
     module.factory('safeApply', ['$rootScope', function ($rootScope) {
         return function (fn) {
             if ($rootScope.$$phase) {
