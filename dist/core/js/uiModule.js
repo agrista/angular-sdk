@@ -7,7 +7,7 @@ define(['angular'], function () {
         var linkFn = function (scope, element, attrs) {
             var _items = {};
 
-            scope.$watch('options', function(val) {
+            var watchData = function () {
                 _items = {};
 
                 for (var i = 0; i < scope.options.length; i++) {
@@ -17,7 +17,10 @@ define(['angular'], function () {
                 for (var i = 0; i < scope.value.length; i++) {
                     _items[scope.value[i]] = true;
                 }
-            });
+            };
+
+            scope.$watch('value', watchData);
+            scope.$watch('options', watchData);
 
             scope.isSelected = function (index) {
                 return _items[scope.options[index]];
@@ -48,7 +51,7 @@ define(['angular'], function () {
                 options: '=',
                 ngDisabled: '='
             },
-            template: '<div class="multi-select" ng-class="{disabled: ngDisabled}">\n    <div class="multi-select-item" ng-repeat="item in options">\n        <div class="multi-select-btn" ng-click="itemClicked($index)" ng-class="{active: isSelected($index)}">{{ item }}</div>\n    </div>\n</div>',
+            template: '<div class="multi-select row" ng-class="{disabled: ngDisabled}">\n    <div class="multi-select-item col-sm-4 col-md-3 col-lg-2" ng-repeat="item in options">\n        <div class="multi-select-btn" ng-click="itemClicked($index)" ng-class="{active: isSelected($index)}">{{ item }}</div>\n    </div>\n</div>',
             link: linkFn
         }
     });

@@ -1,6 +1,6 @@
 {
     "name": "agrista-mobile-framework",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "dependencies": {
         "angular": "https://github.com/angular/bower-angular.git",
         "angular-animate": "https://github.com/angular/bower-angular-animate.git",

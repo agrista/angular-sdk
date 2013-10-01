@@ -99,11 +99,8 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                                     var customer = res[0].data;
 
                                     _getCustomer(customer.customerID, task.ass_by);
+                                    _getCustomerAssets(customer.customerID);
                                     _getCultivars(customer.crop);
-
-                                    for (var i = 0; i < customer.land_assets.length; i++) {
-                                        _getAsset(customer.land_assets[i]);
-                                    }
 
                                     defer.resolve();
                                 } else {
