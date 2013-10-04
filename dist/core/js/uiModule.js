@@ -10,12 +10,16 @@ define(['angular'], function () {
             var watchData = function () {
                 _items = {};
 
-                for (var i = 0; i < scope.options.length; i++) {
-                    _items[scope.options[i]] = false;
+                if (scope.options !== undefined) {
+                    for (var i = 0; i < scope.options.length; i++) {
+                        _items[scope.options[i]] = false;
+                    }
                 }
 
-                for (var i = 0; i < scope.value.length; i++) {
-                    _items[scope.value[i]] = true;
+                if (scope.value !== undefined) {
+                    for (var i = 0; i < scope.value.length; i++) {
+                        _items[scope.value[i]] = true;
+                    }
                 }
             };
 
