@@ -99,7 +99,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                                     var customer = res[0].data;
 
                                     _getCustomer(customer.customerID, task.ass_by);
-                                    _getCustomerAssets(customer.customerID);
+                                    _getCustomerAssets(customer.customerID, task.ass_by);
                                     _getCultivars(customer.crop);
 
                                     defer.resolve();
@@ -192,12 +192,12 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     }
                 }
 
-                function _getCustomerAssets(cid) {
+                function _getCustomerAssets(cid, assigner) {
                     if (_inProgress === true && cid !== undefined && _syncList.customerAssets[cid] === undefined) {
                         _syncList.customerAssets[cid] = true;
 
                         _queue.pushPromise(function (defer) {
-                            customerApiService.getCustomerAssets(cid, _readOptions, function (res, err) {
+                            customerApiService.getCustomerAssets(cid, assigner, _readOptions, function (res, err) {
                                 if (res) {
                                     for (var i = 0; i < res.length; i++) {
                                         if (res[i].dirty === true) {
@@ -565,11 +565,29 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                         tx.find(cid, fcCallback);
                     });
             },
-            getCustomerAssets: function (cid, options, gcaCallback) {
-                dataStore('asset', {apiTemplate: 'customer/:id/assets'})
-                    .transaction(function (tx) {
-                        tx.read({id: cid}, options, gcaCallback);
-                    });
+            getCustomerAssets: function (cid, assigner, options, gcaCallback) {
+                if (typeof assigner === 'object') {
+                    gcaCallback = options;
+                    options = assigner;
+                    assigner = undefined;
+                }
+                if (typeof assigner === 'function') {
+                    gcaCallback = assigner;
+                    options = {};
+                    assigner = undefined;
+                }
+
+                if (assigner !== undefined) {
+                    dataStore('asset', {apiTemplate: 'customer/:id/assets?user=:assigner'})
+                        .transaction(function (tx) {
+                            tx.read({id: cid, assigner: assigner}, options, gcaCallback);
+                        });
+                } else {
+                    dataStore('asset', {apiTemplate: 'customer/:id/assets'})
+                        .transaction(function (tx) {
+                            tx.read({id: cid}, options, gcaCallback);
+                        });
+                }
             }
         };
     }]);
