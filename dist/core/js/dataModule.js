@@ -15,7 +15,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                     _queue.pushPromise(function (defer) {
                         var store = dataStore(name);
 
-                        store.transaction(function(tx) {
+                        store.transaction(function (tx) {
                             tx.purge(function (res) {
                                 if (res) {
                                     defer.resolve();
@@ -783,7 +783,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
 
                             _updateLocal(dataItems, uCallback);
                         },
-                        sync: function (schemaData, writeUri, sCallback) {
+                        sync: function (dataItems, schemaData, writeUri, sCallback) {
                             // Validate parameters
                             if (typeof writeUri === 'function') {
                                 sCallback = writeUri;
@@ -794,18 +794,23 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                                 schemaData = {};
                             }
 
+                            if ((dataItems instanceof Array) === false) {
+                                dataItems = [dataItems];
+                            }
+
                             var uri = _parseRequest(_config.apiTemplate, schemaData);
 
-                            _getLocal(uri, function (res, err) {
-                                _updateRemote(res, writeUri, function (res, err) {
-                                    _getRemote(uri, function (res, err) {
+                            _updateRemote(dataItems, writeUri, function (res, err) {
+                                for (var i = 0; i < res.length; i++) {
+
+                                    _getRemote(res[i].uri, function (res, err) {
                                         if (res) {
                                             _syncLocal(res, uri, sCallback);
                                         } else if (err) {
                                             sCallback(null, err);
                                         }
                                     });
-                                });
+                                }
                             });
                         },
                         remove: function (dataItems, dCallback) {
