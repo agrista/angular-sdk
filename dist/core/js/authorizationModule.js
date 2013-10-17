@@ -96,7 +96,9 @@ define(['underscore', 'angular'], function (_) {
                 return {
                     userRole: _userRoles,
                     accessLevel: _accessLevels,
-                    currentUser: _user,
+                    currentUser: function() {
+                        return _user;
+                    },
                     config: _setConfig,
 
                     isAllowed: function (level) {
@@ -113,11 +115,7 @@ define(['underscore', 'angular'], function (_) {
                     login: function (email, password) {
                         var defer = $q.defer();
 
-                        console.log('login');
-
                         $http.post(_config.url + _config.login, {email: email, password: password}).then(function (res) {
-                            console.log('login response');
-
                             if (res.data.user !== null) {
                                 _user = _setUser(res.data.user);
                                 defer.resolve(_user);
@@ -135,10 +133,24 @@ define(['underscore', 'angular'], function (_) {
 
                         return defer.promise;
                     },
+                    changePassword: function(oldPassword, newPassword, cpCallback) {
+                        $http.post(_config.url + 'api/user/' + _user.id + '/password', {oldPSW: oldPassword, newPSW: newPassword}).then(function (res) {
+                            cpCallback({success: true, data: res.data});
+                        }, function(err) {
+                            cpCallback({success: false, data: err.data});
+                        });
+                    },
+                    changeUserDetails: function(userDetails, cudCallback) {
+                        $http.post(_config.url + 'api/user/' + _user.id + '/self', userDetails).then(function (res) {
+                            _user = _setUser(userDetails);
+
+                            cudCallback({success: true, data: res.data});
+                        }, function(err) {
+                            cudCallback({success: false, data: err.data});
+                        });
+                    },
                     logout: function () {
                         $http.post(_config.url + _config.logout).then(function () {
-                            console.log('logout received');
-
                             $rootScope.$broadcast('authorization.logout', _user);
                         });
 

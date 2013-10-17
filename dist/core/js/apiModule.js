@@ -63,7 +63,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                                             _postPhotos(did);
                                         }
 
-                                        _getDocument(did, task.ass_by, sync);
+                                        _getDocument(did, task.data.ass_by, sync);
                                     }
 
                                     defer.resolve();
