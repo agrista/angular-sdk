@@ -133,6 +133,13 @@ define(['underscore', 'angular'], function (_) {
 
                         return defer.promise;
                     },
+                    resetPassword: function(email, rpCallback) {
+                        $http.post(_config.url + 'api/password-reset-email', {email: email}).then(function (res) {
+                            rpCallback({success: true, data: res.data});
+                        }, function(err) {
+                            rpCallback({success: false, data: err.data});
+                        });
+                    },
                     changePassword: function(oldPassword, newPassword, cpCallback) {
                         $http.post(_config.url + 'api/user/' + _user.id + '/password', {oldPSW: oldPassword, newPSW: newPassword}).then(function (res) {
                             cpCallback({success: true, data: res.data});
