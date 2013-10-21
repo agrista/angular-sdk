@@ -4,27 +4,54 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
     var module = angular.module('navigationModule', ['ngAnimate', 'utilityModule']);
 
     module.service('navigationService', ['$rootScope', '$location', function ($rootScope, $location) {
-        var _transition = undefined;
-        var _menuItems = [];
+        var _stack = [];
+        var _item = {};
 
         return {
-            menu: function(items) {
-                if (items instanceof Array === true) {
-                    _menuItems = items;
-                }
-
-                return _menuItems;
-            },
-            go: function (url, type, pop) {
-                _transition = {
+            go: function (url, mode, pop) {
+                $rootScope.$broadcast('navigation', {
                     url: url,
-                    type: type,
+                    mode: mode,
                     push: !pop
-                };
-
-                $rootScope.$broadcast('navigation', _transition);
+                });
 
                 $location.url(url);
+            },
+            push: function(url, state, mode) {
+                if (typeof state !== 'object') {
+                    mode = state;
+                    state = undefined;
+                }
+
+                _stack.push({
+                    url: $location.url(),
+                    state: state,
+                    mode: mode,
+                    push: false
+                });
+
+                _item = {
+                    url: url,
+                    mode: mode,
+                    push: true
+                };
+
+                $rootScope.$broadcast('navigation', _item);
+                $location.url(_item.url);
+            },
+            pop: function() {
+                if (_stack.length > 0) {
+                    _item = _stack.pop();
+
+                    $rootScope.$broadcast('navigation', _item);
+                    $location.url(_item.url);
+                } else {
+                    _item = {};
+                    $location.url('/');
+                }
+            },
+            state: function() {
+                return _item.state;
             }
         }
     }]);
