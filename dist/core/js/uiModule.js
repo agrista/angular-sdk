@@ -60,6 +60,21 @@ define(['angular'], function () {
         }
     });
 
+    module.directive("locationFormatter", ['$filter', function ($filter) {
+        return {
+            restrict: 'A',
+            require: 'ngModel',
+            link: function (scope, element, attrs, ngModel) {
+                ngModel.$formatters.push(function (value) {
+
+
+                    return (value !== undefined ?
+                        $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) + ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm': '');
+                });
+            }
+        };
+    }]);
+
     module.directive("dateFormatter", ['$filter', function ($filter) {
         return {
             restrict: 'A',
