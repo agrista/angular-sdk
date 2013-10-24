@@ -9,7 +9,8 @@ define(['angular'], function () {
             replace: true,
             template: '<div class="panel panel-default signature"><div class="panel-heading">{{ title }}<div class="btn btn-default btn-sm pull-right" ng-click="reset()">Clear</div></div></div>',
             scope: {
-                signed: '=',
+                onsigned: '=',
+                name: '@',
                 title: '@'
             },
             link: function (scope, element, attrs) {
@@ -20,7 +21,7 @@ define(['angular'], function () {
                 scope.reset = function() {
                     sigElement.jSignature('reset');
 
-                    scope.signed(attrs.id, null);
+                    scope.onsigned(attrs.name, null);
                 };
 
                 sigElement.jSignature({
@@ -29,7 +30,7 @@ define(['angular'], function () {
                     'showUndoButton': false});
 
                 sigElement.bind('change', function() {
-                    scope.signed(attrs.id, sigElement.jSignature('getData', 'svgbase64'));
+                    scope.onsigned(attrs.name, sigElement.jSignature('getData', 'svgbase64'));
                 });
             }
         };
