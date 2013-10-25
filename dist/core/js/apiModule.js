@@ -351,6 +351,22 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
     /*
      * API
      */
+    module.factory('userApiService', ['dataStore', function(dataStore) {
+        return {
+            getCompanyUsers: function(id, options, gcuCallback) {
+                if (typeof options === 'function') {
+                    gcuCallback = options;
+                    options = {};
+                }
+
+                dataStore('users', {apiTemplate: 'users/:id'})
+                    .transaction(function (tx) {
+                        tx.read({id: id}, options, gcuCallback);
+                    });
+            }
+        };
+    }]);
+
     module.factory('taskApiService', ['dataStore', function (dataStore) {
         var taskStore = dataStore('task', {apiTemplate: 'task/:id'});
 
@@ -366,7 +382,6 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     .transaction(function (tx) {
                         tx.read({type: type}, options, gtCallback);
                     });
-
             },
             getTasksById: function (tid, options, gtCallback) {
                 if (typeof options === 'function') {

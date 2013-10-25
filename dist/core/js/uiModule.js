@@ -66,10 +66,16 @@ define(['angular'], function () {
             require: 'ngModel',
             link: function (scope, element, attrs, ngModel) {
                 ngModel.$formatters.push(function (value) {
+                    var viewValue = '';
+                    if (value !== undefined) {
+                        viewValue = $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) + ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm';
 
+                        if (attrs.ngChange) {
+                            scope.$eval(attrs.ngChange);
+                        }
+                    }
 
-                    return (value !== undefined ?
-                        $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) + ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm': '');
+                    return viewValue;
                 });
             }
         };

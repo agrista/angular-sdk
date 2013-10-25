@@ -161,7 +161,7 @@ define(['angular'], function () {
         }
 
         function fitBounds(view) {
-            if (map && view !== undefined) {
+            if (map && view !== undefined && view.bounds.length > 0) {
                 if (view.options.includeLocation && location.coords !== undefined) {
                     view.bounds = view.bounds.concat([
                         [location.coords.latitude, location.coords.longitude]
