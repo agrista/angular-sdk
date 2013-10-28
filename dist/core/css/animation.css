@@ -1,0 +1,119 @@
+/*
+ The slide-enter prefix is the event name that you
+ have provided within the ngAnimate attribute.
+*/
+
+html, body {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+.animate-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    -webkit-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+}
+
+.animate-container.ng-enter,
+.animate-container.ng-leave {
+    -webkit-transition: -webkit-transform 400ms ease;
+    -moz-transition: -moz-transform 400ms ease;
+    -ms-transition: -ms-transform 400ms ease;
+    -o-transition: -o-transform 400ms ease;
+    transition: transform 400ms ease;
+}
+
+.trans-slide.trans-push .animate-container.ng-enter {
+    transform: translate3d(99%, 0, 0);
+    -webkit-transform: translate3d(99%, 0, 0);
+    z-index: 1000;
+}
+
+.trans-slide.trans-push .animate-container.ng-leave {
+    transform: translate3d(0%, 0, 0);
+    -webkit-transform: translate3d(0%, 0, 0);
+    z-index: 950;
+}
+
+.trans-slide.trans-push .animate-container.ng-enter.ng-enter-active {
+    transform: translate3d(0%, 0, 0);
+    -webkit-transform: translate3d(0%, 0, 0);
+}
+
+.trans-slide.trans-push .animate-container.ng-leave.ng-leave-active {
+    transform: translate3d(-99%, 0, 0);
+    -webkit-transform: translate3d(-99%, 0, 0);
+}
+
+.trans-slide.trans-pop .animate-container.ng-enter {
+    transform: translate3d(-99%, 0, 0);
+    -webkit-transform: translate3d(-99%, 0, 0);
+    z-index: 1000;
+}
+
+.trans-slide.trans-pop .animate-container.ng-leave {
+    transform: translate3d(0%, 0, 0);
+    -webkit-transform: translate3d(0%, 0, 0);
+    z-index: 950;
+}
+
+.trans-slide.trans-pop .animate-container.ng-enter.ng-enter-active {
+    transform: translate3d(0%, 0, 0);
+    -webkit-transform: translate3d(0%, 0, 0);
+}
+
+.trans-slide.trans-pop .animate-container.ng-leave.ng-leave-active {
+    transform: translate3d(99%), 0, 0;
+    -webkit-transform: translate3d(99%, 0, 0);
+}
+
+.trans-modal.trans-push .animate-container.ng-enter {
+    transform: translate3d(0, 100%, 0);
+    -webkit-transform: translate3d(0, 100%, 0);
+    z-index: 1000;
+}
+
+.trans-modal.trans-push .animate-container.ng-leave {
+    transform: translate3d(0, 0%, 0);
+    -webkit-transform: translate3d(0, 0%, 0);
+    z-index: 950;
+}
+
+.trans-modal.trans-push .animate-container.ng-enter.ng-enter-active {
+    transform: translate3d(0, 0%, 0);
+    -webkit-transform: translate3d(0, 0%, 0);
+}
+
+.trans-modal.trans-push .animate-container.ng-leave.ng-leave-active {
+    transform: translate3d(0, 0%, 0);
+    -webkit-transform: translate3d(0, 0%, 0);
+}
+
+.trans-modal.trans-pop .animate-container.ng-enter {
+    transform: translate3d(0, 0%, 0);
+    -webkit-transform: translate3d(0, 0%, 0);
+    z-index: 950;
+}
+
+.trans-modal.trans-pop .animate-container.ng-leave {
+    transform: translate3d(0, 0%, 0);
+    -webkit-transform: translate3d(0, 0%, 0);
+    z-index: 1000;
+}
+
+.trans-modal.trans-pop .animate-container.ng-enter.ng-enter-active {
+    transform: translate3d(0, 0%, 0);
+    -webkit-transform: translate3d(0, 0%, 0);
+}
+
+.trans-modal.trans-pop .animate-container.ng-leave.ng-leave-active {
+    transform: translate3d(0, 100%, 0);
+    -webkit-transform: translate3d(0, 100%, 0);
+}
