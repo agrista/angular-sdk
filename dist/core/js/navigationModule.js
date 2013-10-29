@@ -95,50 +95,45 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
      * Setup the page-navbar directive. Directive injects the page-navbar template and provides a button interface.
      * When no navigate-left or navigate-right function is provided then the button is hidden.
      * <page-navbar title="Navbar title"
-     *         left-button="{icon: 'remove'}"
-     *         navigate-left="navigateLeftFunction"
-     *         right-button="{icon: 'ok', title: 'Save'}"
-     *         navigate-right="navigateRightFunction"></page-navbar>
+     *         back-button="{icon: 'remove'}"
+     *         navigate-back="navigateLeftFunction"
+     *         primary-button="{icon: 'ok', title: 'Save'}"
+     *         navigate-primary="navigateRightFunction"></page-navbar>
      *
      * @param title {string} The navigation bar title
-     * @param left-button {object} Left button chrome settings {icon: string, title: string}
-     * @param right-button {object} Right button chrome settings {icon: string, title: string}
-     * @param navigate-left {function} Function to call on left button click
-     * @param navigate-right {function} Function to call on right button click
+     * @param back-button {object} Back button chrome settings {icon: string, title: string}
+     * @param primary-button {object} Primary button chrome settings {icon: string, title: string}
+     * @param secondary-button {object} Secondary button chrome settings {icon: string, title: string}
+     * @param navigate-back {function} Function to call on back button click
+     * @param navigate-primary {function} Function to call on primary button click
+     * @param navigate-secondary {function} Function to call on secondary button click
      */
     module.directive('pageNavbar', function () {
         return {
             restrict: 'E',
             scope: {
                 title: '=',
-                menuShown: '=',
-                leftButton: '=',
-                rightButton: '=',
-                navigateLeft: '=',
-                navigateRight: '='
+                backButton: '=',
+                primaryButton: '=',
+                secondaryButton: '=',
+                navigateBack: '=',
+                navigatePrimary: '=',
+                navigateSecondary: '='
             },
             replace: true,
             transclude: true,
-            template: '<div class="navbar navbar-inverse page-slide">\n    <div class="container">\n        <div class="pull-left" ng-show="showLeftButton()">\n            <div class="btn navbar-btn btn-clear" ng-click="triggerLeftNav()">\n                <i class="glyphicon glyphicon-{{leftButton.icon}}" ng-show="leftButton.icon"></i>\n                <span ng-show="leftButton.title">&nbsp;{{leftButton.title}}</span>\n            </div>\n        </div>\n        <div class="navbar-header"><p class="navbar-text">{{ title }}</p></div>\n        <div class="pull-right" ng-show="showRightButton()">\n            <div class="btn navbar-btn btn-primary" ng-click="triggerRightNav()">\n                <i class="glyphicon glyphicon-{{rightButton.icon}}" ng-show="rightButton.icon"></i>\n                <span ng-show="rightButton.title">&nbsp;{{rightButton.title}}</span>\n            </div>\n        </div>\n    </div>\n</div>\n',
+            template: '<div class="navbar navbar-inverse page-slide">\n    <div class="container">\n        <div class="pull-left" ng-show="showLeftButton()">\n            <div class="btn navbar-btn btn-clear" ng-click="triggerLeftNav()">\n                <i class="glyphicon glyphicon-{{leftButton.icon}}" ng-show="leftButton.icon"></i>\n                <span ng-show="leftButton.title">&nbsp;{{leftButton.title}}</span>\n            </div>\n        </div>\n        <div class="navbar-header"><p class="navbar-text">{{ title }}</p></div>\n        <div class="pull-right" ng-show="showRightButton()">\n            <div class="btn navbar-btn btn-primary" ng-click="triggerRightNav()">\n                <i class="glyphicon glyphicon-{{rightButton.icon}}" ng-show="rightButton.icon"></i>\n                <span ng-show="rightButton.title">&nbsp;{{rightButton.title}}</span>\n            </div>\n        </div>\n    </div>\n</div>\n\n',
             controller: ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
-                $scope.triggerLeftNav = function() {
-                    $scope.navigateLeft();
-
-                    return true;
+                $scope.showBackButton = function () {
+                    return (typeof $attrs.navigateBack === 'string' && typeof $scope.backButton === 'object');
                 };
 
-                $scope.triggerRightNav = function() {
-                    $scope.navigateRight();
-
-                    return true;
+                $scope.showPrimaryButton = function () {
+                    return (typeof $attrs.navigatePrimary === 'string' && typeof $scope.primaryButton === 'object');
                 };
 
-                $scope.showLeftButton = function () {
-                    return (typeof $attrs.navigateLeft === 'string' && typeof $scope.leftButton === 'object');
-                };
-
-                $scope.showRightButton = function () {
-                    return (typeof $attrs.navigateRight === 'string' && typeof $scope.rightButton === 'object');
+                $scope.showSecondaryButton = function () {
+                    return (typeof $attrs.navigateSecondary === 'string' && typeof $scope.secondaryButton === 'object');
                 };
             }]
         };
