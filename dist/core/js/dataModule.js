@@ -736,6 +736,8 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                                 schemaData = {};
                             }
 
+                            if (typeof rCallback !== 'function') rCallback = _voidCallback;
+
                             if (typeof schemaData === 'object') {
                                 var _readOptions = _.defaults(options, {
                                     page: 1,
@@ -793,6 +795,8 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                                 writeUri = _config.apiTemplate;
                                 schemaData = {};
                             }
+
+                            if (typeof sCallback !== 'function') sCallback = _voidCallback;
 
                             if ((dataItems instanceof Array) === false) {
                                 dataItems = [dataItems];
