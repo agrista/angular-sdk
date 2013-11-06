@@ -1,6 +1,6 @@
 {
     "name": "agrista-mobile-framework",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "dependencies": {
         "angular": "https://github.com/angular/bower-angular.git#1.2.0-rc.2",
         "angular-animate": "https://github.com/angular/bower-angular-animate.git#1.2.0-rc.2",
@@ -13,8 +13,5 @@
         "angular-animate": "https://github.com/angular/bower-angular-animate.git#1.2.0-rc.2",
         "angular-mocks": "http://code.angularjs.org/1.1.5/angular-mocks.js",
         "ngMidwayTester": "https://github.com/yearofmoo/ngMidwayTester.git"
-    },
-    "resolutions": {
-        "angular": "1.2.0-rc.2"
     }
 }

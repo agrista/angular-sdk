@@ -39,16 +39,17 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
                 $rootScope.$broadcast('navigation', _item);
                 $location.url(_item.url);
             },
-            pop: function() {
-                if (_stack.length > 0) {
-                    _item = _stack.pop();
+            pop: function(number) {
+                number = number || 1;
+                _item = {url: '/'};
 
-                    $rootScope.$broadcast('navigation', _item);
-                    $location.url(_item.url);
-                } else {
-                    _item = {};
-                    $location.url('/');
+                while (number > 0 && _stack.length > 0) {
+                    _item = _stack.pop();
+                    number--;
                 }
+
+                $rootScope.$broadcast('navigation', _item);
+                $location.url(_item.url);
             },
             state: function() {
                 return _item.state;
