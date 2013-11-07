@@ -1,6 +1,6 @@
 'use strict';
 
-define(['underscore', 'angular', 'core/utilityModule'], function (_) {
+define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
     var module = angular.module('dataModule', ['utilityModule']);
 
     /**
@@ -86,14 +86,14 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
          * @param options
          */
         this.config = function (options) {
-            _defaultOptions = _.defaults((options || {}), _defaultOptions);
+            _defaultOptions = underscore.defaults((options || {}), _defaultOptions);
         };
 
         /**
          * dataStore service
          * @type {Array}
          */
-        this.$get = ['$q', '$http', '$rootScope', function ($q, $http, $rootScope) {
+        this.$get = ['$q', '$http', '$rootScope', 'objectId', function ($q, $http, $rootScope, objectId) {
 
             /**
              * @name _initializeDatabase
@@ -166,7 +166,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                     readRemote: true
                 }
                  */
-                var _config = _.defaults((config || {}), {
+                var _config = underscore.defaults((config || {}), {
                     apiTemplate: undefined,
                     paging: undefined,
                     indexerProperty: '_id',
@@ -176,7 +176,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                 });
 
                 if (_config.paging !== undefined) {
-                    _config.paging = _.defaults(_config.paging, {
+                    _config.paging = underscore.defaults(_config.paging, {
                         template: '',
                         schema: {},
                         data: {
@@ -246,22 +246,15 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                     }
                 };
 
-                function _createUniqueId() {
-                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                        return v.toString(16);
-                    });
-                };
-
                 function _parseRequest(templateUrl, schemaData) {
                     console.log('Unresolved: ' + templateUrl);
 
                     if (templateUrl !== undefined) {
                         for (var key in schemaData) {
                             if (schemaData.hasOwnProperty(key)) {
-                                console.log('Property: ' + key);
+                                var schemaKey = (schemaData[key] !== undefined ? schemaData[key] : '');
 
-                                templateUrl = templateUrl.replace(':' + key, schemaData[key]);
+                                templateUrl = templateUrl.replace(':' + key, schemaKey);
                             }
                         }
                     }
@@ -404,7 +397,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
 
                     if (dataItems.length > 0) {
 
-                        options = _.defaults((options || {}), {force: false});
+                        options = underscore.defaults((options || {}), {force: false});
 
                         var asyncMon = new AsyncMonitor(dataItems.length, function () {
                             ulCallback(dataItems);
@@ -455,7 +448,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                         options = {};
                     }
 
-                    options = _.defaults((options || {}), {force: false});
+                    options = underscore.defaults((options || {}), {force: false});
 
                     var asyncMon = new AsyncMonitor(1, dalCallback);
 
@@ -593,7 +586,9 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
 
                             if (item.dirty === true) {
                                 if (writeUri !== undefined) {
-                                    _makePost(item, _parseRequest(writeUri, {id: item.id}));
+                                    _makePost(item, _parseRequest(writeUri, {
+                                        id: item.local === true ? undefined : item.id
+                                    }));
                                 } else {
                                     _makePost(item, item.uri);
                                 }
@@ -681,7 +676,21 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                             _transactionQueue.splice(0, 1);
                         }
                     }
-                }
+                };
+
+                var _responseHandler = function (handle, res, err) {
+                    if (handle !== undefined) {
+                        if (typeof handle === 'function') {
+                            handle(res, err);
+                        } else {
+                            if (res) {
+                                handle.resolve(res);
+                            } else {
+                                handle.reject(err);
+                            }
+                        }
+                    }
+                };
 
                 /**
                  * @name DataTransaction
@@ -718,12 +727,14 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                             }
 
                             _updateLocal({
-                                id: _createUniqueId(),
+                                id: _getItemIndex(data, objectId().toBase64String()),
                                 uri: _parseRequest(uriTemplate, schemaData),
                                 data: data,
                                 dirty: true,
                                 local: true
-                            }, cCallback);
+                            }, function (res, err) {
+                                _responseHandler(cCallback, res, err);
+                            });
                         },
                         read: function (schemaData, options, rCallback) {
                             // Validate parameters
@@ -736,10 +747,8 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                                 schemaData = {};
                             }
 
-                            if (typeof rCallback !== 'function') rCallback = _voidCallback;
-
                             if (typeof schemaData === 'object') {
-                                var _readOptions = _.defaults(options, {
+                                var _readOptions = underscore.defaults(options, {
                                     page: 1,
                                     limit: _defaultOptions.pageLimit,
                                     readLocal: _config.readLocal,
@@ -750,29 +759,35 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
 
                                 // Process request
                                 if (_readOptions.readLocal === true) {
-                                    _getLocal(_uri, rCallback);
+                                    _getLocal(_uri, function (res, err) {
+                                        _responseHandler(rCallback, res, err);
+                                    });
                                 }
 
                                 if (_readOptions.readRemote === true) {
                                     _getRemote(_uri, function (res, err) {
                                         if (res) {
                                             _syncLocal(res, _uri, function (res, err) {
-                                                rCallback(res);
+                                                _responseHandler(rCallback, res, err);
                                             });
                                         } else if (err) {
-                                            rCallback(null, err);
+                                            _responseHandler(rCallback, null, err);
                                         }
                                     });
                                 }
                             } else {
-                                rCallback(null, _errors.NoReadParams);
+                                _responseHandler(rCallback, null, _errors.NoReadParams);
                             }
                         },
                         find: function (id, fCallback) {
-                            _findLocal(id, fCallback);
+                            _findLocal(id, function (res, err) {
+                                _responseHandler(fCallback, res, err);
+                            });
                         },
                         search: function (col, data, sCallback) {
-                            _searchLocal(col, data, sCallback);
+                            _searchLocal(col, data, function (res, err) {
+                                _responseHandler(sCallback, res, err);
+                            });
                         },
                         update: function (dataItems, uCallback) {
                             if ((dataItems instanceof Array) === false) {
@@ -783,7 +798,9 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                                 dataItems[i].dirty = true;
                             }
 
-                            _updateLocal(dataItems, uCallback);
+                            _updateLocal(dataItems, function (res, err) {
+                                _responseHandler(uCallback, res, err);
+                            });
                         },
                         sync: function (dataItems, schemaData, writeUri, sCallback) {
                             // Validate parameters
@@ -796,8 +813,6 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                                 schemaData = {};
                             }
 
-                            if (typeof sCallback !== 'function') sCallback = _voidCallback;
-
                             if ((dataItems instanceof Array) === false) {
                                 dataItems = [dataItems];
                             }
@@ -809,9 +824,11 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
 
                                     _getRemote(res[i].uri, function (res, err) {
                                         if (res) {
-                                            _syncLocal(res, uri, sCallback);
+                                            _syncLocal(res, uri, function (res, err) {
+                                                _responseHandler(sCallback, res, err);
+                                            });
                                         } else if (err) {
-                                            sCallback(null, err);
+                                            _responseHandler(sCallback, null, err);
                                         }
                                     });
                                 }
@@ -822,7 +839,9 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                                 dataItems = [dataItems];
                             }
 
-                            var asyncMon = new AsyncMonitor(dataItems.length, dCallback);
+                            var asyncMon = new AsyncMonitor(dataItems.length, function (res, err) {
+                                _responseHandler(dCallback, res, err);
+                            });
 
                             for (var i = 0; i < dataItems.length; i++) {
                                 if (dataItems[i].local === true) {
@@ -837,7 +856,9 @@ define(['underscore', 'angular', 'core/utilityModule'], function (_) {
                             }
                         },
                         purge: function (pCallback) {
-                            _clearTable(pCallback);
+                            _clearTable(function (res, err) {
+                                _responseHandler(pCallback, res, err);
+                            });
                         }
                     }
                 }
