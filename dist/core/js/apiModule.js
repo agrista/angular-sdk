@@ -28,6 +28,7 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
 
                                     if (parentTask.dirty === true && parentTask.data.status == 'complete') {
                                         list.push(_monitor.add(_uploadChildTasks(parentTask.id)));
+                                        list.push(_uploadRestrictedDocument(parentTask.data.object.id, parentTask.data.ass_by));
                                     }
                                 }
 
@@ -51,24 +52,40 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
             function _uploadChildTasks(tid) {
                 return  _monitor.add(promiseService.wrap(function(promise) {
                     // Dependency wrapper
-                    taskApiService.getTasksById(tid)
-                        .then(function(res) {
-                            promiseService
-                                .wrapAll(function(list) {
-                                    for (var i = 0; i < res.length; i++) {
-                                        var childTask = res[i].data;
+                    taskApiService.getTasksById(tid).then(function(res) {
+                        promiseService
+                            .wrapAll(function(list) {
+                                for (var i = 0; i < res.length; i++) {
+                                    var childTask = res[i].data;
 
-                                        list.push(_uploadDocument(childTask.object.id, childTask.ass_by));
-                                    }
-                                }).then(function() {
-                                    // Resolve dependency list
-                                    promise.resolve(promiseService.wrapAll(function(list) {
-                                        for (var i = 0; i < res.length; i++) {
+                                    list.push(_uploadDocument(childTask.object.id, childTask.ass_by));
+                                }
+                            }).then(function() {
+                                // Resolve dependency list
+                                promise.resolve(promiseService.wrapAll(function(list) {
+                                    for (var i = 0; i < res.length; i++) {
+                                        if (res[i].dirty === true) {
                                             list.push(_monitor.add(taskApiService.syncTask(res[i], 'task/:id/tasks', {id: tid}, 'task/:id')));
                                         }
-                                    }));
-                                }, promise.reject);
-                        }, promise.reject);
+                                    }
+                                }));
+                            }, promise.reject);
+                    }, promise.reject);
+                }));
+            }
+
+            function _uploadRestrictedDocument(did, taskAssigner) {
+                return _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    documentApiService.getDocument(did, taskAssigner).then(function(res) {
+                        var document = res[0];
+
+                        if (document.dirty === true) {
+                            _monitor.add(documentApiService.syncDocument(document, 'document/:id?user=:assigner', {id: document.id, assigner: taskAssigner})).then(promise.resolve, promise.reject);
+                        } else {
+                            promise.resolve();
+                        }
+                    }, promise.reject);
                 }));
             }
 
@@ -78,13 +95,17 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     documentApiService.getDocument(did).then(function(res) {
                         var document = res[0];
 
-                        promiseService
-                            .all([
-                                _uploadPhotos(document.id),
-                                _uploadCustomer(document.data.customerID, taskAssigner)
-                            ]).then(function() {
-                                _monitor.add(documentApiService.syncDocument(document, {id: document.id})).then(promise.resolve, promise.reject);
-                            }, promise.reject);
+                        if (document.dirty === true) {
+                            promiseService
+                                .all([
+                                    _uploadPhotos(document.id),
+                                    _uploadCustomer(document.data.customerID, taskAssigner)
+                                ]).then(function() {
+                                    _monitor.add(documentApiService.syncDocument(document, {id: document.id})).then(promise.resolve, promise.reject);
+                                }, promise.reject);
+                        } else {
+                            promise.resolve();
+                        }
                     }, promise.reject);
                 }));
             }
@@ -201,10 +222,12 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     // Dependency wrapper
                     taskApiService.getTasksByType(taskType, _readOptions).then(function(res) {
                         for (var i = 0; i < res.length; i++) {
-                            var item = res[i];
+                            var parentTask = res[i];
+                            var did = parentTask.data.object.id;
 
-                            if (item.id !== undefined) {
-                                _getTasks(item.id);
+                            if (parentTask.id !== undefined) {
+                                _getRestrictedDocument(did, parentTask.data.ass_by);
+                                _getTasks(parentTask.id);
                             }
                         }
 
@@ -229,15 +252,27 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                 }));
             }
 
+            function _getRestrictedDocument(did, taskAssigner) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    documentApiService.getDocument(did, taskAssigner, _readOptions).then(promise.resolve, promise.reject);
+                }));
+            }
+
             function _getDocument(did, taskAssigner) {
                 return _monitor.add(promiseService.wrap(function (promise) {
                     // Dependency wrapper
                     documentApiService.getDocument(did, _readOptions).then(function(res) {
                         var document = res[0];
 
-                        _getCustomer(document.data.customerID, taskAssigner);
-                        _getCustomerAssets(document.data.customerID, taskAssigner);
-                        _getCultivars(document.data.crop);
+                        if (document.data.customerID !== undefined) {
+                            _getCustomer(document.data.customerID, taskAssigner);
+                            _getCustomerAssets(document.data.customerID, taskAssigner);
+                        }
+
+                        if (document.data.crop !== undefined) {
+                            _getCultivars(document.data.crop);
+                        }
 
                         promise.resolve();
                     }, promise.reject);
@@ -516,20 +551,34 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     });
                 });
             },
-            getDocument: function (did, options, callback) {
+            getDocument: function (did, assigner, options, callback) {
                 if (typeof options == 'function') {
                     callback = options;
                     options = {};
-                } else if (arguments.length == 1) {
+                } else if (typeof assigner == 'function') {
+                    callback = assigner;
+                    options = {};
+                    assigner = undefined;
+                } else if (typeof assigner == 'object') {
+                    options = assigner;
+                    assigner = undefined;
+                } else if (arguments.length < 3) {
                     options = {};
                 }
 
                 return promiseService.wrap(function(promise) {
                     var response = callback || promise;
 
-                    documentStore.transaction(function (tx) {
-                        tx.read({id: did}, options, response);
-                    });
+                    if (assigner !== undefined) {
+                        dataStore('document', {apiTemplate: 'document/:id?user=:assigner'})
+                            .transaction(function (tx) {
+                                tx.read({id: did, assigner: assigner}, options, response);
+                            });
+                    } else {
+                        documentStore.transaction(function (tx) {
+                            tx.read({id: did}, options, response);
+                        });
+                    }
                 });
             },
             updateDocument: function (documentItem, callback) {
@@ -541,13 +590,31 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                     });
                 });
             },
-            syncDocument: function (documentItem, schema, callback) {
+            syncDocument: function (documentItem, readUri, schema, writeUri, callback) {
+                if (typeof readUri == 'object') {
+                    callback = writeUri;
+                    writeUri = schema;
+                    schema = readUri;
+                    readUri = undefined;
+                } else if (typeof writeUri == 'function' || writeUri === undefined) {
+                    writeUri = readUri;
+                } else if (arguments.length < 2) {
+                    schema = {};
+                }
+
                 return promiseService.wrap(function(promise) {
                     var response = callback || promise;
 
-                    documentStore.transaction(function (tx) {
-                        tx.sync(documentItem, schema, response);
-                    });
+                    if (readUri !== undefined) {
+                        dataStore('document', {apiTemplate: readUri})
+                            .transaction(function (tx) {
+                                tx.sync(documentItem, schema, writeUri, response);
+                            });
+                    } else {
+                        documentStore.transaction(function (tx) {
+                            tx.sync(documentItem, schema, response);
+                        });
+                    }
                 });
             },
             getDocumentPhotos: function (did, options, callback) {
@@ -799,6 +866,10 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
                 });
             },
             syncAsset: function (assetItem, readUri, schema, writeUri, callback) {
+                if (typeof writeUri == 'function' || writeUri === undefined) {
+                    writeUri = readUri;
+                }
+
                 return promiseService.wrap(function(promise) {
                     var response = callback || promise;
 
