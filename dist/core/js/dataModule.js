@@ -12,7 +12,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                 var _queue = null;
 
                 function _purgeDataStore(name) {
-                    _queue.pushPromise(function (defer) {
+                    _queue.wrapPush(function (defer) {
                         var store = dataStore(name);
 
                         store.transaction(function (tx) {
@@ -237,12 +237,11 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     }
 
                     if (typeof err === 'string') {
-                        console.error('Error: ' + err);
+                        console.warn('Error: ' + err);
                     } else if (err.message !== undefined) {
-                        console.error('Error: ' + err.message + '(' + err.code + ')');
+                        console.warn('Error: ' + err.message + '(' + err.code + ')');
                     } else {
-                        console.error('Error');
-                        console.error(err);
+                        console.warn(err);
                     }
                 };
 
@@ -709,17 +708,17 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
 
                     return {
                         make: function (uriTemplate, schemaData, data, cCallback) {
-                            if (typeof data === 'function') {
+                            if (arguments.length == 3) {
                                 cCallback = data;
                                 data = schemaData;
                                 schemaData = uriTemplate;
                                 uriTemplate = _config.apiTemplate;
-                            } else if (typeof schemaData === 'function') {
+                            } else if (arguments.length == 2) {
                                 cCallback = schemaData;
                                 data = uriTemplate;
                                 schemaData = {};
                                 uriTemplate = _config.apiTemplate;
-                            } else if (typeof uriTemplate === 'function') {
+                            } else if (arguments.length == 1) {
                                 cCallback = schemaData;
                                 data = {};
                                 schemaData = {};
@@ -738,10 +737,10 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                         },
                         read: function (schemaData, options, rCallback) {
                             // Validate parameters
-                            if (typeof options === 'function') {
+                            if (arguments.length == 2) {
                                 rCallback = options;
                                 options = {};
-                            } else if (typeof schemaData === 'function') {
+                            } else if (arguments.length == 1) {
                                 rCallback = schemaData;
                                 options = {};
                                 schemaData = {};
@@ -804,10 +803,10 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                         },
                         sync: function (dataItems, schemaData, writeUri, sCallback) {
                             // Validate parameters
-                            if (typeof writeUri === 'function') {
+                            if (arguments.length == 3) {
                                 sCallback = writeUri;
                                 writeUri = _config.apiTemplate;
-                            } else if (typeof schemaData === 'function') {
+                            } else if (arguments.length == 2) {
                                 sCallback = schemaData;
                                 writeUri = _config.apiTemplate;
                                 schemaData = {};
