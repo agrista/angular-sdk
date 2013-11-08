@@ -12,671 +12,879 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
     /*
      * Syncronization
      */
-    module.provider('dataSyncronizationService', function () {
-        this.$get = ['queueService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'cultivarApiService', 'assetApiService', 'farmerApiService',
-            function (queueService, taskApiService, documentApiService, photoApiService, customerApiService, cultivarApiService, assetApiService, farmerApiService) {
-                var _queue = null;
-                var _syncList = null;
-                var _inProgress = false;
+    module.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'assetApiService', 'farmerApiService',
+        function(promiseMonitor, promiseService, taskApiService, documentApiService, photoApiService, customerApiService, assetApiService, farmerApiService) {
+            var _monitor = null;
+            var _syncList = null;
 
-                var _readOptions = {readLocal: false, readRemote: true};
+            function _uploadParentTasksByType (taskType) {
+                return _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    taskApiService.getTasksByType(taskType).then(function(res) {
+                        promiseService
+                            .wrapAll(function(list) {
+                                for (var i = 0; i < res.length; i++) {
+                                    var parentTask = res[i];
 
-                function _getTasksByType(taskType) {
-                    if (_inProgress === true) {
-                        _queue.pushPromise(function (defer) {
-                            taskApiService.getTasksByType(taskType, _readOptions, function (res, err) {
-                                if (res) {
-                                    for (var i = 0; i < res.length; i++) {
-                                        var item = res[i];
+                                    if (parentTask.dirty === true && parentTask.data.status == 'complete') {
+                                        list.push(_monitor.add(_uploadChildTasks(parentTask.id)));
+                                    }
+                                }
 
-                                        if (item.id !== undefined) {
-                                            var sync = (item.dirty === true && item.data.status === 'complete');
+                            }).then(function() {
+                                // Resolve dependency list
+                                promiseService
+                                    .wrapAll(function(list) {
+                                        for (var i = 0; i < res.length; i++) {
+                                            var parentTask = res[i];
 
-                                            if (sync) {
-                                                _postTask(item, 'tasks?type=:type', {type: taskType}, 'task/:id');
+                                            if (parentTask.dirty === true && parentTask.data.status == 'complete') {
+                                                list.push(_monitor.add(taskApiService.syncTask(parentTask, 'tasks?type=:type', {type: taskType}, 'task/:id')));
                                             }
-
-                                            _getTasks(item.id, sync);
                                         }
-                                    }
+                                    }).then(promise.resolve, promise.reject);
+                            }, promise.reject);
+                    }, promise.reject);
+                }));
+            }
 
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _getTasks(tid, sync) {
-                    if (_inProgress === true && tid !== undefined) {
-                        _queue.pushPromise(function (defer) {
-                            taskApiService.getTasksById(tid, _readOptions, function (res, err) {
-                                if (res) {
+            function _uploadChildTasks(tid) {
+                return  _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    taskApiService.getTasksById(tid)
+                        .then(function(res) {
+                            promiseService
+                                .wrapAll(function(list) {
                                     for (var i = 0; i < res.length; i++) {
-                                        var task = res[i];
-                                        var did = task.data.object.id;
+                                        var childTask = res[i].data;
 
-                                        if (sync) {
-                                            _postTask(task, 'task/:id/tasks', {id: tid}, 'task/:id');
-                                            _postPhotos(did);
+                                        list.push(_uploadDocument(childTask.object.id, childTask.ass_by));
+                                    }
+                                }).then(function() {
+                                    // Resolve dependency list
+                                    promise.resolve(promiseService.wrapAll(function(list) {
+                                        for (var i = 0; i < res.length; i++) {
+                                            list.push(_monitor.add(taskApiService.syncTask(res[i], 'task/:id/tasks', {id: tid}, 'task/:id')));
                                         }
+                                    }));
+                                }, promise.reject);
+                        }, promise.reject);
+                }));
+            }
 
-                                        _getDocument(did, task.data.ass_by, sync);
-                                    }
+            function _uploadDocument(did, taskAssigner) {
+                return _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    documentApiService.getDocument(did).then(function(res) {
+                        var document = res[0];
 
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
+                        promiseService
+                            .all([
+                                _uploadPhotos(document.id),
+                                _uploadCustomer(document.data.customerID, taskAssigner)
+                            ]).then(function() {
+                                _monitor.add(documentApiService.syncDocument(document, {id: document.id})).then(promise.resolve, promise.reject);
+                            }, promise.reject);
+                    }, promise.reject);
+                }));
+            }
+
+            function _uploadPhotos(did) {
+                return _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    documentApiService.getDocumentPhotos(did).then(function(res) {
+                        promiseService.wrapAll(function(list) {
+                            for (var i = 0; i < res.length; i++) {
+                                if (res[i].dirty === true) {
+                                    list.push(_monitor.add(photoApiService.uploadPhoto(res[i])));
                                 }
-                            });
-                        });
-                    }
-                }
+                            }
+                        }).then(promise.resolve, promise.reject);
+                    }, promise.reject);
+                }));
+            }
 
-                function _postTask(task, readUri, schema, writeUri) {
-                    if (_inProgress === true) {
-                        _queue.pushPromise(function (defer) {
-                            taskApiService.syncTask(task, readUri, schema, writeUri, function (res, err) {
-                                if (res) {
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _getDocument(did, taskAssigner, sync) {
-                    if (_inProgress === true && did !== undefined) {
-                        _queue.pushPromise(function (defer) {
-                            documentApiService.getDocument(did, _readOptions, function (res, err) {
-                                if (res && res.length == 1) {
-                                    var document = res[0];
-
-                                    if (sync) {
-                                        _postDocument(document);
-                                    }
-
-                                    _getCustomer(document.data.customerID, taskAssigner);
-                                    _getCustomerAssets(document.data.customerID, taskAssigner);
-                                    _getCultivars(document.data.crop);
-
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _postDocument(document) {
-                    if (_inProgress === true && document !== undefined) {
-                        _queue.pushPromise(function (defer) {
-                            documentApiService.syncDocument(document, {id: document.id}, function (res, err) {
-                                if (res) {
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _postPhotos(did) {
-                    if (_inProgress === true && did !== undefined) {
-                        _queue.pushPromise(function (defer) {
-                            documentApiService.getDocumentPhotos(did, function (res, err) {
-                                if (res) {
-                                    for (var i = 0; i < res.length; i++) {
-                                        _postPhoto(res[i]);
-                                    }
-
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _postPhoto(photoItem) {
-                    if (_inProgress === true) {
-                        _queue.pushPromise(function (defer) {
-                            photoApiService.uploadPhoto(photoItem, function (res, err) {
-                                if (res) {
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _getCustomers() {
-                    if (_inProgress === true) {
-                        _queue.pushPromise(function (defer) {
-                            customerApiService.getCustomers(_readOptions, function (res, err) {
-                                if (res) {
-                                    for (var i = 0; i < res.length; i++) {
-                                        _getCustomerAssets(res[i].data.cid);
-                                        _getFarmer(res[i].data.fid);
-                                    }
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _getCustomer(cid, assigner) {
-                    if (_inProgress === true && cid !== undefined && _syncList.customers[cid] === undefined) {
+            function _uploadCustomer(cid, taskAssigner) {
+                return _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    if (cid && _syncList.customers[cid] === undefined) {
                         _syncList.customers[cid] = true;
 
-                        _queue.pushPromise(function (defer) {
-                            customerApiService.getCustomer(cid, assigner, _readOptions, function (res, err) {
-                                if (res && res.length == 1) {
-                                    _getFarmer(res[0].data.farmerID);
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
+                        customerApiService.getCustomer(cid, taskAssigner).then(function(res) {
+                            var customer = res[0];
 
-                function _getCustomerAssets(cid, assigner) {
-                    if (_inProgress === true && cid !== undefined && _syncList.customerAssets[cid] === undefined) {
+                            promiseService.all([
+                                _uploadCustomerAssets(cid, taskAssigner),
+                                _uploadFarmer(customer.data.farmerID)
+                            ]).then(promise.resolve, promise.reject);
+                        }, promise.reject);
+                    } else {
+                        // Handled already
+                        promise.resolve();
+                    }
+                }));
+            }
+
+            function _uploadCustomerAssets(cid, taskAssigner) {
+                return _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    if (cid && _syncList.customerAssets[cid] === undefined) {
                         _syncList.customerAssets[cid] = true;
 
-                        _queue.pushPromise(function (defer) {
-                            customerApiService.getCustomerAssets(cid, assigner, _readOptions, function (res, err) {
-                                if (res) {
+                        customerApiService.getCustomerAssets(cid, taskAssigner).then(function(res) {
+                            promiseService
+                                .wrapAll(function(list) {
                                     for (var i = 0; i < res.length; i++) {
                                         if (res[i].dirty === true) {
-                                            _postAsset(res[i], 'customer/:id/assets', {id: taskType}, 'asset/:id');
+                                            list.push(_monitor.add(assetApiService.syncAsset(res[i], 'customer/:id/assets', {id: cid}, 'asset/:id')));
                                         }
                                     }
-
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
+                                }).then(promise.resolve, promise.reject);
+                        }, promise.reject);
+                    } else {
+                        // Handled already
+                        promise.resolve();
                     }
+                }));
+            }
+
+            function _uploadFarmer(fid) {
+                return _monitor.add(promiseService.wrap(function(promise) {
+                    // Dependency wrapper
+                    if (fid && _syncList.farmer[fid] === undefined) {
+                        _syncList.farmer[fid] = true;
+
+                        farmerApiService.getFarmer(fid).then(function(res) {
+                            if (res[0].dirty === true) {
+                                _monitor.add(farmerApiService.syncFarmer(res[0], {id: res[0].id})).then(promise.resolve, promise.reject);
+                            } else {
+                                promise.resolve();
+                            }
+                        }, promise.reject);
+                    } else {
+                        // Handled already
+                        promise.resolve();
+                    }
+                }));
+            }
+
+            return function(monitor, options) {
+                if (arguments.length == 1) {
+                    options = monitor;
+                    monitor = promiseMonitor();
                 }
 
-                function _getCultivars(crop) {
-                    if (_inProgress === true && crop !== undefined && _syncList.cultivars[crop] === undefined) {
+                _monitor = monitor;
+                _syncList = {
+                    customers: {},
+                    customerAssets: {},
+                    farmer: {}
+                };
+
+                return promiseService.wrapAll(function(list) {
+                    if (options.tasks === true) {
+                        list.push(_uploadParentTasksByType('work-package'));
+                    }
+                });
+            }
+        }]);
+
+    module.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'cultivarApiService', 'assetApiService', 'farmerApiService',
+        function (promiseMonitor, promiseService, taskApiService, documentApiService, photoApiService, customerApiService, cultivarApiService, assetApiService, farmerApiService) {
+            var _monitor = null;
+            var _syncList = null;
+
+            var _readOptions = {readLocal: false, readRemote: true};
+
+            function _getTasksByType(taskType) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    taskApiService.getTasksByType(taskType, _readOptions).then(function(res) {
+                        for (var i = 0; i < res.length; i++) {
+                            var item = res[i];
+
+                            if (item.id !== undefined) {
+                                _getTasks(item.id);
+                            }
+                        }
+
+                        promise.resolve();
+                    }, promise.reject);
+                }));
+            }
+
+            function _getTasks(tid) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    taskApiService.getTasksById(tid, _readOptions).then(function(res) {
+                        for (var i = 0; i < res.length; i++) {
+                            var task = res[i];
+                            var did = task.data.object.id;
+
+                            _getDocument(did, task.data.ass_by);
+                        }
+
+                        promise.resolve();
+                    }, promise.reject);
+                }));
+            }
+
+            function _getDocument(did, taskAssigner) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    documentApiService.getDocument(did, _readOptions).then(function(res) {
+                        var document = res[0];
+
+                        _getCustomer(document.data.customerID, taskAssigner);
+                        _getCustomerAssets(document.data.customerID, taskAssigner);
+                        _getCultivars(document.data.crop);
+
+                        promise.resolve();
+                    }, promise.reject);
+                }));
+            }
+
+            function _getCustomers() {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    customerApiService.getCustomers(_readOptions).then(function(res) {
+                        for (var i = 0; i < res.length; i++) {
+                            _getCustomerAssets(res[i].data.cid);
+                            _getFarmer(res[i].data.fid);
+                        }
+
+                        promise.resolve();
+                    }, promise.reject);
+                }));
+            }
+
+            function _getCustomer(cid, assigner) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    if(cid && _syncList.customers[cid] === undefined) {
+                        _syncList.customers[cid] = true;
+
+                        customerApiService.getCustomer(cid, assigner, _readOptions).then(function(res) {
+                            _getFarmer(res[0].data.farmerID);
+                            promise.resolve();
+                        }, promise.reject);
+                    } else {
+                        promise.resolve();
+                    }
+                }));
+            }
+
+            function _getCustomerAssets(cid, assigner) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    if (cid && _syncList.customerAssets[cid] === undefined) {
+                        _syncList.customerAssets[cid] = true;
+
+                        customerApiService.getCustomerAssets(cid, assigner, _readOptions).then(promise.resolve, promise.reject);
+                    } else {
+                        promise.resolve();
+                    }
+                }));
+            }
+
+            function _getCultivars(crop) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    if (crop && _syncList.cultivars[crop] === undefined) {
                         _syncList.cultivars[crop] = true;
 
-                        _queue.pushPromise(function (defer) {
-                            cultivarApiService.getCultivars(crop, _readOptions, function (res, err) {
-                                if (res) {
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
+                        cultivarApiService.getCultivars(crop, _readOptions).then(promise.resolve, promise.reject);
+                    } else {
+                        promise.resolve();
                     }
-                }
+                }));
+            }
 
-                function _getAsset(aid) {
-                    if (_inProgress === true && aid !== undefined && _syncList.assets[aid] === undefined) {
+            function _getAsset(aid) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    if (aid && _syncList.assets[aid] === undefined) {
                         _syncList.assets[aid] = true;
 
-                        _queue.pushPromise(function (defer) {
-                            assetApiService.getAsset(aid, _readOptions, function (res, err) {
-                                if (res && res.length == 1) {
-                                    if (res[0].dirty === true) {
-                                        _postAsset(res[0], 'asset/:id', {id: aid}, 'asset/:id');
-                                    }
-
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
+                        assetApiService.getAsset(aid, _readOptions).then(promise.resolve, promise.reject);
+                    } else {
+                        promise.resolve();
                     }
-                }
+                }));
+            }
 
-                function _postAsset(asset, readUri, schema, writeUri) {
-                    if (_inProgress === true) {
-                        _queue.pushPromise(function (defer) {
-                            assetApiService.syncAsset(asset, readUri, schema, writeUri, function (res, err) {
-                                if (res) {
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
-                    }
-                }
-
-                function _getFarmer(fid) {
-                    if (_inProgress === true && fid !== undefined && _syncList.farmers[fid] === undefined) {
+            function _getFarmer(fid) {
+                return _monitor.add(promiseService.wrap(function (promise) {
+                    // Dependency wrapper
+                    if (fid && _syncList.farmers[fid] === undefined) {
                         _syncList.farmers[fid] = true;
 
-                        _queue.pushPromise(function (defer) {
-                            farmerApiService.getFarmer(fid, _readOptions, function (res, err) {
-                                if (res && res.length == 1) {
-                                    if (res[0].dirty === true) {
-                                        _postFarmer(res[0]);
-                                    }
-
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
+                        farmerApiService.getFarmer(fid, _readOptions).then(promise.resolve, promise.reject);
+                    } else {
+                        promise.resolve();
                     }
+                }));
+            }
+
+            return function(monitor, options) {
+                if (arguments.length == 1) {
+                    options = monitor;
+                    monitor = promiseMonitor();
                 }
 
-                function _postFarmer(farmer) {
-                    if (_inProgress === true && farmer !== undefined) {
-                        _queue.pushPromise(function (defer) {
-                            farmerApiService.syncFarmer(farmer, {id: farmer.id}, function (res, err) {
-                                if (res) {
-                                    defer.resolve();
-                                } else {
-                                    defer.reject();
-                                }
-                            });
-                        });
+                _monitor = monitor;
+                _syncList = {
+                    customers: {},
+                    customerAssets: {},
+                    cultivars: {},
+                    farmers: {},
+                    assets: {}
+                };
+
+                return promiseService.wrapAll(function(list) {
+                    if (options.tasks === true) {
+                        list.push(_getTasksByType('work-package'));
                     }
-                }
 
-                return {
-                    cancel: function () {
-                        if (_queue) {
-                            _inProgress = false;
-                            _queue.clear();
-                        }
-                    },
-                    sync: function (options, callback) {
-                        if (typeof options === 'function') {
-                            callback = options;
-                            options = {
-                                customers: true,
-                                tasks: true
-                            }
-                        }
-
-                        if (_inProgress === false) {
-                            _inProgress = true;
-                            _syncList = {
-                                customers: {},
-                                customerAssets: {},
-                                cultivars: {},
-                                farmers: {},
-                                assets: {}
-                            };
-
-                            _queue = queueService(function (data) {
-                                if (data.type === 'complete') {
-                                    _inProgress = false;
-                                }
-
-                                callback(data);
-                            });
-
-                            if (options.tasks === true) {
-                                _getTasksByType('work-package');
-                            }
-
-                            if (options.customers === true) {
-                                _getCustomers();
-                            }
-                        }
+                    if (options.customers === true) {
+                        list.push(_getCustomers());
                     }
+                });
+            }
+        }]);
+
+    module.factory('dataSyncronizationService', ['promiseMonitor', 'promiseService', 'dataUploadService', 'dataDownloadService', function (promiseMonitor, promiseService, dataUploadService, dataDownloadService) {
+        var _monitor = null;
+        var _inProgress = false;
+        
+        return function (options, callback) {
+            if (typeof options === 'function') {
+                callback = options;
+                options = {
+                    customers: true,
+                    tasks: true
                 }
-            }]
-    });
+            }
+            
+            if (_inProgress === false) {
+                _inProgress = true;
+
+                _monitor = promiseMonitor(function (data) {
+                    if (data.type === 'complete') {
+                        _inProgress = false;
+                    }
+
+                    callback(data);
+                });
+
+                _monitor.add(promiseService.wrap(function(promise) {
+                    dataUploadService(_monitor, options).then(function() {
+                        dataDownloadService(_monitor, options).then(promise.resolve, promise.reject);
+                    }, promise.reject);
+                }));
+            }
+        }
+    }]);
 
 
     /*
      * API
      */
-    module.factory('userApiService', ['dataStore', function(dataStore) {
+    module.factory('userApiService', ['promiseService', 'dataStore', function(promiseService, dataStore) {
         return {
-            getCompanyUsers: function(id, options, gcuCallback) {
-                if (typeof options === 'function') {
-                    gcuCallback = options;
+            getCompanyUsers: function(id, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
                     options = {};
                 }
 
-                dataStore('users', {apiTemplate: 'users/:id'})
-                    .transaction(function (tx) {
-                        tx.read({id: id}, options, gcuCallback);
-                    });
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('users', {apiTemplate: 'users/:id'})
+                        .transaction(function (tx) {
+                            tx.read({id: id}, options, response);
+                        });
+                });
             }
         };
     }]);
 
-    module.factory('taskApiService', ['dataStore', function (dataStore) {
+    module.factory('taskApiService', ['promiseService', 'dataStore', function (promiseService, dataStore) {
         var taskStore = dataStore('task', {apiTemplate: 'task/:id'});
 
         return {
             // Tasks
-            getTasksByType: function (type, options, gtCallback) {
-                if (typeof options === 'function') {
-                    gtCallback = options;
+            getTasksByType: function (type, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
                     options = {};
                 }
 
-                dataStore('task', {apiTemplate: 'tasks?type=:type'})
-                    .transaction(function (tx) {
-                        tx.read({type: type}, options, gtCallback);
-                    });
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('task', {apiTemplate: 'tasks?type=:type'})
+                        .transaction(function (tx) {
+                            tx.read({type: type}, options, response);
+                        });
+                });
             },
-            getTasksById: function (tid, options, gtCallback) {
-                if (typeof options === 'function') {
-                    gtCallback = options;
+            getTasksById: function (tid, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
                     options = {};
                 }
 
-                dataStore('task', {apiTemplate: 'task/:id/tasks'})
-                    .transaction(function (tx) {
-                        tx.read({id: tid}, options, gtCallback);
-                    });
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('task', {apiTemplate: 'task/:id/tasks'})
+                        .transaction(function (tx) {
+                            tx.read({id: tid}, options, response);
+                        });
+                });
             },
 
             // Task
-            getTask: function (tid, options, gtCallback) {
-                taskStore.transaction(function (tx) {
-                    tx.read({id: tid}, options, gtCallback);
-                });
-            },
-            findTask: function (tid, ftCallback) {
-                taskStore.transaction(function (tx) {
-                    tx.find(tid, ftCallback);
-                });
-            },
-            updateTask: function (taskItem, utCallback) {
-                taskStore.transaction(function (tx) {
-                    tx.update(taskItem, utCallback);
-                });
-            },
-            syncTask: function (taskItem, readUri, schema, writeUri, stCallback) {
-                dataStore('task', {apiTemplate: readUri})
-                    .transaction(function (tx) {
-                        tx.sync(taskItem, schema, writeUri, stCallback);
+            createTask: function (uriTemplate, schema, taskItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    taskStore.transaction(function (tx) {
+                        tx.make(uriTemplate, schema, taskItem, response);
                     });
+                });
+            },
+            getTask: function (tid, options, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    taskStore.transaction(function (tx) {
+                        tx.read({id: tid}, options, response);
+                    });
+                });
+            },
+            findTask: function (tid, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    taskStore.transaction(function (tx) {
+                        tx.find(tid, response);
+                    });
+                });
+            },
+            updateTask: function (taskItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    taskStore.transaction(function (tx) {
+                        tx.update(taskItem, response);
+                    });
+                });
+            },
+            syncTask: function (taskItem, readUri, schema, writeUri, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('task', {apiTemplate: readUri})
+                        .transaction(function (tx) {
+                            tx.sync(taskItem, schema, writeUri, response);
+                        });
+                });
             }
         };
     }]);
 
-    module.factory('documentApiService', ['dataStore', function (dataStore) {
+    module.factory('documentApiService', ['promiseService', 'dataStore', function (promiseService, dataStore) {
         var documentStore = dataStore('document', {apiTemplate: 'document/:id'});
 
         return {
             // Document
-            getDocument: function (did, options, gdCallback) {
-                documentStore.transaction(function (tx) {
-                    tx.read({id: did}, options, gdCallback);
+            createDocument: function (uriTemplate, schema, documentItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    documentStore.transaction(function (tx) {
+                        tx.make(uriTemplate, schema, documentItem, response);
+                    });
                 });
             },
-            updateDocument: function (documentItem, udCallback) {
-                documentStore.transaction(function (tx) {
-                    tx.update(documentItem, udCallback);
-                });
-            },
-            syncDocument: function (documentItem, schema, sdCallback) {
-                documentStore.transaction(function (tx) {
-                    tx.sync(documentItem, schema, sdCallback);
-                });
-            },
-            getDocumentPhotos: function (did, options, gdpCallback) {
-                if (typeof options === 'function') {
-                    gdpCallback = options;
+            getDocument: function (did, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
                     options = {};
                 }
 
-                dataStore('photo', {apiTemplate: 'document/:id/photo'})
-                    .transaction(function (tx) {
-                        tx.read({id: did}, options, gdpCallback);
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    documentStore.transaction(function (tx) {
+                        tx.read({id: did}, options, response);
                     });
+                });
+            },
+            updateDocument: function (documentItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    documentStore.transaction(function (tx) {
+                        tx.update(documentItem, response);
+                    });
+                });
+            },
+            syncDocument: function (documentItem, schema, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    documentStore.transaction(function (tx) {
+                        tx.sync(documentItem, schema, response);
+                    });
+                });
+            },
+            getDocumentPhotos: function (did, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
+                    options = {};
+                }
+
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('photo', {apiTemplate: 'document/:id/photo'})
+                        .transaction(function (tx) {
+                            tx.read({id: did}, options, response);
+                        });
+                });
             }
         };
     }]);
 
-    module.factory('photoApiService', ['$http', 'dataStore', 'fileStorageService', 'safeApply', function ($http, dataStore, fileStorageService, safeApply) {
+    module.factory('photoApiService', ['$http', 'promiseService', 'dataStore', 'fileStorageService', 'safeApply', function ($http, promiseService, dataStore, fileStorageService, safeApply) {
         var photoStore = dataStore('photo', {apiTemplate: 'photo/:id'});
 
         return {
             // Photo
-            createPhoto: function (uriTemplate, schema, photoItem, cpCallback) {
-                photoStore.transaction(function (tx) {
-                    tx.make(uriTemplate, schema, photoItem, cpCallback);
+            createPhoto: function (uriTemplate, schema, photoItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    photoStore.transaction(function (tx) {
+                        tx.make(uriTemplate, schema, photoItem, response);
+                    });
                 });
             },
-            findPhoto: function (pid, fpCallback) {
-                photoStore.transaction(function (tx) {
-                    tx.find(pid, fpCallback);
+            findPhoto: function (pid, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    photoStore.transaction(function (tx) {
+                        tx.find(pid, response);
+                    });
                 });
             },
-            updatePhoto: function (photoItem, upCallback) {
-                photoStore.transaction(function (tx) {
-                    tx.update(photoItem, upCallback);
+            updatePhoto: function (photoItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    photoStore.transaction(function (tx) {
+                        tx.update(photoItem, response);
+                    });
                 });
             },
-            uploadPhoto: function (photoItem, upCallback) {
-                if (photoItem.local === true) {
-                    console.log('photoItem local');
+            uploadPhoto: function (photoItem) {
+                return promiseService.wrap(function(promise) {
+                    if (photoItem.local === true) {
+                        console.log('photoItem local');
 
-                    var photoData = {
-                        loc: photoItem.data.loc
-                    };
+                        var photoData = {
+                            loc: photoItem.data.loc
+                        };
 
-                    var _uploadAndUpdatePhoto = function (photoData) {
-                        console.log('start upload');
+                        var _uploadAndUpdatePhoto = function (photoData) {
+                            console.log('start upload');
 
-                        safeApply(function () {
-                            $http
-                                .post(photoStore.defaults.url + photoItem.uri, photoData, {withCredentials: true})
-                                .then(function () {
-                                    console.log('finish upload');
-                                    photoItem.local = false;
+                            safeApply(function () {
+                                $http
+                                    .post(photoStore.defaults.url + photoItem.uri, photoData, {withCredentials: true})
+                                    .then(function () {
+                                        console.log('finish upload');
+                                        photoItem.local = false;
 
-                                    photoStore.transaction(function (tx) {
-                                        console.log('update upload');
+                                        photoStore.transaction(function (tx) {
+                                            console.log('update upload');
 
-                                        tx.update(photoItem, upCallback);
+                                            tx.update(photoItem, promise);
+                                        });
+                                    }, function () {
+                                        promise.reject(_errors.UploadPhotoError);
                                     });
-                                }, function () {
-                                    upCallback(null, _errors.UploadPhotoError);
-                                });
-                        });
-                    };
+                            });
+                        };
 
-                    if (photoItem.data.image.src !== undefined) {
-                        console.log('start read');
+                        if (photoItem.data.image.src !== undefined) {
+                            console.log('start read');
 
-                        fileStorageService.read(photoItem.data.image.src, true).then(function (fileData) {
-                            console.log('finish read');
+                            fileStorageService.read(photoItem.data.image.src, true).then(function (fileData) {
+                                console.log('finish read');
 
-                            photoData.image = {
-                                data: fileData.content.substring(fileData.content.indexOf(',') + 1),
-                                type: photoItem.data.image.type
-                            };
+                                photoData.image = {
+                                    data: fileData.content.substring(fileData.content.indexOf(',') + 1),
+                                    type: photoItem.data.image.type
+                                };
+
+                                _uploadAndUpdatePhoto(photoData);
+                            }, promise.resolve);
+                        } else {
+                            photoData.image = photoItem.data.image;
 
                             _uploadAndUpdatePhoto(photoData);
-                        }, function (err) {
-                            upCallback(null, err);
-                        });
+                        }
                     } else {
-                        photoData.image = photoItem.data.image;
-
-                        _uploadAndUpdatePhoto(photoData);
+                        promise.resolve(photoItem);
                     }
-                } else {
-                    upCallback(photoItem);
-                }
+                });
             },
-            deletePhoto: function (photoItem, dpCallback) {
-                photoStore.transaction(function (tx) {
-                    tx.remove(photoItem, dpCallback);
+            deletePhoto: function (photoItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    photoStore.transaction(function (tx) {
+                        tx.remove(photoItem, response);
+                    });
                 });
             }
         };
     }]);
 
-    module.factory('customerApiService', ['dataStore', function (dataStore) {
+    module.factory('customerApiService', ['promiseService', 'dataStore', function (promiseService, dataStore) {
         return {
             // Customers
-            getCustomers: function (options, gcCallback) {
-                if (typeof options === 'function') {
-                    gcCallback = options;
+            getCustomers: function (options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 0) {
                     options = {};
                 }
 
-                dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
-                    .transaction(function (tx) {
-                        tx.read({}, options, gcCallback);
-                    });
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
+                        .transaction(function (tx) {
+                            tx.read({}, options, response);
+                        });
+                });
             },
-            findCustomers: function (cid, fcCallback) {
-                dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
-                    .transaction(function (tx) {
-                        tx.find(cid, fcCallback);
-                    });
+            findCustomers: function (cid, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('customers', {apiTemplate: 'customers', indexerProperty: 'cid'})
+                        .transaction(function (tx) {
+                            tx.find(cid, response);
+                        });
+                });
             },
 
             // Customer
-            getCustomer: function (cid, assigner, options, gcCallback) {
-                if (typeof assigner === 'object') {
-                    gcCallback = options;
-                    options = assigner;
-                    assigner = undefined;
-                }
-
-                if (assigner !== undefined) {
-                    dataStore('customer', {apiTemplate: 'customer/:id?user=:assigner'})
-                        .transaction(function (tx) {
-                            tx.read({id: cid, assigner: assigner}, options, gcCallback);
-                        });
-                } else {
-                    dataStore('customer', {apiTemplate: 'customer/:id'})
-                        .transaction(function (tx) {
-                            tx.read({id: cid}, options, gcCallback);
-                        });
-                }
-            },
-            findCustomer: function (cid, fcCallback) {
-                dataStore('customer', {apiTemplate: 'customer'})
-                    .transaction(function (tx) {
-                        tx.find(cid, fcCallback);
-                    });
-            },
-            getCustomerAssets: function (cid, assigner, options, gcaCallback) {
-                if (typeof assigner === 'object') {
-                    gcaCallback = options;
-                    options = assigner;
-                    assigner = undefined;
-                }
-                if (typeof assigner === 'function') {
-                    gcaCallback = assigner;
+            getCustomer: function (cid, assigner, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
                     options = {};
-                    assigner = undefined;
+                } else if (arguments.length < 3) {
+                    options = {};
                 }
 
-                if (assigner !== undefined) {
-                    dataStore('asset', {apiTemplate: 'customer/:id/assets?user=:assigner'})
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    if (assigner !== undefined) {
+                        dataStore('customer', {apiTemplate: 'customer/:id?user=:assigner'})
+                            .transaction(function (tx) {
+                                tx.read({id: cid, assigner: assigner}, options, response);
+                            });
+                    } else {
+                        dataStore('customer', {apiTemplate: 'customer/:id'})
+                            .transaction(function (tx) {
+                                tx.read({id: cid}, options, response);
+                            });
+                    }
+                });
+            },
+            findCustomer: function (cid, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    dataStore('customer', {apiTemplate: 'customer'})
                         .transaction(function (tx) {
-                            tx.read({id: cid, assigner: assigner}, options, gcaCallback);
+                            tx.find(cid, response);
                         });
-                } else {
-                    dataStore('asset', {apiTemplate: 'customer/:id/assets'})
-                        .transaction(function (tx) {
-                            tx.read({id: cid}, options, gcaCallback);
-                        });
+                });
+            },
+            getCustomerAssets: function (cid, assigner, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length < 3) {
+                    options = {};
                 }
+
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    if (assigner !== undefined) {
+                        dataStore('asset', {apiTemplate: 'customer/:id/assets?user=:assigner'})
+                            .transaction(function (tx) {
+                                tx.read({id: cid, assigner: assigner}, options, response);
+                            });
+                    } else {
+                        dataStore('asset', {apiTemplate: 'customer/:id/assets'})
+                            .transaction(function (tx) {
+                                tx.read({id: cid}, options, response);
+                            });
+                    }
+                });
             }
         };
     }]);
 
-    module.factory('assetApiService', ['dataStore', function (dataStore) {
+    module.factory('assetApiService', ['promiseService', 'dataStore', function (promiseService, dataStore) {
         var assetStore = dataStore('asset', {apiTemplate: 'asset/:id'});
 
         return {
-            getAsset: function (aid, options, gaCallback) {
-                assetStore.transaction(function (tx) {
-                    tx.read({id: aid}, options, gaCallback);
-                });
-            },
-            findAsset: function (aid, faCallback) {
-                assetStore.transaction(function (tx) {
-                    tx.find(aid, faCallback);
-                });
-            },
-            updateAsset: function (assetItem, uaCallback) {
-                assetStore.transaction(function (tx) {
-                    tx.update(assetItem, uaCallback);
-                });
-            },
-            syncAsset: function (assetItem, readUri, schema, writeUri, saCallback) {
-                if (readUri === assetStore.config.apiTemplate) {
-                    assetStore.transaction(function (tx) {
-                        tx.sync(assetItem, schema, writeUri, saCallback);
-                    });
-                } else {
-                    dataStore('asset', {apiTemplate: readUri})
-                        .transaction(function (tx) {
-                            tx.sync(assetItem, schema, writeUri, saCallback);
-                        });
+            getAsset: function (aid, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
+                    options = {};
                 }
+
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    assetStore.transaction(function (tx) {
+                        tx.read({id: aid}, options, response);
+                    });
+                });
+            },
+            findAsset: function (aid, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    assetStore.transaction(function (tx) {
+                        tx.find(aid, response);
+                    });
+                });
+            },
+            updateAsset: function (assetItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    assetStore.transaction(function (tx) {
+                        tx.update(assetItem, response);
+                    });
+                });
+            },
+            syncAsset: function (assetItem, readUri, schema, writeUri, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    if (readUri === assetStore.config.apiTemplate) {
+                        assetStore.transaction(function (tx) {
+                            tx.sync(assetItem, schema, writeUri, response);
+                        });
+                    } else {
+                        dataStore('asset', {apiTemplate: readUri})
+                            .transaction(function (tx) {
+                                tx.sync(assetItem, schema, writeUri, response);
+                            });
+                    }
+                });
             }
         };
     }]);
 
-    module.factory('cultivarApiService', ['dataStore', function (dataStore) {
+    module.factory('cultivarApiService', ['promiseService', 'dataStore', function (promiseService, dataStore) {
         var cultivarsStore = dataStore('cultivars', {apiTemplate: 'cultivars/:crop'});
 
         return {
-            getCultivars: function (crop, options, gcCallback) {
-                cultivarsStore.transaction(function (tx) {
-                    tx.read({crop: crop}, options, gcCallback);
+            getCultivars: function (crop, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
+                    options = {};
+                }
+
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    cultivarsStore.transaction(function (tx) {
+                        tx.read({crop: crop}, options, response);
+                    });
                 });
             },
-            searchCultivars: function (data, scCallback) {
-                cultivarsStore.transaction(function (tx) {
-                    tx.search(data, scCallback);
+            searchCultivars: function (data, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    cultivarsStore.transaction(function (tx) {
+                        tx.search(data, response);
+                    });
                 });
             }
         };
     }]);
 
-    module.factory('farmerApiService', ['dataStore', function (dataStore) {
+    module.factory('farmerApiService', ['promiseService', 'dataStore', function (promiseService, dataStore) {
         var farmerStore = dataStore('farmer', {apiTemplate: 'farmer/:id'});
 
         return {
-            getFarmer: function (fid, options, gfCallback) {
-                farmerStore.transaction(function (tx) {
-                    tx.read({id: fid}, options, gfCallback);
+            getFarmer: function (fid, options, callback) {
+                if (typeof options == 'function') {
+                    callback = options;
+                    options = {};
+                } else if (arguments.length == 1) {
+                    options = {};
+                }
+
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    farmerStore.transaction(function (tx) {
+                        tx.read({id: fid}, options, response);
+                    });
                 });
             },
-            updateFarmer: function (farmerItem, ufCallback) {
-                farmerStore.transaction(function (tx) {
-                    tx.update(farmerItem, ufCallback);
+            updateFarmer: function (farmerItem, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    farmerStore.transaction(function (tx) {
+                        tx.update(farmerItem, response);
+                    });
                 });
             },
-            syncFarmer: function (farmerItem, schema, sfCallback) {
-                farmerStore.transaction(function (tx) {
-                    tx.sync(farmerItem, schema, sfCallback);
+            syncFarmer: function (farmerItem, schema, callback) {
+                return promiseService.wrap(function(promise) {
+                    var response = callback || promise;
+
+                    farmerStore.transaction(function (tx) {
+                        tx.sync(farmerItem, schema, response);
+                    });
                 });
             }
         };
