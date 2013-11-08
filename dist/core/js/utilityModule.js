@@ -63,9 +63,9 @@ define(['angular'], function () {
             };
 
             // Public Functions
-            var push = function (todo, context, args) {
+            var push = function (action, deferred) {
                 _progress.total++;
-                _queue.push([todo, context, args]);
+                _queue.push([action, deferred]);
 
                 pop();
             };
@@ -73,7 +73,7 @@ define(['angular'], function () {
             var pop = function () {
                 callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
 
-                console.log('TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
+                console.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
 
                 if (_queue.length === 0 && _progress.total === _progress.complete) {
                     _progress.total = 0;
@@ -88,12 +88,13 @@ define(['angular'], function () {
 
                 _limit--;
 
-                var buf = _queue.shift(),
-                    todo = buf[0],
-                    context = buf[1] || null,
-                    args = buf[2] || null;
+                var buffer = _queue.shift(),
+                    action = buffer[0],
+                    deferred = buffer[1];
 
-                $q.when(todo.apply(context, args)).then(_success, _error);
+                deferred.promise.then(_success, _error);
+
+                action(deferred);
             };
 
             var clear = function () {
@@ -102,18 +103,16 @@ define(['angular'], function () {
                 _queue.length = 0;
             };
 
-            var pushPromise = function (todo, context, args) {
-                push(function () {
-                    var defer = promiseService.defer();
+            var wrapPush = function (action) {
+                var deferred = promiseService.defer();
 
-                    todo(defer);
+                push(action, deferred);
 
-                    return defer.promise;
-                }, context, args);
+                return deferred.promise;
             };
 
             return {
-                pushPromise: pushPromise,
+                wrapPush: wrapPush,
                 push: push,
                 pop: pop,
                 clear: clear
@@ -229,30 +228,101 @@ define(['angular'], function () {
         };
     });
 
+    module.factory('promiseMonitor', function() {
+        function PromiseMonitor(callback) {
+            if (!(this instanceof PromiseMonitor)) {
+                return new PromiseMonitor(callback);
+            }
+
+            var _stats = {
+                total: 0,
+                complete: 0,
+                resolved: 0,
+                rejected: 0,
+                percent: 0
+            };
+
+            var _completePromise = function() {
+                _stats.complete++;
+                _stats.percent = (100.0 / _stats.total) * _stats.complete;
+
+                console.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
+
+                if (_stats.complete == _stats.total) {
+                    callback({type: 'complete', percent: _stats.percent, stats: _stats});
+                } else {
+                    callback({type: 'progress', percent: _stats.percent, stats: _stats});
+                }
+            };
+
+            return {
+                stats: function() {
+                    return _stats;
+                },
+                add: function(promise) {
+                    _stats.total++;
+
+                    promise.then(function(res) {
+                        _stats.resolved++;
+
+                        _completePromise();
+                    }, function(err) {
+                        _stats.rejected++;
+
+                        callback({type: 'error'}, err);
+                        _completePromise();
+                    });
+
+                    return promise;
+                }
+            };
+        }
+
+        return function(callback) {
+            return new PromiseMonitor(callback);
+        }
+    });
+
     module.factory('promiseService', ['$q', '$rootScope', 'safeApply', function ($q, $rootScope, safeApply) {
+        var _defer = function() {
+            var deferred = $q.defer();
+
+            return {
+                resolve: function (response) {
+                    safeApply(function () {
+                        deferred.resolve(response);
+                    });
+
+                },
+                reject: function (response) {
+                    safeApply(function () {
+                        deferred.reject(response);
+                    });
+
+                },
+                promise: deferred.promise
+            }
+        };
+
         return {
             all: function (promises) {
                 return $q.all(promises);
             },
-            defer: function () {
-                var _defer = $q.defer();
+            wrap: function(action) {
+                var deferred = _defer();
 
-                return {
-                    resolve: function (response) {
-                        safeApply(function () {
-                            _defer.resolve(response);
-                        });
+                action(deferred);
 
-                    },
-                    reject: function (response) {
-                        safeApply(function () {
-                            _defer.reject(response);
-                        });
+                return deferred.promise;
+            },
+            wrapAll: function(action) {
+                var list = [];
 
-                    },
-                    promise: _defer.promise
-                }
-            }
+                action(list);
+
+                return $q.all(list);
+            },
+            defer: _defer
         }
     }]);
 });
