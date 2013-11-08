@@ -539,10 +539,14 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                  * @param urCallback
                  * @private
                  */
-                var _updateRemote = function (dataItems, writeUri, urCallback) {
+                var _updateRemote = function (dataItems, writeUri, writeSchema, urCallback) {
                     console.log('_updateRemote');
-                    if (typeof writeUri === 'function') {
+                    if (typeof writeSchema === 'function') {
+                        urCallback = writeSchema;
+                        writeSchema = {};
+                    } else if (typeof writeUri === 'function') {
                         urCallback = writeUri;
+                        writeSchema = {};
                         writeUri = undefined;
                     }
 
@@ -585,9 +589,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
 
                             if (item.dirty === true) {
                                 if (writeUri !== undefined) {
-                                    _makePost(item, _parseRequest(writeUri, {
-                                        id: item.local === true ? undefined : item.id
-                                    }));
+                                    _makePost(item, _parseRequest(writeUri, underscore.extend(writeSchema, {id: item.local ? undefined : item.id})));
                                 } else {
                                     _makePost(item, item.uri);
                                 }
@@ -818,7 +820,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
 
                             var uri = _parseRequest(_config.apiTemplate, schemaData);
 
-                            _updateRemote(dataItems, writeUri, function (res, err) {
+                            _updateRemote(dataItems, writeUri, schemaData, function (res, err) {
                                 for (var i = 0; i < res.length; i++) {
 
                                     _getRemote(res[i].uri, function (res, err) {
