@@ -410,9 +410,9 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
                                     // Insert failed
                                     if (item.dirty === true || item.local === true || options.force) {
-                                        tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ?', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                        tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
                                     } else {
-                                        tx.executeSql('UPDATE ' + name + ' SET data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                        tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
                                     }
                                 });
                             }
@@ -790,7 +790,12 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 _responseHandler(sCallback, res, err);
                             });
                         },
-                        update: function (dataItems, uCallback) {
+                        update: function (dataItems, options, uCallback) {
+                            if (arguments.length == 2) {
+                                uCallback = options;
+                                options = {};
+                            }
+
                             if ((dataItems instanceof Array) === false) {
                                 dataItems = [dataItems];
                             }
@@ -799,7 +804,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 dataItems[i].dirty = true;
                             }
 
-                            _updateLocal(dataItems, function (res, err) {
+                            _updateLocal(dataItems, options, function (res, err) {
                                 _responseHandler(uCallback, res, err);
                             });
                         },
