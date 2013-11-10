@@ -13,19 +13,14 @@ define(['angular'], function () {
                 }
 
                 return urls;
-            };
+            }
 
             this.inject = function (dependencies, options) {
                 if (typeof dependencies === 'string') dependencies = dependencies.split(',');
 
-                console.log(dependencies);
-
                 if (options.path) {
-                    console.log(options.path);
                     dependencies = joinPaths(options.path, dependencies);
                 }
-
-                console.log(dependencies);
 
                 return ['$q', '$rootScope', function ($q, $rootScope) {
                     var defer = $q.defer();
@@ -33,7 +28,6 @@ define(['angular'], function () {
                     requirejs(dependencies, function () {
                         $rootScope.$apply(function () {
                             defer.resolve(defer, arguments);
-                            console.log('Injection');
                         });
                     });
 
@@ -57,6 +51,9 @@ define(['angular'], function () {
                     },
                     factory: function (name, factory) {
                         $provide.factory(name, factory);
+                    },
+                    provider: function (name, provider) {
+                        $provide.provider(name, provider);
                     }
                 }
             }
