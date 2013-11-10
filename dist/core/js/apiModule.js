@@ -1,6 +1,6 @@
 'use strict';
 
-define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule'], function () {
+define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone/storageModule'], function (angular, underscore) {
     var module = angular.module('apiModule', ['utilityModule', 'dataModule', 'storageModule']);
 
     var _errors = {
@@ -420,6 +420,184 @@ define(['angular', 'core/utilityModule', 'core/dataModule', 'phone/storageModule
             }
         }
     }]);
+
+
+    /*
+     * Dependency Resolving
+     */
+    module.factory('dataDependencyService', ['promiseService', 'taskApiService', 'documentApiService', 'customerApiService', 'cultivarApiService', 'farmerApiService',
+        function(promiseService, taskApiService, documentApiService, customerApiService, cultivarApiService, farmerApiService) {
+
+            var _getIncludedDependencies = function(include) {
+                include = include || {};
+
+                return underscore.defaults(include, {
+                    children: true,
+                    documents: false,
+                    document: true,
+                    cultivar: false,
+                    photos: false,
+                    customer: true,
+                    farmer: true
+                });
+            };
+
+            var _resolveTasksByType = function(type, include) {
+                return promiseService.wrap(function(promise) {
+                    taskApiService.getTasksByType(type).then(function(res) {
+                        var data = {
+                            parents: res
+                        };
+
+                        if (include.children) {
+                            promiseService
+                                .wrapAll(function(list) {
+                                    for (var i = 0; i < data.parents.length; i++) {
+                                        list.push(_resolveTasksById(data.parents[i].id, include));
+                                    }
+                                }).then(function(tasks) {
+                                    for (var i = 0; i < data.parents.length; i++) {
+                                        data.parents[i].dependencies = tasks[i];
+                                    }
+
+                                    promise.resolve(data);
+                                }, promise.reject);
+                        } else {
+                            promise.resolve(data);
+                        }
+                    }, promise.reject);
+                });
+            };
+
+            var _resolveTasksById = function(id, include) {
+                return promiseService.wrap(function(promise) {
+                    taskApiService.getTasksById(id).then(function(res) {
+                        var data = {
+                            children: res
+                        };
+
+                        if (include.documents || include.document) {
+                            if (include.document) {
+                                _resolveDocument(data.children[0].data.object.id, include).then(function(document) {
+                                    promise.resolve(underscore.extend(data, document));
+                                }, promise.reject);
+                            } else {
+                                promiseService
+                                    .wrapAll(function(list) {
+                                        for (var i = 0; i < data.children.length; i++) {
+                                            list.push(_resolveDocument(data.children[i].data.object.id, include));
+                                        }
+                                    }).then(function(documents) {
+                                        for (var i = 0; i < data.children.length; i++) {
+                                            data.children[i].dependencies = documents[i];
+                                        }
+
+                                        promise.resolve(data);
+                                    }, promise.reject);
+                            }
+                        } else {
+                            promise.resolve(data);
+                        }
+                    }, promise.reject);
+                });
+            };
+
+            var _resolveDocument = function(id, include) {
+                return promiseService.wrap(function(promise) {
+                    documentApiService.getDocument(id).then(function(res) {
+                        var data = {
+                            document: res[0]
+                        };
+
+                        if (include.customer || include.cultivar) {
+                            data.document.dependencies = {};
+
+                            promiseService
+                                .wrapAll(function(list) {
+                                    if (include.customer) {
+                                        list.push(_resolveCustomer(data.document.data.customerID, include));
+                                    }
+
+                                    if (include.cultivar) {
+                                        list.push(_resolveCultivar(data.document.data.crop, include));
+                                    }
+                                }).then(function(res) {
+                                    for (var i = 0; i < res.length; i++) {
+                                        underscore.extend(data.document.dependencies, res[i]);
+                                    }
+
+                                    promise.resolve(data);
+                                }, promise.reject);
+                        } else {
+                            promise.resolve(data);
+                        }
+                    }, promise.reject);
+                });
+            };
+
+            function _resolveCustomer(id, include) {
+                return promiseService.wrap(function (promise) {
+                    customerApiService.findCustomer(id).then(function(res) {
+                        var data = {
+                            customer: res[0]
+                        };
+
+                        if(include.farmer) {
+                            _resolveFarmer(data.customer.data.farmerID).then(function(res) {
+                                data.customer.dependencies = res;
+
+                                promise.resolve(data);
+                            }, promise.reject);
+                        } else {
+                            promise.resolve(data);
+                        }
+                    }, promise.reject);
+                });
+            }
+
+            function _resolveFarmer(id, include) {
+                return promiseService.wrap(function (promise) {
+                    farmerApiService.getFarmer(id).then(function(res) {
+                        var data = {
+                            farmer: res[0]
+                        };
+
+                        promise.resolve(data);
+                    }, promise.reject);
+                });
+            }
+
+            function _resolveCultivar(id, include) {
+                return promiseService.wrap(function (promise) {
+                    cultivarApiService.findCultivars(id).then(function(res) {
+                        var data = {
+                            cultivar: undefined
+                        };
+
+                        for (var i = 0; i < res.length; i++) {
+                            var provider = res[i].data;
+
+                            if (provider[crop] !== undefined) {
+                                data.cultivar = provider[crop];
+                                break;
+                            }
+                        }
+
+                        promise.resolve(data);
+                    }, promise.reject);
+                });
+            }
+
+
+            return {
+                resolveTasksByType: function(type, include) {
+                    return _resolveTasksByType(type, _getIncludedDependencies(include));
+                },
+                resolveTasksById: function(id, include) {
+                    return _resolveTasksById(id, _getIncludedDependencies(include));
+                }
+            };
+        }]);
 
 
     /*
