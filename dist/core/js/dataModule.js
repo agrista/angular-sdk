@@ -16,7 +16,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                         var store = dataStore(name);
 
                         store.transaction(function (tx) {
-                            tx.purge(function (res) {
+                            tx.purgeItems(function (res) {
                                 if (res) {
                                     defer.resolve();
                                 } else {
@@ -93,7 +93,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
          * dataStore service
          * @type {Array}
          */
-        this.$get = ['$q', '$http', '$rootScope', 'objectId', function ($q, $http, $rootScope, objectId) {
+        this.$get = ['$q', '$http', '$rootScope', 'objectId', 'safeApply', function ($q, $http, $rootScope, objectId, safeApply) {
 
             /**
              * @name _initializeDatabase
@@ -193,7 +193,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                         tx.executeSql('CREATE TABLE IF NOT EXISTS ' + name + ' (id TEXT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], asyncMon.done, _errorCallback);
                         tx.executeSql('CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [], asyncMon.done, _errorCallback);
                     });
-                };
+                }
 
                 function _countTableRows(cdrCallback) {
                     _localDatabase.transaction(function (tx) {
@@ -219,16 +219,16 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                  */
 
                 function _voidCallback() {
-                };
+                }
 
                 function _traceCallback() {
                     console.warn('_traceCallback');
                     console.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
-                };
+                }
 
                 function _dataCallback(tx, res) {
                     console.log('SQL complete: ' + res.rowsAffected);
-                };
+                }
 
                 function _errorCallback(tx, err) {
                     if (typeof err === 'undefined') {
@@ -243,7 +243,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     } else {
                         console.warn(err);
                     }
-                };
+                }
 
                 function _parseRequest(templateUrl, schemaData) {
                     console.log('Unresolved: ' + templateUrl);
@@ -261,11 +261,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     console.log('Resolved: ' + templateUrl);
 
                     return templateUrl;
-                };
-
-                function _safeApply(scope, fn) {
-                    (scope.$$phase || scope.$root.$$phase) ? fn() : scope.$apply(fn);
-                };
+                }
 
 
                 function _getItemIndex(item, id) {
@@ -274,7 +270,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     }
 
                     return (item[_config.indexerProperty] || item._id || item.id || id);
-                };
+                }
 
                 function _createDataItem(item) {
                     return {
@@ -284,7 +280,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                         dirty: (item.dirty == 1 ? true : false),
                         local: (item.local == 1 ? true : false)
                     };
-                };
+                }
 
 
                 /*
@@ -315,39 +311,16 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     });
                 };
 
-                var _findLocal = function (id, flCallback) {
+                var _findLocal = function (key, column, flCallback) {
                     console.log('_findLocal');
+                    if (column === undefined) {
+                        column = 'id';
+                    }
+
                     if (typeof flCallback !== 'function') flCallback = _voidCallback;
 
                     _localDatabase.transaction(function (tx) {
-                        tx.executeSql('SELECT * FROM ' + name + ' WHERE id = ? LIMIT 1', [id], function (tx, res) {
-                            if (res.rows.length == 1) {
-                                flCallback([_createDataItem(res.rows.item(0))]);
-
-                            } else {
-                                flCallback([]);
-                            }
-                        }, function (tx, err) {
-                            flCallback();
-                        });
-                    });
-                };
-
-                var _searchLocal = function (col, data, slCallback) {
-                    console.log('_searchLocal');
-                    if (typeof data === 'function') {
-                        slCallback = data;
-                        data = col;
-                        col = 'data';
-                    } else if (typeof col === 'function') {
-                        slCallback = col;
-                        data = '';
-                        col = 'data'
-                    }
-                    if (typeof slCallback !== 'function') slCallback = _voidCallback;
-
-                    _localDatabase.transaction(function (tx) {
-                        tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + col + ' LIKE ?', ["%" + data + "%"], function (tx, res) {
+                        tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + column + ' LIKE ?', ["%" + key + "%"], function (tx, res) {
                             if (res.rows.length > 0) {
                                 var dataItems = [];
 
@@ -355,15 +328,15 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                     dataItems.push(_createDataItem(res.rows.item(i)));
                                 }
 
-                                slCallback(dataItems);
+                                flCallback(dataItems);
                             } else {
-                                slCallback([]);
+                                flCallback([]);
                             }
                         }, function (tx, err) {
-                            slCallback(null, err);
+                            flCallback(null, err);
                         });
                     });
-                }
+                };
 
                 var _syncLocal = function (dataItems, uri, slCallback) {
                     console.log('_syncLocal');
@@ -488,7 +461,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     if (typeof grCallback !== 'function') grCallback = _voidCallback;
 
                     if (_config.apiTemplate !== undefined) {
-                        _safeApply($rootScope, function () {
+                        safeApply(function () {
                             $http.get(_defaultOptions.url + uri, {withCredentials: true}).then(function (res) {
                                 if (res.data != null && res.data !== 'null') {
                                     var data = res.data;
@@ -560,7 +533,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                         });
 
                         var _makePost = function (item, uri) {
-                            _safeApply($rootScope, function () {
+                            safeApply(function () {
                                 $http.post(_defaultOptions.url + uri, item.data, {withCredentials: true}).then(function (res) {
                                     var remoteItem = {
                                         id: _getItemIndex(res.data, item.id),
@@ -568,7 +541,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                         data: item.data,
                                         dirty: false,
                                         local: false
-                                    }
+                                    };
 
                                     if (item.local == true) {
                                         remoteItem.data._id = remoteItem.id;
@@ -619,7 +592,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                         var asyncMon = new AsyncMonitor(dataItems.length, drCallback);
 
                         var _makeDelete = function (item) {
-                            _safeApply($rootScope, function () {
+                            safeApply(function () {
                                 $http.delete(_defaultOptions.url + item.uri, {withCredentials: true}).then(function (res) {
                                     _deleteLocal(item, asyncMon.done);
                                 }, function (err) {
@@ -709,7 +682,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     }
 
                     return {
-                        make: function (uriTemplate, schemaData, data, cCallback) {
+                        createItem: function (uriTemplate, schemaData, data, cCallback) {
                             if (arguments.length == 3) {
                                 cCallback = data;
                                 data = schemaData;
@@ -737,7 +710,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 _responseHandler(cCallback, res, err);
                             });
                         },
-                        read: function (schemaData, options, rCallback) {
+                        getItems: function (schemaData, options, rCallback) {
                             // Validate parameters
                             if (arguments.length == 2) {
                                 rCallback = options;
@@ -780,17 +753,17 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 _responseHandler(rCallback, null, _errors.NoReadParams);
                             }
                         },
-                        find: function (id, fCallback) {
-                            _findLocal(id, function (res, err) {
+                        findItems: function (key, column, fCallback) {
+                            if (arguments.length == 2) {
+                                fCallback = column;
+                                column = undefined;
+                            }
+
+                            _findLocal(key, column, function (res, err) {
                                 _responseHandler(fCallback, res, err);
                             });
                         },
-                        search: function (col, data, sCallback) {
-                            _searchLocal(col, data, function (res, err) {
-                                _responseHandler(sCallback, res, err);
-                            });
-                        },
-                        update: function (dataItems, options, uCallback) {
+                        updateItems: function (dataItems, options, uCallback) {
                             if (arguments.length == 2) {
                                 uCallback = options;
                                 options = {};
@@ -808,7 +781,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 _responseHandler(uCallback, res, err);
                             });
                         },
-                        sync: function (dataItems, schemaData, writeUri, sCallback) {
+                        postItems: function (dataItems, schemaData, writeUri, sCallback) {
                             // Validate parameters
                             if (arguments.length == 3) {
                                 sCallback = writeUri;
@@ -823,24 +796,11 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 dataItems = [dataItems];
                             }
 
-                            var uri = _parseRequest(_config.apiTemplate, schemaData);
-
                             _updateRemote(dataItems, writeUri, schemaData, function (res, err) {
-                                for (var i = 0; i < res.length; i++) {
-
-                                    _getRemote(res[i].uri, function (res, err) {
-                                        if (res) {
-                                            _syncLocal(res, uri, function (res, err) {
-                                                _responseHandler(sCallback, res, err);
-                                            });
-                                        } else if (err) {
-                                            _responseHandler(sCallback, null, err);
-                                        }
-                                    });
-                                }
+                                _responseHandler(sCallback, res, err);
                             });
                         },
-                        remove: function (dataItems, dCallback) {
+                        removeItems: function (dataItems, dCallback) {
                             if ((dataItems instanceof Array) === false) {
                                 dataItems = [dataItems];
                             }
@@ -861,7 +821,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                                 }
                             }
                         },
-                        purge: function (pCallback) {
+                        purgeItems: function (pCallback) {
                             _clearTable(function (res, err) {
                                 _responseHandler(pCallback, res, err);
                             });

@@ -259,6 +259,15 @@ define(['angular'], function () {
                 stats: function() {
                     return _stats;
                 },
+                clear: function() {
+                    _stats = {
+                        total: 0,
+                        complete: 0,
+                        resolved: 0,
+                        rejected: 0,
+                        percent: 0
+                    };
+                },
                 add: function(promise) {
                     _stats.total++;
 
