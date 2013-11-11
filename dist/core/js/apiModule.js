@@ -18,7 +18,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
             var _promises = null;
 
             function _uploadParentTasksByType (taskType) {
-                return _monitor.add(promiseService.wrap(function(promise) {
+                return _monitor.add(promiseService.wrap(function(defer) {
                     // Dependency wrapper
                     taskApiService.getTasksByType(taskType).then(function(res) {
                         promiseService
@@ -45,8 +45,8 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                             }
                                         }
                                     })
-                            }, promise.reject).then(promise.resolve, promise.reject);
-                    }, promise.reject);
+                            }, defer.reject).then(defer.resolve, defer.reject);
+                    }, defer.reject);
                 }));
             }
 
@@ -207,7 +207,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
     module.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'cultivarApiService', 'assetApiService', 'farmerApiService',
         function (promiseMonitor, promiseService, taskApiService, documentApiService, photoApiService, customerApiService, cultivarApiService, assetApiService, farmerApiService) {
             var _monitor = null;
-            var _syncList = null;
+            var _promises = null;
 
             var _readOptions = {readLocal: false, readRemote: true};
 
@@ -247,15 +247,17 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
             }
 
             function _getRestrictedDocument(did, taskAssigner) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
-                    documentApiService.getDocument(did, taskAssigner, _readOptions).then(promise.resolve, promise.reject);
+                return _promises.document[did] || _monitor.add(promiseService.wrap(function (defer) {
+                    _promises.document[did] = defer.promise;
+
+                    documentApiService.getDocument(did, taskAssigner, _readOptions).then(defer.resolve, defer.reject);
                 }));
             }
 
             function _getDocument(did, taskAssigner) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
+                return _promises.document[did] || _monitor.add(promiseService.wrap(function (defer) {
+                    _promises.document[did] = defer.promise;
+
                     documentApiService.getDocument(did, _readOptions).then(function(res) {
                         var document = res[0];
 
@@ -268,8 +270,8 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                             _getCultivars(document.data.crop);
                         }
 
-                        promise.resolve();
-                    }, promise.reject);
+                        defer.resolve();
+                    }, defer.reject);
                 }));
             }
 
@@ -288,70 +290,44 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
             }
 
             function _getCustomer(cid, assigner) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
-                    if(cid && _syncList.customers[cid] === undefined) {
-                        _syncList.customers[cid] = true;
+                return _promises.customer[cid] || _monitor.add(promiseService.wrap(function (defer) {
+                    _promises.customer[cid] = defer.promise;
 
-                        customerApiService.getCustomer(cid, assigner, _readOptions).then(function(res) {
-                            _getFarmer(res[0].data.farmerID);
-                            promise.resolve();
-                        }, promise.reject);
-                    } else {
-                        promise.resolve();
-                    }
+                    customerApiService.getCustomer(cid, assigner, _readOptions).then(function(res) {
+                        return _getFarmer(res[0].data.farmerID);
+                    }, defer.reject).then(defer.resolve, defer.reject);
                 }));
             }
 
             function _getCustomerAssets(cid, assigner) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
-                    if (cid && _syncList.customerAssets[cid] === undefined) {
-                        _syncList.customerAssets[cid] = true;
+                return _promises.customerAsset[cid] || _monitor.add(promiseService.wrap(function (defer) {
+                    _promises.customerAsset[cid] = defer.promise;
 
-                        customerApiService.getCustomerAssets(cid, assigner, _readOptions).then(promise.resolve, promise.reject);
-                    } else {
-                        promise.resolve();
-                    }
+                    customerApiService.getCustomerAssets(cid, assigner, _readOptions).then(defer.resolve, defer.reject);
                 }));
             }
 
             function _getCultivars(crop) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
-                    if (crop && _syncList.cultivars[crop] === undefined) {
-                        _syncList.cultivars[crop] = true;
+                return _promises.cultivar[crop] || _monitor.add(promiseService.wrap(function (defer) {
+                    _promises.cultivar[crop] = defer.promise;
 
-                        cultivarApiService.getCultivars(crop, _readOptions).then(promise.resolve, promise.reject);
-                    } else {
-                        promise.resolve();
-                    }
+                    cultivarApiService.getCultivars(crop, _readOptions).then(defer.resolve, defer.reject);
                 }));
             }
 
             function _getAsset(aid) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
-                    if (aid && _syncList.assets[aid] === undefined) {
-                        _syncList.assets[aid] = true;
+                return _promises.asset[aid] || _monitor.add(promiseService.wrap(function (defer) {
+                    _promises.asset[aid] = defer.promise;
 
-                        assetApiService.getAsset(aid, _readOptions).then(promise.resolve, promise.reject);
-                    } else {
-                        promise.resolve();
-                    }
+                    assetApiService.getAsset(aid, _readOptions).then(defer.resolve, defer.reject);
                 }));
             }
 
             function _getFarmer(fid) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
-                    if (fid && _syncList.farmers[fid] === undefined) {
-                        _syncList.farmers[fid] = true;
+                return _promises.farmer[fid] || _monitor.add(promiseService.wrap(function (defer) {
+                    _promises.farmer[fid] = defer.promise;
 
-                        farmerApiService.getFarmer(fid, _readOptions).then(promise.resolve, promise.reject);
-                    } else {
-                        promise.resolve();
-                    }
+                    farmerApiService.getFarmer(fid, _readOptions).then(defer.resolve, defer.reject);
                 }));
             }
 
@@ -362,12 +338,12 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 }
 
                 _monitor = monitor;
-                _syncList = {
-                    customers: {},
-                    customerAssets: {},
-                    cultivars: {},
-                    farmers: {},
-                    assets: {}
+                _promises = {
+                    customer: {},
+                    customerAsset: {},
+                    cultivar: {},
+                    farmer: {},
+                    asset: {}
                 };
 
                 return promiseService.wrapAll(function(list) {
