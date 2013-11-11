@@ -15,7 +15,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
     module.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'assetApiService', 'farmerApiService',
         function(promiseMonitor, promiseService, taskApiService, documentApiService, photoApiService, customerApiService, assetApiService, farmerApiService) {
             var _monitor = null;
-            var _syncList = null;
+            var _promises = null;
 
             function _uploadParentTasksByType (taskType) {
                 return _monitor.add(promiseService.wrap(function(promise) {
@@ -27,14 +27,14 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                     var parentTask = res[i];
 
                                     if (parentTask.dirty === true && parentTask.data.status == 'complete') {
-                                        list.push(_monitor.add(_uploadChildTasks(parentTask.id)));
+                                        list.push(_uploadChildTasks(parentTask.id));
                                         list.push(_uploadRestrictedDocument(parentTask.data.object.id, parentTask.data.ass_by));
                                     }
                                 }
 
                             }).then(function() {
                                 // Resolve dependency list
-                                promiseService
+                                return promiseService
                                     .wrapAll(function(list) {
                                         for (var i = 0; i < res.length; i++) {
                                             var parentTask = res[i];
@@ -44,15 +44,16 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                                 list.push(_monitor.add(taskApiService.postTask(parentTask, 'task/:id')));
                                             }
                                         }
-                                    }).then(promise.resolve, promise.reject);
-                            }, promise.reject);
+                                    })
+                            }, promise.reject).then(promise.resolve, promise.reject);
                     }, promise.reject);
                 }));
             }
 
             function _uploadChildTasks(tid) {
-                return  _monitor.add(promiseService.wrap(function(promise) {
-                    // Dependency wrapper
+                return _promises.task[tid] || _monitor.add(promiseService.wrap(function(defer) {
+                    _promises.task[tid] = defer.promise;
+
                     taskApiService.getTasksById(tid).then(function(res) {
                         promiseService
                             .wrapAll(function(list) {
@@ -63,63 +64,64 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                 }
                             }).then(function() {
                                 // Resolve dependency list
-                                promise.resolve(promiseService.wrapAll(function(list) {
+                                return promiseService.wrapAll(function(list) {
                                     for (var i = 0; i < res.length; i++) {
                                         if (res[i].dirty === true) {
                                             list.push(_monitor.add(taskApiService.postTask(res[i], 'task/:id')));
                                         }
                                     }
-                                }));
-                            }, promise.reject);
-                    }, promise.reject);
+                                });
+                            }, defer.reject).then(defer.resolve, defer.reject);
+                    }, defer.reject);
                 }));
             }
 
             function _uploadRestrictedDocument(did, taskAssigner) {
-                return _monitor.add(promiseService.wrap(function(promise) {
-                    // Dependency wrapper
-                    if (did && _syncList.policy[did] === undefined) {
-                        _syncList.policy[did] = true;
+                return _promises.document[did] || _monitor.add(promiseService.wrap(function(defer) {
+                    _promises.document[did] = defer.promise;
 
-                        documentApiService.getDocument(did, taskAssigner).then(function(res) {
-                            var document = res[0];
+                    documentApiService.getDocument(did, taskAssigner).then(function(res) {
+                        var document = res[0];
 
-                            if (document.dirty === true) {
-                                _monitor.add(documentApiService.postDocument(document)).then(promise.resolve, promise.reject);
-                            } else {
-                                promise.resolve();
-                            }
-                        }, promise.reject);
-                    } else {
-                        // Handled already
-                        promise.resolve();
-                    }
+                        if (document.dirty === true) {
+                            _monitor.add(documentApiService.postDocument(document)).then(defer.resolve, defer.reject);
+                        } else {
+                            defer.resolve();
+                        }
+                    }, defer.reject);
                 }));
             }
 
             function _uploadDocument(did, taskAssigner) {
-                return _monitor.add(promiseService.wrap(function(promise) {
-                    // Dependency wrapper
-                    documentApiService.getDocument(did).then(function(res) {
-                        var document = res[0];
+                return _promises.document[did] || _monitor.add(promiseService.wrap(function(defer) {
+                    _promises.document[did] = defer.promise;
 
-                        if (document.dirty === true) {
-                            documentApiService.postDocument(document).then(function() {
-                                return promiseService.all([
-                                    _uploadPhotos(document.id),
-                                    _uploadCustomer(document.data.customerID, taskAssigner)
-                                ]);
-                            }, promise.reject).then(promise.resolve, promise.reject);
-                        } else {
-                            promise.resolve();
-                        }
+                    documentApiService.getDocument(did).then(function(res) {
+                        promiseService
+                            .wrapAll(function(list) {
+                                for (var i = 0; i < res.length; i++) {
+                                    if (res[i].dirty === true) {
+                                        list.push(_monitor.add(documentApiService.postDocument(document)));
+                                    }
+                                }
+                            }).then(function(documents) {
+                                return promiseService.wrapAll(function(list) {
+                                    for (var i = 0; i < documents.length; i++) {
+                                        list.push(promiseService.all([
+                                            _uploadPhotos(documents[i].id),
+                                            _uploadCustomer(document[i].data.customerID, taskAssigner)
+                                        ]));
+                                    }
+                                });
+                            }, defer.reject).then(defer.resolve, defer.reject);
                     }, promise.reject);
                 }));
             }
 
             function _uploadPhotos(did) {
-                return _monitor.add(promiseService.wrap(function(promise) {
-                    // Dependency wrapper
+                return _promises.photo[did] || _monitor.add(promiseService.wrap(function(defer) {
+                    _promises.photo[did] = defer.promise;
+
                     documentApiService.getDocumentPhotos(did).then(function(res) {
                         promiseService.wrapAll(function(list) {
                             for (var i = 0; i < res.length; i++) {
@@ -127,72 +129,54 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                     list.push(_monitor.add(photoApiService.postPhoto(res[i])));
                                 }
                             }
-                        }).then(promise.resolve, promise.reject);
-                    }, promise.reject);
+                        }).then(defer.resolve, defer.reject);
+                    }, defer.reject);
                 }));
             }
 
             function _uploadCustomer(cid, taskAssigner) {
-                return _monitor.add(promiseService.wrap(function(promise) {
-                    // Dependency wrapper
-                    if (cid && _syncList.customers[cid] === undefined) {
-                        _syncList.customers[cid] = true;
+                return _promises.customer[cid] || _monitor.add(promiseService.wrap(function(defer) {
+                    _promises.customer[cid] = defer.promise;
 
-                        customerApiService.findCustomer(cid).then(function(res) {
-                            var customer = res[0];
+                    customerApiService.findCustomer(cid).then(function(res) {
+                        var customer = res[0];
 
-                            promiseService.all([
-                                _uploadCustomerAssets(cid, taskAssigner),
-                                _uploadFarmer(customer.data.farmerID)
-                            ]).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        // Handled already
-                        promise.resolve();
-                    }
+                        promiseService.all([
+                            _uploadCustomerAssets(cid, taskAssigner),
+                            _uploadFarmer(customer.data.farmerID)
+                        ]).then(defer.resolve, defer.reject);
+                    }, defer.reject);
                 }));
             }
 
             function _uploadCustomerAssets(cid, taskAssigner) {
-                return _monitor.add(promiseService.wrap(function(promise) {
-                    // Dependency wrapper
-                    if (cid && _syncList.customerAssets[cid] === undefined) {
-                        _syncList.customerAssets[cid] = true;
+                return _promises.customerAsset[cid] || _monitor.add(promiseService.wrap(function(defer) {
+                    _promises.customerAsset[cid] = defer.promise;
 
-                        customerApiService.getCustomerAssets(cid).then(function(res) {
-                            promiseService
-                                .wrapAll(function(list) {
-                                    for (var i = 0; i < res.length; i++) {
-                                        if (res[i].dirty === true) {
-                                            list.push(_monitor.add(assetApiService.postAsset(res[i], {assigner: taskAssigner}, 'asset/:id?user=:assigner')));
-                                        }
+                    customerApiService.getCustomerAssets(cid).then(function(res) {
+                        promiseService
+                            .wrapAll(function(list) {
+                                for (var i = 0; i < res.length; i++) {
+                                    if (res[i].dirty === true) {
+                                        list.push(_monitor.add(assetApiService.postAsset(res[i], {assigner: taskAssigner}, 'asset/:id?user=:assigner')));
                                     }
-                                }).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        // Handled already
-                        promise.resolve();
-                    }
+                                }
+                            }).then(defer.resolve, defer.reject);
+                    }, defer.reject);
                 }));
             }
 
             function _uploadFarmer(fid) {
-                return _monitor.add(promiseService.wrap(function(promise) {
-                    // Dependency wrapper
-                    if (fid && _syncList.farmer[fid] === undefined) {
-                        _syncList.farmer[fid] = true;
+                return _promises.farmer[fid] || _monitor.add(promiseService.wrap(function(defer) {
+                    _promises.farmer[fid] = defer.promise;
 
-                        farmerApiService.getFarmer(fid).then(function(res) {
-                            if (res[0].dirty === true) {
-                                _monitor.add(farmerApiService.postFarmer(res[0])).then(promise.resolve, promise.reject);
-                            } else {
-                                promise.resolve();
-                            }
-                        }, promise.reject);
-                    } else {
-                        // Handled already
-                        promise.resolve();
-                    }
+                    farmerApiService.getFarmer(fid).then(function(res) {
+                        if (res.length > 0 && res[0].dirty === true) {
+                            _monitor.add(farmerApiService.postFarmer(res[0])).then(defer.resolve, defer.reject);
+                        } else {
+                            defer.resolve();
+                        }
+                    }, defer.reject);
                 }));
             }
 
@@ -203,11 +187,13 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 }
 
                 _monitor = monitor;
-                _syncList = {
-                    policy: {},
-                    customers: {},
-                    customerAssets: {},
-                    farmer: {}
+                _promises = {
+                    customer: {},
+                    customerAsset: {},
+                    document: {},
+                    farmer: {},
+                    photo: {},
+                    task: {}
                 };
 
                 return promiseService.wrapAll(function(list) {
