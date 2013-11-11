@@ -39,8 +39,9 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                         for (var i = 0; i < res.length; i++) {
                                             var parentTask = res[i];
 
-                                            if (parentTask.dirty === true && parentTask.data.status == 'complete') {
-                                                list.push(_monitor.add(taskApiService.postTask(parentTask, 'tasks?type=:type', {type: taskType}, 'task/:id')));
+                                            if (parentTask.dirty === true) {
+                                                // Always push the changes to parent task, incase the workpackage is split
+                                                list.push(_monitor.add(taskApiService.postTask(parentTask, 'task/:id')));
                                             }
                                         }
                                     }).then(promise.resolve, promise.reject);
@@ -65,7 +66,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                 promise.resolve(promiseService.wrapAll(function(list) {
                                     for (var i = 0; i < res.length; i++) {
                                         if (res[i].dirty === true) {
-                                            list.push(_monitor.add(taskApiService.postTask(res[i], 'task/:id/tasks', {id: tid}, 'task/:id')));
+                                            list.push(_monitor.add(taskApiService.postTask(res[i], 'task/:id')));
                                         }
                                     }
                                 }));
@@ -77,15 +78,22 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
             function _uploadRestrictedDocument(did, taskAssigner) {
                 return _monitor.add(promiseService.wrap(function(promise) {
                     // Dependency wrapper
-                    documentApiService.getDocument(did, taskAssigner).then(function(res) {
-                        var document = res[0];
+                    if (did && _syncList.policy[did] === undefined) {
+                        _syncList.policy[did] = true;
 
-                        if (document.dirty === true) {
-                            _monitor.add(documentApiService.postDocument(document, 'document/:id?user=:assigner', {id: document.id, assigner: taskAssigner})).then(promise.resolve, promise.reject);
-                        } else {
-                            promise.resolve();
-                        }
-                    }, promise.reject);
+                        documentApiService.getDocument(did, taskAssigner).then(function(res) {
+                            var document = res[0];
+
+                            if (document.dirty === true) {
+                                _monitor.add(documentApiService.postDocument(document)).then(promise.resolve, promise.reject);
+                            } else {
+                                promise.resolve();
+                            }
+                        }, promise.reject);
+                    } else {
+                        // Handled already
+                        promise.resolve();
+                    }
                 }));
             }
 
@@ -96,13 +104,12 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                         var document = res[0];
 
                         if (document.dirty === true) {
-                            promiseService
-                                .all([
+                            documentApiService.postDocument(document).then(function() {
+                                return promiseService.all([
                                     _uploadPhotos(document.id),
                                     _uploadCustomer(document.data.customerID, taskAssigner)
-                                ]).then(function() {
-                                    _monitor.add(documentApiService.postDocument(document, {id: document.id})).then(promise.resolve, promise.reject);
-                                }, promise.reject);
+                                ]);
+                            }, promise.reject).then(promise.resolve, promise.reject);
                         } else {
                             promise.resolve();
                         }
@@ -131,7 +138,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     if (cid && _syncList.customers[cid] === undefined) {
                         _syncList.customers[cid] = true;
 
-                        customerApiService.getCustomer(cid, taskAssigner).then(function(res) {
+                        customerApiService.findCustomer(cid).then(function(res) {
                             var customer = res[0];
 
                             promiseService.all([
@@ -152,12 +159,12 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     if (cid && _syncList.customerAssets[cid] === undefined) {
                         _syncList.customerAssets[cid] = true;
 
-                        customerApiService.getCustomerAssets(cid, taskAssigner).then(function(res) {
+                        customerApiService.getCustomerAssets(cid).then(function(res) {
                             promiseService
                                 .wrapAll(function(list) {
                                     for (var i = 0; i < res.length; i++) {
                                         if (res[i].dirty === true) {
-                                            list.push(_monitor.add(assetApiService.postAsset(res[i], 'customer/:id/assets', {id: cid}, 'asset/:id')));
+                                            list.push(_monitor.add(assetApiService.postAsset(res[i], {assigner: taskAssigner}, 'asset/:id?user=:assigner')));
                                         }
                                     }
                                 }).then(promise.resolve, promise.reject);
@@ -177,7 +184,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
 
                         farmerApiService.getFarmer(fid).then(function(res) {
                             if (res[0].dirty === true) {
-                                _monitor.add(farmerApiService.postFarmer(res[0], {id: res[0].id})).then(promise.resolve, promise.reject);
+                                _monitor.add(farmerApiService.postFarmer(res[0])).then(promise.resolve, promise.reject);
                             } else {
                                 promise.resolve();
                             }
@@ -197,6 +204,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
 
                 _monitor = monitor;
                 _syncList = {
+                    policy: {},
                     customers: {},
                     customerAssets: {},
                     farmer: {}
@@ -702,14 +710,28 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     });
                 });
             },
-            postTask: function (taskItem, readUri, schema, writeUri, callback) {
+            postTask: function (taskItem, schema, writeUri, callback) {
+                if (typeof writeUri == 'function') {
+                    callback = writeUri;
+                    writeUri = undefined;
+                } else if (typeof schema == 'string') {
+                    callback = writeUri;
+                    writeUri = schema;
+                    schema = {};
+                } else if (typeof schema == 'function') {
+                    callback = schema;
+                    writeUri = undefined;
+                    schema = {};
+                } else if (arguments.length < 2) {
+                    schema = {};
+                }
+
                 return promiseService.wrap(function(promise) {
                     var response = callback || promise;
 
-                    dataStore('task', {apiTemplate: readUri})
-                        .transaction(function (tx) {
-                            tx.postItems(taskItem, schema, writeUri, response);
-                        });
+                    taskStore.transaction(function (tx) {
+                        tx.postItems(taskItem, schema, writeUri, response);
+                    });
                 });
             }
         };
@@ -768,14 +790,18 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     });
                 });
             },
-            postDocument: function (documentItem, readUri, schema, writeUri, callback) {
-                if (typeof readUri == 'object') {
+            postDocument: function (documentItem, schema, writeUri, callback) {
+                if (typeof writeUri == 'function') {
+                    callback = writeUri;
+                    writeUri = undefined;
+                } else if (typeof schema == 'string') {
                     callback = writeUri;
                     writeUri = schema;
-                    schema = readUri;
-                    readUri = undefined;
-                } else if (typeof writeUri == 'function' || writeUri === undefined) {
-                    writeUri = readUri;
+                    schema = {};
+                } else if (typeof schema == 'function') {
+                    callback = schema;
+                    writeUri = undefined;
+                    schema = {};
                 } else if (arguments.length < 2) {
                     schema = {};
                 }
@@ -783,16 +809,9 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 return promiseService.wrap(function(promise) {
                     var response = callback || promise;
 
-                    if (readUri !== undefined) {
-                        dataStore('document', {apiTemplate: readUri})
-                            .transaction(function (tx) {
-                                tx.postItems(documentItem, schema, writeUri, response);
-                            });
-                    } else {
-                        documentStore.transaction(function (tx) {
-                            tx.postItems(documentItem, schema, response);
-                        });
-                    }
+                    documentStore.transaction(function (tx) {
+                        tx.postItems(documentItem, schema, writeUri, response);
+                    });
                 });
             },
             getDocumentPhotos: function (did, options, callback) {
@@ -982,6 +1001,14 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 if (typeof options == 'function') {
                     callback = options;
                     options = {};
+                } else if(typeof assigner == 'object') {
+                    callback = options;
+                    options = assigner;
+                    assigner = undefined;
+                } else if(typeof assigner == 'function') {
+                    callback = assigner;
+                    options = {};
+                    assigner = undefined;
                 } else if (arguments.length < 3) {
                     options = {};
                 }
@@ -997,7 +1024,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     } else {
                         dataStore('asset', {apiTemplate: 'customer/:id/assets'})
                             .transaction(function (tx) {
-                                tx.getItems({id: cid}, options, response);
+                                tx.findItems(cid, 'uri', response);
                             });
                     }
                 });
@@ -1043,24 +1070,28 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     });
                 });
             },
-            postAsset: function (assetItem, readUri, schema, writeUri, callback) {
-                if (typeof writeUri == 'function' || writeUri === undefined) {
-                    writeUri = readUri;
+            postAsset: function (assetItem, schema, writeUri, callback) {
+                if (typeof writeUri == 'function') {
+                    callback = writeUri;
+                    writeUri = undefined;
+                } else if (typeof schema == 'string') {
+                    callback = writeUri;
+                    writeUri = schema;
+                    schema = {};
+                } else if (typeof schema == 'function') {
+                    callback = schema;
+                    writeUri = undefined;
+                    schema = {};
+                } else if (arguments.length < 2) {
+                    schema = {};
                 }
 
                 return promiseService.wrap(function(promise) {
                     var response = callback || promise;
 
-                    if (readUri === assetStore.config.apiTemplate) {
-                        assetStore.transaction(function (tx) {
-                            tx.postItems(assetItem, schema, writeUri, response);
-                        });
-                    } else {
-                        dataStore('asset', {apiTemplate: readUri})
-                            .transaction(function (tx) {
-                                tx.postItems(assetItem, schema, writeUri, response);
-                            });
-                    }
+                    assetStore.transaction(function (tx) {
+                        tx.postItems(assetItem, schema, writeUri, response);
+                    });
                 });
             }
         };
@@ -1127,12 +1158,27 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     });
                 });
             },
-            postFarmer: function (farmerItem, schema, callback) {
+            postFarmer: function (farmerItem, schema, writeUri, callback) {
+                if (typeof writeUri == 'function') {
+                    callback = writeUri;
+                    writeUri = undefined;
+                } else if (typeof schema == 'string') {
+                    callback = writeUri;
+                    writeUri = schema;
+                    schema = {};
+                } else if (typeof schema == 'function') {
+                    callback = schema;
+                    writeUri = undefined;
+                    schema = {};
+                } else if (arguments.length < 2) {
+                    schema = {};
+                }
+
                 return promiseService.wrap(function(promise) {
                     var response = callback || promise;
 
                     farmerStore.transaction(function (tx) {
-                        tx.postItems(farmerItem, schema, response);
+                        tx.postItems(farmerItem, schema, writeUri, response);
                     });
                 });
             }

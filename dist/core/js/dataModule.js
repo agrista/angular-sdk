@@ -561,8 +561,8 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                             var item = dataItems[i];
 
                             if (item.dirty === true) {
-                                if (writeUri !== undefined) {
-                                    _makePost(item, _parseRequest(writeUri, underscore.extend(writeSchema, {id: item.local ? undefined : item.id})));
+                                if (item.local || writeUri !== undefined) {
+                                    _makePost(item, _parseRequest(writeUri || _config.apiTemplate, underscore.extend(writeSchema, {id: item.local ? undefined : item.id})));
                                 } else {
                                     _makePost(item, item.uri);
                                 }
@@ -785,10 +785,10 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                             // Validate parameters
                             if (arguments.length == 3) {
                                 sCallback = writeUri;
-                                writeUri = _config.apiTemplate;
+                                writeUri = undefined;
                             } else if (arguments.length == 2) {
                                 sCallback = schemaData;
-                                writeUri = _config.apiTemplate;
+                                writeUri = undefined;
                                 schemaData = {};
                             }
 
