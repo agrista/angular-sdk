@@ -234,7 +234,7 @@ define(['angular'], function () {
 
                         var boundsView = mapboxService.getBounds();
 
-                        if (boundsView.options && boundsView.options.includeLocation) {
+                        if (boundsView !== undefined && boundsView.options && boundsView.options.includeLocation) {
                             map.fitBounds(boundsView.bounds.concat([
                                 [res.coords.latitude, res.coords.longitude]
                             ]), boundsView.options);

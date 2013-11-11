@@ -114,7 +114,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                     }
                                 });
                             }, defer.reject).then(defer.resolve, defer.reject);
-                    }, promise.reject);
+                    }, defer.reject);
                 }));
             }
 
@@ -212,37 +212,28 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
             var _readOptions = {readLocal: false, readRemote: true};
 
             function _getTasksByType(taskType) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
+                return _monitor.add(promiseService.wrap(function (defer) {
                     taskApiService.getTasksByType(taskType, _readOptions).then(function(res) {
-                        for (var i = 0; i < res.length; i++) {
-                            var parentTask = res[i];
-                            var did = parentTask.data.object.id;
-
-                            if (parentTask.id !== undefined) {
-                                _getRestrictedDocument(did, parentTask.data.ass_by);
-                                _getTasks(parentTask.id);
+                        promiseService.wrapAll(function(list) {
+                            for (var i = 0; i < res.length; i++) {
+                                list.push(
+                                    _getRestrictedDocument(res[i].data.object.id, res[i].data.ass_by),
+                                    _getTasks(res[i].id));
                             }
-                        }
-
-                        promise.resolve();
-                    }, promise.reject);
+                        }).then(defer.resolve, defer.reject);
+                    }, promise.defer);
                 }));
             }
 
             function _getTasks(tid) {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
+                return _monitor.add(promiseService.wrap(function (defer) {
                     taskApiService.getTasksById(tid, _readOptions).then(function(res) {
-                        for (var i = 0; i < res.length; i++) {
-                            var task = res[i];
-                            var did = task.data.object.id;
-
-                            _getDocument(did, task.data.ass_by);
-                        }
-
-                        promise.resolve();
-                    }, promise.reject);
+                        promiseService.wrapAll(function(list) {
+                            for (var i = 0; i < res.length; i++) {
+                                list.push(_getDocument(res[i].data.object.id, res[i].data.ass_by));
+                            }
+                        }).then(defer.resolve, defer.reject);
+                    }, defer.reject);
                 }));
             }
 
@@ -259,33 +250,36 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     _promises.document[did] = defer.promise;
 
                     documentApiService.getDocument(did, _readOptions).then(function(res) {
-                        var document = res[0];
+                        promiseService.wrapAll(function(list) {
+                            for (var i = 0; i < res.length; i++) {
+                                var document = res[i].data;
 
-                        if (document.data.customerID !== undefined) {
-                            _getCustomer(document.data.customerID, taskAssigner);
-                            _getCustomerAssets(document.data.customerID, taskAssigner);
-                        }
+                                if(document.customerID !== undefined) {
+                                    list.push(
+                                        _getCustomer(document.customerID, taskAssigner),
+                                        _getCustomerAssets(document.customerID, taskAssigner));
+                                }
 
-                        if (document.data.crop !== undefined) {
-                            _getCultivars(document.data.crop);
-                        }
-
-                        defer.resolve();
+                                if (document.crop !== undefined) {
+                                    list.push(_getCultivars(document.crop));
+                                }
+                            }
+                        }).then(defer.resolve, defer.reject);
                     }, defer.reject);
                 }));
             }
 
             function _getCustomers() {
-                return _monitor.add(promiseService.wrap(function (promise) {
-                    // Dependency wrapper
+                return _monitor.add(promiseService.wrap(function (defer) {
                     customerApiService.getCustomers(_readOptions).then(function(res) {
-                        for (var i = 0; i < res.length; i++) {
-                            _getCustomerAssets(res[i].data.cid);
-                            _getFarmer(res[i].data.fid);
-                        }
-
-                        promise.resolve();
-                    }, promise.reject);
+                        return promiseService.wrapAll(function(list) {
+                            for (var i = 0; i < res.length; i++) {
+                                list.push(
+                                    _getCustomerAssets(res[i].data.cid),
+                                    _getFarmer(res[i].data.fid));
+                            }
+                        });
+                    }, defer.reject).then(defer.resolve, defer.reject);
                 }));
             }
 
@@ -303,7 +297,11 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 return _promises.customerAsset[cid] || _monitor.add(promiseService.wrap(function (defer) {
                     _promises.customerAsset[cid] = defer.promise;
 
-                    customerApiService.getCustomerAssets(cid, assigner, _readOptions).then(defer.resolve, defer.reject);
+                    if (assigner !== undefined) {
+                        customerApiService.getCustomerAssets(cid, assigner, _readOptions).then(defer.resolve, defer.reject);
+                    } else {
+                        customerApiService.getCustomerAssets(cid, _readOptions).then(defer.resolve, defer.reject);
+                    }
                 }));
             }
 
@@ -384,8 +382,8 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
 
                 _monitor.add(promiseService.wrap(function(promise) {
                     dataUploadService(_monitor, options).then(function() {
-                        dataDownloadService(_monitor, options).then(promise.resolve, promise.reject);
-                    }, promise.reject);
+                        return dataDownloadService(_monitor, options);
+                    }, promise.reject).then(promise.resolve, promise.reject);
                 }));
             }
         }
@@ -982,6 +980,11 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                         dataStore('asset', {apiTemplate: 'customer/:id/assets?user=:assigner'})
                             .transaction(function (tx) {
                                 tx.getItems({id: cid, assigner: assigner}, options, response);
+                            });
+                    } else if (options.readRemote === true) {
+                        dataStore('asset', {apiTemplate: 'customer/:id/assets'})
+                            .transaction(function (tx) {
+                                tx.getItems({id: cid}, options, response);
                             });
                     } else {
                         dataStore('asset', {apiTemplate: 'customer/:id/assets'})
