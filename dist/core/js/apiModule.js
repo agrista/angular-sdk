@@ -81,13 +81,14 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     _promises.document[did] = defer.promise;
 
                     documentApiService.getDocument(did, taskAssigner).then(function(res) {
-                        var document = res[0];
-
-                        if (document.dirty === true) {
-                            _monitor.add(documentApiService.postDocument(document)).then(defer.resolve, defer.reject);
-                        } else {
-                            defer.resolve();
-                        }
+                        promiseService
+                            .wrapAll(function(list) {
+                                for (var i = 0; i < res.length; i++) {
+                                    if (res[i].dirty === true) {
+                                        list.push(_monitor.add(documentApiService.postDocument(res[i])));
+                                    }
+                                }
+                            }).then(defer.resolve, defer.reject);
                     }, defer.reject);
                 }));
             }
@@ -101,16 +102,18 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                             .wrapAll(function(list) {
                                 for (var i = 0; i < res.length; i++) {
                                     if (res[i].dirty === true) {
-                                        list.push(_monitor.add(documentApiService.postDocument(document)));
+                                        list.push(_monitor.add(documentApiService.postDocument(res[i])));
                                     }
                                 }
-                            }).then(function(documents) {
+                            }).then(function() {
                                 return promiseService.wrapAll(function(list) {
-                                    for (var i = 0; i < documents.length; i++) {
-                                        list.push(promiseService.all([
-                                            _uploadPhotos(documents[i].id),
-                                            _uploadCustomer(document[i].data.customerID, taskAssigner)
-                                        ]));
+                                    for (var i = 0; i < res.length; i++) {
+                                        if (res[i].dirty === true) {
+                                            list.push(promiseService.all([
+                                                _uploadPhotos(res[i].id),
+                                                _uploadCustomer(res[i].data.customerID, taskAssigner)
+                                            ]));
+                                        }
                                     }
                                 });
                             }, defer.reject).then(defer.resolve, defer.reject);
@@ -221,7 +224,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                     _getTasks(res[i].id));
                             }
                         }).then(defer.resolve, defer.reject);
-                    }, promise.defer);
+                    }, defer.defer);
                 }));
             }
 
@@ -339,6 +342,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 _promises = {
                     customer: {},
                     customerAsset: {},
+                    document: {},
                     cultivar: {},
                     farmer: {},
                     asset: {}
@@ -396,18 +400,10 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
     module.factory('dataDependencyService', ['promiseService', 'taskApiService', 'documentApiService', 'customerApiService', 'cultivarApiService', 'farmerApiService',
         function(promiseService, taskApiService, documentApiService, customerApiService, cultivarApiService, farmerApiService) {
 
-            var _getIncludedDependencies = function(include) {
+            var _getIncludedDependencies = function(include, defaults) {
                 include = include || {};
 
-                return underscore.defaults(include, {
-                    children: true,
-                    documents: false,
-                    document: true,
-                    cultivar: false,
-                    photos: false,
-                    customer: true,
-                    farmer: true
-                });
+                return underscore.defaults(include, defaults);
             };
 
             var _resolveTasksByType = function(type, include) {
@@ -445,7 +441,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                         };
 
                         if (include.documents || include.document) {
-                            if (include.document) {
+                            if (include.document && include.documents !== true) {
                                 _resolveDocument(data.children[0].data.object.id, include).then(function(document) {
                                     promise.resolve(underscore.extend(data, document));
                                 }, promise.reject);
@@ -489,6 +485,10 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                     if (include.cultivar) {
                                         list.push(_resolveCultivar(data.document.data.crop, include));
                                     }
+
+                                    if (include.photos) {
+                                        list.push(_resolvePhotos(id, include));
+                                    }
                                 }).then(function(res) {
                                     for (var i = 0; i < res.length; i++) {
                                         underscore.extend(data.document.dependencies, res[i]);
@@ -502,6 +502,19 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                     }, promise.reject);
                 });
             };
+
+            function _resolvePhotos(id, include) {
+                return promiseService.wrap(function (promise) {
+
+                    documentApiService.getDocumentPhotos(did).then(function(res) {
+                        var data = {
+                            photos: res
+                        };
+
+                        promise.resolve(data);
+                    }, promise.reject);
+                });
+            }
 
             function _resolveCustomer(id, include) {
                 return promiseService.wrap(function (promise) {
@@ -556,13 +569,44 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 });
             }
 
-
             return {
                 resolveTasksByType: function(type, include) {
-                    return _resolveTasksByType(type, _getIncludedDependencies(include));
+                    return _resolveTasksByType(type, _getIncludedDependencies(include, {
+                        children: true,
+                        document: true,
+                        cultivar: true,
+                        customer: true,
+                        farmer: true
+                    }));
                 },
                 resolveTasksById: function(id, include) {
-                    return _resolveTasksById(id, _getIncludedDependencies(include));
+                    return _resolveTasksById(id, _getIncludedDependencies(include, {
+                        documents: true,
+                        customer: true,
+                        farmer: true
+                    }));
+                },
+                resolveDocument: function(id, include) {
+                    return  _resolveDocument(id, _getIncludedDependencies(include, {
+                        cultivar: true,
+                        customer: true,
+                        farmer: true,
+                        photos: true
+                    }));
+                },
+                resolvePhotos: function(id, include) {
+                    return  _resolvePhotos(id, _getIncludedDependencies(include, {}));
+                },
+                resolveCustomer: function(id, include) {
+                    return  _resolveCustomer(id, _getIncludedDependencies(include, {
+                        farmer: true
+                    }));
+                },
+                resolveFarmer: function(id, include) {
+                    return  _resolveFarmer(id, _getIncludedDependencies(include, {}));
+                },
+                resolveCultivar: function(id, include) {
+                    return  _resolveCultivar(id, _getIncludedDependencies(include, {}));
                 }
             };
         }]);
