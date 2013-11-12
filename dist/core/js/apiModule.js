@@ -407,7 +407,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
             };
 
             var _resolveTasksByType = function(type, include) {
-                return promiseService.wrap(function(promise) {
+                return promiseService.wrap(function(defer) {
                     taskApiService.getTasksByType(type).then(function(res) {
                         var data = {
                             parents: res
@@ -424,17 +424,17 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                         data.parents[i].dependencies = tasks[i];
                                     }
 
-                                    promise.resolve(data);
-                                }, promise.reject);
+                                    defer.resolve(data);
+                                }, defer.reject);
                         } else {
-                            promise.resolve(data);
+                            defer.resolve(data);
                         }
-                    }, promise.reject);
+                    }, defer.reject);
                 });
             };
 
             var _resolveTasksById = function(id, include) {
-                return promiseService.wrap(function(promise) {
+                return promiseService.wrap(function(defer) {
                     taskApiService.getTasksById(id).then(function(res) {
                         var data = {
                             children: res
@@ -443,8 +443,8 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                         if (include.documents || include.document) {
                             if (include.document && include.documents !== true) {
                                 _resolveDocument(data.children[0].data.object.id, include).then(function(document) {
-                                    promise.resolve(underscore.extend(data, document));
-                                }, promise.reject);
+                                    defer.resolve(underscore.extend(data, document));
+                                }, defer.reject);
                             } else {
                                 promiseService
                                     .wrapAll(function(list) {
@@ -456,18 +456,18 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                             data.children[i].dependencies = documents[i];
                                         }
 
-                                        promise.resolve(data);
-                                    }, promise.reject);
+                                        defer.resolve(data);
+                                    }, defer.reject);
                             }
                         } else {
-                            promise.resolve(data);
+                            defer.resolve(data);
                         }
-                    }, promise.reject);
+                    }, defer.reject);
                 });
             };
 
             var _resolveDocument = function(id, include) {
-                return promiseService.wrap(function(promise) {
+                return promiseService.wrap(function(defer) {
                     documentApiService.getDocument(id).then(function(res) {
                         var data = {
                             document: res[0]
@@ -494,62 +494,113 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                         underscore.extend(data.document.dependencies, res[i]);
                                     }
 
-                                    promise.resolve(data);
-                                }, promise.reject);
+                                    defer.resolve(data);
+                                }, defer.reject);
                         } else {
-                            promise.resolve(data);
+                            defer.resolve(data);
                         }
-                    }, promise.reject);
+                    }, defer.reject);
                 });
             };
 
             function _resolvePhotos(id, include) {
-                return promiseService.wrap(function (promise) {
-
-                    documentApiService.getDocumentPhotos(did).then(function(res) {
+                return promiseService.wrap(function (defer) {
+                    documentApiService.getDocumentPhotos(id).then(function(res) {
                         var data = {
                             photos: res
                         };
 
-                        promise.resolve(data);
-                    }, promise.reject);
+                        defer.resolve(data);
+                    }, defer.reject);
                 });
             }
 
-            function _resolveCustomer(id, include) {
-                return promiseService.wrap(function (promise) {
-                    customerApiService.findCustomer(id).then(function(res) {
+            function _resolveAllCustomers(include) {
+                return promiseService.wrap(function (defer) {
+                    customerApiService.getCustomers().then(function(res) {
+                        var data = {
+                            customers: res
+                        };
+
+                        promiseService
+                            .wrapAll(function(list) {
+                                for (var i = 0; i < data.customers.length; i++) {
+                                    list.push(_processCustomer(data.customers[i], include));
+                                }
+                            }).then(function() {
+                                defer.resolve(data);
+                            }, defer.reject);
+                    }, defer.reject);
+                });
+            }
+
+            function _processCustomer(customer, include) {
+                return promiseService.wrap(function (processDefer) {
+                    promiseService
+                        .wrapAll(function(list) {
+                            if(include.assets) {
+                                list.push(_resolveCustomerAssets(customer.id));
+                            }
+
+                            if(include.assets) {
+                                list.push(_resolveFarmer(customer.data.fid || customer.data.farmerID));
+                            }
+                        }).then(function(dependencies) {
+                            for (var i = 0; i < dependencies.length; i++) {
+                                customer.dependencies = underscore.extend(customer.dependencies || {}, dependencies[i]);
+                            }
+
+                            processDefer.resolve();
+                        }, processDefer.reject);
+                });
+            }
+
+            function _resolveCustomer(apiService, id, include) {
+                if (typeof apiService !== 'function') {
+                    include = id;
+                    id = apiService;
+                    apiService = customerApiService.findCustomer;
+                }
+
+                return promiseService.wrap(function (defer) {
+                    apiService(id).then(function(res) {
                         var data = {
                             customer: res[0]
                         };
 
-                        if(include.farmer) {
-                            _resolveFarmer(data.customer.data.farmerID).then(function(res) {
-                                data.customer.dependencies = res;
+                        _processCustomer(data.customer, include).then(function() {
+                            defer.resolve(data);
+                        })
+                    }, defer.reject);
+                });
+            }
 
-                                promise.resolve(data);
-                            }, promise.reject);
-                        } else {
-                            promise.resolve(data);
-                        }
-                    }, promise.reject);
+            function _resolveCustomerAssets(id, include) {
+                return promiseService.wrap(function (defer) {
+                    customerApiService.getCustomerAssets(id).then(function(res) {
+                        var data = {
+                            assets: res
+                        };
+
+                        defer.resolve(data);
+                    }, defer.reject);
                 });
             }
 
             function _resolveFarmer(id, include) {
-                return promiseService.wrap(function (promise) {
+                return promiseService.wrap(function (defer) {
                     farmerApiService.getFarmer(id).then(function(res) {
                         var data = {
                             farmer: res[0]
                         };
 
-                        promise.resolve(data);
-                    }, promise.reject);
+                        defer.resolve(data);
+                    }, defer.reject);
                 });
             }
 
             function _resolveCultivar(id, include) {
-                return promiseService.wrap(function (promise) {
+                return promiseService.wrap(function (defer) {
                     cultivarApiService.findCultivars(id).then(function(res) {
                         var data = {
                             cultivar: undefined
@@ -564,8 +615,8 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                             }
                         }
 
-                        promise.resolve(data);
-                    }, promise.reject);
+                        defer.resolve(data);
+                    }, defer.reject);
                 });
             }
 
@@ -597,8 +648,18 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                 resolvePhotos: function(id, include) {
                     return  _resolvePhotos(id, _getIncludedDependencies(include, {}));
                 },
+                resolveAllCustomers: function(include) {
+                    return _resolveAllCustomers(_getIncludedDependencies(include, {}));
+                },
+                resolveCustomersById: function(id, include) {
+                    return _resolveCustomer(customerApiService.findCustomers, id, _getIncludedDependencies(include, {
+                        assets: true,
+                        farmer: true
+                    }));
+                },
                 resolveCustomer: function(id, include) {
                     return  _resolveCustomer(id, _getIncludedDependencies(include, {
+                        assets: true,
                         farmer: true
                     }));
                 },
