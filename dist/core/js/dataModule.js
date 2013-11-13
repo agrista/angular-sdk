@@ -126,7 +126,7 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     }
                 };
 
-                _processMigration(window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 1000000));
+                _processMigration(window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576));
             };
 
             /**
