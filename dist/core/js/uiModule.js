@@ -55,7 +55,7 @@ define(['angular'], function () {
                 options: '=',
                 ngDisabled: '='
             },
-            template: '<div class="multi-select row" ng-class="{disabled: ngDisabled}">\n    <div class="multi-select-item col-sm-4 col-md-3 col-lg-2" ng-repeat="item in options">\n        <div class="multi-select-btn" ng-click="itemClicked($index)" ng-class="{active: isSelected($index)}">{{ item }}</div>\n    </div>\n</div>',
+            template: '<div class="multi-select" ng-class="{disabled: ngDisabled}">\n    <div class="multi-select-item col-xs-6 col-sm-4 col-md-3 col-lg-2" ng-repeat="item in options">\n        <div class="multi-select-btn" ng-click="itemClicked($index)" ng-class="{active: isSelected($index)}">{{ item }}</div>\n    </div>\n</div>',
             link: linkFn
         }
     });

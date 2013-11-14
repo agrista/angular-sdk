@@ -104,6 +104,10 @@ body {
  * Bootstrap adaption
  */
 
+.row .no-pad {
+    padding: 0;
+}
+
 .container.container-list {
     background-color: #f4f4f4;
 }
@@ -140,9 +144,6 @@ body {
 }
 
 .navbar-text {
-    position: absolute;
-    left: 125px;
-    right: 125px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -200,7 +201,13 @@ body {
     border-color: #6b6b6b;
 }
 
+@media (max-width: 768px) {
+    .col-xs {}
+}
+
 @media (min-width: 768px) {
+    .col-sm {}
+
     .container {
         max-width: 100%;
     }
@@ -210,12 +217,16 @@ body {
 }
 
 @media (min-width: 992px) {
+    .col-md {}
+
     .container {
         max-width: 100%;
     }
 }
 
 @media (min-width: 1200px) {
+    .col-lg {}
+
     .container {
         max-width: 100%;
     }
