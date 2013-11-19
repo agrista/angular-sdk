@@ -200,33 +200,3 @@ body {
     box-shadow: none;
     border-color: #6b6b6b;
 }
-
-@media (max-width: 768px) {
-    .container {
-        max-width: 100%;
-    }
-    .row {
-        margin: 0;
-    }
-}
-
-@media (min-width: 768px) {
-    .container {
-        max-width: 100%;
-    }
-    .row {
-        margin: 0;
-    }
-}
-
-@media (min-width: 992px) {
-    .container {
-        max-width: 100%;
-    }
-}
-
-@media (min-width: 1200px) {
-    .container {
-        max-width: 100%;
-    }
-}
