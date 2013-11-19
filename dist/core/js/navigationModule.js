@@ -7,6 +7,13 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
         var _stack = [];
         var _item = {};
 
+
+        // Handle back button event
+        document.addEventListener('backbutton', function(e) {
+            $rootScope.$broadcast('navigation::back__selected', e);
+            e.preventDefault();
+        }, false);
+
         return {
             go: function (url, mode, pop) {
                 $rootScope.$broadcast('navigation', {
@@ -109,7 +116,7 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
      * @param navigate-primary {function} Function to call on primary button click
      * @param navigate-secondary {function} Function to call on secondary button click
      */
-    module.directive('pageNavbar', function () {
+    module.directive('pageNavbar', ['safeApply', function (safeApply) {
         return {
             restrict: 'E',
             scope: {
@@ -136,8 +143,14 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
                 $scope.showSecondaryButton = function () {
                     return (typeof $attrs.navigateSecondary === 'string' && typeof $scope.secondaryButton === 'object');
                 };
+
+                $scope.$on('navigation::back__selected', function() {
+                    if (typeof $attrs.navigateBack === 'string') {
+                        safeApply($scope.navigateBack);
+                    }
+                });
             }]
         };
-    })
+    }]);
 
 });
