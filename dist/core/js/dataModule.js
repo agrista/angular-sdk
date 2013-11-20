@@ -342,14 +342,6 @@ define(['underscore', 'angular', 'core/utilityModule'], function (underscore) {
                     console.log('_syncLocal');
                     if (typeof slCallback !== 'function') slCallback = _voidCallback;
 
-                    _localDatabase.transaction(function (tx) {
-                        tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], function (tx, res) {
-                            console.log('select success: ' + res.rows.length);
-                        }, function (tx, err) {
-                            console.log('select error: ' + err.message);
-                        });
-                    });
-
                     _deleteAllLocal(uri, function () {
                         _updateLocal(dataItems, function () {
                             _getLocal(uri, slCallback);
