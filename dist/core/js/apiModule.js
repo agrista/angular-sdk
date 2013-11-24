@@ -224,7 +224,7 @@ define(['angular', 'underscore', 'core/utilityModule', 'core/dataModule', 'phone
                                     _getTasks(res[i].id));
                             }
                         }).then(defer.resolve, defer.reject);
-                    }, defer.defer);
+                    }, defer.reject);
                 }));
             }
 

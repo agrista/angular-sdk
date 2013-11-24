@@ -95,7 +95,7 @@ body {
 
 .page-container .page-content .container {
     position: relative;
-    overflow-y: scroll;
+    overflow-y: auto;
     overflow-x: hidden;
     height: 100%;
 }
@@ -160,10 +160,6 @@ body {
     top: 50px;
     z-index: 1020;
     background-color: #a5aba8;
-}
-
-.list-group {
-    margin-bottom: 0;
 }
 
 .sidebar .navbar-text {
