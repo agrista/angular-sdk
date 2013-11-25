@@ -99,6 +99,38 @@ define(['angular', 'angular-animate', 'core/utilityModule'], function () {
         };
     });
 
+    module.directive('pageNotification', ['$timeout', function ($timeout) {
+        return {
+            restrict: 'E',
+            scope: {
+                message: '=',
+                delay: '='
+            },
+            replace: true,
+            template: '<div class="page-notification" ng-show="message"><div class="page-notification-message">{{message}}</div></div>',
+            link: function (scope, element, attrs) {
+                var timer = null;
+
+                scope.delay = scope.delay || 5;
+
+                scope.$watch('message', function(newMsg, oldMsg) {
+                    if (timer !== null) {
+                        $timeout.cancel(timer);
+
+                        timer = null;
+                    }
+
+                    if (newMsg !== undefined) {
+                        timer = $timeout(function() {
+                            scope.message = '';
+                        }, scope.delay * 1000);
+                    }
+                });
+            }
+        };
+    }]);
+
+
     /**
      * Setup the page-navbar directive. Directive injects the page-navbar template and provides a button interface.
      * When no navigate-left or navigate-right function is provided then the button is hidden.

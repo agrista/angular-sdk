@@ -100,6 +100,38 @@ body {
     height: 100%;
 }
 
+.page-notification {
+    position: absolute;
+    width: 100%;
+    bottom: 15px;
+    left: 0;
+    right: 0;
+
+    -webkit-transition: opacity 1000ms ease;
+    -moz-transition: opacity 1000ms ease;
+    -ms-transition: opacity 1000ms ease;
+    -o-transition: opacity 1000ms ease;
+    transition: opacity 1000ms ease;
+}
+
+.page-notification-message {
+    width: 75%;
+    margin: 0 auto;
+    padding: 5px 10px;
+    background-color: #a4a4a4;
+    color: #000000;
+    border-radius: 30px;
+    text-align: center;
+    opacity: 0.75;
+    -webkit-box-shadow: 4px 4px 10px rgba(50, 50, 50, 0.75);
+    -moz-box-shadow: 4px 4px 10px rgba(50, 50, 50, 0.75);
+    box-shadow: 4px 4px 10px rgba(50, 50, 50, 0.75);
+}
+
+.page-notification.ng-hide {
+    opacity: 0;
+}
+
 /**
  * Bootstrap adaption
  */
