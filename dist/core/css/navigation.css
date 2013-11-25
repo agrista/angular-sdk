@@ -172,6 +172,10 @@ body {
  * Buttons
  */
 
+*:focus {
+    outline: 0;
+}
+
 .btn-clear {
     background-color: #5B4723;
     border-color: #755426;

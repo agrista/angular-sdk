@@ -14,7 +14,7 @@ define(['angular'], function () {
                 title: '@'
             },
             link: function (scope, element, attrs) {
-                var sigElement = $compile('<div class="panel-body"></div>')(scope);
+                var sigElement = $compile('<div class="panel-body signature-body"></div>')(scope);
 
                 element.append(sigElement);
 
