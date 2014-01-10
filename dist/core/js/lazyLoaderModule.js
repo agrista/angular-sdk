@@ -1,7 +1,7 @@
 'use strict';
 
 define(['angular'], function () {
-    var module = angular.module('lazyLoaderModule', []);
+    var module = angular.module('ag.core.lazyLoader', []);
 
     module.provider('lazyLoader', ['$controllerProvider', '$compileProvider', '$filterProvider', '$provide',
         function ($controllerProvider, $compileProvider, $filterProvider, $provide) {
