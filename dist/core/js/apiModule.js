@@ -9,665 +9,201 @@ var _errors = {
 /*
  * Syncronization
  */
-coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'assetApiService', 'farmerApiService',
-    function (promiseMonitor, promiseService, taskApiService, documentApiService, photoApiService, customerApiService, assetApiService, farmerApiService) {
+coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi',
+    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi) {
         var _monitor = null;
-        var _promises = null;
 
-        function _uploadParentTasksByType(taskType) {
+        function _getFarmers () {
             return _monitor.add(promiseService.wrap(function (defer) {
-                // Dependency wrapper
-                taskApiService.getTasksByType(taskType).then(function (res) {
+                farmerApi.getFarmers().then(function (farmers) {
                     promiseService
                         .arrayWrap(function (list) {
-                            for (var i = 0; i < res.length; i++) {
-                                var parentTask = res[i];
-
-                                if (parentTask.dirty === true && parentTask.data.status == 'complete') {
-                                    list.push(_uploadChildTasks(parentTask.id));
-                                    list.push(_uploadRestrictedDocument(parentTask.data.object.id, parentTask.data.ass_by));
-                                }
-                            }
-
-                        }).then(function () {
-                            // Resolve dependency list
-                            return promiseService
-                                .arrayWrap(function (list) {
-                                    for (var i = 0; i < res.length; i++) {
-                                        var parentTask = res[i];
-
-                                        if (parentTask.dirty === true) {
-                                            // Always push the changes to parent task, incase the workpackage is split
-                                            list.push(_monitor.add(taskApiService.postTask(parentTask, 'task/:id')));
-                                        }
-                                    }
-                                })
-                        }, defer.reject).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _uploadChildTasks(tid) {
-            return _promises.task[tid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.task[tid] = defer.promise;
-
-                taskApiService.getTasksById(tid).then(function (res) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            for (var i = 0; i < res.length; i++) {
-                                var childTask = res[i].data;
-
-                                list.push(_uploadDocument(childTask.object.id, childTask.ass_by));
-                            }
-                        }).then(function () {
-                            // Resolve dependency list
-                            return promiseService.arrayWrap(function (list) {
-                                for (var i = 0; i < res.length; i++) {
-                                    if (res[i].dirty === true) {
-                                        list.push(_monitor.add(taskApiService.postTask(res[i], 'task/:id')));
-                                    }
-                                }
+                            angular.forEach(farmers, function (farmer) {
+                                list.push(promiseService.wrap(function(promise) {
+                                    _postFarmer(farmer).then(function () {
+                                        promiseService
+                                            .all(_postFarms(farmer.id), _postAssets(farmer.id))
+                                            .then(promise.resolve, promise.reject);
+                                    });
+                                }));
                             });
-                        }, defer.reject).then(defer.resolve, defer.reject);
-                }, defer.reject);
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
             }));
         }
 
-        function _uploadRestrictedDocument(did, taskAssigner) {
-            return _promises.document[did] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.document[did] = defer.promise;
-
-                documentApiService.getDocument(did, taskAssigner).then(function (res) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            for (var i = 0; i < res.length; i++) {
-                                if (res[i].dirty === true) {
-                                    list.push(_monitor.add(documentApiService.postDocument(res[i])));
-                                }
-                            }
-                        }).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _uploadDocument(did, taskAssigner) {
-            return _promises.document[did] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.document[did] = defer.promise;
-
-                documentApiService.getDocument(did).then(function (res) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            for (var i = 0; i < res.length; i++) {
-                                if (res[i].dirty === true) {
-                                    list.push(_monitor.add(documentApiService.postDocument(res[i])));
-                                }
-                            }
-                        }).then(function () {
-                            return promiseService.arrayWrap(function (list) {
-                                for (var i = 0; i < res.length; i++) {
-                                    if (res[i].dirty === true) {
-                                        list.push(promiseService.all([
-                                            _uploadPhotos(res[i].id),
-                                            _uploadCustomer(res[i].data.customerID, taskAssigner)
-                                        ]));
-                                    }
-                                }
-                            });
-                        }, defer.reject).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _uploadPhotos(did) {
-            return _promises.photo[did] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.photo[did] = defer.promise;
-
-                documentApiService.getDocumentPhotos(did).then(function (res) {
-                    promiseService.arrayWrap(function (list) {
-                        for (var i = 0; i < res.length; i++) {
-                            if (res[i].dirty === true) {
-                                list.push(_monitor.add(photoApiService.postPhoto(res[i])));
-                            }
-                        }
-                    }).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _uploadCustomer(cid, taskAssigner) {
-            return _promises.customer[cid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.customer[cid] = defer.promise;
-
-                customerApiService.findCustomer(cid).then(function (res) {
-                    var customer = res[0];
-
-                    promiseService.all([
-                        _uploadCustomerAssets(cid, taskAssigner),
-                        _uploadFarmer(customer.data.farmerID)
-                    ]).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _uploadCustomerAssets(cid, taskAssigner) {
-            return _promises.customerAsset[cid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.customerAsset[cid] = defer.promise;
-
-                customerApiService.getCustomerAssets(cid).then(function (res) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            for (var i = 0; i < res.length; i++) {
-                                if (res[i].dirty === true) {
-                                    list.push(_monitor.add(assetApiService.postAsset(res[i], {assigner: taskAssigner}, 'asset/:id?user=:assigner')));
-                                }
-                            }
-                        }).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _uploadFarmer(fid) {
-            return _promises.farmer[fid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.farmer[fid] = defer.promise;
-
-                farmerApiService.getFarmer(fid).then(function (res) {
-                    if (res.length > 0 && res[0].dirty === true) {
-                        _monitor.add(farmerApiService.postFarmer(res[0])).then(defer.resolve, defer.reject);
-                    } else {
-                        defer.resolve();
-                    }
-                }, defer.reject);
-            }));
-        }
-
-        return function (monitor, options) {
-            if (arguments.length == 1) {
-                options = monitor;
-                monitor = promiseMonitor();
-            }
-
-            _monitor = monitor;
-            _promises = {
-                customer: {},
-                customerAsset: {},
-                document: {},
-                farmer: {},
-                photo: {},
-                task: {}
-            };
-
-            return promiseService.arrayWrap(function (list) {
-                if (options.tasks === true) {
-                    list.push(_uploadParentTasksByType('work-package'));
+        function _postFarmer (farmer) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                if (farmer.dirty === true) {
+                    farmerApi.postFarmer({data: farmer}).then(defer.resolve, defer.reject);
+                } else {
+                    defer.resolve();
                 }
+            }));
+        }
+
+        function _postFarms (fid) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                farmApi.getFarms({id: fid}).then(function (farms) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(farms, function (farm) {
+                                if (farm.dirty === true) {
+                                    list.push(farmApi.postFarm({data: farm}));
+                                }
+
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        function _postAssets (fid) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                assetApi.getAssets({id: fid}).then(function (assets) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(assets, function (asset) {
+                                if (asset.dirty === true) {
+                                    list.push(assetApi.postAsset({data: asset}));
+                                }
+
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        function _getDocuments () {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                documentApi.getDocuments().then(function (documents) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(documents, function (document) {
+                                list.push(promiseService.wrap(function(promise) {
+                                    _postDocument(document).then(function () {
+                                        _postTasks(document.id).then(promise.resolve, promise.reject);
+                                    });
+                                }));
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        function _postDocument (document) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                if (document.dirty === true) {
+                    documentApi.postDocument({data: document}).then(defer.resolve, defer.reject);
+                } else {
+                    defer.resolve();
+                }
+            }));
+        }
+
+        function _postTasks (did) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                taskApi.getTasks({template: 'document/:id/tasks', schema: {id: did}}).then(function (tasks) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(tasks, function (task) {
+                                if (task.dirty === true) {
+                                    list.push(taskApi.postTask({template: 'task/:id', schema: {id: task.id}, data: task}));
+                                }
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        return function (monitor) {
+            _monitor = monitor || promiseMonitor();
+
+            return promiseService.wrap(function(promise) {
+                _getFarmers()
+                    .then(function () {
+                        return _getDocuments();
+                    }).then(promise.resolve, promise.reject);
             });
         }
     }]);
 
-coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'taskApiService', 'documentApiService', 'photoApiService', 'customerApiService', 'cultivarApiService', 'assetApiService', 'farmerApiService',
-    function (promiseMonitor, promiseService, taskApiService, documentApiService, photoApiService, customerApiService, cultivarApiService, assetApiService, farmerApiService) {
+coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentUtility',
+    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentUtility) {
         var _monitor = null;
-        var _promises = null;
-
         var _readOptions = {readLocal: false, readRemote: true};
 
-        function _getTasksByType(taskType) {
+        function _getFarmers() {
             return _monitor.add(promiseService.wrap(function (defer) {
-                taskApiService.getTasksByType(taskType, _readOptions).then(function (res) {
-                    promiseService.arrayWrap(function (list) {
-                        for (var i = 0; i < res.length; i++) {
-                            list.push(
-                                _getRestrictedDocument(res[i].data.object.id, res[i].data.ass_by),
-                                _getTasks(res[i].id));
-                        }
-                    }).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _getTasks(tid) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                taskApiService.getTasksById(tid, _readOptions).then(function (res) {
-                    promiseService.arrayWrap(function (list) {
-                        for (var i = 0; i < res.length; i++) {
-                            list.push(_getDocument(res[i].data.object.id, res[i].data.ass_by));
-                        }
-                    }).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _getRestrictedDocument(did, taskAssigner) {
-            return _promises.document[did] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.document[did] = defer.promise;
-
-                documentApiService.getDocument(did, taskAssigner, _readOptions).then(defer.resolve, defer.reject);
-            }));
-        }
-
-        function _getDocument(did, taskAssigner) {
-            return _promises.document[did] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.document[did] = defer.promise;
-
-                documentApiService.getDocument(did, _readOptions).then(function (res) {
-                    promiseService.arrayWrap(function (list) {
-                        for (var i = 0; i < res.length; i++) {
-                            var document = res[i].data;
-
-                            if (document.customerID !== undefined) {
-                                list.push(
-                                    _getCustomer(document.customerID, taskAssigner),
-                                    _getCustomerAssets(document.customerID, taskAssigner));
-                            }
-
-                            if (document.crop !== undefined) {
-                                list.push(_getCultivars(document.crop));
-                            }
-                        }
-                    }).then(defer.resolve, defer.reject);
-                }, defer.reject);
-            }));
-        }
-
-        function _getCustomers() {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                customerApiService.getCustomers(_readOptions).then(function (res) {
+                farmerApi.getFarmers({options: _readOptions}).then(function (farmers) {
                     return promiseService.arrayWrap(function (list) {
-                        for (var i = 0; i < res.length; i++) {
-                            list.push(
-                                _getCustomerAssets(res[i].data.cid),
-                                _getFarmer(res[i].data.fid));
-                        }
+                        angular.forEach(farmers, function (farmer) {
+                            list.push(_getFarms(farmer.id), _getAssets(farmer.id));
+                        });
                     });
                 }, defer.reject).then(defer.resolve, defer.reject);
             }));
         }
 
-        function _getCustomer(cid, assigner) {
-            return _promises.customer[cid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.customer[cid] = defer.promise;
-
-                customerApiService.getCustomer(cid, assigner, _readOptions).then(function (res) {
-                    return _getFarmer(res[0].data.farmerID);
-                }, defer.reject).then(defer.resolve, defer.reject);
+        function _getAssets(fid) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                assetApi.getAssets({id: fid, options: _readOptions}).then(defer.resolve, defer.reject);
             }));
         }
 
-        function _getCustomerAssets(cid, assigner) {
-            return _promises.customerAsset[cid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.customerAsset[cid] = defer.promise;
-
-                if (assigner !== undefined) {
-                    customerApiService.getCustomerAssets(cid, assigner, _readOptions).then(defer.resolve, defer.reject);
-                } else {
-                    customerApiService.getCustomerAssets(cid, _readOptions).then(defer.resolve, defer.reject);
-                }
+        function _getFarms(fid) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                farmApi.getFarms({id: fid, options: _readOptions}).then(defer.resolve, defer.reject);
             }));
         }
 
-        function _getCultivars(crop) {
-            return _promises.cultivar[crop] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.cultivar[crop] = defer.promise;
-
-                cultivarApiService.getCultivars(crop, _readOptions).then(defer.resolve, defer.reject);
+        function _getDocuments() {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                documentUtility.api
+                    .getDocuments({options: _readOptions})
+                    .then(function (documents) {
+                        return promiseService.arrayWrap(function (promises) {
+                            angular.forEach(documents, function (document) {
+                                promises.push(documentUtility.hydration.dehydrate(document));
+                            })
+                        });
+                    }, defer.reject)
+                    .then(defer.resolve, defer.reject);
             }));
         }
 
-        function _getAsset(aid) {
-            return _promises.asset[aid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.asset[aid] = defer.promise;
+        return function (monitor) {
+            _monitor = monitor || promiseMonitor();
 
-                assetApiService.getAsset(aid, _readOptions).then(defer.resolve, defer.reject);
-            }));
-        }
-
-        function _getFarmer(fid) {
-            return _promises.farmer[fid] || _monitor.add(promiseService.wrap(function (defer) {
-                _promises.farmer[fid] = defer.promise;
-
-                farmerApiService.getFarmer(fid, _readOptions).then(defer.resolve, defer.reject);
-            }));
-        }
-
-        return function (monitor, options) {
-            if (arguments.length == 1) {
-                options = monitor;
-                monitor = promiseMonitor();
-            }
-
-            _monitor = monitor;
-            _promises = {
-                customer: {},
-                customerAsset: {},
-                document: {},
-                cultivar: {},
-                farmer: {},
-                asset: {}
-            };
-
-            return promiseService.arrayWrap(function (list) {
-                if (options.tasks === true) {
-                    list.push(_getTasksByType('work-package'));
-                }
-
-                if (options.customers === true) {
-                    list.push(_getCustomers());
-                }
+            return promiseService.wrap(function(promise) {
+                _getFarmers()
+                    .then(function () {
+                        return _getDocuments();
+                    }).then(promise.resolve, promise.reject);
             });
-        }
+        };
     }]);
 
-coreApiApp.factory('dataSyncronizationService', ['promiseMonitor', 'promiseService', 'dataUploadService', 'dataDownloadService', function (promiseMonitor, promiseService, dataUploadService, dataDownloadService) {
+coreApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 'dataUploadService', 'dataDownloadService', function (promiseMonitor, promiseService, dataUploadService, dataDownloadService) {
     var _monitor = null;
-    var _inProgress = false;
 
-    return function (options, callback) {
-        if (typeof options === 'function') {
-            callback = options;
-            options = {
-                customers: true,
-                tasks: true
-            }
-        }
+    return function (callback) {
+        _monitor = promiseMonitor(callback);
 
-        if (_inProgress === false) {
-            _inProgress = true;
-
-            _monitor = promiseMonitor(function (data) {
-                if (data.type === 'complete') {
-                    _inProgress = false;
-                }
-
-                callback(data);
-            });
-
-            _monitor.add(promiseService.wrap(function (promise) {
-                dataUploadService(_monitor, options).then(function () {
-                    return dataDownloadService(_monitor, options);
-                }, promise.reject).then(promise.resolve, promise.reject);
-            }));
-        }
-    }
+        _monitor.add(promiseService.wrap(function (promise) {
+            dataUploadService(_monitor)
+                .then(function () {
+                    return dataDownloadService(_monitor);
+                }, promise.reject)
+                .then(promise.resolve, promise.reject);
+        }));
+    };
 }]);
-
-
-/*
- * Dependency Resolving
- */
-coreApiApp.factory('dataDependencyService', ['promiseService', 'taskApiService', 'documentApiService', 'customerApiService', 'cultivarApiService', 'farmerApiService',
-    function (promiseService, taskApiService, documentApiService, customerApiService, cultivarApiService, farmerApiService) {
-
-        var _getIncludedDependencies = function (include, defaults) {
-            include = include || {};
-
-            return _.defaults(include, defaults);
-        };
-
-        var _resolveTasksByType = function (type, include) {
-            return promiseService.wrap(function (defer) {
-                taskApiService.getTasksByType(type).then(function (res) {
-                    var data = {
-                        parents: res
-                    };
-
-                    if (include.children) {
-                        promiseService
-                            .arrayWrap(function (list) {
-                                for (var i = 0; i < data.parents.length; i++) {
-                                    list.push(_resolveTasksById(data.parents[i].id, include));
-                                }
-                            }).then(function (tasks) {
-                                for (var i = 0; i < data.parents.length; i++) {
-                                    data.parents[i].dependencies = tasks[i];
-                                }
-
-                                defer.resolve(data);
-                            }, defer.reject);
-                    } else {
-                        defer.resolve(data);
-                    }
-                }, defer.reject);
-            });
-        };
-
-        var _resolveTasksById = function (id, include) {
-            return promiseService.wrap(function (defer) {
-                taskApiService.getTasksById(id).then(function (res) {
-                    var data = {
-                        children: res
-                    };
-
-                    if (include.documents || include.document) {
-                        if (include.document && include.documents !== true) {
-                            _resolveDocument(data.children[0].data.object.id, include).then(function (document) {
-                                defer.resolve(_.extend(data, document));
-                            }, defer.reject);
-                        } else {
-                            promiseService
-                                .arrayWrap(function (list) {
-                                    for (var i = 0; i < data.children.length; i++) {
-                                        list.push(_resolveDocument(data.children[i].data.object.id, include));
-                                    }
-                                }).then(function (documents) {
-                                    for (var i = 0; i < data.children.length; i++) {
-                                        data.children[i].dependencies = documents[i];
-                                    }
-
-                                    defer.resolve(data);
-                                }, defer.reject);
-                        }
-                    } else {
-                        defer.resolve(data);
-                    }
-                }, defer.reject);
-            });
-        };
-
-        var _resolveDocument = function (id, include) {
-            return promiseService.wrap(function (defer) {
-                documentApiService.getDocument(id).then(function (res) {
-                    var data = {
-                        document: res[0]
-                    };
-
-                    if (include.customer || include.cultivar) {
-                        data.document.dependencies = {};
-
-                        promiseService
-                            .arrayWrap(function (list) {
-                                if (include.customer) {
-                                    list.push(_resolveCustomer(data.document.data.customerID, include));
-                                }
-
-                                if (include.cultivar) {
-                                    list.push(_resolveCultivar(data.document.data.crop, include));
-                                }
-
-                                if (include.photos) {
-                                    list.push(_resolvePhotos(id, include));
-                                }
-                            }).then(function (res) {
-                                for (var i = 0; i < res.length; i++) {
-                                    _.extend(data.document.dependencies, res[i]);
-                                }
-
-                                defer.resolve(data);
-                            }, defer.reject);
-                    } else {
-                        defer.resolve(data);
-                    }
-                }, defer.reject);
-            });
-        };
-
-        function _resolvePhotos(id, include) {
-            return promiseService.wrap(function (defer) {
-                documentApiService.getDocumentPhotos(id).then(function (res) {
-                    var data = {
-                        photos: res
-                    };
-
-                    defer.resolve(data);
-                }, defer.reject);
-            });
-        }
-
-        function _resolveAllCustomers(include) {
-            return promiseService.wrap(function (defer) {
-                customerApiService.getCustomers().then(function (res) {
-                    var data = {
-                        customers: res
-                    };
-
-                    promiseService
-                        .arrayWrap(function (list) {
-                            for (var i = 0; i < data.customers.length; i++) {
-                                list.push(_processCustomer(data.customers[i], include));
-                            }
-                        }).then(function () {
-                            defer.resolve(data);
-                        }, defer.reject);
-                }, defer.reject);
-            });
-        }
-
-        function _processCustomer(customer, include) {
-            return promiseService.wrap(function (processDefer) {
-                promiseService
-                    .arrayWrap(function (list) {
-                        if (include.assets) {
-                            list.push(_resolveCustomerAssets(customer.id));
-                        }
-
-                        if (include.assets) {
-                            list.push(_resolveFarmer(customer.data.fid || customer.data.farmerID));
-                        }
-                    }).then(function (dependencies) {
-                        for (var i = 0; i < dependencies.length; i++) {
-                            customer.dependencies = _.extend(customer.dependencies || {}, dependencies[i]);
-                        }
-
-                        processDefer.resolve();
-                    }, processDefer.reject);
-            });
-        }
-
-        function _resolveCustomer(apiService, id, include) {
-            if (typeof apiService !== 'function') {
-                include = id;
-                id = apiService;
-                apiService = customerApiService.findCustomer;
-            }
-
-            return promiseService.wrap(function (defer) {
-                apiService(id).then(function (res) {
-                    var data = {
-                        customer: res[0]
-                    };
-
-                    _processCustomer(data.customer, include).then(function () {
-                        defer.resolve(data);
-                    })
-                }, defer.reject);
-            });
-        }
-
-        function _resolveCustomerAssets(id, include) {
-            return promiseService.wrap(function (defer) {
-                customerApiService.getCustomerAssets(id).then(function (res) {
-                    var data = {
-                        assets: res
-                    };
-
-                    defer.resolve(data);
-                }, defer.reject);
-            });
-        }
-
-        function _resolveFarmer(id, include) {
-            return promiseService.wrap(function (defer) {
-                farmerApiService.getFarmer(id).then(function (res) {
-                    var data = {
-                        farmer: res[0]
-                    };
-
-                    defer.resolve(data);
-                }, defer.reject);
-            });
-        }
-
-        function _resolveCultivar(id, include) {
-            return promiseService.wrap(function (defer) {
-                cultivarApiService.findCultivars(id).then(function (res) {
-                    var data = {
-                        cultivar: undefined
-                    };
-
-                    for (var i = 0; i < res.length; i++) {
-                        var provider = res[i].data;
-
-                        if (provider[crop] !== undefined) {
-                            data.cultivar = provider[crop];
-                            break;
-                        }
-                    }
-
-                    defer.resolve(data);
-                }, defer.reject);
-            });
-        }
-
-        return {
-            resolveTasksByType: function (type, include) {
-                return _resolveTasksByType(type, _getIncludedDependencies(include, {
-                    children: true,
-                    document: true,
-                    cultivar: true,
-                    customer: true,
-                    farmer: true
-                }));
-            },
-            resolveTasksById: function (id, include) {
-                return _resolveTasksById(id, _getIncludedDependencies(include, {
-                    documents: true,
-                    customer: true,
-                    farmer: true
-                }));
-            },
-            resolveDocument: function (id, include) {
-                return  _resolveDocument(id, _getIncludedDependencies(include, {
-                    cultivar: true,
-                    customer: true,
-                    farmer: true,
-                    photos: true
-                }));
-            },
-            resolvePhotos: function (id, include) {
-                return  _resolvePhotos(id, _getIncludedDependencies(include, {}));
-            },
-            resolveAllCustomers: function (include) {
-                return _resolveAllCustomers(_getIncludedDependencies(include, {}));
-            },
-            resolveCustomersById: function (id, include) {
-                return _resolveCustomer(customerApiService.findCustomers, id, _getIncludedDependencies(include, {
-                    assets: true,
-                    farmer: true
-                }));
-            },
-            resolveCustomer: function (id, include) {
-                return  _resolveCustomer(id, _getIncludedDependencies(include, {
-                    assets: true,
-                    farmer: true
-                }));
-            },
-            resolveFarmer: function (id, include) {
-                return  _resolveFarmer(id, _getIncludedDependencies(include, {}));
-            },
-            resolveCultivar: function (id, include) {
-                return  _resolveCultivar(id, _getIncludedDependencies(include, {}));
-            }
-        };
-    }]);
 
 
 /*
@@ -690,8 +226,10 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
             /**
              * @name getItems
              * @param req {Object}
-             * @param req.id {Number} Optional
+             * @param req.template {String} Optional uri template
+             * @param req.schema {Object} Optional schema for template
              * @param req.search {String} Optional
+             * @param req.id {Number} Optional
              * @param req.options {Object} Optional
              * @returns {Promise}
              */
@@ -700,7 +238,9 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
 
                 return promiseService.wrap(function (promise) {
                     _itemStore.transaction(function (tx) {
-                        if (req.search) {
+                        if (req.template) {
+                            tx.getItems({template: req.template, schema: req.schema, options: req.options, callback: promise});
+                        } else if (req.search) {
                             req.options.readLocal = false;
                             req.options.readRemote = true;
 
@@ -719,6 +259,7 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
              * @param req.template {String} Optional uri template
              * @param req.schema {Object} Optional schema for template
              * @param req.data {Object} Required document data
+             * @param req.options {Object} Optional
              * @returns {Promise}
              */
             createItem: function (req) {
@@ -726,7 +267,7 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
 
                 return promiseService.wrap(function (promise) {
                     _itemStore.transaction(function (tx) {
-                        tx.createItems({template: req.template, schema: req.schema, data: req.data, callback: promise});
+                        tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options, callback: promise});
                     });
                 });
             },
@@ -759,7 +300,7 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
 
                 return promiseService.wrap(function (promise) {
                     _itemStore.transaction(function (tx) {
-                        tx.getItems({key: req.key, column: req.column, callback: promise});
+                        tx.findItems({key: req.key, column: req.column, callback: promise});
                     });
                 });
             }, /**
@@ -925,57 +466,59 @@ coreApiApp.factory('assetApi', ['api', function (api) {
 /*
  * Document Handlers
  */
-coreApiApp.factory('documentHydration', ['promiseService', 'farmerApi', 'taskApi', function (promiseService, farmerApi, taskApi) {
+coreApiApp.factory('documentUtility', ['promiseService', 'documentApi', 'farmerApi', 'taskApi', function (promiseService, documentApi, farmerApi, taskApi) {
     return {
-        /**
-         * @name Resolve all related dependencies to document
-         * @param document
-         */
-        hydrate: function (document) {
-            return promiseService.wrap(function (promise) {
-                promiseService
-                    .objectWrap(function (promises) {
-                        if (document.data.farmer_id) {
-                            promises.farmer = farmerApi.getFarmer({id: document.data.farmer_id});
-                        }
-                    })
-                    .then(function (result) {
-                        promise.resolve(_.extend({document: document}, result));
-                    }, promise.reject);
-            });
+        hydration: {
+            /**
+             * @name Resolve all related dependencies to document
+             * @param document
+             */
+            hydrate: function (document) {
+                return promiseService.wrap(function (promise) {
+                    promiseService
+                        .objectWrap(function (promises) {
+                            if (document.data.farmer_id) {
+                                promises.farmer = farmerApi.findFarmer({key: document.data.farmer_id});
+                            }
+
+                            promises.tasks = taskApi.getTasks({template: 'document/:id/tasks', schema: {id: document.id}});
+                        })
+                        .then(function (result) {
+                            promise.resolve(_.extend(document, result));
+                        }, promise.reject);
+                });
+            },
+            dehydrate: function (document) {
+                return promiseService.wrap(function (promise) {
+                    promiseService
+                        .arrayWrap(function (promises) {
+                            if (document.data.farmer_id && document.data.farmer) {
+                                promises.push(farmerApi.createFarmer({data: document.data.farmer, options: {replace: false, dirty: false}}));
+                            }
+
+                            if (document.data.tasks) {
+                                angular.forEach(document.data.tasks, function (task) {
+                                    promises.push(taskApi.createTask({template: 'document/:id/tasks', schema: {id: document.id}, data: task, options: {replace: false, dirty: false}}));
+                                });
+                            }
+                        })
+                        .then(function () {
+                            delete document.data.farmer;
+                            delete document.data.tasks;
+
+                            documentApi.updateDocument({data: document, options: {dirty: false}}).then(function () {
+                                promise.resolve(document);
+                            }, promise.reject);
+                        }, promise.reject);
+                });
+            }
         },
-        dehydrate: function (data) {
-            return promiseService.wrap(function (promise) {
-                promiseService
-                    .arrayWrap(function (promises) {
-                        if (data.farmer_id && data.farmer) {
-                            promises.push(farmerApi.createFarmer({data: data.farmer}));
-
-                            delete data.farmer;
-                        }
-
-                        if (data.tasks) {
-                            angular.forEach(data.tasks, function (task) {
-                                promises.push(taskApi.createTask({data: task}));
-                            });
-
-                            delete data.tasks;
-                        }
-                    })
-                    .then(function () {
-                        promise.resolve(data);
-                    }, promise.reject);
-            });
-        }
-    }
+        api: documentApi
+    };
 }]);
 
-coreApiApp.factory('documentApi', ['api', 'documentHydration', function (api, documentHydration) {
-    var documentStore = api({plural: 'documents', singular: 'document'}, {
-        events: {
-            ongetremote: documentHydration.dehydrate
-        }
-    });
+coreApiApp.factory('documentApi', ['api', function (api) {
+    var documentStore = api({plural: 'documents', singular: 'document'});
 
     return {
         getDocuments: documentStore.getItems,
@@ -1000,6 +543,7 @@ coreApiApp.factory('activityApi', ['api', function (api) {
     };
 }]);
 
+/*
 coreApiApp.factory('photoApiService', ['$http', 'promiseService', 'dataStore', 'fileStorageService', 'safeApply', function ($http, promiseService, dataStore, fileStorageService, safeApply) {
     var photoStore = dataStore('photo', {apiTemplate: 'photo/:id'});
 
@@ -1096,35 +640,4 @@ coreApiApp.factory('photoApiService', ['$http', 'promiseService', 'dataStore', '
         }
     };
 }]);
-
-coreApiApp.factory('cultivarApiService', ['promiseService', 'dataStore', function (promiseService, dataStore) {
-    var cultivarsStore = dataStore('cultivars', {apiTemplate: 'cultivars/:crop'});
-
-    return {
-        getCultivars: function (crop, options, callback) {
-            if (typeof options == 'function') {
-                callback = options;
-                options = {};
-            } else if (arguments.length == 1) {
-                options = {};
-            }
-
-            return promiseService.wrap(function (promise) {
-                var response = callback || promise;
-
-                cultivarsStore.transaction(function (tx) {
-                    tx.getItems({schema: {crop: crop}, options: options, callback: response});
-                });
-            });
-        },
-        findCultivars: function (crop, callback) {
-            return promiseService.wrap(function (promise) {
-                var response = callback || promise;
-
-                cultivarsStore.transaction(function (tx) {
-                    tx.findItems({key: crop, column: 'data', callback: response});
-                });
-            });
-        }
-    };
-}]);
+*/

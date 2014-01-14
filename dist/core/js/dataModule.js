@@ -37,33 +37,21 @@ coreDataApp.provider('dataPurge', function () {
     }];
 });
 
-
 /**
  * @name dataStore
- * @example
-
- var testStore = dataStore('test', {apiTemplate: 'test/:id'});
-
- ...
-
- testStore.transaction(function(tx) {
-        tx.read({id: '123xyz'}, function(res, err) {
-            // Handle read data
-        });
-     });
-
  */
 coreDataApp.provider('dataStore', function () {
     var _defaultOptions = {
         url: '/api',
         pageLimit: 10,
-        dbName: 'appDatabase',
+        dbName: undefined,
         readLocal: true,
         readRemote: true
     };
 
     var _errors = {
         NoStoreParams: {code: 'NoStoreParams', message: 'No DataStore parameters defined'},
+        NoConfigDBNameParams: {code: 'NoConfigDBNameParams', message: 'No Config database name defined'},
         NoConfigAPIParams: {code: 'NoConfigAPIParams', message: 'No Config API parameters defined'},
         NoConfigPagingParams: {code: 'NoConfigPagingParams', message: 'No Config Paging parameters defined'},
         NoReadParams: {code: 'NoReadParams', message: 'No DataRead parameters defined'},
@@ -89,7 +77,7 @@ coreDataApp.provider('dataStore', function () {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$q', '$http', '$rootScope', 'objectId', 'safeApply', function ($q, $http, $rootScope, objectId, safeApply) {
+    this.$get = ['$q', '$http', '$rootScope', 'safeApply', function ($q, $http, $rootScope, safeApply) {
 
         /**
          * @name _initializeDatabase
@@ -144,6 +132,10 @@ coreDataApp.provider('dataStore', function () {
                 throw new Error(_errors.NoStoreParams.msg);
             }
 
+            if (_defaultOptions.dbName === undefined) {
+                throw new Error(_errors.NoConfigDBNameParams.msg);
+            }
+
             /**
              * Private variables
              * @private
@@ -165,7 +157,7 @@ coreDataApp.provider('dataStore', function () {
             var _config = _.defaults((config || {}), {
                 apiTemplate: undefined,
                 paging: undefined,
-                indexerProperty: '_id',
+                indexerProperty: 'id',
 
                 readLocal: _defaultOptions.readLocal,
                 readRemote: _defaultOptions.readRemote
@@ -186,7 +178,7 @@ coreDataApp.provider('dataStore', function () {
                 var asyncMon = new AsyncMonitor(2, itCallback);
 
                 _localDatabase.transaction(function (tx) {
-                    tx.executeSql('CREATE TABLE IF NOT EXISTS ' + name + ' (id TEXT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], asyncMon.done, _errorCallback);
+                    tx.executeSql('CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], asyncMon.done, _errorCallback);
                     tx.executeSql('CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [], asyncMon.done, _errorCallback);
                 });
             }
@@ -262,7 +254,7 @@ coreDataApp.provider('dataStore', function () {
                     console.warn('Configured indexer property not defined');
                 }
 
-                return (item[_config.indexerProperty] || item._id || item.id || id);
+                return (item[_config.indexerProperty] || item.id || id);
             }
 
             function _createDataItem(item) {
@@ -353,8 +345,10 @@ coreDataApp.provider('dataStore', function () {
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 if (dataItems.length > 0) {
-
-                    options = _.defaults((options || {}), {force: false});
+                    options = _.defaults(options || {}, {
+                        replace: true,
+                        force: false
+                    });
 
                     var asyncMon = new AsyncMonitor(dataItems.length, function () {
                         ulCallback(dataItems);
@@ -367,10 +361,14 @@ coreDataApp.provider('dataStore', function () {
 
                             tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
                                 // Insert failed
-                                if (item.dirty === true || item.local === true || options.force) {
-                                    tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                if (options.replace === true) {
+                                    if (item.dirty === true || item.local === true || options.force) {
+                                        tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                    } else {
+                                        tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                    }
                                 } else {
-                                    tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
+                                    asyncMon.done();
                                 }
                             });
                         }
@@ -600,7 +598,7 @@ coreDataApp.provider('dataStore', function () {
                         var item = dataItems[i];
 
                         if (item.local === false) {
-                            _makeDelete(item, _parseRequest(writeUri, _.extend(writeSchema, {id: item.id})));
+                            _makeDelete(item, _parseRequest(writeUri, _.defaults(writeSchema, {id: item.id})));
                         } else {
                             asyncMon.done();
                         }
@@ -628,7 +626,7 @@ coreDataApp.provider('dataStore', function () {
                         size--;
 
                         if (size == 0 && callback) {
-                            callback();
+                            callback.apply(this, arguments);
                         }
                     }
                 }
@@ -687,7 +685,11 @@ coreDataApp.provider('dataStore', function () {
                             template: _config.apiTemplate,
                             schema: {},
                             data: [],
-                            local: true,
+                            options: {
+                                replace: true,
+                                force: false,
+                                dirty: true,
+                            },
                             callback: angular.noop
                         });
 
@@ -700,15 +702,15 @@ coreDataApp.provider('dataStore', function () {
                         });
 
                         angular.forEach(request.data, function (data) {
-                            var id = _getItemIndex(data, objectId().toBase64String());
+                            var id = _getItemIndex(data, null);
 
                             _updateLocal({
                                 id: id,
-                                uri: _parseRequest(request.template, _.extend(request.schema, {id: id})),
+                                uri: _parseRequest(request.template, _.defaults(request.schema, {id: id})),
                                 data: data,
-                                dirty: request.local,
-                                local: request.local
-                            }, asyncMon.done);
+                                dirty: request.options.dirty,
+                                local: request.options.dirty
+                            }, request.options, asyncMon.done);
                         });
                     },
                     getItems: function (req) {
@@ -763,7 +765,9 @@ coreDataApp.provider('dataStore', function () {
                     updateItems: function (req) {
                         var request = _.defaults(req || {}, {
                             data: [],
-                            options: {},
+                            options: {
+                                dirty: true
+                            },
                             callback: angular.noop
                         });
 
@@ -771,9 +775,11 @@ coreDataApp.provider('dataStore', function () {
                             request.data = [request.data];
                         }
 
-                        angular.forEach(request.data, function (item) {
-                            item.dirty = true;
-                        });
+                        if (request.options.dirty) {
+                            angular.forEach(request.data, function (item) {
+                                item.dirty = true;
+                            });
+                        }
 
                         _updateLocal(request.data, request.options, function (res, err) {
                             _responseHandler(request.callback, res, err);

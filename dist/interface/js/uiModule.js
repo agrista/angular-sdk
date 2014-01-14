@@ -122,3 +122,23 @@ interfaceUiApp.directive('preValidate', function () {
         }
     };
 });
+
+interfaceUiApp.filter('checkmark', function () {
+    return function (input) {
+        return input === true ? '\u2713' : '\u2718';
+    };
+});
+
+interfaceUiApp.filter('progress', function () {
+    return function (input) {
+        if (input instanceof Array === false) return 0;
+
+        var completeCount = 0;
+
+        for (var i = 0; i < input.length; i++) {
+            if (input[i].complete) completeCount++;
+        }
+
+        return (completeCount / input.length) * 100;
+    };
+});

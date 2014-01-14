@@ -281,16 +281,22 @@ coreUtilitiesApp.factory('promiseMonitor', function () {
 });
 
 coreUtilitiesApp.factory('dataMapService', [function () {
-    return function (items, mapping, excludeId) {
+    return function (items, mapping, options) {
         var mappedItems = [];
 
         if (items instanceof Array === false) {
             items = (items !== undefined ? [items] : []);
         }
 
+        options = options || {};
+
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
             var mappedItem;
+
+            if (options.property && item[options.property]) {
+                item = item[options.property];
+            }
 
             if (typeof mapping === 'function') {
                 mappedItem = mapping(item);
@@ -307,7 +313,7 @@ coreUtilitiesApp.factory('dataMapService', [function () {
             if (mappedItem instanceof Array) {
                 mappedItems = mappedItems.concat(mappedItem);
             } else if (typeof mappedItem === 'object') {
-                if (excludeId !== true) {
+                if (options.excludeId !== true) {
                     mappedItem.id = mappedItem.id || item.id;
                 }
 
