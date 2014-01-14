@@ -1,4 +1,4 @@
-var interfaceMapboxApp = angular.module('ag.interface.mapbox', []);
+var interfaceMapboxApp = angular.module('ag.interface.mapbox', ['ag.phone.geolocation']);
 
 interfaceMapboxApp.factory('mapboxService', ['$rootScope', function ($rootScope) {
     var _view = undefined;
