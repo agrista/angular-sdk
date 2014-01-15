@@ -216,7 +216,7 @@ coreUtilitiesApp.factory('objectId', function () {
     };
 });
 
-coreUtilitiesApp.factory('promiseMonitor', function () {
+coreUtilitiesApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
     function PromiseMonitor(callback) {
         if (!(this instanceof PromiseMonitor)) {
             return new PromiseMonitor(callback);
@@ -236,11 +236,13 @@ coreUtilitiesApp.factory('promiseMonitor', function () {
 
             console.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
 
-            if (_stats.complete == _stats.total) {
-                callback({type: 'complete', percent: _stats.percent, stats: _stats});
-            } else {
-                callback({type: 'progress', percent: _stats.percent, stats: _stats});
-            }
+            safeApply(function () {
+                if (_stats.complete == _stats.total) {
+                    callback({type: 'complete', percent: _stats.percent, stats: _stats});
+                } else {
+                    callback({type: 'progress', percent: _stats.percent, stats: _stats});
+                }
+            });
         };
 
         return {
@@ -266,7 +268,10 @@ coreUtilitiesApp.factory('promiseMonitor', function () {
                 }, function (err) {
                     _stats.rejected++;
 
-                    callback({type: 'error'}, err);
+                    safeApply(function () {
+                        callback({type: 'error'}, err);
+                    });
+
                     _completePromise();
                 });
 
@@ -278,7 +283,7 @@ coreUtilitiesApp.factory('promiseMonitor', function () {
     return function (callback) {
         return new PromiseMonitor(callback);
     }
-});
+}]);
 
 coreUtilitiesApp.factory('dataMapService', [function () {
     return function (items, mapping, options) {

@@ -1,6 +1,6 @@
 var interfaceNavigationApp = angular.module('ag.interface.navigation', ['ngAnimate', 'ag.core.utilities']);
 
-interfaceNavigationApp.service('navigationService', ['$rootScope', '$location', function ($rootScope, $location) {
+interfaceNavigationApp.service('navigationService', ['$rootScope', '$location', 'safeApply', function ($rootScope, $location, safeApply) {
     var _stack = [];
     var _item = {};
 
@@ -13,13 +13,15 @@ interfaceNavigationApp.service('navigationService', ['$rootScope', '$location', 
 
     return {
         go: function (url, mode, pop) {
-            $rootScope.$broadcast('navigation', {
-                url: url,
-                mode: mode,
-                push: !pop
-            });
+            safeApply(function () {
+                $rootScope.$broadcast('navigation', {
+                    url: url,
+                    mode: mode,
+                    push: !pop
+                });
 
-            $location.url(url);
+                $location.url(url);
+            });
         },
         push: function (url, state, mode) {
             if (typeof state !== 'object') {
@@ -40,8 +42,10 @@ interfaceNavigationApp.service('navigationService', ['$rootScope', '$location', 
                 push: true
             };
 
-            $rootScope.$broadcast('navigation', _item);
-            $location.url(_item.url);
+            safeApply(function () {
+                $rootScope.$broadcast('navigation', _item);
+                $location.url(_item.url);
+            });
         },
         pop: function (number) {
             number = number || 1;
@@ -52,8 +56,10 @@ interfaceNavigationApp.service('navigationService', ['$rootScope', '$location', 
                 number--;
             }
 
-            $rootScope.$broadcast('navigation', _item);
-            $location.url(_item.url);
+            safeApply(function () {
+                $rootScope.$broadcast('navigation', _item);
+                $location.url(_item.url);
+            });
         },
         state: function () {
             return _item.state;

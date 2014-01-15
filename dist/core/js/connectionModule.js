@@ -1,35 +1,33 @@
 var coreConnectionApp = angular.module('ag.core.connection', []);
 
-coreConnectionApp.run(['$rootScope', 'authorization', 'navigationService', function ($rootScope, authorization, navigationService) {
-    $rootScope.$on('$routeChangeStart', function (event, next, current) {
+/**
+ * @name routeResolverProvider / routeResolver
+ * @description Provider to define and resolve the data required for a route
+ */
+coreConnectionApp.provider('routeResolver', function () {
+    var _routeTable = {};
 
-        if (next.$$route !== undefined && next.$$route.authorization !== undefined) {
-            if (!authorization.isAllowed(next.$$route.authorization)) {
-                if (!authorization.isLoggedIn()) {
-                    navigationService.go('/login', 'modal');
-                } else {
-                    navigationService.go('/', 'slide');
-                }
+    this.when = function (routePath, resolverInjection) {
+        _routeTable[routePath] = resolverInjection;
+
+        return this;
+    };
+
+    this.$get = ['$route', '$injector', function ($route, $injector) {
+        return {
+            getData: function () {
+                var resolverInjection = ($route.current && $route.current.$$route ? _routeTable[$route.current.$$route.originalPath] : undefined);
+
+                return (resolverInjection ? $injector.invoke(resolverInjection) : undefined);
             }
         }
-    });
-}]);
+    }];
+});
 
-coreConnectionApp.factory('authorizationInterceptor', ['$q', 'navigationService', function ($q, navigationService) {
-    return function (promise) {
-        return promise.then(function (res) {
-            return res;
-        }, function (err) {
-            if (err.status === 401) {
-                console.warn('Not authorized');
-                navigationService.go('/login', 'modal');
-            }
-
-            return $q.reject(err);
-        });
-    }
-}]);
-
+/**
+ * @name configurationProvider / configuration
+ * @description Provider to define the configuration of servers
+ */
 coreConnectionApp.provider('configuration', [function() {
     var _version = '';
     var _host = 'alpha';
@@ -66,6 +64,39 @@ coreConnectionApp.provider('configuration', [function() {
                 }
             }
         }
+    }
+}]);
+
+/*
+ * Authorization
+ */
+coreConnectionApp.run(['$rootScope', 'authorization', 'navigationService', function ($rootScope, authorization, navigationService) {
+    $rootScope.$on('$routeChangeStart', function (event, next, current) {
+
+        if (next.$$route !== undefined && next.$$route.authorization !== undefined) {
+            if (!authorization.isAllowed(next.$$route.authorization)) {
+                if (!authorization.isLoggedIn()) {
+                    navigationService.go('/login', 'modal');
+                } else {
+                    navigationService.go('/', 'slide');
+                }
+            }
+        }
+    });
+}]);
+
+coreConnectionApp.factory('authorizationInterceptor', ['$q', 'navigationService', function ($q, navigationService) {
+    return function (promise) {
+        return promise.then(function (res) {
+            return res;
+        }, function (err) {
+            if (err.status === 401) {
+                console.warn('Not authorized');
+                navigationService.go('/login', 'modal');
+            }
+
+            return $q.reject(err);
+        });
     }
 }]);
 

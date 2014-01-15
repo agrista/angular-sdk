@@ -434,6 +434,59 @@ coreApiApp.factory('farmerApi', ['api', function (api) {
     };
 }]);
 
+/*
+ * Farmer Handlers
+ */
+coreApiApp.factory('farmerUtility', ['promiseService', 'farmerApi', 'farmApi', 'assetApi', function (promiseService, farmerApi, farmApi, assetApi) {
+    return {
+        hydration: {
+            /**
+             * @name Resolve all related dependencies to farmer
+             * @param farmer
+             */
+            hydrate: function (farmer) {
+                return promiseService.wrap(function (promise) {
+                    promiseService
+                        .objectWrap(function (promises) {
+                            promises.farms = farmApi.getFarms({id: farmer.id});
+                            promises.assets = assetApi.getAssets({id: farmer.id});
+                        })
+                        .then(function (result) {
+                            promise.resolve(_.extend(farmer, result));
+                        }, promise.reject);
+                });
+            },
+            dehydrate: function (farmer) {
+                return promiseService.wrap(function (promise) {
+                    promiseService
+                        .arrayWrap(function (promises) {
+                            if (farmer.data.farms) {
+                                angular.forEach(farmer.data.farms, function (farm) {
+                                    promises.push(farmApi.createFarm({data: farm, options: {replace: false, dirty: false}}));
+                                });
+                            }
+
+                            if (farmer.data.assets) {
+                                angular.forEach(farmer.data.assets, function (asset) {
+                                    promises.push(assetApi.createAsset({data: asset, options: {replace: false, dirty: false}}));
+                                });
+                            }
+                        })
+                        .then(function () {
+                            delete farmer.data.farms;
+                            delete farmer.data.assets;
+
+                            farmerApi.updateFarmer({data: farmer, options: {dirty: false}}).then(function () {
+                                promise.resolve(farmer);
+                            }, promise.reject);
+                        }, promise.reject);
+                });
+            }
+        },
+        api: farmerApi
+    };
+}]);
+
 coreApiApp.factory('farmApi', ['api', function (api) {
     var farmApi = api({plural: 'farms', singular: 'farm'});
 
