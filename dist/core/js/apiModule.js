@@ -22,7 +22,7 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
                                 list.push(promiseService.wrap(function(promise) {
                                     _postFarmer(farmer).then(function () {
                                         promiseService
-                                            .all(_postFarms(farmer.id), _postAssets(farmer.id))
+                                            .all([_postFarms(farmer.id), _postAssets(farmer.id)])
                                             .then(promise.resolve, promise.reject);
                                     });
                                 }));
@@ -126,40 +126,38 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
 
             return promiseService.wrap(function(promise) {
                 _getFarmers()
-                    .then(function () {
-                        return _getDocuments();
-                    }).then(promise.resolve, promise.reject);
+                    .then(_getDocuments)
+                    .then(promise.resolve, promise.reject);
             });
         }
     }]);
 
-coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentUtility', 'taskUtility',
-    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentUtility, taskUtility) {
+coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetApi', 'farmerUtility', 'documentUtility', 'taskUtility',
+    function (promiseMonitor, promiseService, farmApi, assetApi, farmerUtility, documentUtility, taskUtility) {
         var _monitor = null;
         var _readOptions = {readLocal: false, readRemote: true};
 
         function _getFarmers() {
             return _monitor.add(promiseService.wrap(function (defer) {
-                farmerApi.getFarmers({options: _readOptions}).then(function (farmers) {
-                    return promiseService.arrayWrap(function (list) {
-                        angular.forEach(farmers, function (farmer) {
-                            list.push(_getFarms(farmer.id), _getAssets(farmer.id));
+                farmerUtility.api
+                    .getFarmers({options: _readOptions})
+                    .then(function (farmers) {
+                        return promiseService.arrayWrap(function (list) {
+                            angular.forEach(farmers, function (farmer) {
+                                list.push(farmerUtility.hydration.dehydrate(farmer), _getFarms(farmer.id), _getAssets(farmer.id));
+                            });
                         });
-                    });
-                }, defer.reject).then(defer.resolve, defer.reject);
+                    }, defer.reject)
+                    .then(defer.resolve, defer.reject);
             }));
         }
 
         function _getAssets(fid) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                assetApi.getAssets({id: fid, options: _readOptions}).then(defer.resolve, defer.reject);
-            }));
+            return _monitor.add(assetApi.getAssets({id: fid, options: _readOptions}));
         }
 
         function _getFarms(fid) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                farmApi.getFarms({id: fid, options: _readOptions}).then(defer.resolve, defer.reject);
-            }));
+            return _monitor.add(farmApi.getFarms({id: fid, options: _readOptions}));
         }
 
         function _getDocuments() {
@@ -195,7 +193,12 @@ coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', '
         return function (monitor) {
             _monitor = monitor || promiseMonitor();
 
-            return promiseService.all([_getFarmers(), _getDocuments(), _getTasks()]);
+            return promiseService.wrap(function(promise) {
+                _getFarmers()
+                    .then(_getDocuments)
+                    .then(_getTasks)
+                    .then(promise.resolve, promise.reject);
+            });
         };
     }]);
 
@@ -206,11 +209,9 @@ coreApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 'data
         _monitor = promiseMonitor(callback);
 
         _monitor.add(promiseService.wrap(function (promise) {
-            dataUploadService(_monitor)
-                .then(function () {
-                    return dataDownloadService(_monitor);
-                }, promise.reject)
-                .then(promise.resolve, promise.reject);
+            dataUploadService(_monitor).then(function () {
+                dataDownloadService(_monitor).then(promise.resolve, promise.reject);
+            }, promise.reject);
         }));
     };
 }]);
@@ -276,9 +277,13 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options, callback: promise});
-                    });
+                    if (req.data) {
+                        _itemStore.transaction(function (tx) {
+                            tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options, callback: promise});
+                        });
+                    } else {
+                        promise.resolve();
+                    }
                 });
             },
             /**
@@ -293,9 +298,13 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.getItems({template: req.template, schema: {id: req.id}, options: req.options, callback: promise});
-                    });
+                    if (req.id) {
+                        _itemStore.transaction(function (tx) {
+                            tx.getItems({template: req.template, schema: {id: req.id}, options: req.options, callback: promise});
+                        });
+                    } else {
+                        promise.resolve();
+                    }
                 });
             },
             /**
@@ -309,9 +318,13 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.findItems({key: req.key, column: req.column, callback: promise});
-                    });
+                    if (req.key) {
+                        _itemStore.transaction(function (tx) {
+                            tx.findItems({key: req.key, column: req.column, callback: promise});
+                        });
+                    } else {
+                        promise.resolve();
+                    }
                 });
             }, /**
              * @name updateItem
@@ -324,9 +337,13 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.updateItems({data: req.data, options: req.options, callback: promise});
-                    });
+                    if (req.data) {
+                        _itemStore.transaction(function (tx) {
+                            tx.updateItems({data: req.data, options: req.options, callback: promise});
+                        });
+                    } else {
+                        promise.resolve();
+                    }
                 });
             },
             /**
@@ -341,9 +358,13 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.postItems({template: req.template, schema: req.schema, data: req.data, callback: promise});
-                    });
+                    if (req.data) {
+                        _itemStore.transaction(function (tx) {
+                            tx.postItems({template: req.template, schema: req.schema, data: req.data, callback: promise});
+                        });
+                    } else {
+                        promise.resolve();
+                    }
                 });
             },
             /**
@@ -356,9 +377,13 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.removeItems({template: naming.singular + '/:id/delete', data: req.data, callback: promise});
-                    });
+                    if (req.data) {
+                        _itemStore.transaction(function (tx) {
+                            tx.removeItems({template: naming.singular + '/:id/delete', data: req.data, callback: promise});
+                        });
+                    } else {
+                        promise.resolve();
+                    }
                 });
             }
         };
@@ -502,99 +527,136 @@ coreApiApp.factory('activityApi', ['api', function (api) {
 /*
  * Handlers
  */
-coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'documentApi', function (promiseService, taskApi, farmerApi, documentApi) {
-    var _relations = ['farmer', 'document', 'subtasks'];
+coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi',
+    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi) {
 
-    var _relationTable = {
-        farmer: {
-            hydrate: function (obj) {
-                return farmerApi.findFarmer({key: obj.data.farmer_id});
+        var _relationTable = {
+            farmer: {
+                many: false,
+                hydrate: function (obj) {
+                    return farmerApi.findFarmer({key: obj.data.farmer_id});
+                },
+                dehydrate: function (obj) {
+                    return farmerApi.createFarmer({data: obj.data.farmer, options: {replace: false, dirty: false}});
+                }
             },
-            dehydrate: function (obj) {
-                return farmerApi.createFarmer({data: obj.data.farmer, options: {replace: false, dirty: false}});
-            }
-        },
-        document: {
-            hydrate: function (obj) {
-                return documentApi.findDocument({key: obj.data.document_id});
-            },
-            dehydrate: function (obj) {
-                return documentApi.createDocument({data: obj.data.document, options: {replace: false, dirty: false}});
-            }
-        },
-        subtasks: {
-            hydrate: function (obj) {
-                return taskApi.getTasks({template: 'task/:id/tasks', schema: {id: obj.id}});
-            },
-            dehydrate: function (obj) {
-                return promiseService.arrayWrap(function (promises) {
-                    angular.forEach(obj.data.subtasks, function (subtask) {
-                        promises.push(taskApi.createTask({template: 'task/:id/tasks', schema: {id: obj.id}, data: subtask, options: {replace: false, dirty: false}}));
+            farms: {
+                many: true,
+                hydrate: function (obj) {
+                    return farmApi.getFarms({id: obj.id});
+                },
+                dehydrate: function (obj) {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.data.farms, function (farm) {
+                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: obj.id}, data: farm, options: {replace: false, dirty: false}}));
+                        });
                     });
+                }
+            },
+            assets: {
+                many: true,
+                hydrate: function (obj) {
+                    return assetApi.getAssets({id: obj.id});
+                },
+                dehydrate: function (obj) {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.data.assets, function (asset) {
+                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: obj.id}, data: asset, options: {replace: false, dirty: false}}));
+                        });
+                    });
+                }
+            },
+            document: {
+                many: false,
+                hydrate: function (obj) {
+                    return documentApi.findDocument({key: obj.data.document_id});
+                },
+                dehydrate: function (obj) {
+                    return documentApi.createDocument({data: obj.data.document, options: {replace: false, dirty: false}});
+                }
+            },
+            subtasks: {
+                many: true,
+                hydrate: function (obj) {
+                    return taskApi.getTasks({template: 'task/:id/tasks', schema: {id: obj.id}});
+                },
+                dehydrate: function (obj) {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.data.subtasks, function (subtask) {
+                            promises.push(taskApi.createTask({template: 'task/:id/tasks', schema: {id: obj.id}, data: subtask, options: {replace: false, dirty: false}}));
+                        });
+                    });
+                }
+            }
+        };
+
+        return {
+            hydrate: function (obj, relations) {
+                relations = relations || [];
+
+                return promiseService.wrap(function (promise) {
+                    promiseService
+                        .objectWrap(function (promises) {
+                            angular.forEach(relations, function (relationName) {
+                                var relation = _relationTable[relationName];
+
+                                if (relation && relation.hydrate) {
+                                    promises[relationName] = relation.hydrate(obj);
+                                }
+                            });
+                        })
+                        .then(function (results) {
+                            angular.forEach(results, function (result, relationName) {
+                                var relation = _relationTable[relationName];
+
+                                if (relation && relation.many === false) {
+                                    results[relationName] = (result.length == 1 ? result[0] : undefined);
+                                }
+                            });
+
+                            promise.resolve(_.extend(obj, results));
+                        }, promise.reject);
+                });
+            },
+            dehydrate: function (obj, relations) {
+                relations = relations || [];
+
+                return promiseService.wrap(function (promise) {
+                    promiseService
+                        .objectWrap(function (promises) {
+                            angular.forEach(relations, function (relationName) {
+                                var relation = _relationTable[relationName];
+
+                                if (relation && relation.dehydrate) {
+                                    promises[relationName] = relation.dehydrate(obj);
+                                }
+                            });
+                        })
+                        .then(function () {
+                            angular.forEach(relations, function (relationName) {
+                                delete obj.data[relationName];
+                            });
+
+                            promise.resolve(obj);
+                        }, promise.reject);
                 });
             }
-        }
-    };
-
-    return {
-        hydrate: function (obj, relations) {
-            relations = relations || _relations;
-
-            return promiseService.wrap(function (promise) {
-                promiseService
-                    .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
-
-                            if (relation && relation.hydrate) {
-                                promises[relationName] = relation.hydrate(obj);
-                            }
-                        });
-                    })
-                    .then(function (results) {
-                        angular.forEach(results, function (result, i) {
-                            if (result.length == 1) {
-                                results[i] = result[0];
-                            }
-                        });
-
-                        promise.resolve(_.extend(obj, results));
-                    }, promise.reject);
-            });
-        },
-        dehydrate: function (obj, relations) {
-            relations = relations || _relations;
-
-            return promiseService.wrap(function (promise) {
-                promiseService
-                    .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
-
-                            if (relation && relation.dehydrate) {
-                                promises[relationName] = relation.dehydrate(obj);
-                            }
-                        });
-                    })
-                    .then(function () {
-                        angular.forEach(relations, function (relationName) {
-                            delete obj.data[relationName];
-                        });
-
-                        promise.resolve(obj);
-                    }, promise.reject);
-            });
-        }
-    };
-}]);
+        };
+    }]);
 
 coreApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', function (promiseService, hydration, taskApi) {
+    var _relations = ['farmer', 'document', 'subtasks'];
+
     return {
         hydration: {
             hydrate: function (task, relations) {
+                relations = relations || _relations;
+
                 return hydration.hydrate(task, relations);
             },
             dehydrate: function (task, relations) {
+                relations = relations || _relations;
+
                 return hydration.dehydrate(task, relations).then(function (task) {
                     taskApi.updateTask({data: task, options: {dirty: false}});
                 })
@@ -604,93 +666,52 @@ coreApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', fun
     };
 }]);
 
-coreApiApp.factory('farmerUtility', ['promiseService', 'farmerApi', 'farmApi', 'assetApi', function (promiseService, farmerApi, farmApi, assetApi) {
+coreApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
+    var _relations = ['farms', 'assets'];
+
     return {
         hydration: {
-            /**
-             * @name Resolve all related dependencies to farmer
-             * @param farmer
-             */
-            hydrate: function (farmer) {
-                return promiseService.wrap(function (promise) {
-                    promiseService
-                        .objectWrap(function (promises) {
-                            promises.farms = farmApi.getFarms({id: farmer.id});
-                            promises.assets = assetApi.getAssets({id: farmer.id});
-                        })
-                        .then(function (result) {
-                            promise.resolve(_.extend(farmer, result));
-                        }, promise.reject);
-                });
+            hydrate: function (farmer, relations) {
+                relations = relations || _relations;
+
+                return hydration.hydrate(farmer, relations);
             },
-            dehydrate: function (farmer) {
-                return promiseService.wrap(function (promise) {
-                    promiseService
-                        .arrayWrap(function (promises) {
-                            if (farmer.data.farms) {
-                                angular.forEach(farmer.data.farms, function (farm) {
-                                    promises.push(farmApi.createFarm({data: farm, options: {replace: false, dirty: false}}));
-                                });
-                            }
+            dehydrate: function (farmer, relations) {
+                relations = relations || _relations;
 
-                            if (farmer.data.assets) {
-                                angular.forEach(farmer.data.assets, function (asset) {
-                                    promises.push(assetApi.createAsset({data: asset, options: {replace: false, dirty: false}}));
-                                });
-                            }
-                        })
-                        .then(function () {
-                            delete farmer.data.farms;
-                            delete farmer.data.assets;
-
-                            farmerApi.updateFarmer({data: farmer, options: {dirty: false}}).then(function () {
-                                promise.resolve(farmer);
-                            }, promise.reject);
-                        }, promise.reject);
+                angular.forEach(farmer.data.teams, function (team, i) {
+                    if (typeof team === 'object') {
+                        farmer.data.teams[i] = team.name;
+                    }
                 });
+
+                return hydration.dehydrate(farmer, relations).then(function (farmer) {
+                    farmerApi.updateFarmer({data: farmer, options: {dirty: false}});
+                })
             }
         },
         api: farmerApi
     };
 }]);
 
-coreApiApp.factory('documentUtility', ['promiseService', 'documentApi', 'farmerApi', 'taskApi', function (promiseService, documentApi, farmerApi, taskApi) {
+coreApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
+    var _relations = ['farmer'];
+
     return {
         hydration: {
-            /**
-             * @name Resolve all related dependencies to document
-             * @param document
-             */
-            hydrate: function (document) {
-                return promiseService.wrap(function (promise) {
-                    promiseService
-                        .objectWrap(function (promises) {
-                            if (document.data.farmer_id) {
-                                promises.farmer = farmerApi.findFarmer({key: document.data.farmer_id});
-                            }
-                        })
-                        .then(function (result) {
-                            promise.resolve(_.extend(document, result));
-                        }, promise.reject);
-                });
-            },
-            dehydrate: function (document) {
-                return promiseService.wrap(function (promise) {
-                    promiseService
-                        .arrayWrap(function (promises) {
-                            if (document.data.farmer_id && document.data.farmer) {
-                                promises.push(farmerApi.createFarmer({data: document.data.farmer, options: {replace: false, dirty: false}}));
-                            }
-                        })
-                        .then(function () {
-                            delete document.data.farmer;
-                            delete document.data.tasks;
+            hydrate: function (document, relations) {
+                relations = relations || _relations;
 
-                            documentApi.updateDocument({data: document, options: {dirty: false}}).then(function () {
-                                promise.resolve(document);
-                            }, promise.reject);
-                        }, promise.reject);
-                });
+                return hydration.hydrate(task, relations);
+            },
+            dehydrate: function (document, relations) {
+                relations = relations || _relations;
+
+                return hydration.dehydrate(document, relations).then(function (document) {
+                    delete document.data.tasks;
+
+                    documentApi.updateDocument({data: document, options: {dirty: false}});
+                })
             }
         },
         api: documentApi
