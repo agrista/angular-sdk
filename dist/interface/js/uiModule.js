@@ -66,7 +66,7 @@ interfaceUiApp.directive('multiSelect', function () {
     }
 });
 
-interfaceUiApp.directive("locationFormatter", ['$filter', function ($filter) {
+interfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
@@ -87,7 +87,7 @@ interfaceUiApp.directive("locationFormatter", ['$filter', function ($filter) {
     };
 }]);
 
-interfaceUiApp.directive("dateFormatter", ['$filter', function ($filter) {
+interfaceUiApp.directive('dateFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
@@ -99,13 +99,25 @@ interfaceUiApp.directive("dateFormatter", ['$filter', function ($filter) {
     };
 }]);
 
-interfaceUiApp.directive("dateParser", ['$filter', function ($filter) {
+interfaceUiApp.directive('dateParser', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
         link: function (scope, element, attrs, ngModel) {
             ngModel.$parsers.push(function (value) {
                 return (value !== undefined ? $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd') : '');
+            });
+        }
+    };
+}]);
+
+interfaceUiApp.directive('inputNumber', [function () {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$parsers.push(function (value) {
+                return parseFloat(value);
             });
         }
     };
