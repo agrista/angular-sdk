@@ -19,6 +19,15 @@ coreConnectionApp.provider('routeResolver', function () {
                 var resolverInjection = ($route.current && $route.current.$$route ? _routeTable[$route.current.$$route.originalPath] : undefined);
 
                 return (resolverInjection ? $injector.invoke(resolverInjection) : undefined);
+            },
+            getRoute: function (route, params) {
+                params = params || {};
+
+                angular.forEach(params, function (value, param) {
+                    route = route.replace(':' + param, value);
+                });
+
+                return route;
             }
         }
     }];

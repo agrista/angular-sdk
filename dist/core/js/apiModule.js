@@ -312,6 +312,9 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
              * @param req {Object}
              * @param req.key {String} Required
              * @param req.column {String} Optional
+             * @param req.options {Object} Optional
+             * @param req.options.like {boolean} Optional to use a fuzzy search
+             * @param req.options.one {boolean} Optional to return one result
              * @returns {Promise}
              */
             findItem: function (req) {
@@ -320,13 +323,14 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                 return promiseService.wrap(function (promise) {
                     if (req.key) {
                         _itemStore.transaction(function (tx) {
-                            tx.findItems({key: req.key, column: req.column, callback: promise});
+                            tx.findItems({key: req.key, column: req.column, options: req.options, callback: promise});
                         });
                     } else {
                         promise.resolve();
                     }
                 });
-            }, /**
+            },
+            /**
              * @name updateItem
              * @param req {Object}
              * @param req.data {Object} Required

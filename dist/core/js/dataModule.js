@@ -272,22 +272,26 @@ coreDataApp.provider('dataStore', function () {
              * Local data storage
              */
 
-            var _getLocal = function (uri, glCallback) {
+            var _getLocal = function (uri, options, glCallback) {
                 console.log('_getLocal');
                 if (typeof glCallback !== 'function') glCallback = angular.noop;
 
                 _localDatabase.transaction(function (tx) {
                     tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
                         if (res.rows.length > 0) {
-                            var dataItems = [];
+                            if (options.one) {
+                                glCallback(_createDataItem(res.rows.item(0)));
+                            } else {
+                                var dataItems = [];
 
-                            for (var i = 0; i < res.rows.length; i++) {
-                                dataItems.push(_createDataItem(res.rows.item(i)));
+                                for (var i = 0; i < res.rows.length; i++) {
+                                    dataItems.push(_createDataItem(res.rows.item(i)));
+                                }
+
+                                glCallback(dataItems);
                             }
-
-                            glCallback(dataItems);
                         } else {
-                            glCallback([]);
+                            glCallback(options.one ? undefined : []);
                         }
                     }, function (tx, err) {
                         _errorCallback(tx, err);
@@ -296,26 +300,27 @@ coreDataApp.provider('dataStore', function () {
                 });
             };
 
-            var _findLocal = function (key, column, flCallback) {
+            var _findLocal = function (key, column, options, flCallback) {
                 console.log('_findLocal');
-                if (column === undefined) {
-                    column = 'id';
-                }
 
                 if (typeof flCallback !== 'function') flCallback = angular.noop;
 
                 _localDatabase.transaction(function (tx) {
-                    tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + column + ' LIKE ?', ["%" + key + "%"], function (tx, res) {
+                    tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + column + ' ' + (options.like ? 'LIKE' : '=') + ' ?', [(options.like ? "%" + key + "%" : key)], function (tx, res) {
                         if (res.rows.length > 0) {
-                            var dataItems = [];
+                            if (options.one) {
+                                flCallback(_createDataItem(res.rows.item(0)));
+                            } else {
+                                var dataItems = [];
 
-                            for (var i = 0; i < res.rows.length; i++) {
-                                dataItems.push(_createDataItem(res.rows.item(i)));
+                                for (var i = 0; i < res.rows.length; i++) {
+                                    dataItems.push(_createDataItem(res.rows.item(i)));
+                                }
+
+                                flCallback(dataItems);
                             }
-
-                            flCallback(dataItems);
                         } else {
-                            flCallback([]);
+                            flCallback(options.one ? undefined : []);
                         }
                     }, function (tx, err) {
                         flCallback(null, err);
@@ -329,7 +334,7 @@ coreDataApp.provider('dataStore', function () {
 
                 _deleteAllLocal(uri, function () {
                     _updateLocal(dataItems, function () {
-                        _getLocal(uri, slCallback);
+                        _getLocal(uri, {}, slCallback);
                     });
                 });
             };
@@ -737,13 +742,13 @@ coreDataApp.provider('dataStore', function () {
                                             _responseHandler(request.callback, res, err);
                                         });
                                     } else {
-                                        _getLocal(_uri, function (res, err) {
+                                        _getLocal(_uri, request.options, function (res, err) {
                                             _responseHandler(request.callback, res, err);
                                         });
                                     }
                                 });
                             } else if (request.options.readLocal === true) {
-                                _getLocal(_uri, function (res, err) {
+                                _getLocal(_uri, request.options, function (res, err) {
                                     _responseHandler(request.callback, res, err);
                                 });
                             }
@@ -755,10 +760,14 @@ coreDataApp.provider('dataStore', function () {
                         var request = _.defaults(req || {}, {
                             key: '',
                             column: 'id',
+                            options: {
+                                like: false,
+                                one: false
+                            },
                             callback: angular.noop
                         });
 
-                        _findLocal(request.key, request.column, function (res, err) {
+                        _findLocal(request.key, request.column, request.options, function (res, err) {
                             _responseHandler(request.callback, res, err);
                         });
                     },
