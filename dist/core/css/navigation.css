@@ -232,3 +232,22 @@ body {
     box-shadow: none;
     border-color: #6b6b6b;
 }
+
+/*
+ * Maps
+ */
+
+.mapbox-dynamic {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 100%;
+}
+
+.mapbox-dynamic.show-panel {
+    right: 256px;
+}
+
+.mapbox-dynamic.show-panel .mapbox-panel {
+    width: 256px;
+}

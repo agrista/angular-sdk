@@ -51,6 +51,9 @@ interfaceMapboxApp.factory('mapboxService', ['$rootScope', function ($rootScope)
 
             $rootScope.$broadcast('mapbox::fit-bounds', _boundsView);
         },
+        showPanel: function (show) {
+            $rootScope.$broadcast('mapbox::show-panel', show);
+        },
         addLayer: function (layer) {
             _layers.push(layer);
             $rootScope.$broadcast('mapbox::add-layer', layer);
@@ -102,7 +105,7 @@ interfaceMapboxApp.factory('mapboxService', ['$rootScope', function ($rootScope)
     }
 }]);
 
-interfaceMapboxApp.directive('mapbox', ['mapboxService', 'geolocationService', '$rootScope', function (mapboxService, geolocationService, $rootScope) {
+interfaceMapboxApp.directive('mapbox', ['$timeout', 'mapboxService', 'geolocationService', function ($timeout, mapboxService, geolocationService) {
     var map;
     var featureGroups = {};
     var location = {};
@@ -171,8 +174,9 @@ interfaceMapboxApp.directive('mapbox', ['mapboxService', 'geolocationService', '
 
     return {
         restrict: 'E',
-        template: '<div></div>',
+        template: '<div class="mapbox-dynamic" ng-class="{\'show-panel\': showPanel}">\n    <div class="mapbox-panel" ng-transclude></div>\n</div>',
         replace: true,
+        transclude: true,
         link: function (scope, element, attrs) {
             map = L.mapbox.map(attrs.id);
 
@@ -190,6 +194,8 @@ interfaceMapboxApp.directive('mapbox', ['mapboxService', 'geolocationService', '
             addGeoJson(mapboxService.getGeoJsonData());
         },
         controller: function ($scope, $attrs) {
+            $scope.showPanel = false;
+
             $scope.$on('mapbox::set-view', function (event, args) {
                 setView(args);
             });
@@ -201,6 +207,18 @@ interfaceMapboxApp.directive('mapbox', ['mapboxService', 'geolocationService', '
             });
             $scope.$on('mapbox::add-layer', function (event, args) {
                 addLayer(args);
+            });
+            $scope.$on('mapbox::show-panel', function (event, args) {
+                var center = map.getCenter();
+                $scope.showPanel = args;
+
+                $timeout(function () {
+                    map.invalidateSize();
+                    map.panTo(center, {
+                        animate: true,
+                        duration: 1
+                    });
+                }, 100);
             });
 
             var watcher = geolocationService.watchPosition(function (res, err) {
