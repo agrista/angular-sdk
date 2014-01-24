@@ -117,7 +117,8 @@ interfaceUiApp.directive('inputNumber', [function () {
         require: 'ngModel',
         link: function (scope, element, attrs, ngModel) {
             ngModel.$parsers.push(function (value) {
-                return parseFloat(value);
+                var float = parseFloat(value)
+                return (isNaN(float) ? value : float);
             });
         }
     };

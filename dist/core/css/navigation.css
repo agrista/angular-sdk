@@ -136,10 +136,6 @@ body {
  * Bootstrap adaption
  */
 
-.no-pad {
-    padding: 0;
-}
-
 .container.container-list {
     background-color: #f4f4f4;
 }
