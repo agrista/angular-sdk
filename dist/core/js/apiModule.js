@@ -83,11 +83,7 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
                     promiseService
                         .arrayWrap(function (list) {
                             angular.forEach(documents, function (document) {
-                                list.push(promiseService.wrap(function(promise) {
-                                    _postDocument(document).then(function () {
-                                        _postTasks(document.id).then(promise.resolve, promise.reject);
-                                    });
-                                }));
+                                list.push(_postDocument(document));
                             });
                         })
                         .then(defer.resolve, defer.reject);
@@ -105,19 +101,40 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
             }));
         }
 
-        function _postTasks (did) {
+        function _getTasks () {
             return _monitor.add(promiseService.wrap(function (defer) {
-                taskApi.getTasks({template: 'document/:id/tasks', schema: {id: did}}).then(function (tasks) {
+                taskApi.getTasks().then(function (tasks) {
                     promiseService
                         .arrayWrap(function (list) {
                             angular.forEach(tasks, function (task) {
-                                if (task.dirty === true) {
-                                    list.push(taskApi.postTask({template: 'task/:id', schema: {id: task.id}, data: task}));
-                                }
+                                list.push(promiseService.wrap(function(promise) {
+                                    taskApi.getTasks({template: 'task/:id/tasks', schema: {id: task.id}}).then(function (subtasks) {
+                                        promiseService
+                                            .arrayWrap(function (promises) {
+                                                angular.forEach(subtasks, function (subtask) {
+                                                    promises.push(_postTask(subtask));
+                                                });
+                                            })
+                                            .then(function () {
+                                                return _postTask(task);
+                                            }, promise.reject)
+                                            .then(promise.resolve, promise.reject);
+                                    }, promise.reject);
+                                }));
                             });
                         })
                         .then(defer.resolve, defer.reject);
                 });
+            }));
+        }
+
+        function _postTask (task) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                if (task.dirty === true) {
+                    taskApi.postTask({template: 'task/:id', schema: {id: task.id}, data: task}).then(defer.resolve, defer.reject);
+                } else {
+                    defer.resolve();
+                }
             }));
         }
 
@@ -127,6 +144,7 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
             return promiseService.wrap(function(promise) {
                 _getFarmers()
                     .then(_getDocuments)
+                    .then(_getTasks)
                     .then(promise.resolve, promise.reject);
             });
         }
@@ -175,6 +193,12 @@ coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', '
             }));
         }
 
+        function _getDocument(did, options) {
+            options = options || _readOptions;
+
+            return _monitor.add(documentUtility.api.getDocument({id: did, options: options}));
+        }
+
         function _getTasks() {
             return _monitor.add(promiseService.wrap(function (defer) {
                 taskUtility.api
@@ -182,6 +206,7 @@ coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', '
                     .then(function (tasks) {
                         return promiseService.arrayWrap(function (promises) {
                             angular.forEach(tasks, function (task) {
+                                promises.push(_getDocument(task.data.document_id, {readLocal: true, fallbackRemote: true}));
                                 promises.push(taskUtility.hydration.dehydrate(task));
                             })
                         });
@@ -389,6 +414,26 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
                         promise.resolve();
                     }
                 });
+            },
+            /**
+             * @name purgeItem
+             * @param req {Object}
+             * @param req.template {String} Required template
+             * @param req.schema {Object} Optional schema
+             * @returns {Promise}
+             */
+            purgeItem: function (req) {
+                req = req || {};
+
+                return promiseService.wrap(function (promise) {
+                    if (req.template) {
+                        _itemStore.transaction(function (tx) {
+                            tx.purgeItems({template: req.template, schema: req.schema, callback: promise});
+                        });
+                    } else {
+                        promise.resolve();
+                    }
+                });
             }
         };
     }
@@ -442,7 +487,8 @@ coreApiApp.factory('taskApi', ['api', function (api) {
         findTask: taskApi.findItem,
         updateTask: taskApi.updateItem,
         postTask: taskApi.postItem,
-        deleteTask: taskApi.deleteItem
+        deleteTask: taskApi.deleteItem,
+        purgeTask: taskApi.purgeItem
     };
 }]);
 
@@ -469,7 +515,8 @@ coreApiApp.factory('farmerApi', ['api', function (api) {
         findFarmer: farmerApi.findItem,
         updateFarmer: farmerApi.updateItem,
         postFarmer: farmerApi.postItem,
-        deleteFarmer: farmerApi.deleteItem
+        deleteFarmer: farmerApi.deleteItem,
+        purgeFarmer: farmerApi.purgeItem
     };
 }]);
 
@@ -483,7 +530,8 @@ coreApiApp.factory('farmApi', ['api', function (api) {
         findFarm: farmApi.findItem,
         updateFarm: farmApi.updateItem,
         postFarm: farmApi.postItem,
-        deleteFarm: farmApi.deleteItem
+        deleteFarm: farmApi.deleteItem,
+        purgeFarm: farmApi.purgeItem
     };
 }]);
 
@@ -497,7 +545,8 @@ coreApiApp.factory('assetApi', ['api', function (api) {
         findAsset: assetApi.findItem,
         updateAsset: assetApi.updateItem,
         postAsset: assetApi.postItem,
-        deleteAsset: assetApi.deleteItem
+        deleteAsset: assetApi.deleteItem,
+        purgeAsset: assetApi.purgeItem
     };
 }]);
 
@@ -511,7 +560,8 @@ coreApiApp.factory('documentApi', ['api', function (api) {
         findDocument: documentStore.findItem,
         updateDocument: documentStore.updateItem,
         postDocument: documentStore.postItem,
-        deleteDocument: documentStore.deleteItem
+        deleteDocument: documentStore.deleteItem,
+        purgeDocument: documentStore.purgeItem
     };
 }]);
 
@@ -550,10 +600,19 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                     return farmApi.getFarms({id: obj.id});
                 },
                 dehydrate: function (obj) {
-                    return promiseService.arrayWrap(function (promises) {
-                        angular.forEach(obj.data.farms, function (farm) {
-                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: obj.id}, data: farm, options: {replace: false, dirty: false}}));
-                        });
+                    return promiseService.wrap(function (promise) {
+                        farmApi.purgeFarm({template: 'farms/:id', schema: {id: obj.id}, options: {force: false}})
+                            .then(function () {
+                                promiseService.arrayWrap(function (promises) {
+                                    angular.forEach(obj.data.farms, function (farm) {
+                                        promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: obj.id}, data: farm, options: {replace: false, dirty: false}}));
+                                    });
+                                }).then(promise.resolve, function () {
+                                        promise.reject();
+                                    });
+                            }, function () {
+                                promise.reject();
+                            });
                     });
                 }
             },
@@ -563,10 +622,19 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                     return assetApi.getAssets({id: obj.id});
                 },
                 dehydrate: function (obj) {
-                    return promiseService.arrayWrap(function (promises) {
-                        angular.forEach(obj.data.assets, function (asset) {
-                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: obj.id}, data: asset, options: {replace: false, dirty: false}}));
-                        });
+                    return promiseService.wrap(function (promise) {
+                        assetApi.purgeAsset({template: 'assets/:id', schema: {id: obj.id}, options: {force: false}})
+                            .then(function () {
+                                promiseService.arrayWrap(function (promises) {
+                                    angular.forEach(obj.data.assets, function (asset) {
+                                        promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: obj.id}, data: asset, options: {replace: false, dirty: false}}));
+                                    });
+                                }).then(promise.resolve, function () {
+                                        promise.reject();
+                                    });
+                            }, function () {
+                                promise.reject();
+                            });
                     });
                 }
             },
@@ -585,10 +653,19 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                     return taskApi.getTasks({template: 'task/:id/tasks', schema: {id: obj.id}});
                 },
                 dehydrate: function (obj) {
-                    return promiseService.arrayWrap(function (promises) {
-                        angular.forEach(obj.data.subtasks, function (subtask) {
-                            promises.push(taskApi.createTask({template: 'task/:id/tasks', schema: {id: obj.id}, data: subtask, options: {replace: false, dirty: false}}));
-                        });
+                    return promiseService.wrap(function (promise) {
+                        taskApi.purgeTask({template: 'task/:id/tasks', schema: {id: obj.id}, options: {force: false}})
+                            .then(function () {
+                                promiseService.arrayWrap(function (promises) {
+                                    angular.forEach(obj.data.subtasks, function (subtask) {
+                                        promises.push(taskApi.createTask({template: 'task/:id/tasks', schema: {id: obj.id}, data: subtask, options: {replace: false, dirty: false}}));
+                                    });
+                                }).then(promise.resolve, function () {
+                                        promise.reject();
+                                    });
+                            }, function () {
+                                promise.reject();
+                            });
                     });
                 }
             }
@@ -642,7 +719,9 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                             });
 
                             promise.resolve(obj);
-                        }, promise.reject);
+                        }, function () {
+                            promise.reject();
+                        });
                 });
             }
         };

@@ -12,11 +12,13 @@ coreDataApp.provider('dataPurge', function () {
                 var store = dataStore(name);
 
                 store.transaction(function (tx) {
-                    tx.purgeItems(function (res) {
-                        if (res) {
-                            defer.resolve();
-                        } else {
-                            defer.reject();
+                    tx.purgeItems({
+                        callback: function (res) {
+                            if (res) {
+                                defer.resolve();
+                            } else {
+                                defer.reject();
+                            }
                         }
                     });
                 })
@@ -387,18 +389,22 @@ coreDataApp.provider('dataStore', function () {
                 console.log('_deleteLocal');
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                var asyncMon = new AsyncMonitor(dataItems.length, dlCallback);
+                if (dataItems.length > 0) {
+                    var asyncMon = new AsyncMonitor(dataItems.length, dlCallback);
 
-                _localDatabase.transaction(function (tx) {
-                    for (var i = 0; i < dataItems.length; i++) {
-                        var item = dataItems[i];
+                    _localDatabase.transaction(function (tx) {
+                        for (var i = 0; i < dataItems.length; i++) {
+                            var item = dataItems[i];
 
-                        tx.executeSql('DELETE FROM ' + name + ' WHERE id = ? AND uri = ?', [item.id, item.uri], asyncMon.done, function (err) {
-                            _errorCallback(tx, err);
-                            asyncMon.done();
-                        });
-                    }
-                });
+                            tx.executeSql('DELETE FROM ' + name + ' WHERE id = ? AND uri = ?', [item.id, item.uri], asyncMon.done, function (err) {
+                                _errorCallback(tx, err);
+                                asyncMon.done();
+                            });
+                        }
+                    });
+                } else {
+                    dlCallback(dataItems);
+                }
             };
 
             var _deleteAllLocal = function (uri, options, dalCallback) {
@@ -726,30 +732,40 @@ coreDataApp.provider('dataStore', function () {
                                 page: 1,
                                 limit: _defaultOptions.pageLimit,
                                 readLocal: _config.readLocal,
-                                readRemote: _config.readRemote
+                                readRemote: _config.readRemote,
+                                fallbackRemote: false
                             },
                             callback: angular.noop
                         });
+
+                        var handleRemote = function (_uri) {
+                            _getRemote(_uri, function (res, err) {
+                                if (res) {
+                                    _syncLocal(res, _uri, function (res, err) {
+                                        _responseHandler(request.callback, res, err);
+                                    });
+                                } else {
+                                    _getLocal(_uri, request.options, function (res, err) {
+                                        _responseHandler(request.callback, res, err);
+                                    });
+                                }
+                            });
+                        };
 
                         if (typeof request.schema === 'object') {
                             var _uri = _parseRequest(request.template, request.schema);
 
                             // Process request
                             if (request.options.readRemote === true) {
-                                _getRemote(_uri, function (res, err) {
-                                    if (res) {
-                                        _syncLocal(res, _uri, function (res, err) {
-                                            _responseHandler(request.callback, res, err);
-                                        });
-                                    } else {
-                                        _getLocal(_uri, request.options, function (res, err) {
-                                            _responseHandler(request.callback, res, err);
-                                        });
-                                    }
-                                });
+                                handleRemote(_uri);
                             } else if (request.options.readLocal === true) {
                                 _getLocal(_uri, request.options, function (res, err) {
-                                    _responseHandler(request.callback, res, err);
+                                    if (res.length == 0 && request.options.fallbackRemote === true) {
+                                        handleRemote(_uri);
+                                    } else {
+                                        _responseHandler(request.callback, res, err);
+                                    }
+
                                 });
                             }
                         } else {
@@ -818,7 +834,6 @@ coreDataApp.provider('dataStore', function () {
                             callback: angular.noop
                         });
 
-
                         if ((request.data instanceof Array) === false) {
                             request.data = [request.data];
                         }
@@ -835,10 +850,37 @@ coreDataApp.provider('dataStore', function () {
                             }
                         });
                     },
-                    purgeItems: function (pCallback) {
-                        _clearTable(function (res, err) {
-                            _responseHandler(pCallback, res, err);
+                    purgeItems: function (req) {
+                        var request = _.defaults(req || {}, {
+                            template: undefined,
+                            schema: {},
+                            options: {
+                                force: true
+                            },
+                            callback: angular.noop
                         });
+
+                        if (request.template !== undefined) {
+                            var _uri = _parseRequest(request.template, request.schema);
+
+                            _getLocal(_uri, request.options, function (res, err) {
+                                var deleteItems = [];
+
+                                angular.forEach(res, function (item) {
+                                    if (item.dirty == false || request.options.force == true) {
+                                        deleteItems.push(item);
+                                    }
+                                });
+
+                                _deleteLocal(deleteItems, function (res, err) {
+                                    _responseHandler(request.callback, res, err);
+                                });
+                            });
+                        } else {
+                            _clearTable(function (res, err) {
+                                _responseHandler(request.callback, res, err);
+                            });
+                        }
                     }
                 }
             }
