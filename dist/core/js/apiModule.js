@@ -206,7 +206,7 @@ coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', '
                     .then(function (tasks) {
                         return promiseService.arrayWrap(function (promises) {
                             angular.forEach(tasks, function (task) {
-                                promises.push(_getDocument(task.data.document_id, {readLocal: true, fallbackRemote: true}));
+                                promises.push(_getDocument(task.data.documentId, {readLocal: true, fallbackRemote: true}));
                                 promises.push(taskUtility.hydration.dehydrate(task));
                             })
                         });
@@ -588,7 +588,7 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
             farmer: {
                 many: false,
                 hydrate: function (obj) {
-                    return farmerApi.findFarmer({key: obj.data.farmer_id});
+                    return farmerApi.findFarmer({key: obj.data.farmerId});
                 },
                 dehydrate: function (obj) {
                     return farmerApi.createFarmer({data: obj.data.farmer, options: {replace: false, dirty: false}});
@@ -641,7 +641,7 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
             document: {
                 many: false,
                 hydrate: function (obj) {
-                    return documentApi.findDocument({key: obj.data.document_id});
+                    return documentApi.findDocument({key: obj.data.documentId});
                 },
                 dehydrate: function (obj) {
                     return documentApi.createDocument({data: obj.data.document, options: {replace: false, dirty: false}});
