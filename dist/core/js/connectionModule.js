@@ -8,7 +8,13 @@ coreConnectionApp.provider('routeResolver', function () {
     var _routeTable = {};
 
     this.when = function (routePath, resolverInjection) {
-        _routeTable[routePath] = resolverInjection;
+        if (routePath instanceof Array) {
+            angular.forEach(routePath, function (route) {
+                _routeTable[route] = resolverInjection;
+            })
+        } else {
+            _routeTable[routePath] = resolverInjection;
+        }
 
         return this;
     };
