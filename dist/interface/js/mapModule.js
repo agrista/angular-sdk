@@ -54,6 +54,17 @@ interfaceMapApp.factory('mapMarkerHelper', function () {
         });
     };
 
+    function recursiveCoordinate (data, coordinates) {
+        if (coordinates[0] instanceof Array) {
+            angular.forEach(coordinates, function(coordinate) {
+                recursiveCoordinate(data, coordinate);
+            });
+        } else {
+            data.center[0] += coordinates[0];
+            data.center[1] += coordinates[1];
+            data.count++;
+        }
+    }
 
     return {
         getMarker: function (name, options) {
@@ -75,6 +86,16 @@ interfaceMapApp.factory('mapMarkerHelper', function () {
             }
 
             return markers;
+        },
+        findCenter: function (coordinates) {
+            var data = {
+                center: [0, 0],
+                count: 0
+            };
+
+            recursiveCoordinate(data, coordinates);
+
+            return [data.center[0] / data.count, data.center[1] / data.count];
         }
     }
 });
