@@ -39,6 +39,40 @@ coreDataApp.provider('dataPurge', function () {
     }];
 });
 
+coreDataApp.factory('dataStoreUtilities', function () {
+    return {
+        parseRequest: function (templateUrl, schemaData) {
+            console.log('Unresolved: ' + templateUrl);
+
+            if (templateUrl !== undefined) {
+                for (var key in schemaData) {
+                    if (schemaData.hasOwnProperty(key)) {
+                        var schemaKey = (schemaData[key] !== undefined ? schemaData[key] : '');
+
+                        templateUrl = templateUrl.replace(':' + key, schemaKey);
+                    }
+                }
+            }
+
+            console.log('Resolved: ' + templateUrl);
+
+            return templateUrl;
+        },
+        generateItemIndex: function () {
+            return 2000000000 + Math.round(Math.random() * 147483647);
+        },
+        createDataItem: function (item) {
+            return {
+                id: item.id,
+                uri: item.uri,
+                data: JSON.parse(item.data),
+                dirty: (item.dirty == 1 ? true : false),
+                local: (item.local == 1 ? true : false)
+            };
+        }
+    }
+});
+
 /**
  * @name dataStore
  */
@@ -79,7 +113,7 @@ coreDataApp.provider('dataStore', function () {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$q', '$http', '$rootScope', 'safeApply', function ($q, $http, $rootScope, safeApply) {
+    this.$get = ['$q', '$http', '$rootScope', 'safeApply', 'dataStoreUtilities', function ($q, $http, $rootScope, safeApply, dataStoreUtilities) {
 
         /**
          * @name _initializeDatabase
@@ -232,25 +266,6 @@ coreDataApp.provider('dataStore', function () {
                 }
             }
 
-            function _parseRequest(templateUrl, schemaData) {
-                console.log('Unresolved: ' + templateUrl);
-
-                if (templateUrl !== undefined) {
-                    for (var key in schemaData) {
-                        if (schemaData.hasOwnProperty(key)) {
-                            var schemaKey = (schemaData[key] !== undefined ? schemaData[key] : '');
-
-                            templateUrl = templateUrl.replace(':' + key, schemaKey);
-                        }
-                    }
-                }
-
-                console.log('Resolved: ' + templateUrl);
-
-                return templateUrl;
-            }
-
-
             function _getItemIndex(item, id) {
                 if (item[_config.indexerProperty] === undefined) {
                     console.warn('Configured indexer property not defined');
@@ -258,17 +273,6 @@ coreDataApp.provider('dataStore', function () {
 
                 return (item[_config.indexerProperty] || item.id || id);
             }
-
-            function _createDataItem(item) {
-                return {
-                    id: item.id,
-                    uri: item.uri,
-                    data: JSON.parse(item.data),
-                    dirty: (item.dirty == 1 ? true : false),
-                    local: (item.local == 1 ? true : false)
-                };
-            }
-
 
             /*
              * Local data storage
@@ -282,12 +286,12 @@ coreDataApp.provider('dataStore', function () {
                     tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
                         if (res.rows.length > 0) {
                             if (options.one) {
-                                glCallback(_createDataItem(res.rows.item(0)));
+                                glCallback(dataStoreUtilities.createDataItem(res.rows.item(0)));
                             } else {
                                 var dataItems = [];
 
                                 for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(_createDataItem(res.rows.item(i)));
+                                    dataItems.push(dataStoreUtilities.createDataItem(res.rows.item(i)));
                                 }
 
                                 glCallback(dataItems);
@@ -311,12 +315,12 @@ coreDataApp.provider('dataStore', function () {
                     tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + column + ' ' + (options.like ? 'LIKE' : '=') + ' ?', [(options.like ? "%" + key + "%" : key)], function (tx, res) {
                         if (res.rows.length > 0) {
                             if (options.one) {
-                                flCallback(_createDataItem(res.rows.item(0)));
+                                flCallback(dataStoreUtilities.createDataItem(res.rows.item(0)));
                             } else {
                                 var dataItems = [];
 
                                 for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(_createDataItem(res.rows.item(i)));
+                                    dataItems.push(dataStoreUtilities.createDataItem(res.rows.item(i)));
                                 }
 
                                 flCallback(dataItems);
@@ -522,8 +526,9 @@ coreDataApp.provider('dataStore', function () {
                 if (dataItems !== undefined && _config.apiTemplate !== undefined) {
                     if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
+                    var postedDataItems = [];
                     var asyncMon = new AsyncMonitor(dataItems.length, function () {
-                        urCallback(dataItems);
+                        urCallback(postedDataItems);
                     });
 
                     var _makePost = function (item, uri) {
@@ -538,10 +543,12 @@ coreDataApp.provider('dataStore', function () {
                                 };
 
                                 if (item.local == true) {
-                                    remoteItem.data._id = remoteItem.id;
+                                    remoteItem.data.id = remoteItem.id;
 
                                     _deleteLocal(item);
                                 }
+
+                                postedDataItems.push(remoteItem);
 
                                 _updateLocal(remoteItem, {force: true}, asyncMon.done);
                             }, function (err) {
@@ -556,7 +563,11 @@ coreDataApp.provider('dataStore', function () {
 
                         if (item.dirty === true) {
                             if (item.local || writeUri !== undefined) {
-                                _makePost(item, _parseRequest(writeUri || _config.apiTemplate, _.extend(writeSchema, {id: item.local ? undefined : item.id})));
+                                if (item.local && item.data[_config.indexerProperty] !== undefined) {
+                                    delete item.data[_config.indexerProperty];
+                                }
+
+                                _makePost(item, dataStoreUtilities.parseRequest(writeUri || _config.apiTemplate, _.extend(writeSchema, {id: item.local ? undefined : item.id})));
                             } else {
                                 _makePost(item, item.uri);
                             }
@@ -609,7 +620,7 @@ coreDataApp.provider('dataStore', function () {
                         var item = dataItems[i];
 
                         if (item.local === false) {
-                            _makeDelete(item, _parseRequest(writeUri, _.defaults(writeSchema, {id: item.id})));
+                            _makeDelete(item, dataStoreUtilities.parseRequest(writeUri, _.defaults(writeSchema, {id: item.id})));
                         } else {
                             asyncMon.done();
                         }
@@ -713,11 +724,11 @@ coreDataApp.provider('dataStore', function () {
                         });
 
                         angular.forEach(request.data, function (data) {
-                            var id = _getItemIndex(data, null);
+                            var id = _getItemIndex(data, dataStoreUtilities.generateItemIndex());
 
                             _updateLocal({
                                 id: id,
-                                uri: _parseRequest(request.template, _.defaults(request.schema, {id: id})),
+                                uri: dataStoreUtilities.parseRequest(request.template, _.defaults(request.schema, {id: id})),
                                 data: data,
                                 dirty: request.options.dirty,
                                 local: request.options.dirty
@@ -753,7 +764,7 @@ coreDataApp.provider('dataStore', function () {
                         };
 
                         if (typeof request.schema === 'object') {
-                            var _uri = _parseRequest(request.template, request.schema);
+                            var _uri = dataStoreUtilities.parseRequest(request.template, request.schema);
 
                             // Process request
                             if (request.options.readRemote === true) {
@@ -861,7 +872,7 @@ coreDataApp.provider('dataStore', function () {
                         });
 
                         if (request.template !== undefined) {
-                            var _uri = _parseRequest(request.template, request.schema);
+                            var _uri = dataStoreUtilities.parseRequest(request.template, request.schema);
 
                             _getLocal(_uri, request.options, function (res, err) {
                                 var deleteItems = [];
