@@ -74,7 +74,7 @@ interfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
             ngModel.$formatters.push(function (value) {
                 var viewValue = '';
                 if (value !== undefined) {
-                    viewValue = $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) + ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm';
+                    viewValue = $filter('location')(value);
 
                     if (attrs.ngChange) {
                         scope.$eval(attrs.ngChange);
@@ -84,6 +84,12 @@ interfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
                 return viewValue;
             });
         }
+    };
+}]);
+
+interfaceUiApp.filter('location', ['$filter', function ($filter) {
+    return function (value) {
+        return ((value && value.geometry ? $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) : '') + (value && value.properties ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);
 
@@ -116,9 +122,19 @@ interfaceUiApp.directive('inputNumber', [function () {
         restrict: 'A',
         require: 'ngModel',
         link: function (scope, element, attrs, ngModel) {
+            var _max = (attrs.max ? parseFloat(attrs.max) : false);
+            var _min = (attrs.min ? parseFloat(attrs.min) : false);
+
             ngModel.$parsers.push(function (value) {
-                var float = parseFloat(value)
-                return (isNaN(float) ? value : float);
+                var float = parseFloat(value);
+
+                if (isNaN(float) == false) {
+                    ngModel.$setValidity('range', (!_min || float >= _min) && (!_max || float <= _max));
+
+                    return float;
+                } else {
+                    return value;
+                }
             });
         }
     };
