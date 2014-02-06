@@ -19,6 +19,14 @@ coreConnectionApp.provider('routeResolver', function () {
         return this;
     };
 
+    this.resolver = function () {
+        return {
+            data: ['routeResolver', function (routeResolver) {
+                return routeResolver.getData();
+            }]
+        }
+    };
+
     this.$get = ['$route', '$injector', function ($route, $injector) {
         return {
             getData: function () {
