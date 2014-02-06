@@ -1,4 +1,4 @@
-var coreApiApp = angular.module('ag.core.api', ['ag.core.utilities', 'ag.core.data', 'ag.phone.storage']);
+var coreApiApp = angular.module('ag.core.api', ['ag.core.utilities', 'ag.core.data', 'ag.phone.storage', 'ag.core.connection']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -9,8 +9,8 @@ var _errors = {
 /*
  * Syncronization
  */
-coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi',
-    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi) {
+coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi',
+    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi, attachmentApi) {
         var _monitor = null;
 
         function _getFarmers () {
@@ -25,6 +25,47 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
                                             .all([_postFarms(farmer.id), _postAssets(farmer.id)])
                                             .then(promise.resolve, promise.reject);
                                     });
+                                }));
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        function _getDocuments () {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                documentApi.getDocuments().then(function (documents) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(documents, function (document) {
+                                list.push(_postDocument(document));
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        function _getTasks () {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                taskApi.getTasks().then(function (tasks) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(tasks, function (task) {
+                                list.push(promiseService.wrap(function(promise) {
+                                    taskApi.getTasks({template: 'task/:id/tasks', schema: {id: task.id}}).then(function (subtasks) {
+                                        promiseService
+                                            .arrayWrap(function (promises) {
+                                                angular.forEach(subtasks, function (subtask) {
+                                                    promises.push(_postTask(subtask));
+                                                });
+                                            })
+                                            .then(function () {
+                                                return _postTask(task);
+                                            }, promise.reject)
+                                            .then(promise.resolve, promise.reject);
+                                    }, promise.reject);
                                 }));
                             });
                         })
@@ -66,10 +107,7 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
                     promiseService
                         .arrayWrap(function (list) {
                             angular.forEach(assets, function (asset) {
-                                if (asset.dirty === true) {
-                                    list.push(assetApi.postAsset({data: asset}));
-                                }
-
+                                list.push(_postAsset(asset));
                             });
                         })
                         .then(defer.resolve, defer.reject);
@@ -77,50 +115,51 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
             }));
         }
 
-        function _getDocuments () {
+        function _postAsset (asset) {
             return _monitor.add(promiseService.wrap(function (defer) {
-                documentApi.getDocuments().then(function (documents) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(documents, function (document) {
-                                list.push(_postDocument(document));
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
-                });
-            }));
-        }
-
-        function _postDocument (document) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                if (document.dirty === true) {
-                    documentApi.postDocument({data: document}).then(defer.resolve, defer.reject);
+                if (asset.dirty === true) {
+                    assetApi.postAsset({data: asset})
+                        .then(function (res) {
+                            if (res && res.length == 1) {
+                                _postAttachments('asset', asset.id, res[0].id).then(defer.resolve, defer.reject);
+                            } else {
+                                defer.resolve();
+                            }
+                        }, defer.reject);
                 } else {
                     defer.resolve();
                 }
             }));
         }
 
-        function _getTasks () {
+        function _postDocument (document) {
             return _monitor.add(promiseService.wrap(function (defer) {
-                taskApi.getTasks().then(function (tasks) {
+                if (document.dirty === true) {
+                    documentApi.postDocument({data: document})
+                        .then(function (res) {
+                            if (res && res.length == 1) {
+                                _postAttachments('document', document.id, res[0].id).then(defer.resolve, defer.reject);
+                            } else {
+                                defer.resolve();
+                            }
+                        }, defer.reject)
+                } else {
+                    defer.resolve();
+                }
+            }));
+        }
+
+        function _postAttachments (type, oldId, newId) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                attachmentApi.getAttachments({template: type + '/:id/attachments', schema: {id: oldId}}).then(function (attachments) {
                     promiseService
                         .arrayWrap(function (list) {
-                            angular.forEach(tasks, function (task) {
-                                list.push(promiseService.wrap(function(promise) {
-                                    taskApi.getTasks({template: 'task/:id/tasks', schema: {id: task.id}}).then(function (subtasks) {
-                                        promiseService
-                                            .arrayWrap(function (promises) {
-                                                angular.forEach(subtasks, function (subtask) {
-                                                    promises.push(_postTask(subtask));
-                                                });
-                                            })
-                                            .then(function () {
-                                                return _postTask(task);
-                                            }, promise.reject)
-                                            .then(promise.resolve, promise.reject);
-                                    }, promise.reject);
-                                }));
+                            angular.forEach(attachments, function (attachment) {
+                                if (attachment.dirty === true) {
+                                    attachment.uri = type + '/' + newId + '/attachments';
+
+                                    list.push(attachmentApi.postAttachment({template: type + '/:id/attach', schema: {id: newId}, data: attachment}));
+                                }
                             });
                         })
                         .then(defer.resolve, defer.reject);
@@ -150,8 +189,8 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
         }
     }]);
 
-coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetApi', 'farmerUtility', 'documentUtility', 'taskUtility',
-    function (promiseMonitor, promiseService, farmApi, assetApi, farmerUtility, documentUtility, taskUtility) {
+coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility',
+    function (promiseMonitor, promiseService, farmApi, assetUtility, farmerUtility, documentUtility, taskUtility) {
         var _monitor = null;
         var _readOptions = {readLocal: false, readRemote: true};
 
@@ -171,7 +210,17 @@ coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', '
         }
 
         function _getAssets(fid) {
-            return _monitor.add(assetApi.getAssets({id: fid, options: _readOptions}));
+            return _monitor.add(promiseService.wrap(function (defer) {
+                assetUtility.api.getAssets({id: fid, options: _readOptions})
+                    .then(function (assets) {
+                        return promiseService.arrayWrap(function (list) {
+                            angular.forEach(assets, function (asset) {
+                                list.push(assetUtility.hydration.dehydrate(asset));
+                            });
+                        });
+                    }, defer.reject)
+                    .then(defer.resolve, defer.reject);
+            }));
         }
 
         function _getFarms(fid) {
@@ -565,6 +614,56 @@ coreApiApp.factory('documentApi', ['api', function (api) {
     };
 }]);
 
+coreApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
+    var attachmentStore = api({plural: 'attachments', singular: 'attachment'});
+
+    return {
+        getAttachments: attachmentStore.getItems,
+        createAttachment: attachmentStore.createItem,
+        getAttachment: attachmentStore.getItem,
+        findAttachment: attachmentStore.findItem,
+        updateAttachment: attachmentStore.updateItem,
+        postAttachment: function (req) {
+            req = req || {};
+
+            return promiseService.wrap(function (promise) {
+                if (req.data) {
+                    var attachment = req.data;
+                    var uri = 'api/' + (req.template !== undefined ? dataStoreUtilities.parseRequest(req.template, req.schema) : attachment.uri);
+
+                    fileStorageService.read(attachment.data.src, true)
+                        .then(function (fileData) {
+                            // Set content
+                            var upload = {
+                                archive: angular.copy(attachment.data)
+                            };
+
+                            upload.archive.content = fileData.content.substring(fileData.content.indexOf(',') + 1);
+
+                            return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
+                        }, promise.reject)
+                        .then(function () {
+                            console.log('update attachment');
+                            attachment.local = false;
+
+                            attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);
+                        }, promise.reject);
+                } else {
+                    promise.reject();
+                }
+            });
+        },
+        deleteAttachment: function (req) {
+            req = req || {
+                data: {}
+            };
+            req.data.local = true;
+
+            return attachmentStore.deleteItem(req);
+        },
+        purgeAttachment: attachmentStore.purgeItem
+    };
+}]);
 
 coreApiApp.factory('activityApi', ['api', function (api) {
     var activityApi = api({plural: 'activities', singular: 'activity'});
@@ -581,8 +680,8 @@ coreApiApp.factory('activityApi', ['api', function (api) {
 /*
  * Handlers
  */
-coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi',
-    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi) {
+coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'attachmentApi',
+    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi, attachmentApi) {
 
         var _relationTable = {
             farmer: {
@@ -607,12 +706,8 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                                     angular.forEach(obj.data.farms, function (farm) {
                                         promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: obj.id}, data: farm, options: {replace: false, dirty: false}}));
                                     });
-                                }).then(promise.resolve, function () {
-                                        promise.reject();
-                                    });
-                            }, function () {
-                                promise.reject();
-                            });
+                                }).then(promise.resolve, promise.reject);
+                            }, promise.reject);
                     });
                 }
             },
@@ -629,12 +724,8 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                                     angular.forEach(obj.data.assets, function (asset) {
                                         promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: obj.id}, data: asset, options: {replace: false, dirty: false}}));
                                     });
-                                }).then(promise.resolve, function () {
-                                        promise.reject();
-                                    });
-                            }, function () {
-                                promise.reject();
-                            });
+                                }).then(promise.resolve, promise.reject);
+                            }, promise.reject);
                     });
                 }
             },
@@ -645,6 +736,24 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                 },
                 dehydrate: function (obj) {
                     return documentApi.createDocument({data: obj.data.document, options: {replace: false, dirty: false}});
+                }
+            },
+            attachments: {
+                many: true,
+                hydrate: function (obj, type) {
+                    return attachmentApi.getAttachments({template: type + '/:id/attachments', schema: {id: obj.id}});
+                },
+                dehydrate: function (obj, type) {
+                    return promiseService.wrap(function (promise) {
+                        attachmentApi.purgeAttachment({template: type + '/:id/attachments', schema: {id: obj.id}, options: {force: false}})
+                            .then(function () {
+                                promiseService.arrayWrap(function (promises) {
+                                    angular.forEach(obj.data.data.attachments, function (attachment) {
+                                        promises.push(attachmentApi.createAttachment({template: type + '/:id/attachments', schema: {id: obj.id}, data: attachment, options: {replace: false, dirty: false}}));
+                                    });
+                                }).then(promise.resolve, promise.reject);
+                            }, promise.reject);
+                    });
                 }
             },
             subtasks: {
@@ -660,19 +769,15 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                                     angular.forEach(obj.data.subtasks, function (subtask) {
                                         promises.push(taskApi.createTask({template: 'task/:id/tasks', schema: {id: obj.id}, data: subtask, options: {replace: false, dirty: false}}));
                                     });
-                                }).then(promise.resolve, function () {
-                                        promise.reject();
-                                    });
-                            }, function () {
-                                promise.reject();
-                            });
+                                }).then(promise.resolve, promise.reject);
+                            }, promise.reject);
                     });
                 }
             }
         };
 
         return {
-            hydrate: function (obj, relations) {
+            hydrate: function (obj, type, relations) {
                 relations = relations || [];
 
                 return promiseService.wrap(function (promise) {
@@ -682,7 +787,7 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                                 var relation = _relationTable[relationName];
 
                                 if (relation && relation.hydrate) {
-                                    promises[relationName] = relation.hydrate(obj);
+                                    promises[relationName] = relation.hydrate(obj, type);
                                 }
                             });
                         })
@@ -699,7 +804,7 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                         }, promise.reject);
                 });
             },
-            dehydrate: function (obj, relations) {
+            dehydrate: function (obj, type, relations) {
                 relations = relations || [];
 
                 return promiseService.wrap(function (promise) {
@@ -709,7 +814,7 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                                 var relation = _relationTable[relationName];
 
                                 if (relation && relation.dehydrate) {
-                                    promises[relationName] = relation.dehydrate(obj);
+                                    promises[relationName] = relation.dehydrate(obj, type);
                                 }
                             });
                         })
@@ -735,12 +840,12 @@ coreApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', fun
             hydrate: function (task, relations) {
                 relations = relations || _relations;
 
-                return hydration.hydrate(task, relations);
+                return hydration.hydrate(task, 'task', relations);
             },
             dehydrate: function (task, relations) {
                 relations = relations || _relations;
 
-                return hydration.dehydrate(task, relations).then(function (task) {
+                return hydration.dehydrate(task, 'task', relations).then(function (task) {
                     taskApi.updateTask({data: task, options: {dirty: false}});
                 })
             }
@@ -757,7 +862,7 @@ coreApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi',
             hydrate: function (farmer, relations) {
                 relations = relations || _relations;
 
-                return hydration.hydrate(farmer, relations);
+                return hydration.hydrate(farmer, 'farmer', relations);
             },
             dehydrate: function (farmer, relations) {
                 relations = relations || _relations;
@@ -768,7 +873,7 @@ coreApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi',
                     }
                 });
 
-                return hydration.dehydrate(farmer, relations).then(function (farmer) {
+                return hydration.dehydrate(farmer, 'farmer', relations).then(function (farmer) {
                     farmerApi.updateFarmer({data: farmer, options: {dirty: false}});
                 })
             }
@@ -777,20 +882,42 @@ coreApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi',
     };
 }]);
 
+coreApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
+    var _relations = ['attachments'];
+
+    return {
+        hydration: {
+            hydrate: function (asset, relations) {
+                relations = relations || _relations;
+
+                return hydration.hydrate(asset, 'asset', relations);
+            },
+            dehydrate: function (asset, relations) {
+                relations = relations || _relations;
+
+                return hydration.dehydrate(asset, 'asset', relations).then(function (asset) {
+                    assetApi.updateAsset({data: asset, options: {dirty: false}});
+                })
+            }
+        },
+        api: assetApi
+    };
+}]);
+
 coreApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
-    var _relations = ['farmer'];
+    var _relations = ['farmer', 'attachments'];
 
     return {
         hydration: {
             hydrate: function (document, relations) {
                 relations = relations || _relations;
 
-                return hydration.hydrate(task, relations);
+                return hydration.hydrate(task, 'document', relations);
             },
             dehydrate: function (document, relations) {
                 relations = relations || _relations;
 
-                return hydration.dehydrate(document, relations).then(function (document) {
+                return hydration.dehydrate(document, 'document', relations).then(function (document) {
                     delete document.data.tasks;
 
                     documentApi.updateDocument({data: document, options: {dirty: false}});
