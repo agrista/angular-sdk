@@ -54,18 +54,6 @@ interfaceMapApp.factory('mapMarkerHelper', function () {
         });
     };
 
-    function recursiveCoordinate (data, coordinates) {
-        if (coordinates[0] instanceof Array) {
-            angular.forEach(coordinates, function(coordinate) {
-                recursiveCoordinate(data, coordinate);
-            });
-        } else {
-            data.center[0] += coordinates[0];
-            data.center[1] += coordinates[1];
-            data.count++;
-        }
-    }
-
     return {
         getMarker: function (name, options) {
             var marker = {};
@@ -86,16 +74,102 @@ interfaceMapApp.factory('mapMarkerHelper', function () {
             }
 
             return markers;
-        },
-        findCenter: function (coordinates) {
-            var data = {
-                center: [0, 0],
-                count: 0
-            };
-
-            recursiveCoordinate(data, coordinates);
-
-            return [data.center[0] / data.count, data.center[1] / data.count];
         }
+    }
+});
+
+/*
+ * GeoJson
+ */
+interfaceMapApp.factory('geojsonHelper', function () {
+    function GeojsonHelper(json) {
+        if (!(this instanceof GeojsonHelper)) {
+            return new GeojsonHelper(json);
+        }
+
+        this._json = json;
+    }
+
+    function _recursiveCoordinateFinder (bounds, coordinates) {
+        if (angular.isArray(coordinates[0])) {
+            angular.forEach(coordinates, function(coordinate) {
+                _recursiveCoordinateFinder(bounds, coordinate);
+            });
+        } else if (angular.isArray(coordinates)) {
+            bounds.push([coordinates[1], coordinates[0]]);
+        }
+    }
+
+    GeojsonHelper.prototype = {
+        getJson: function () {
+            return this._json;
+        },
+        getCenter: function () {
+            var bounds = this.getBounds();
+            var center = [0, 0];
+
+            angular.forEach(bounds, function(coordinate) {
+                center[0] += coordinate[0];
+                center[1] += coordinate[1];
+            });
+
+            return [(center[1] / bounds.length), (center[0] / bounds.length)];
+        },
+        getBounds: function () {
+            var features = this._json.features || [this._json];
+            var bounds = [];
+
+            angular.forEach(features, function(feature) {
+                var geometry = feature.geometry || feature;
+
+                _recursiveCoordinateFinder(bounds, geometry.coordinates);
+            });
+
+            return bounds;
+        },
+        addProperties: function (properties) {
+            var _this = this;
+
+            if (_this._json.type == 'Feature') {
+                angular.forEach(properties, function(property, key) {
+                    _this._json.geometry[key] = property;
+                });
+            } else if (_this._json.type != 'FeatureGroup') {
+                _this._json = {
+                    type: 'Feature',
+                    geometry: _this._json,
+                    properties: properties
+                };
+            }
+
+            return _this;
+        },
+        addGeometry: function (geometry, properties) {
+            if (this._json.type != 'FeatureGroup' && this._json.type != 'Feature') {
+                this._json = {
+                    type: 'Feature',
+                    geometry: this._json
+                };
+            }
+
+            if (this._json.type == 'Feature') {
+                this._json = {
+                    type: 'FeatureGroup',
+                    features: [this._json]
+                };
+            }
+
+            if (this._json.type == 'FeatureGroup') {
+                this._json.features.push({
+                    type: 'Feature',
+                    geometry: geometry,
+                    properties: properties
+                });
+            }
+        }
+    };
+
+    return function (json) {
+        return new GeojsonHelper(json);
     }
 });
