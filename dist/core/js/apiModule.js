@@ -703,10 +703,10 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
             organization: {
                 many: false,
                 hydrate: function (obj, type) {
-                    return farmerApi.findFarmer({key: obj.data.farmerId});
+                    return farmerApi.findFarmer({key: obj.data.organizationId});
                 },
                 dehydrate: function (obj, type) {
-                    return farmerApi.createFarmer({data: obj.data.farmer, options: {replace: false, dirty: false}});
+                    return farmerApi.createFarmer({data: obj.data.organization, options: {replace: false, dirty: false}});
                 }
             },
             farms: {
