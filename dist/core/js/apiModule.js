@@ -756,7 +756,7 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
                             .then(function () {
                                 promiseService.arrayWrap(function (promises) {
                                     angular.forEach(obj.data.legalEntities, function (entity) {
-                                        delete obj.data.legalEntities.assets;
+                                        delete entity.assets;
 
                                         promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: obj.id}, data: entity, options: {replace: false, dirty: false}}));
                                     });
