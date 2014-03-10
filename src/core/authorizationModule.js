@@ -206,18 +206,3 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         }]
     }
 }]);
-
-sdkAuthorizationApp.run(['$rootScope', 'authorization', '$state', function ($rootScope, authorization, $state) {
-    $rootScope.$on('$stateChangeStart', function (event, toState, toParams, fromState, fromParams) {
-
-        if (toState.authorization !== undefined) {
-            if (!authorization.isAllowed(toState.authorization)) {
-                event.preventDefault();
-
-                if (!authorization.isLoggedIn()) {
-                    $state.transitionTo('loggedOut');
-                }
-            }
-        }
-    });
-}]);
