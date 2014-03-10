@@ -1,6 +1,6 @@
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
 
-sdkHelperAssetApp.factory('assetsHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
     var _listServiceMap = function(item, metadata) {
         var map = {
             type: item.type,
