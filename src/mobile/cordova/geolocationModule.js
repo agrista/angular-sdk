@@ -1,7 +1,7 @@
-var phoneGeolocationApp = angular.module('ag.phone.geolocation', ['ag.core.utilities']);
+var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', ['ag.core.utilities']);
 
 /**
- * @name geolocationModule.geolocationService
+ * @name cordovaGeolocationApp.geolocationService
  * @requires promiseService
  * @description Creates a AngularJS service to provide geolocation data
  * @example
@@ -23,7 +23,7 @@ var phoneGeolocationApp = angular.module('ag.phone.geolocation', ['ag.core.utili
  watch.cancel();
 
  */
-phoneGeolocationApp.factory('geolocationService', ['promiseService', function (promiseService) {
+cordovaGeolocationApp.factory('geolocationService', ['promiseService', function (promiseService) {
     var _geolocation = navigator.geolocation;
     var _defaultOptions = {enableHighAccuracy: true};
     var _errors = {

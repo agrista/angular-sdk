@@ -1,9 +1,9 @@
-var coreDataApp = angular.module('ag.core.data', ['ag.core.utilities']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.core.utilities']);
 
 /**
  * @name dataPurgeService
  */
-coreDataApp.provider('dataPurge', function () {
+mobileSdkDataApp.provider('dataPurge', function () {
     this.$get = ['queueService', 'dataStore', function (queueService, dataStore) {
         var _queue = null;
 
@@ -39,7 +39,7 @@ coreDataApp.provider('dataPurge', function () {
     }];
 });
 
-coreDataApp.factory('dataStoreUtilities', function () {
+mobileSdkDataApp.factory('dataStoreUtilities', function () {
     return {
         parseRequest: function (templateUrl, schemaData) {
             console.log('Unresolved: ' + templateUrl);
@@ -76,7 +76,7 @@ coreDataApp.factory('dataStoreUtilities', function () {
 /**
  * @name dataStore
  */
-coreDataApp.provider('dataStore', function () {
+mobileSdkDataApp.provider('dataStore', function () {
     var _defaultOptions = {
         url: '/api',
         pageLimit: 10,

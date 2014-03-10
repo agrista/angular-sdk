@@ -1,7 +1,7 @@
-var phoneCameraApp = angular.module('ag.phone.camera', ['ag.core.utilities']);
+var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.core.utilities']);
 
 /**
- * @name cameraphoneCameraApp.cameraService
+ * @name cordovaCameraApp.cameraService
  * @requires promiseService
  * @description Creates a AngularJS service to provide camera data
  * @example
@@ -13,7 +13,7 @@ var phoneCameraApp = angular.module('ag.phone.camera', ['ag.core.utilities']);
         });
 
  */
-phoneCameraApp.factory('cameraService', ['promiseService', function (promiseService) {
+cordovaCameraApp.factory('cameraService', ['promiseService', function (promiseService) {
     if (typeof window.Camera === 'undefined') {
         window.Camera = {};
     }

@@ -1,14 +1,9 @@
 {
-    "name": "agrista-mobile-data-services",
-    "version": "0.4.7",
+    "name": "agrista-sdk",
+    "version": "0.5.0",
     "dependencies": {
-        "angular": "https://github.com/angular/bower-angular.git#1.2.0-rc.2",
-        "angular-animate": "https://github.com/angular/bower-angular-animate.git#1.2.0-rc.2",
-        "angular-leaflet": "https://github.com/tombatossals/angular-leaflet-directive.git",
+        "angular": "https://github.com/angular/bower-angular.git",
+        "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
         "underscore": "https://github.com/documentcloud/underscore.git"
-    },
-    "devDependencies": {
-        "angular-mocks": "http://code.angularjs.org/1.1.5/angular-mocks.js",
-        "ngMidwayTester": "https://github.com/yearofmoo/ngMidwayTester.git"
     }
 }

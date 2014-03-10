@@ -1,6 +1,6 @@
-var phoneUtilitiesApp = angular.module('ag.phone.utilities', ['ag.core.utilities', 'ag.phone.geolocation', 'ag.phone.camera']);
+var cordovaHelperApp = angular.module('ag.mobile-sdk.helper', ['ag.core.utilities', 'ag.mobile-sdk.cordova.geolocation', 'ag.mobile-sdk.cordova.camera']);
 
-phoneUtilitiesApp.factory('geolocationHelper', ['promiseService', 'geolocationService', function(promiseService, geolocationService) {
+cordovaHelperApp.factory('geolocationHelper', ['promiseService', 'geolocationService', function(promiseService, geolocationService) {
     function GeolocationHelper(req) {
         if (!(this instanceof GeolocationHelper)) {
             return new GeolocationHelper(req);
@@ -70,7 +70,7 @@ phoneUtilitiesApp.factory('geolocationHelper', ['promiseService', 'geolocationSe
     }
 }]);
 
-phoneUtilitiesApp.factory('cameraHelper', ['promiseService', 'geolocationService', 'cameraService', function(promiseService, geolocationService, cameraService) {
+cordovaHelperApp.factory('cameraHelper', ['promiseService', 'geolocationService', 'cameraService', function(promiseService, geolocationService, cameraService) {
     var _defaults = {
         geolocation: {
             timeout: 20000

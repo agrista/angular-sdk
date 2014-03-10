@@ -1,0 +1,1 @@
+var sdkHelperApp = angular.module('ag.sdk.helper', ['ag.sdk.helper.asset', 'ag.sdk.helper.farmer', 'ag.sdk.helper.document', 'ag.sdk.helper.favourites', 'ag.sdk.helper.merchant', 'ag.sdk.helper.task', 'ag.sdk.helper.user']);

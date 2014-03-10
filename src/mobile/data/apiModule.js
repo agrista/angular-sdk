@@ -1,4 +1,4 @@
-var coreApiApp = angular.module('ag.core.api', ['ag.core.utilities', 'ag.core.data', 'ag.phone.storage', 'ag.core.connection']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.core.utilities', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -9,7 +9,7 @@ var _errors = {
 /*
  * Syncronization
  */
-coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi',
+mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi',
     function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi, attachmentApi) {
         var _monitor = null;
 
@@ -189,7 +189,7 @@ coreApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'fa
         }
     }]);
 
-coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility',
+mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility',
     function (promiseMonitor, promiseService, farmApi, assetUtility, farmerUtility, documentUtility, taskUtility) {
         var _monitor = null;
         var _readOptions = {readLocal: false, readRemote: true};
@@ -276,7 +276,7 @@ coreApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', '
         };
     }]);
 
-coreApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 'dataUploadService', 'dataDownloadService', function (promiseMonitor, promiseService, dataUploadService, dataDownloadService) {
+mobileSdkApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 'dataUploadService', 'dataDownloadService', function (promiseMonitor, promiseService, dataUploadService, dataDownloadService) {
     var _monitor = null;
 
     return function (callback) {
@@ -294,7 +294,7 @@ coreApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 'data
 /*
  * API
  */
-coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseService, dataStore) {
+mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promiseService, dataStore) {
     return function (naming) {
         if (typeof naming === 'String') {
             naming = {
@@ -488,7 +488,7 @@ coreApiApp.factory('api', ['promiseService', 'dataStore', function (promiseServi
     }
 }]);
 
-coreApiApp.factory('userApi', ['api', function (api) {
+mobileSdkApiApp.factory('userApi', ['api', function (api) {
     var userApi = api({plural: 'users', singular: 'user'});
 
     return {
@@ -502,7 +502,7 @@ coreApiApp.factory('userApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('teamApi', ['api', function (api) {
+mobileSdkApiApp.factory('teamApi', ['api', function (api) {
     var teamApi = api({plural: 'teams', singular: 'team'});
 
     return {
@@ -516,7 +516,7 @@ coreApiApp.factory('teamApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('notificationApi', ['api', function (api) {
+mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
     var notificationApi = api({plural: 'notifications', singular: 'notification'});
 
     return {
@@ -526,7 +526,7 @@ coreApiApp.factory('notificationApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('taskApi', ['api', function (api) {
+mobileSdkApiApp.factory('taskApi', ['api', function (api) {
     var taskApi = api({plural: 'tasks', singular: 'task'});
 
     return {
@@ -541,7 +541,7 @@ coreApiApp.factory('taskApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('organizationApi', ['api', function (api) {
+mobileSdkApiApp.factory('organizationApi', ['api', function (api) {
     var organizationApi = api({plural: 'providers', singular: 'provider'});
 
     return {
@@ -554,7 +554,7 @@ coreApiApp.factory('organizationApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('farmerApi', ['api', function (api) {
+mobileSdkApiApp.factory('farmerApi', ['api', function (api) {
     var farmerApi = api({plural: 'farmers', singular: 'farmer'});
 
     return {
@@ -569,7 +569,7 @@ coreApiApp.factory('farmerApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('legalEntityApi', ['api', function (api) {
+mobileSdkApiApp.factory('legalEntityApi', ['api', function (api) {
     var entityApi = api({plural: 'legalentities', singular: 'legalentity'});
 
     return {
@@ -584,7 +584,7 @@ coreApiApp.factory('legalEntityApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('farmApi', ['api', function (api) {
+mobileSdkApiApp.factory('farmApi', ['api', function (api) {
     var farmApi = api({plural: 'farms', singular: 'farm'});
 
     return {
@@ -599,7 +599,7 @@ coreApiApp.factory('farmApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('assetApi', ['api', function (api) {
+mobileSdkApiApp.factory('assetApi', ['api', function (api) {
     var assetApi = api({plural: 'assets', singular: 'asset'});
 
     return {
@@ -614,7 +614,7 @@ coreApiApp.factory('assetApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('documentApi', ['api', function (api) {
+mobileSdkApiApp.factory('documentApi', ['api', function (api) {
     var documentStore = api({plural: 'documents', singular: 'document'});
 
     return {
@@ -629,7 +629,7 @@ coreApiApp.factory('documentApi', ['api', function (api) {
     };
 }]);
 
-coreApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
+mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
     var attachmentStore = api({plural: 'attachments', singular: 'attachment'});
 
     return {
@@ -680,7 +680,7 @@ coreApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStore
     };
 }]);
 
-coreApiApp.factory('activityApi', ['api', function (api) {
+mobileSdkApiApp.factory('activityApi', ['api', function (api) {
     var activityApi = api({plural: 'activities', singular: 'activity'});
 
     return {
@@ -695,7 +695,7 @@ coreApiApp.factory('activityApi', ['api', function (api) {
 /*
  * Handlers
  */
-coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'attachmentApi', 'legalEntityApi',
+mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'attachmentApi', 'legalEntityApi',
     function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi, attachmentApi, legalEntityApi) {
         // TODO: Allow for tree of hydrations/dehydrations (e.g. Farmer -> LegalEntities -> Assets)
 
@@ -872,7 +872,7 @@ coreApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farm
         }
     }]);
 
-coreApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', function (promiseService, hydration, taskApi) {
+mobileSdkApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', function (promiseService, hydration, taskApi) {
     var _relations = ['organization', 'document', 'subtasks'];
 
     return {
@@ -902,7 +902,7 @@ coreApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', fun
     };
 }]);
 
-coreApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
+mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
     var _relations = ['farms', 'assets', 'legalEntities'];
 
     return {
@@ -938,7 +938,7 @@ coreApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi',
     };
 }]);
 
-coreApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
+mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
     var _relations = ['attachments'];
 
     return {
@@ -968,7 +968,7 @@ coreApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', f
     };
 }]);
 
-coreApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
+mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
     var _relations = ['organization', 'attachments'];
 
     return {

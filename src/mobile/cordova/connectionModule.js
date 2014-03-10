@@ -1,6 +1,6 @@
-var phoneConnectionApp = angular.module('ag.phone.connection', []);
+var cordovaConnectionApp = angular.module('ag.mobile-sdk.cordova.connection', []);
 
-phoneConnectionApp.factory('connectionService', ['$timeout', function ($timeout) {
+cordovaConnectionApp.factory('connectionService', ['$timeout', function ($timeout) {
     var _onConnectionChangeList = [];
     var _lastConnectionType = undefined;
 
