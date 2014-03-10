@@ -1,4 +1,4 @@
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.core.utilities']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.core.utilities', 'ag.sdk.core.config']);
 
 /**
  * @name dataPurgeService
@@ -78,7 +78,6 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
  */
 mobileSdkDataApp.provider('dataStore', function () {
     var _defaultOptions = {
-        url: '/api',
         pageLimit: 10,
         dbName: undefined,
         readLocal: true,
@@ -113,7 +112,8 @@ mobileSdkDataApp.provider('dataStore', function () {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$q', '$http', '$rootScope', 'safeApply', 'dataStoreUtilities', function ($q, $http, $rootScope, safeApply, dataStoreUtilities) {
+    this.$get = ['$q', '$http', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($q, $http, $rootScope, safeApply, configuration, dataStoreUtilities) {
+        var _hostApi = configuration.getServer() + 'api';
 
         /**
          * @name _initializeDatabase
@@ -460,7 +460,7 @@ mobileSdkDataApp.provider('dataStore', function () {
 
                 if (_config.apiTemplate !== undefined) {
                     safeApply(function () {
-                        $http.get(_defaultOptions.url + uri, {withCredentials: true}).then(function (res) {
+                        $http.get(_hostApi + uri, {withCredentials: true}).then(function (res) {
                             if (res.data != null && res.data !== 'null') {
                                 var data = res.data;
 
@@ -533,7 +533,7 @@ mobileSdkDataApp.provider('dataStore', function () {
 
                     var _makePost = function (item, uri) {
                         safeApply(function () {
-                            $http.post(_defaultOptions.url + uri, item.data, {withCredentials: true}).then(function (res) {
+                            $http.post(_hostApi + uri, item.data, {withCredentials: true}).then(function (res) {
                                 var remoteItem = {
                                     id: _getItemIndex(res.data, item.id),
                                     uri: item.uri,
@@ -607,7 +607,7 @@ mobileSdkDataApp.provider('dataStore', function () {
 
                     var _makeDelete = function (item, uri) {
                         safeApply(function () {
-                            $http.post(_defaultOptions.url + uri, {withCredentials: true}).then(function (res) {
+                            $http.post(_hostApi + uri, {withCredentials: true}).then(function (res) {
                                 _deleteLocal(item, asyncMon.done);
                             }, function (err) {
                                 _errorCallback(err);

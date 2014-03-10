@@ -1,4 +1,4 @@
-var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.core.utilities']);
+var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.core.utilities']);
 
 /**
  * @name cordovaCameraApp.cameraService

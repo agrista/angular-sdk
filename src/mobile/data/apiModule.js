@@ -1,4 +1,4 @@
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.core.utilities', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.core.utilities', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},

@@ -1,4 +1,4 @@
-var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.core.utilities']);
+var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk.core.utilities']);
 
 /**
  * @name cordovaStorageApp.fileStorageService
