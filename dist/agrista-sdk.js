@@ -250,6 +250,13 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', fu
                 }, promise.reject);
             });
         },
+        inviteMerchantUser: function(id) {
+            return promiseService.wrap(function(promise) {
+                $http.post('/api/merchant/' + id + '/invite-user', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getMerchant: function(id) {
             return promiseService.wrap(function(promise) {
                 $http.get('/api/merchant/' + id, {withCredentials: true}).then(function (res) {
@@ -1317,6 +1324,9 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
             action(deferred);
 
             return deferred.promise;
+        },
+        wrapAll: function (action) {
+            return _wrapAll(action, []);
         },
         arrayWrap: function (action) {
             return _wrapAll(action, []);

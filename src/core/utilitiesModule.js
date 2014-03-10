@@ -152,6 +152,9 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
 
             return deferred.promise;
         },
+        wrapAll: function (action) {
+            return _wrapAll(action, []);
+        },
         arrayWrap: function (action) {
             return _wrapAll(action, []);
         },
