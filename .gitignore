@@ -1,4 +1,4 @@
 *.log
 .idea/
 node_modules/
-test/components/
+examples/components/

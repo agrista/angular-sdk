@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html ng-app="app">
+<head>
+    <script type="text/javascript" src="components/underscore/underscore.js"></script>
+    <script type="text/javascript" src="components/angular/angular.js"></script>
+    <script type="text/javascript" src="components/angular-cookies/angular-cookies.js"></script>
+    <script type="text/javascript" src="../dist/agrista-sdk.js"></script>
+    <script>
+        var app = angular.module('app', ['ag.sdk.core.authorization']);
+
+        app.config(['configurationProvider', function (configurationProvider) {
+            configurationProvider.setServers({
+                local: 'http://localhost:9003/'
+            });
+        }]);
+
+        app.run(['$log', 'authorization', function ($log, authorization) {
+            authorization.login('example@agrista.com', 'password123').then(function (user) {
+                $log.debug(user);
+            });
+        }]);
+    </script>
+</head>
+<body></body>
+</html>

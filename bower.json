@@ -5,5 +5,10 @@
         "angular": "https://github.com/angular/bower-angular.git",
         "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
         "underscore": "https://github.com/documentcloud/underscore.git"
+    },
+    "devDependencies": {
+        "angular": "https://github.com/angular/bower-angular.git",
+        "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
+        "underscore": "https://github.com/documentcloud/underscore.git"
     }
 }

@@ -1,51 +1,53 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.core.authorization', ['ag.sdk.core.utilities', 'ngCookies']);
+var sdkAuthorizationApp = angular.module('ag.sdk.core.authorization', ['ag.sdk.core.config', 'ag.sdk.core.utilities', 'ngCookies']);
 
-sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', function($http, promiseService) {
+sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+    
     return {
         login: function (email, password) {
             return promiseService.wrap(function(promise) {
-                $http.post('/login', {email: email, password: password}).then(function (res) {
+                $http.post(_host + 'login', {email: email, password: password}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         resetPassword: function (hash, password) {
             return promiseService.wrap(function(promise) {
-                $http.post('/api/password-reset', {hash: hash, password: password}).then(function (res) {
+                $http.post(_host + 'api/password-reset', {hash: hash, password: password}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         requestResetPasswordEmail: function(email) {
             return promiseService.wrap(function(promise) {
-                $http.post('/api/password-reset-email', {email: email}).then(function (res) {
+                $http.post(_host + 'api/password-reset-email', {email: email}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         changePassword: function (id, oldPassword, newPassword) {
             return promiseService.wrap(function(promise) {
-                $http.post('/api/user/password', {password: oldPassword, newPassword: newPassword}).then(function (res) {
+                $http.post(_host + 'api/user/password', {password: oldPassword, newPassword: newPassword}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getUser: function () {
             return promiseService.wrap(function(promise) {
-                $http.get('/current-user', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'current-user', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         registerUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post('/api/register', data).then(function (res) {
+                $http.post(_host + 'api/register', data).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         logout: function() {
-            return $http.post('/logout');
+            return $http.post(_host + 'logout');
         }
     };
 }]);
@@ -207,6 +209,63 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
     }
 }]);
 
+var sdkConfigApp = angular.module('ag.sdk.core.config', []);
+
+/**
+ * @name configurationProvider / configuration
+ * @description Provider to define the configuration of servers
+ */
+sdkConfigApp.provider('configuration', [function() {
+    var _version = '';
+    var _host = 'local';
+
+    var _servers = {
+        local: '/',
+        alpha: 'http://staging.farmer.agrista.net/',
+        beta: 'http://farmer.agrista.net/'
+    };
+
+    return {
+        setServers: function(servers) {
+            angular.forEach(servers, function (host, name) {
+                if (host.lastIndexOf('/') !== host.length - 1) {
+                    host += '/';
+                }
+
+                _servers[name] = host;
+            });
+        },
+        useHost: function(host, version, cCallback) {
+            if (typeof version === 'function') {
+                cCallback = version;
+                version = '';
+            }
+
+            _version = version;
+
+            if (_servers[host] !== undefined) {
+                _host = host;
+            }
+
+            if (typeof cCallback === 'function') {
+                cCallback(_servers[_host]);
+            }
+        },
+        $get: function() {
+            return {
+                getVersion: function() {
+                    return _version;
+                },
+                getHost: function() {
+                    return _host;
+                },
+                getServer: function() {
+                    return _servers[_host];
+                }
+            }
+        }
+    }
+}]);
 var sdkIdApp = angular.module('ag.sdk.core.id', ['ngCookies']);
 
 sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
@@ -6290,46 +6349,3 @@ mobileSdkApp.provider('routeResolver', function () {
         }
     }];
 });
-
-/**
- * @name configurationProvider / configuration
- * @description Provider to define the configuration of servers
- */
-mobileSdkApp.provider('configuration', [function() {
-    var _version = '';
-    var _host = 'alpha';
-
-    var _servers = {
-        local: 'http://localhost:3005/',
-        alpha: 'http://staging.farmer.agrista.net/',
-        beta: 'http://farmer.agrista.net/'
-    };
-
-    return {
-        setServers: function(servers) {
-            _servers = servers;
-        },
-        config: function(version, host, cCallback) {
-            if (_servers[host] !== undefined) {
-                _host = host;
-            }
-
-            _version = version;
-
-            cCallback(_servers[_host]);
-        },
-        $get: function() {
-            return {
-                getVersion: function() {
-                    return _version;
-                },
-                getHost: function() {
-                    return _host;
-                },
-                getServer: function() {
-                    return _servers[_host];
-                }
-            }
-        }
-    }
-}]);
