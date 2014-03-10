@@ -869,20 +869,6 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
     }
 }]);
 
-sdkAuthorizationApp.run(['$rootScope', 'authorization', '$state', function ($rootScope, authorization, $state) {
-    $rootScope.$on('$stateChangeStart', function (event, toState, toParams, fromState, fromParams) {
-
-        if (toState.authorization !== undefined) {
-            if (!authorization.isAllowed(toState.authorization)) {
-                event.preventDefault();
-
-                if (!authorization.isLoggedIn()) {
-                    $state.transitionTo('loggedOut');
-                }
-            }
-        }
-    });
-}]);
 var sdkIdApp = angular.module('ag.sdk.core.id', ['ngCookies']);
 
 sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
@@ -990,7 +976,7 @@ sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
 }]);
 
 sdkIdApp.factory('generateUUID', function () {
-    return function () {
+    function GenerateUUID () {
         var d = new Date().getTime();
         var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             var r = (d + Math.random()*16)%16 | 0;
@@ -998,6 +984,10 @@ sdkIdApp.factory('generateUUID', function () {
             return (c=='x' ? r : (r&0x7|0x8)).toString(16);
         });
         return uuid;
+    };
+
+    return function() {
+        return new GenerateUUID();
     };
 });
 
@@ -1340,7 +1330,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
 
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
 
-sdkHelperAssetApp.factory('assetsHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
     var _listServiceMap = function(item, metadata) {
         var map = {
             type: item.type,
