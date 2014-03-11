@@ -1,6 +1,6 @@
 var sdkInterfaceNavigiationApp = angular.module('ag.sdk.interface.navigation', []);
 
-frameworkApp.provider('navigationService', function() {
+sdkInterfaceNavigiationApp.provider('navigationService', function() {
     var _registeredApps = {};
     var _groupedApps = [];
 
