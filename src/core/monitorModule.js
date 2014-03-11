@@ -1,4 +1,4 @@
-var sdkMonitorApp = angular.module('ag.sdk.core.monitor', ['ag.sdk.core.utilities']);
+var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
 sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
     function QueueService(options, callback) {

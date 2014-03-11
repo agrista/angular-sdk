@@ -1,4 +1,4 @@
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.core.utilities', 'ag.sdk.core.config']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config']);
 
 /**
  * @name dataPurgeService

@@ -1,4 +1,4 @@
-var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.core.id']);
+var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.id']);
 
 sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function ($rootScope, objectId) {
     var _button;

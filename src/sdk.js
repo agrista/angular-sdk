@@ -1,1 +1,1 @@
-var sdkApp = angular.module('ag.sdk', ['ag.sdk.core.authorization', 'ag.sdk.core.id', 'ag.sdk.core.utilities', 'ag.sdk.core.api', 'ag.sdk.helper', 'ag.sdk.interface.map']);
+var sdkApp = angular.module('ag.sdk', ['ag.sdk.authorization', 'ag.sdk.id', 'ag.sdk.utilities', 'ag.sdk.api', 'ag.sdk.helper', 'ag.sdk.interface.map']);

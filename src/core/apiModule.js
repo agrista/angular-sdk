@@ -1,4 +1,4 @@
-var sdkApiApp = angular.module('ag.sdk.core.api', ['ag.sdk.core.config', 'ag.sdk.core.utilities']);
+var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 /**
  * User API

@@ -1,4 +1,4 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.core.authorization', ['ag.sdk.core.config', 'ag.sdk.core.utilities', 'ngCookies']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'ngCookies']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
     var _host = configuration.getServer();

@@ -1,10 +1,10 @@
-var sdkConfigApp = angular.module('ag.sdk.core.config', []);
+var sdkConfigApp = angular.module('ag.sdk.config', []);
 
 /**
  * @name configurationProvider / configuration
  * @description Provider to define the configuration of servers
  */
-sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', function($httpProvider, $locationProvider) {
+sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider) {
     var _version = '';
     var _host = 'local';
 
@@ -34,11 +34,12 @@ sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', fu
 
             _version = version || '';
 
-            if (_servers[host] !== undefined && host !== 'local') {
+            if (_servers[host] !== undefined) {
                 _host = host;
 
                 // Enable cross domain
-                $httpProvider.defaults.useXDomain = (_servers[_host].indexOf($locationProvider.host()) === -1);
+                $httpProvider.defaults.useXDomain = true;
+                delete $httpProvider.defaults.headers.common['X-Requested-With'];
             }
 
             if (typeof cCallback === 'function') {

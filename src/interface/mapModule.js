@@ -1,4 +1,4 @@
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.core.utilities']);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities']);
 
 /*
  * GeoJson

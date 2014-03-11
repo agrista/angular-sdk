@@ -17,12 +17,21 @@ module.exports = function(grunt) {
                     'dist/agrista-mobile-sdk.min.js': ['dist/agrista-mobile-sdk.js']
                 }
             }
+        },
+        connect: {
+            server: {
+                options: {
+                    port: 8000,
+                    keepalive: true
+                }
+            }
         }
     });
 
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-concat');
+    grunt.loadNpmTasks('grunt-contrib-connect');
 
     grunt.registerTask('default', ['concat', 'uglify']);
-
+    grunt.registerTask('server', ['default', 'connect']);
 };

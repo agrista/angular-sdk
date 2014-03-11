@@ -1,4 +1,4 @@
-var skdUtilitiesApp = angular.module('ag.sdk.core.utilities', []);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
 
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {

@@ -1,4 +1,4 @@
-var sdkApiApp = angular.module('ag.sdk.core.api', ['ag.sdk.core.config', 'ag.sdk.core.utilities']);
+var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 /**
  * User API
@@ -697,7 +697,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
 }]);
 
 
-var sdkAuthorizationApp = angular.module('ag.sdk.core.authorization', ['ag.sdk.core.config', 'ag.sdk.core.utilities', 'ngCookies']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'ngCookies']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -908,13 +908,13 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
     }
 }]);
 
-var sdkConfigApp = angular.module('ag.sdk.core.config', []);
+var sdkConfigApp = angular.module('ag.sdk.config', []);
 
 /**
  * @name configurationProvider / configuration
  * @description Provider to define the configuration of servers
  */
-sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', function($httpProvider, $locationProvider) {
+sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider) {
     var _version = '';
     var _host = 'local';
 
@@ -944,11 +944,12 @@ sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', fu
 
             _version = version || '';
 
-            if (_servers[host] !== undefined && host !== 'local') {
+            if (_servers[host] !== undefined) {
                 _host = host;
 
                 // Enable cross domain
-                $httpProvider.defaults.useXDomain = (_servers[_host].indexOf($locationProvider.host()) === -1);
+                $httpProvider.defaults.useXDomain = true;
+                delete $httpProvider.defaults.headers.common['X-Requested-With'];
             }
 
             if (typeof cCallback === 'function') {
@@ -970,7 +971,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', fu
         }
     }
 }]);
-var sdkIdApp = angular.module('ag.sdk.core.id', ['ngCookies']);
+var sdkIdApp = angular.module('ag.sdk.id', ['ngCookies']);
 
 sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
     /*
@@ -1092,7 +1093,7 @@ sdkIdApp.factory('generateUUID', function () {
     };
 });
 
-var sdkMonitorApp = angular.module('ag.sdk.core.monitor', ['ag.sdk.core.utilities']);
+var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
 sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
     function QueueService(options, callback) {
@@ -1265,7 +1266,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
     }
 }]);
 
-var skdUtilitiesApp = angular.module('ag.sdk.core.utilities', []);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
 
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
@@ -2083,7 +2084,7 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     }
 }]);
 
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.core.utilities']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities']);
 
 sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
@@ -2247,7 +2248,7 @@ sdkHelperUserApp.factory('userHelper', [function() {
     }
 }]);
 
-var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.core.id']);
+var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.id']);
 
 sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function ($rootScope, objectId) {
     var _button;
@@ -2514,7 +2515,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     }
 }]);
 
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.core.utilities']);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities']);
 
 /*
  * GeoJson
@@ -4412,4 +4413,4 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
 }]);
 
 
-var sdkApp = angular.module('ag.sdk', ['ag.sdk.core.authorization', 'ag.sdk.core.id', 'ag.sdk.core.utilities', 'ag.sdk.core.api', 'ag.sdk.helper', 'ag.sdk.interface.map']);
+var sdkApp = angular.module('ag.sdk', ['ag.sdk.authorization', 'ag.sdk.id', 'ag.sdk.utilities', 'ag.sdk.api', 'ag.sdk.helper', 'ag.sdk.interface.map']);

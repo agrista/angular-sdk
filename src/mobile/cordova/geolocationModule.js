@@ -1,4 +1,4 @@
-var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', ['ag.sdk.core.utilities']);
+var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', ['ag.sdk.utilities']);
 
 /**
  * @name cordovaGeolocationApp.geolocationService

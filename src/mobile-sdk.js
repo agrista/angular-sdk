@@ -1,4 +1,4 @@
-var mobileSdkApp = angular.module('ag.mobile-sdk', ['ag.sdk.core.authorization', 'ag.sdk.core.id', 'ag.sdk.core.utilities', 'ag.sdk.core.monitor', 'ag.sdk.interface.map', 'ag.sdk.helper', 'ag.mobile-sdk.helper', 'ag.mobile-sdk.api', 'ag.mobile-sdk.data']);
+var mobileSdkApp = angular.module('ag.mobile-sdk', ['ag.sdk.authorization', 'ag.sdk.id', 'ag.sdk.utilities', 'ag.sdk.monitor', 'ag.sdk.interface.map', 'ag.sdk.helper', 'ag.mobile-sdk.helper', 'ag.mobile-sdk.api', 'ag.mobile-sdk.data']);
 
 /**
  * @name routeResolverProvider / routeResolver

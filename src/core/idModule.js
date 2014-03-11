@@ -1,4 +1,4 @@
-var sdkIdApp = angular.module('ag.sdk.core.id', ['ngCookies']);
+var sdkIdApp = angular.module('ag.sdk.id', ['ngCookies']);
 
 sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
     /*

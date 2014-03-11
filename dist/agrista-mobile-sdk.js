@@ -1,4 +1,4 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.core.authorization', ['ag.sdk.core.config', 'ag.sdk.core.utilities', 'ngCookies']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'ngCookies']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -209,13 +209,13 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
     }
 }]);
 
-var sdkConfigApp = angular.module('ag.sdk.core.config', []);
+var sdkConfigApp = angular.module('ag.sdk.config', []);
 
 /**
  * @name configurationProvider / configuration
  * @description Provider to define the configuration of servers
  */
-sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', function($httpProvider, $locationProvider) {
+sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider) {
     var _version = '';
     var _host = 'local';
 
@@ -245,11 +245,12 @@ sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', fu
 
             _version = version || '';
 
-            if (_servers[host] !== undefined && host !== 'local') {
+            if (_servers[host] !== undefined) {
                 _host = host;
 
                 // Enable cross domain
-                $httpProvider.defaults.useXDomain = (_servers[_host].indexOf($locationProvider.host()) === -1);
+                $httpProvider.defaults.useXDomain = true;
+                delete $httpProvider.defaults.headers.common['X-Requested-With'];
             }
 
             if (typeof cCallback === 'function') {
@@ -271,7 +272,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', fu
         }
     }
 }]);
-var sdkIdApp = angular.module('ag.sdk.core.id', ['ngCookies']);
+var sdkIdApp = angular.module('ag.sdk.id', ['ngCookies']);
 
 sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
     /*
@@ -393,7 +394,7 @@ sdkIdApp.factory('generateUUID', function () {
     };
 });
 
-var sdkMonitorApp = angular.module('ag.sdk.core.monitor', ['ag.sdk.core.utilities']);
+var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
 sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
     function QueueService(options, callback) {
@@ -566,7 +567,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
     }
 }]);
 
-var skdUtilitiesApp = angular.module('ag.sdk.core.utilities', []);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
 
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
@@ -1384,7 +1385,7 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     }
 }]);
 
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.core.utilities']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities']);
 
 sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
@@ -1548,7 +1549,7 @@ sdkHelperUserApp.factory('userHelper', [function() {
     }
 }]);
 
-var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.core.id']);
+var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.id']);
 
 sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function ($rootScope, objectId) {
     var _button;
@@ -1815,7 +1816,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     }
 }]);
 
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.core.utilities']);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities']);
 
 /*
  * GeoJson
@@ -3713,7 +3714,7 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
 }]);
 
 
-var cordovaHelperApp = angular.module('ag.mobile-sdk.helper', ['ag.sdk.core.utilities', 'ag.mobile-sdk.cordova.geolocation', 'ag.mobile-sdk.cordova.camera']);
+var cordovaHelperApp = angular.module('ag.mobile-sdk.helper', ['ag.sdk.utilities', 'ag.mobile-sdk.cordova.geolocation', 'ag.mobile-sdk.cordova.camera']);
 
 cordovaHelperApp.factory('geolocationHelper', ['promiseService', 'geolocationService', function(promiseService, geolocationService) {
     function GeolocationHelper(req) {
@@ -3838,7 +3839,7 @@ cordovaHelperApp.factory('cameraHelper', ['promiseService', 'geolocationService'
         }
     }
 }]);
-var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.core.utilities']);
+var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities']);
 
 /**
  * @name cordovaCameraApp.cameraService
@@ -3992,7 +3993,7 @@ cordovaConnectionApp.factory('connectionService', ['$timeout', function ($timeou
     };
 }]);
 
-var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', ['ag.sdk.core.utilities']);
+var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', ['ag.sdk.utilities']);
 
 /**
  * @name cordovaGeolocationApp.geolocationService
@@ -4114,7 +4115,7 @@ cordovaGeolocationApp.factory('geolocationService', ['promiseService', function 
     };
 }]);
 
-var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk.core.utilities']);
+var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk.utilities']);
 
 /**
  * @name cordovaStorageApp.fileStorageService
@@ -4355,7 +4356,7 @@ cordovaStorageApp.factory('fileStorageService', ['promiseService', function (pro
     };
 }]);
 
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.core.utilities', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -5357,7 +5358,7 @@ mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'docu
     };
 }]);
 
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.core.utilities', 'ag.sdk.core.config']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config']);
 
 /**
  * @name dataPurgeService
@@ -6306,7 +6307,7 @@ mobileSdkDataApp.provider('dataStore', function () {
     }];
 });
 
-var mobileSdkApp = angular.module('ag.mobile-sdk', ['ag.sdk.core.authorization', 'ag.sdk.core.id', 'ag.sdk.core.utilities', 'ag.sdk.core.monitor', 'ag.sdk.interface.map', 'ag.sdk.helper', 'ag.mobile-sdk.helper', 'ag.mobile-sdk.api', 'ag.mobile-sdk.data']);
+var mobileSdkApp = angular.module('ag.mobile-sdk', ['ag.sdk.authorization', 'ag.sdk.id', 'ag.sdk.utilities', 'ag.sdk.monitor', 'ag.sdk.interface.map', 'ag.sdk.helper', 'ag.mobile-sdk.helper', 'ag.mobile-sdk.api', 'ag.mobile-sdk.data']);
 
 /**
  * @name routeResolverProvider / routeResolver
