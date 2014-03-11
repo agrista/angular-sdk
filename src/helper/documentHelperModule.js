@@ -68,10 +68,10 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             },
 
             getDocumentTitle: function (docType) {
-                return _documentMap[docType].title;
+                return (_documentMap[docType] ? _documentMap[docType].title : undefined);
             },
             getDocumentState: function (docType) {
-                return _documentMap[docType].state;
+                return (_documentMap[docType] ? _documentMap[docType].state : undefined);
             },
             getDocumentMap: function (docType) {
                 return _documentMap[docType];
