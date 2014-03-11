@@ -78,7 +78,6 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             responseError: function (err) {
                 if (err.status === 401) {
                     console.warn('Not authorized');
-                    $injector.get('$state').transitionTo('loggedOut');
 
                     $rootScope.$broadcast('authorization::unauthorized');
                 }
@@ -569,6 +568,10 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
 
 var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
 
+skdUtilitiesApp.run(['stateResolver', function (stateResolver) {
+    // Initialize stateResolver
+}]);
+
 skdUtilitiesApp.provider('stateResolver', function () {
     var _stateTable = {};
 
@@ -592,16 +595,21 @@ skdUtilitiesApp.provider('stateResolver', function () {
         }
     };
 
-    this.$get = ['$state', '$injector', function ($state, $injector) {
+    this.$get = ['$rootScope', '$state', '$injector', function ($rootScope, $state, $injector) {
+        var nextState = undefined;
+
+        $rootScope.$on('$stateChangeStart', function (event, toState) {
+            nextState = toState;
+        });
+
         return {
             getData: function () {
-                var resolverInjection = ($state.current && $state.current.name ? _stateTable[$state.current.name] : undefined);
-
-                return (resolverInjection ? $injector.invoke(resolverInjection) : undefined);
+                return (nextState && _stateTable[nextState.name] ? $injector.invoke(_stateTable[nextState.name]) : undefined);
             }
         }
     }];
 });
+
 
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
