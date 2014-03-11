@@ -621,44 +621,56 @@ skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     };
 }]);
 
-skdUtilitiesApp.factory('dataMapService', [function() {
-    return function(items, mapping, excludeId) {
-        var mappedItems = [];
+skdUtilitiesApp.provider('dataMapService', [function() {
+    var _storeMode = false;
 
-        if (items instanceof Array === false) {
-            items = (items !== undefined ? [items] : []);
-        }
+    this.setDataStoreMode = function (mode) {
+        _storeMode = mode;
+    }
 
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-            var mappedItem;
+    this.$get = function () {
+        return function(items, mapping, excludeId) {
+            var mappedItems = [];
 
-            if (typeof mapping === 'function') {
-                mappedItem = mapping(item);
-            } else {
-                mappedItem = {};
+            if (items instanceof Array === false) {
+                items = (items !== undefined ? [items] : []);
+            }
 
-                for (var key in mapping) {
-                    if (mapping.hasOwnProperty(key)) {
-                        mappedItem[key] = item[mapping[key]];
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                var mappedItem;
+
+                if (_storeMode && item.data) {
+                    item = item.data;
+                }
+
+                if (typeof mapping === 'function') {
+                    mappedItem = mapping(item);
+                } else {
+                    mappedItem = {};
+
+                    for (var key in mapping) {
+                        if (mapping.hasOwnProperty(key)) {
+                            mappedItem[key] = item[mapping[key]];
+                        }
                     }
                 }
-            }
 
-            if (mappedItem instanceof Array) {
-                mappedItems = mappedItems.concat(mappedItem);
-            } else if (typeof mappedItem === 'object') {
-                if (excludeId !== true) {
-                    mappedItem.id = mappedItem.id || item.id;
+                if (mappedItem instanceof Array) {
+                    mappedItems = mappedItems.concat(mappedItem);
+                } else if (typeof mappedItem === 'object') {
+                    if (excludeId !== true) {
+                        mappedItem.id = mappedItem.id || item.id;
+                    }
+
+                    mappedItems.push(mappedItem);
+                } else if (mappedItem !== undefined) {
+                    mappedItems.push(mappedItem);
                 }
-
-                mappedItems.push(mappedItem);
-            } else if (mappedItem !== undefined) {
-                mappedItems.push(mappedItem);
             }
-        }
 
-        return mappedItems;
+            return mappedItems;
+        }
     }
 }]);
 
@@ -1072,10 +1084,10 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             },
 
             getDocumentTitle: function (docType) {
-                return _documentMap[docType].title;
+                return (_documentMap[docType] ? _documentMap[docType].title : undefined);
             },
             getDocumentState: function (docType) {
-                return _documentMap[docType].state;
+                return (_documentMap[docType] ? _documentMap[docType].state : undefined);
             },
             getDocumentMap: function (docType) {
                 return _documentMap[docType];
@@ -5608,7 +5620,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
 /**
  * @name dataStore
  */
-mobileSdkDataApp.provider('dataStore', function () {
+mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (dataMapServiceProvider) {
     var _defaultOptions = {
         pageLimit: 10,
         dbName: undefined,
@@ -5629,6 +5641,8 @@ mobileSdkDataApp.provider('dataStore', function () {
     };
 
     var _localDatabase;
+
+    dataMapServiceProvider.setDataStoreMode(true);
 
     /**
      * @name dataStoreProvider.config
@@ -6477,6 +6491,6 @@ mobileSdkDataApp.provider('dataStore', function () {
             return new DataStore(name, config);
         };
     }];
-});
+}]);
 
 var mobileSdkApp = angular.module('ag.mobile-sdk', ['ag.sdk.authorization', 'ag.sdk.id', 'ag.sdk.utilities', 'ag.sdk.monitor', 'ag.sdk.interface.map', 'ag.sdk.helper', 'ag.mobile-sdk.helper', 'ag.mobile-sdk.api', 'ag.mobile-sdk.data']);
