@@ -664,14 +664,14 @@ sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'co
     return {
         getMerchants: function() {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/agrista/providers', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/merchants', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchMerchants : function(query) {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/agrista/providers?search=' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/merchants?search=' + query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

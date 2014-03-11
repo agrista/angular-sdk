@@ -541,16 +541,16 @@ mobileSdkApiApp.factory('taskApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('organizationApi', ['api', function (api) {
-    var organizationApi = api({plural: 'providers', singular: 'provider'});
+mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
+    var merchantApi = api({plural: 'merchants', singular: 'merchant'});
 
     return {
-        getOrganizations: organizationApi.getItems,
-        createOrganization: organizationApi.createItem,
-        getOrganization: organizationApi.getItem,
-        updateOrganization: organizationApi.updateItem,
-        postOrganization: organizationApi.postItem,
-        deleteOrganization: organizationApi.deleteItem
+        getMerchants: merchantApi.getItems,
+        createMerchant: merchantApi.createItem,
+        getMerchant: merchantApi.getItem,
+        updateMerchant: merchantApi.updateItem,
+        postMerchant: merchantApi.postItem,
+        deleteMerchant: merchantApi.deleteItem
     };
 }]);
 
