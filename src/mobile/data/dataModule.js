@@ -76,7 +76,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
 /**
  * @name dataStore
  */
-mobileSdkDataApp.provider('dataStore', function () {
+mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (dataMapServiceProvider) {
     var _defaultOptions = {
         pageLimit: 10,
         dbName: undefined,
@@ -97,6 +97,8 @@ mobileSdkDataApp.provider('dataStore', function () {
     };
 
     var _localDatabase;
+
+    dataMapServiceProvider.setDataStoreMode(true);
 
     /**
      * @name dataStoreProvider.config
@@ -945,4 +947,4 @@ mobileSdkDataApp.provider('dataStore', function () {
             return new DataStore(name, config);
         };
     }];
-});
+}]);
