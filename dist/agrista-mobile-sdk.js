@@ -215,7 +215,7 @@ var sdkConfigApp = angular.module('ag.sdk.core.config', []);
  * @name configurationProvider / configuration
  * @description Provider to define the configuration of servers
  */
-sdkConfigApp.provider('configuration', [function() {
+sdkConfigApp.provider('configuration', ['$httpProvider', '$locationProvider', function($httpProvider, $locationProvider) {
     var _version = '';
     var _host = 'local';
 
@@ -234,6 +234,8 @@ sdkConfigApp.provider('configuration', [function() {
 
                 _servers[name] = host;
             });
+
+            this.useHost(_host, _version);
         },
         useHost: function(host, version, cCallback) {
             if (typeof version === 'function') {
@@ -241,10 +243,13 @@ sdkConfigApp.provider('configuration', [function() {
                 version = '';
             }
 
-            _version = version;
+            _version = version || '';
 
-            if (_servers[host] !== undefined) {
+            if (_servers[host] !== undefined && host !== 'local') {
                 _host = host;
+
+                // Enable cross domain
+                $httpProvider.defaults.useXDomain = (_servers[_host].indexOf($locationProvider.host()) === -1);
             }
 
             if (typeof cCallback === 'function') {
