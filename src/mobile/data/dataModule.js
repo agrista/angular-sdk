@@ -113,7 +113,7 @@ mobileSdkDataApp.provider('dataStore', function () {
      * @type {Array}
      */
     this.$get = ['$q', '$http', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($q, $http, $rootScope, safeApply, configuration, dataStoreUtilities) {
-        var _hostApi = configuration.getServer() + 'api';
+        var _hostApi = configuration.getServer() + 'api/';
 
         /**
          * @name _initializeDatabase

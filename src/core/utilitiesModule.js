@@ -1,5 +1,39 @@
 var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
 
+skdUtilitiesApp.provider('stateResolver', function () {
+    var _stateTable = {};
+
+    this.when = function (states, resolverInjection) {
+        if (states instanceof Array) {
+            angular.forEach(states, function (state) {
+                _stateTable[state] = resolverInjection;
+            })
+        } else {
+            _stateTable[states] = resolverInjection;
+        }
+
+        return this;
+    };
+
+    this.resolver = function () {
+        return {
+            data: ['stateResolver', function (stateResolver) {
+                return stateResolver.getData();
+            }]
+        }
+    };
+
+    this.$get = ['$state', '$injector', function ($state, $injector) {
+        return {
+            getData: function () {
+                var resolverInjection = ($state.current && $state.current.name ? _stateTable[$state.current.name] : undefined);
+
+                return (resolverInjection ? $injector.invoke(resolverInjection) : undefined);
+            }
+        }
+    }];
+});
+
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
         if ($rootScope.$$phase) {
