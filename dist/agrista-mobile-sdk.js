@@ -1816,7 +1816,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     }
 }]);
 
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities']);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id']);
 
 /*
  * GeoJson
@@ -4356,7 +4356,7 @@ cordovaStorageApp.factory('fileStorageService', ['promiseService', function (pro
     };
 }]);
 
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -5358,7 +5358,7 @@ mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'docu
     };
 }]);
 
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor']);
 
 /**
  * @name dataPurgeService
