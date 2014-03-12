@@ -61,13 +61,21 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
         generateItemIndex: function () {
             return 2000000000 + Math.round(Math.random() * 147483647);
         },
-        createDataItem: function (item) {
+        injectMetadata: function (item) {
+            return _.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
+                __id: item.id,
+                __uri: item.uri,
+                __dirty: (item.dirty == 1),
+                __local: (item.local == 1)
+            });
+        },
+        extractMetadata: function (item) {
             return {
-                id: item.id,
-                uri: item.uri,
-                data: JSON.parse(item.data),
-                dirty: (item.dirty == 1 ? true : false),
-                local: (item.local == 1 ? true : false)
+                id: item.__id,
+                uri: item.__uri,
+                dirty: item.__dirty,
+                local: item.__local,
+                data: _.omit(item, ['__id', '__uri', '__dirty', '__local'])
             };
         }
     }
@@ -76,7 +84,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
 /**
  * @name dataStore
  */
-mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (dataMapServiceProvider) {
+mobileSdkDataApp.provider('dataStore', [function () {
     var _defaultOptions = {
         pageLimit: 10,
         dbName: undefined,
@@ -97,8 +105,6 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
     };
 
     var _localDatabase;
-
-    dataMapServiceProvider.setDataStoreMode(true);
 
     /**
      * @name dataStoreProvider.config
@@ -288,12 +294,12 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                     tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
                         if (res.rows.length > 0) {
                             if (options.one) {
-                                glCallback(dataStoreUtilities.createDataItem(res.rows.item(0)));
+                                glCallback(dataStoreUtilities.injectMetadata(res.rows.item(0)));
                             } else {
                                 var dataItems = [];
 
                                 for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(dataStoreUtilities.createDataItem(res.rows.item(i)));
+                                    dataItems.push(dataStoreUtilities.injectMetadata(res.rows.item(i)));
                                 }
 
                                 glCallback(dataItems);
@@ -317,12 +323,12 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                     tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + column + ' ' + (options.like ? 'LIKE' : '=') + ' ?', [(options.like ? "%" + key + "%" : key)], function (tx, res) {
                         if (res.rows.length > 0) {
                             if (options.one) {
-                                flCallback(dataStoreUtilities.createDataItem(res.rows.item(0)));
+                                flCallback(dataStoreUtilities.injectMetadata(res.rows.item(0)));
                             } else {
                                 var dataItems = [];
 
                                 for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(dataStoreUtilities.createDataItem(res.rows.item(i)));
+                                    dataItems.push(dataStoreUtilities.injectMetadata(res.rows.item(i)));
                                 }
 
                                 flCallback(dataItems);
@@ -369,7 +375,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
 
                     _localDatabase.transaction(function (tx) {
                         for (var i = 0; i < dataItems.length; i++) {
-                            var item = dataItems[i];
+                            var item = dataStoreUtilities.extractMetadata(dataItems[i]);
                             var dataString = JSON.stringify(item.data);
 
                             tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
@@ -400,7 +406,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
 
                     _localDatabase.transaction(function (tx) {
                         for (var i = 0; i < dataItems.length; i++) {
-                            var item = dataItems[i];
+                            var item = dataStoreUtilities.extractMetadata(dataItems[i]);
 
                             tx.executeSql('DELETE FROM ' + name + ' WHERE id = ? AND uri = ?', [item.id, item.uri], asyncMon.done, function (err) {
                                 _errorCallback(tx, err);
@@ -467,28 +473,26 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                                 var data = res.data;
 
                                 if ((data instanceof Array) === false) {
-                                    grCallback([
-                                        {
-                                            id: _getItemIndex(data),
-                                            uri: uri,
-                                            data: data,
-                                            dirty: false,
-                                            local: false
-                                        }
-                                    ]);
+                                    grCallback([dataStoreUtilities.injectMetadata({
+                                        id: _getItemIndex(data),
+                                        uri: uri,
+                                        data: data,
+                                        dirty: false,
+                                        local: false
+                                    })]);
                                 } else {
                                     var dataItems = [];
 
                                     for (var i = 0; i < data.length; i++) {
                                         var item = data[i];
 
-                                        dataItems.push({
+                                        dataItems.push(dataStoreUtilities.injectMetadata({
                                             id: _getItemIndex(item),
                                             uri: uri,
                                             data: item,
                                             dirty: false,
                                             local: false
-                                        });
+                                        }));
                                     }
 
                                     grCallback(dataItems);
@@ -536,16 +540,16 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                     var _makePost = function (item, uri) {
                         safeApply(function () {
                             $http.post(_hostApi + uri, item.data, {withCredentials: true}).then(function (res) {
-                                var remoteItem = {
+                                var remoteItem = dataStoreUtilities.injectMetadata({
                                     id: _getItemIndex(res.data, item.id),
                                     uri: item.uri,
                                     data: item.data,
                                     dirty: false,
                                     local: false
-                                };
+                                });
 
                                 if (item.local == true) {
-                                    remoteItem.data.id = remoteItem.id;
+                                    remoteItem.id = remoteItem.__id;
 
                                     _deleteLocal(item);
                                 }
@@ -561,7 +565,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                     };
 
                     for (var i = 0; i < dataItems.length; i++) {
-                        var item = dataItems[i];
+                        var item = dataStoreUtilities.extractMetadata(dataItems[i]);
 
                         if (item.dirty === true) {
                             if (item.local || writeUri !== undefined) {
@@ -619,7 +623,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                     };
 
                     for (var i = 0; i < dataItems.length; i++) {
-                        var item = dataItems[i];
+                        var item = dataStoreUtilities.extractMetadata(dataItems[i]);
 
                         if (item.local === false) {
                             _makeDelete(item, dataStoreUtilities.parseRequest(writeUri, _.defaults(writeSchema, {id: item.id})));
@@ -712,7 +716,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                             options: {
                                 replace: true,
                                 force: false,
-                                dirty: true,
+                                dirty: true
                             },
                             callback: angular.noop
                         });
@@ -728,13 +732,13 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                         angular.forEach(request.data, function (data) {
                             var id = _getItemIndex(data, dataStoreUtilities.generateItemIndex());
 
-                            _updateLocal({
+                            _updateLocal(dataStoreUtilities.injectMetadata({
                                 id: id,
                                 uri: dataStoreUtilities.parseRequest(request.template, _.defaults(request.schema, {id: id})),
                                 data: data,
                                 dirty: request.options.dirty,
                                 local: request.options.dirty
-                            }, request.options, asyncMon.done);
+                            }), request.options, asyncMon.done);
                         });
                     },
                     getItems: function (req) {
@@ -815,7 +819,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
 
                         if (request.options.dirty) {
                             angular.forEach(request.data, function (item) {
-                                item.dirty = true;
+                                item.__dirty = true;
                             });
                         }
 
@@ -856,7 +860,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                         });
 
                         angular.forEach(request.data, function (item) {
-                            if (item.local === true) {
+                            if (item.__local === true) {
                                 _deleteLocal(item, asyncMon.done);
                             } else {
                                 _deleteRemote(item, request.template, request.schema, asyncMon.done);
@@ -880,7 +884,7 @@ mobileSdkDataApp.provider('dataStore', ['dataMapServiceProvider', function (data
                                 var deleteItems = [];
 
                                 angular.forEach(res, function (item) {
-                                    if (item.dirty == false || request.options.force == true) {
+                                    if (item.__dirty == false || request.options.force == true) {
                                         deleteItems.push(item);
                                     }
                                 });
