@@ -1320,56 +1320,44 @@ skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     };
 }]);
 
-skdUtilitiesApp.provider('dataMapService', [function() {
-    var _storeMode = false;
+skdUtilitiesApp.factory('dataMapService', [function() {
+    return function(items, mapping, excludeId) {
+        var mappedItems = [];
 
-    this.setDataStoreMode = function (mode) {
-        _storeMode = mode;
-    }
-
-    this.$get = function () {
-        return function(items, mapping, excludeId) {
-            var mappedItems = [];
-
-            if (items instanceof Array === false) {
-                items = (items !== undefined ? [items] : []);
-            }
-
-            for (var i = 0; i < items.length; i++) {
-                var item = items[i];
-                var mappedItem;
-
-                if (_storeMode && item.data) {
-                    item = item.data;
-                }
-
-                if (typeof mapping === 'function') {
-                    mappedItem = mapping(item);
-                } else {
-                    mappedItem = {};
-
-                    for (var key in mapping) {
-                        if (mapping.hasOwnProperty(key)) {
-                            mappedItem[key] = item[mapping[key]];
-                        }
-                    }
-                }
-
-                if (mappedItem instanceof Array) {
-                    mappedItems = mappedItems.concat(mappedItem);
-                } else if (typeof mappedItem === 'object') {
-                    if (excludeId !== true) {
-                        mappedItem.id = mappedItem.id || item.id;
-                    }
-
-                    mappedItems.push(mappedItem);
-                } else if (mappedItem !== undefined) {
-                    mappedItems.push(mappedItem);
-                }
-            }
-
-            return mappedItems;
+        if (items instanceof Array === false) {
+            items = (items !== undefined ? [items] : []);
         }
+
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var mappedItem;
+
+            if (typeof mapping === 'function') {
+                mappedItem = mapping(item);
+            } else {
+                mappedItem = {};
+
+                for (var key in mapping) {
+                    if (mapping.hasOwnProperty(key)) {
+                        mappedItem[key] = item[mapping[key]];
+                    }
+                }
+            }
+
+            if (mappedItem instanceof Array) {
+                mappedItems = mappedItems.concat(mappedItem);
+            } else if (typeof mappedItem === 'object') {
+                if (excludeId !== true) {
+                    mappedItem.id = mappedItem.id || item.id;
+                }
+
+                mappedItems.push(mappedItem);
+            } else if (mappedItem !== undefined) {
+                mappedItems.push(mappedItem);
+            }
+        }
+
+        return mappedItems;
     }
 }]);
 
@@ -1970,11 +1958,11 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
                 map.title = item.actor.firstName + ' ' + item.actor.lastName;
                 map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
             }
+
             if (item.company) {
-                map.title += ' (' + item.company + ')';
+                map.company += item.company;
                 map.subtitle += ' (' + item.company + ')';
             }
-
         } else if (item.organization) {
             // Organization is the actor
             map.title = item.organization.name;
@@ -2138,7 +2126,7 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     }
 }]);
 
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities', 'ag.sdk.interface.list']);
 
 sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
