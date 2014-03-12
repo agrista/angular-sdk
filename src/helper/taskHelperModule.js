@@ -1,4 +1,4 @@
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities', 'ag.sdk.interface.list']);
 
 sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];

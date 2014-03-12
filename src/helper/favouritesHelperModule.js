@@ -16,11 +16,11 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
                 map.title = item.actor.firstName + ' ' + item.actor.lastName;
                 map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
             }
+
             if (item.company) {
-                map.title += ' (' + item.company + ')';
+                map.company += item.company;
                 map.subtitle += ' (' + item.company + ')';
             }
-
         } else if (item.organization) {
             // Organization is the actor
             map.title = item.organization.name;
