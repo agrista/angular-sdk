@@ -129,12 +129,16 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
             title: 'Import',
             state: 'import'
         },
-        'review': {
-            title: 'Review',
-            state: 'view'
-        },
         'new': {
             title: 'New',
+            state: 'view'
+        },
+        'reject': {
+            title: 'Reassign',
+            state: 'manage'
+        },
+        'review': {
+            title: 'Review',
             state: 'view'
         }
     };
