@@ -785,6 +785,9 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             featureClickOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-off');
+            },
+            printMap: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::print-map');
             }
         };
 
@@ -1027,6 +1030,21 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
         scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
             _this._featureClickable = false;
+        });
+
+        scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
+            _this._featureClickable = false;
+        });
+
+        scope.$on('mapbox-' + id + '::print-map', function(event, args) {
+            leafletImage(_this._map, function(err, canvas) {
+                var img = document.createElement('img');
+                var dimensions = _this._map.getSize();
+                img.width = dimensions.x;
+                img.height = dimensions.y;
+                img.src = canvas.toDataURL();
+                $rootScope.$broadcast('mapbox-' + id + '::print-map-done', img);
+            });
         });
     };
 
