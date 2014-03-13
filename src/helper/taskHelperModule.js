@@ -85,9 +85,9 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'assign': 'Assign',
         'start': 'Start',
         'complete': 'Complete',
-        'approve': 'approve',
-        'reject': 'reject',
-        'release': 'release'
+        'approve': 'Approve',
+        'reject': 'Reject',
+        'release': 'Release'
     };
 
     var _taskStatusMap = {

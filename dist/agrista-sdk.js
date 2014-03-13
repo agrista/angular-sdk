@@ -1930,19 +1930,20 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 
         if (typeof item.actor === 'object') {
             // User is the actor
-            if (item.actor.name) {
-                map.title = item.actor.name;
-                map.subtitle = item.actor.name;
+            if (item.actor.displayName) {
+                map.title = item.actor.displayName;
+                map.subtitle = item.actor.displayName;
             }
             else {
                 map.title = item.actor.firstName + ' ' + item.actor.lastName;
                 map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
             }
-            if (item.company) {
-                map.title += ' (' + item.company + ')';
-                map.subtitle += ' (' + item.company + ')';
+
+            if (item.actor.position) {
+                map.title += ' (' + item.actor.position + ')';
             }
 
+            map.profilePhotoSrc = item.actor.profilePhotoSrc;
         } else if (item.organization) {
             // Organization is the actor
             map.title = item.organization.name;
@@ -1971,45 +1972,55 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
             }
 
             map.referenceState = 'customer.details';
-        } else if (item.referenceType == 'document' && item[item.referenceType] !== undefined) {
-            map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + item[item.referenceType].docType;
-            map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
-            if (item.organization && item.organization.name) {
-                map.subtitle = item.action == 'share' ? map.subtitle + ' with ' : map.subtitle + ' for ';
-                map.subtitle += item.organization.name;
-            }
         } else {
-            map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            if (item[item.referenceType] !== undefined) {
+                if (item.referenceType == 'document') {
+                    map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
+                } else if (item.referenceType == 'task') {
+                    map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+                } else {
+                    map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+                }
+            } else {
+                map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            }
+
+            if (item.actor && item.organization && item.organization.name) {
+                map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
+            }
         }
 
         return map;
     };
 
+    var _getActionPreposition = function (action) {
+        return _actionPrepositionExceptionMap[action] || 'for';
+    };
+
     var _getActionVerb = function (action) {
-        return _actionVerbMap[action] || (action.indexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
+        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
     };
 
     var _getReferenceArticle = function (reference) {
-        return _referenceArticleMap[reference] || 'a'
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        return _referenceArticleExceptionMap[reference] || (vowels.indexOf(reference.substr(0, 1)) != -1 ? 'an' : 'a');
     };
 
-    var _actionVerbMap = {
+    var _actionPrepositionExceptionMap = {
+        'share': 'with',
+        'sent': 'to'
+    };
+
+    var _actionVerbExceptionMap = {
         'register': 'accepted',
-        'create': 'created',
-        'decline': 'declined',
-        'delete': 'deleted',
-        'invite': 'invited',
-        'reject': 'rejected',
-        'review': 'reviewed',
-        'update': 'updated'
+        'sent': 'sent'
     };
 
-    var _referenceArticleMap = {
-        'asset register': 'an',
-        'document': 'a',
-        'farmer': 'a',
-        'team': 'a',
-        'farm valuation': 'a'
+    var _referenceArticleExceptionMap = {
+        'asset register': 'an'
     };
 
     return {
@@ -2197,9 +2208,9 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'assign': 'Assign',
         'start': 'Start',
         'complete': 'Complete',
-        'approve': 'approve',
-        'reject': 'reject',
-        'release': 'release'
+        'approve': 'Approve',
+        'reject': 'Reject',
+        'release': 'Release'
     };
 
     var _taskStatusMap = {
