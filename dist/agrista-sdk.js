@@ -269,9 +269,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        getMerchant: function(id) {
+        getMerchant: function(id, isUuid) {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/merchant/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/merchant/' + id + (isUuid ? '?uuid=true' : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1741,13 +1741,14 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
     }]
 });
 
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', []);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
 
-sdkHelperFarmerApp.factory('farmerHelper', [function() {
+sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.operationType
+            subtitle: item.operationType,
+            profileImage : item.profilePhotoSrc
         }
     };
 
@@ -1759,6 +1760,27 @@ sdkHelperFarmerApp.factory('farmerHelper', [function() {
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+        getFarmerLocation: function(farmer) {
+            if (farmer) {
+                if (farmer.data && farmer.data.loc) {
+                    return farmer.data.loc.coordinates;
+                } else if (farmer.legalEntities) {
+                    var geojson = geoJSONHelper();
+
+                    angular.forEach(farmer.legalEntities, function (entity) {
+                        if (entity.assets) {
+                            angular.forEach(entity.assets, function (asset) {
+                                geojson.addGeometry(asset.loc);
+                            });
+                        }
+                    });
+
+                    return geojson.getCenter();
+                }
+            }
+
+            return null;
         }
     }
 }]);
@@ -2519,7 +2541,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     }
 }]);
 
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities']);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id']);
 
 /*
  * GeoJson
@@ -2561,7 +2583,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 center[1] += coordinate[1];
             });
 
-            return [(center[0] / bounds.length), (center[1] / bounds.length)];
+            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
         },
         getBounds: function () {
             var features = this._json.features || [this._json];
@@ -2597,31 +2619,33 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return _this;
         },
         addGeometry: function (geometry, properties) {
-            if (this._json === undefined) {
-                this._json = geometry;
+            if (geometry) {
+                if (this._json === undefined) {
+                    this._json = geometry;
 
-                this.addProperties(properties);
-            } else {
-                if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
-                    this._json = {
-                        type: 'Feature',
-                        geometry: this._json
-                    };
-                }
+                    this.addProperties(properties);
+                } else {
+                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                        this._json = {
+                            type: 'Feature',
+                            geometry: this._json
+                        };
+                    }
 
-                if (this._json.type == 'Feature') {
-                    this._json = {
-                        type: 'FeatureCollection',
-                        features: [this._json]
-                    };
-                }
+                    if (this._json.type == 'Feature') {
+                        this._json = {
+                            type: 'FeatureCollection',
+                            features: [this._json]
+                        };
+                    }
 
-                if (this._json.type == 'FeatureCollection') {
-                    this._json.features.push({
-                        type: 'Feature',
-                        geometry: geometry,
-                        properties: properties
-                    });
+                    if (this._json.type == 'FeatureCollection') {
+                        this._json.features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: properties
+                        });
+                    }
                 }
             }
 

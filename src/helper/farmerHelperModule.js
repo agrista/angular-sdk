@@ -1,10 +1,11 @@
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', []);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
 
-sdkHelperFarmerApp.factory('farmerHelper', [function() {
+sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.operationType
+            subtitle: item.operationType,
+            profileImage : item.profilePhotoSrc
         }
     };
 
@@ -16,6 +17,27 @@ sdkHelperFarmerApp.factory('farmerHelper', [function() {
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+        getFarmerLocation: function(farmer) {
+            if (farmer) {
+                if (farmer.data && farmer.data.loc) {
+                    return farmer.data.loc.coordinates;
+                } else if (farmer.legalEntities) {
+                    var geojson = geoJSONHelper();
+
+                    angular.forEach(farmer.legalEntities, function (entity) {
+                        if (entity.assets) {
+                            angular.forEach(entity.assets, function (asset) {
+                                geojson.addGeometry(asset.loc);
+                            });
+                        }
+                    });
+
+                    return geojson.getCenter();
+                }
+            }
+
+            return null;
         }
     }
 }]);

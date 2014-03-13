@@ -269,9 +269,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        getMerchant: function(id) {
+        getMerchant: function(id, isUuid) {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/merchant/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/merchant/' + id + (isUuid ? '?uuid=true' : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
