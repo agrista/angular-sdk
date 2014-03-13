@@ -2166,6 +2166,10 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         return _taskStatusTitles[taskStatus] || taskStatus || ' ';
     };
 
+    var _getActionTitle = function (taskAction) {
+        return _taskActionTitles[taskAction] || taskAction || ' ';
+    };
+
     var _getStatusLabelClass = function (status) {
         switch (status) {
             case 'in progress':
@@ -2183,7 +2187,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'assigned': 'Assigned',
         'in progress': 'In Progress',
         'in review': 'In Review',
-        'done': 'Done'
+        'done': 'Done',
+        'archive': 'Archived'
+    };
+
+    var _taskActionTitles = {
+        'accept': 'Accept',
+        'decline': 'Decline',
+        'assign': 'Assign',
+        'start': 'Start',
+        'complete': 'Complete',
+        'approve': 'approve',
+        'reject': 'reject',
+        'release': 'release'
     };
 
     var _taskStatusMap = {
@@ -2213,6 +2229,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             getTaskState: _getTaskState,
             getTaskTitle: _getTaskTitle,
             getTaskStatusTitle: _getStatusTitle,
+            getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
             getTaskStatus: function (status) {
                 return _taskStatusMap[status];
