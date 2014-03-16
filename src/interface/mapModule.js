@@ -1579,7 +1579,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         this._draw.controlOptions = controlOptions || {};
         this._draw.controls = {};
 
-        if(controls instanceof Array) {
+        if(controls instanceof Array && typeof L.Control.Draw == 'function') {
             this._draw.controls.polyline = new L.Control.Draw({
                 draw: {
                     polyline: (controls.indexOf('polyline') != -1),

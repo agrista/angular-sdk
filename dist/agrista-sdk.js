@@ -1631,13 +1631,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
     var _assetLandUse = {
         'crop': ['Cropland'],
         'farmland': landUseHelper.landUseTypes(),
-        'improvement': landUseHelper.landUseTypes(),
+        'improvement': [],
         'irrigated cropland': ['Cropland'],
-        'livestock': landUseHelper.landUseTypes(),
+        'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
         'pasture': ['Grazing', 'Planted Pastures', 'Conservation'],
         'permanent crop': ['Horticulture (Perennial)'],
         'plantation': ['Plantation'],
-        'vme': landUseHelper.landUseTypes(),
+        'vme': [],
         'water right': landUseHelper.landUseTypes()
     }
 
@@ -3330,8 +3330,20 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             pickPortionOn: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::pick-portion-on');
             },
+            pickDistrictOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-district-on');
+            },
+            pickFieldOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-field-on');
+            },
             defineFarmOn: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::define-farm-on');
+            },
+            defineServiceAreaOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-service-area-on');
+            },
+            defineFieldGroupOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-field-group-on');
             },
             featureClickOn: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-on');
@@ -3339,11 +3351,26 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             pickPortionOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::pick-portion-off');
             },
+            pickDistrictOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-district-off');
+            },
+            pickFieldOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-field-off');
+            },
             defineFarmOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
             },
+            defineServiceAreaOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
+            },
+            defineFieldGroupOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-field-group-off');
+            },
             featureClickOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-off');
+            },
+            printMap: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::print-map');
             }
         };
 
@@ -3568,8 +3595,24 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
             _this._map.on('click', _this.pickPortion, _this);
         });
 
+        scope.$on('mapbox-' + id + '::pick-district-on', function(event, args) {
+            _this._map.on('click', _this.pickDistrict, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::pick-field-on', function(event, args) {
+            _this._map.on('click', _this.pickField, _this);
+        });
+
         scope.$on('mapbox-' + id + '::define-farm-on', function(event, args) {
             _this._map.on('click', _this.defineNewFarm, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::define-service-area-on', function(event, args) {
+            _this._map.on('click', _this.defineServiceArea, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::define-field-group-on', function(event, args) {
+            _this._map.on('click', _this.defineFieldGroup, _this);
         });
 
         scope.$on('mapbox-' + id + '::feature-click-on', function(event, args) {
@@ -3580,12 +3623,39 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
             _this._map.off('click', _this.pickPortion, _this);
         });
 
+        scope.$on('mapbox-' + id + '::pick-field-off', function(event, args) {
+            _this._map.off('click', _this.pickField, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::pick-district-off', function(event, args) {
+            _this._map.off('click', _this.pickDistrict, _this);
+        });
+
         scope.$on('mapbox-' + id + '::define-farm-off', function(event, args) {
             _this._map.off('click', _this.defineNewFarm, _this);
         });
 
+        scope.$on('mapbox-' + id + '::define-service-area-off', function(event, args) {
+            _this._map.off('click', _this.defineServiceArea, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::define-field-group-off', function(event, args) {
+            _this._map.off('click', _this.defineFieldGroup, _this);
+        });
+
         scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
             _this._featureClickable = false;
+        });
+
+        scope.$on('mapbox-' + id + '::print-map', function(event, args) {
+            leafletImage(_this._map, function(err, canvas) {
+                var img = document.createElement('img');
+                var dimensions = _this._map.getSize();
+                img.width = dimensions.x;
+                img.height = dimensions.y;
+                img.src = canvas.toDataURL();
+                $rootScope.$broadcast('mapbox-' + id + '::print-map-done', img);
+            });
         });
     };
 
@@ -4068,7 +4138,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         this._draw.controlOptions = controlOptions || {};
         this._draw.controls = {};
 
-        if(controls instanceof Array) {
+        if(controls instanceof Array && typeof L.Control.Draw == 'function') {
             this._draw.controls.polyline = new L.Control.Draw({
                 draw: {
                     polyline: (controls.indexOf('polyline') != -1),
@@ -4235,6 +4305,78 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
                     _this.updateDrawControls();
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.pickDistrict = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/district-polygon' + params)
+                .success(function (district) {
+                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.defineServiceArea = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/district-polygon' + params)
+                .success(function (district) {
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: mdName});
+
+                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                    _this.updateDrawControls();
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.pickField = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/field-polygon' + params)
+                .success(function (district) {
+                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {});
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.defineFieldGroup = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/field-polygon' + params)
+                .success(function (field) {
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
+
+                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                    _this.updateDrawControls();
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                 }).error(function(err) {
                     console.log(err);
                 });
