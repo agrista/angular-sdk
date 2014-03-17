@@ -2676,14 +2676,17 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
         },
         getBounds: function () {
-            var features = this._json.features || [this._json];
             var bounds = [];
 
-            angular.forEach(features, function(feature) {
-                var geometry = feature.geometry || feature;
+            if (this._json) {
+                var features = this._json.features || [this._json];
 
-                _recursiveCoordinateFinder(bounds, geometry.coordinates);
-            });
+                angular.forEach(features, function(feature) {
+                    var geometry = feature.geometry || feature;
+
+                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                });
+            }
 
             return bounds;
         },
