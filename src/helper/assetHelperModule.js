@@ -154,13 +154,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
     var _assetLandUse = {
         'crop': ['Cropland'],
         'farmland': landUseHelper.landUseTypes(),
-        'improvement': landUseHelper.landUseTypes(),
+        'improvement': [],
         'irrigated cropland': ['Cropland'],
-        'livestock': landUseHelper.landUseTypes(),
+        'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
         'pasture': ['Grazing', 'Planted Pastures', 'Conservation'],
         'permanent crop': ['Horticulture (Perennial)'],
         'plantation': ['Plantation'],
-        'vme': landUseHelper.landUseTypes(),
+        'vme': [],
         'water right': landUseHelper.landUseTypes()
     }
 
