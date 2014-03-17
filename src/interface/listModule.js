@@ -184,10 +184,6 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                 _items = angular.copy(items);
                 _activeItemId = undefined;
 
-                if (_items instanceof Array && _items.length == 0) {
-                    $rootScope.$broadcast('list::items__empty');
-                }
-
                 $rootScope.$broadcast('list::items__changed', _items);
             }
 
