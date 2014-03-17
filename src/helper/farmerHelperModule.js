@@ -4,7 +4,19 @@ sdkHelperFarmerApp.factory('farmerHelper', [function() {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.operationType
+            subtitle: item.operationType,
+            profileImage : item.profilePhotoSrc,
+            searchingIndex: searchingIndex(item)
+        }
+        function searchingIndex(item) {
+            var index = [];
+            item.legalEntities.forEach(function(entity) {
+                index.push(entity.name);
+                if(entity.registrationNumber) {
+                    index.push(entity.name);
+                }
+            });
+            return index;
         }
     };
 
