@@ -700,16 +700,14 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
 
         var _relationTable = {
             organization: {
-                many: false,
                 hydrate: function (obj, type) {
-                    return farmerApi.findFarmer({key: obj.organizationId});
+                    return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
                 },
                 dehydrate: function (obj, type) {
                     return farmerApi.createFarmer({data: obj.organization, options: {replace: false, dirty: false}});
                 }
             },
             farms: {
-                many: true,
                 hydrate: function (obj, type) {
                     return farmApi.getFarms({id: obj.__id});
                 },
@@ -726,8 +724,12 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                     });
                 }
             },
+            farm: {
+                hydrate: function (obj, type) {
+                    return farmApi.findFarm({key: obj.farmId, options: {one: true}});
+                }
+            },
             assets: {
-                many: true,
                 hydrate: function (obj, type) {
                     return assetApi.getAssets({id: obj.__id});
                 },
@@ -745,7 +747,6 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                 }
             },
             legalEntities: {
-                many: true,
                 hydrate: function (obj, type) {
                     return legalEntityApi.getEntities({id: obj.__id});
                 },
@@ -764,17 +765,20 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                     });
                 }
             },
-            document: {
-                many: false,
+            legalEntity: {
                 hydrate: function (obj, type) {
-                    return documentApi.findDocument({key: obj.documentId});
+                    return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true}});
+                }
+            },
+            document: {
+                hydrate: function (obj, type) {
+                    return documentApi.findDocument({key: obj.documentId, options: {one: true}});
                 },
                 dehydrate: function (obj, type) {
                     return documentApi.createDocument({data: obj.document, options: {replace: false, dirty: false}});
                 }
             },
             attachments: {
-                many: true,
                 hydrate: function (obj, type) {
                     return attachmentApi.getAttachments({template: type + '/:id/attachments', schema: {id: obj.__id}});
                 },
@@ -796,7 +800,6 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                 }
             },
             subtasks: {
-                many: true,
                 hydrate: function (obj, type) {
                     return taskApi.getTasks({template: 'task/:id/tasks', schema: {id: obj.__id}});
                 },
@@ -830,16 +833,10 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                         });
                     })
                     .then(function (results) {
-                        angular.forEach(results, function (result, relationName) {
-                            var relation = _relationTable[relationName];
-
-                            if (relation && relation.many === false) {
-                                results[relationName] = (result.length == 1 ? result[0] : undefined);
-                            }
-                        });
-
                         promise.resolve(_.extend(obj, results));
-                    }, promise.reject);
+                    }, function (results) {
+                        promise.resolve(_.extend(obj, results));
+                    });
             });
         };
 
@@ -906,7 +903,7 @@ mobileSdkApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi'
 }]);
 
 mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
-    var _relations = ['farms', 'legalEntities'];
+    var _relations = ['farms', 'legalEntities', 'assets'];
 
     return {
         hydration: {
@@ -942,7 +939,7 @@ mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmer
 }]);
 
 mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
-    var _relations = ['attachments'];
+    var _relations = ['attachments', 'farm', 'legalEntity'];
 
     return {
         hydration: {

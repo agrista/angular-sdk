@@ -40,7 +40,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 center[1] += coordinate[1];
             });
 
-            return [(center[0] / bounds.length), (center[1] / bounds.length)];
+            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
         },
         getBounds: function () {
             var features = this._json.features || [this._json];
@@ -76,31 +76,33 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return _this;
         },
         addGeometry: function (geometry, properties) {
-            if (this._json === undefined) {
-                this._json = geometry;
+            if (geometry) {
+                if (this._json === undefined) {
+                    this._json = geometry;
 
-                this.addProperties(properties);
-            } else {
-                if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
-                    this._json = {
-                        type: 'Feature',
-                        geometry: this._json
-                    };
-                }
+                    this.addProperties(properties);
+                } else {
+                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                        this._json = {
+                            type: 'Feature',
+                            geometry: this._json
+                        };
+                    }
 
-                if (this._json.type == 'Feature') {
-                    this._json = {
-                        type: 'FeatureCollection',
-                        features: [this._json]
-                    };
-                }
+                    if (this._json.type == 'Feature') {
+                        this._json = {
+                            type: 'FeatureCollection',
+                            features: [this._json]
+                        };
+                    }
 
-                if (this._json.type == 'FeatureCollection') {
-                    this._json.features.push({
-                        type: 'Feature',
-                        geometry: geometry,
-                        properties: properties
-                    });
+                    if (this._json.type == 'FeatureCollection') {
+                        this._json.features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: properties
+                        });
+                    }
                 }
             }
 
@@ -1579,7 +1581,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         this._draw.controlOptions = controlOptions || {};
         this._draw.controls = {};
 
-        if(controls instanceof Array) {
+        if(controls instanceof Array && typeof L.Control.Draw == 'function') {
             this._draw.controls.polyline = new L.Control.Draw({
                 draw: {
                     polyline: (controls.indexOf('polyline') != -1),

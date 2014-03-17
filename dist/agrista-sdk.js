@@ -145,9 +145,9 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
                 }, promise.reject);
             });
         },
-        rejectNotification: function (id) {
+        rejectNotification: function (id, rejectData) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/notification/' + id + '/reject', {}, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/notification/' + id + '/reject', rejectData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -269,9 +269,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        getMerchant: function(id) {
+        getMerchant: function(id, isUuid) {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/merchant/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/merchant/' + id + (isUuid ? '?uuid=true' : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -409,6 +409,13 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        uploadEntityAttachments: function(id, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/legalentity/' + id +'/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
         },
         getEntity: function (id) {
             return promiseService.wrap(function(promise) {
@@ -1631,13 +1638,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
     var _assetLandUse = {
         'crop': ['Cropland'],
         'farmland': landUseHelper.landUseTypes(),
-        'improvement': landUseHelper.landUseTypes(),
+        'improvement': [],
         'irrigated cropland': ['Cropland'],
-        'livestock': landUseHelper.landUseTypes(),
+        'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
         'pasture': ['Grazing', 'Planted Pastures', 'Conservation'],
         'permanent crop': ['Horticulture (Perennial)'],
         'plantation': ['Plantation'],
-        'vme': landUseHelper.landUseTypes(),
+        'vme': [],
         'water right': landUseHelper.landUseTypes()
     }
 
@@ -1783,13 +1790,27 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
     }]
 });
 
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', []);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
 
-sdkHelperFarmerApp.factory('farmerHelper', [function() {
+sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.operationType
+            subtitle: item.operationType,
+            profileImage : item.profilePhotoSrc,
+            searchingIndex: searchingIndex(item)
+        };
+        
+        function searchingIndex(item) {
+            var index = [];
+            item.legalEntities.forEach(function(entity) {
+                index.push(entity.name);
+                
+                if(entity.registrationNumber) {
+                    index.push(entity.registrationNumber);
+                }
+            });
+            return index;
         }
     };
 
@@ -1801,6 +1822,27 @@ sdkHelperFarmerApp.factory('farmerHelper', [function() {
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+        getFarmerLocation: function(farmer) {
+            if (farmer) {
+                if (farmer.data && farmer.data.loc) {
+                    return farmer.data.loc.coordinates;
+                } else if (farmer.legalEntities) {
+                    var geojson = geoJSONHelper();
+
+                    angular.forEach(farmer.legalEntities, function (entity) {
+                        if (entity.assets) {
+                            angular.forEach(entity.assets, function (asset) {
+                                geojson.addGeometry(asset.loc);
+                            });
+                        }
+                    });
+
+                    return geojson.getCenter();
+                }
+            }
+
+            return null;
         }
     }
 }]);
@@ -1813,7 +1855,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
         };
     };
 
-    var _legalEntityTypes = ['Close Corporation', 'Co-operation', 'Incorporated Company', 'Private Company', 'Partnership', 'Public Company', 'State Owned Company', 'Sole Proprietor', 'Trust', 'Association', 'Government', 'Individual', 'Strategic Business Unit', 'Limited', 'Unknown', 'Other'];
+    var _legalEntityTypes = ['Individual', 'Sole Proprietor', 'Close Corporation', 'Trust', 'Party Limited Company', 'Co-operative', 'Partnership', 'State Owned Company', 'Association'];
 
     var _enterpriseTypes = {
         'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
@@ -1950,19 +1992,20 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 
         if (typeof item.actor === 'object') {
             // User is the actor
-            if (item.actor.name) {
-                map.title = item.actor.name;
-                map.subtitle = item.actor.name;
+            if (item.actor.displayName) {
+                map.title = item.actor.displayName;
+                map.subtitle = item.actor.displayName;
             }
             else {
                 map.title = item.actor.firstName + ' ' + item.actor.lastName;
                 map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
             }
 
-            if (item.company) {
-                map.company += item.company;
-                map.subtitle += ' (' + item.company + ')';
+            if (item.actor.position) {
+                map.title += ' (' + item.actor.position + ')';
             }
+
+            map.profilePhotoSrc = item.actor.profilePhotoSrc;
         } else if (item.organization) {
             // Organization is the actor
             map.title = item.organization.name;
@@ -1991,45 +2034,55 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
             }
 
             map.referenceState = 'customer.details';
-        } else if (item.referenceType == 'document' && item[item.referenceType] !== undefined) {
-            map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + item[item.referenceType].docType;
-            map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
-            if (item.organization && item.organization.name) {
-                map.subtitle = item.action == 'share' ? map.subtitle + ' with ' : map.subtitle + ' for ';
-                map.subtitle += item.organization.name;
-            }
         } else {
-            map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            if (item[item.referenceType] !== undefined) {
+                if (item.referenceType == 'document') {
+                    map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
+                } else if (item.referenceType == 'task') {
+                    map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+                } else {
+                    map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+                }
+            } else {
+                map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            }
+
+            if (item.actor && item.organization && item.organization.name) {
+                map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
+            }
         }
 
         return map;
     };
 
+    var _getActionPreposition = function (action) {
+        return _actionPrepositionExceptionMap[action] || 'for';
+    };
+
     var _getActionVerb = function (action) {
-        return _actionVerbMap[action] || (action.indexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
+        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
     };
 
     var _getReferenceArticle = function (reference) {
-        return _referenceArticleMap[reference] || 'a'
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        return _referenceArticleExceptionMap[reference] || (vowels.indexOf(reference.substr(0, 1)) != -1 ? 'an' : 'a');
     };
 
-    var _actionVerbMap = {
+    var _actionPrepositionExceptionMap = {
+        'share': 'with',
+        'sent': 'to'
+    };
+
+    var _actionVerbExceptionMap = {
         'register': 'accepted',
-        'create': 'created',
-        'decline': 'declined',
-        'delete': 'deleted',
-        'invite': 'invited',
-        'reject': 'rejected',
-        'review': 'reviewed',
-        'update': 'updated'
+        'sent': 'sent'
     };
 
-    var _referenceArticleMap = {
-        'asset register': 'an',
-        'document': 'a',
-        'farmer': 'a',
-        'team': 'a',
-        'farm valuation': 'a'
+    var _referenceArticleExceptionMap = {
+        'asset register': 'an'
     };
 
     return {
@@ -2071,12 +2124,16 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
             title: 'Import',
             state: 'import'
         },
-        'review': {
-            title: 'Review',
+        'view': {
+            title: 'View',
             state: 'view'
         },
-        'new': {
-            title: 'New',
+        'reject': {
+            title: 'Reassign',
+            state: 'manage'
+        },
+        'review': {
+            title: 'Review',
             state: 'view'
         }
     };
@@ -2182,6 +2239,10 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         return _taskStatusTitles[taskStatus] || taskStatus || ' ';
     };
 
+    var _getActionTitle = function (taskAction) {
+        return _taskActionTitles[taskAction] || taskAction || ' ';
+    };
+
     var _getStatusLabelClass = function (status) {
         switch (status) {
             case 'in progress':
@@ -2199,7 +2260,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'assigned': 'Assigned',
         'in progress': 'In Progress',
         'in review': 'In Review',
-        'done': 'Done'
+        'done': 'Done',
+        'archive': 'Archived'
+    };
+
+    var _taskActionTitles = {
+        'accept': 'Accept',
+        'decline': 'Decline',
+        'assign': 'Assign',
+        'start': 'Start',
+        'complete': 'Complete',
+        'approve': 'Approve',
+        'reject': 'Reject',
+        'release': 'Release'
     };
 
     var _taskStatusMap = {
@@ -2229,6 +2302,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             getTaskState: _getTaskState,
             getTaskTitle: _getTaskTitle,
             getTaskStatusTitle: _getStatusTitle,
+            getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
             getTaskStatus: function (status) {
                 return _taskStatusMap[status];
@@ -2599,7 +2673,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 center[1] += coordinate[1];
             });
 
-            return [(center[0] / bounds.length), (center[1] / bounds.length)];
+            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
         },
         getBounds: function () {
             var features = this._json.features || [this._json];
@@ -2635,31 +2709,33 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return _this;
         },
         addGeometry: function (geometry, properties) {
-            if (this._json === undefined) {
-                this._json = geometry;
+            if (geometry) {
+                if (this._json === undefined) {
+                    this._json = geometry;
 
-                this.addProperties(properties);
-            } else {
-                if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
-                    this._json = {
-                        type: 'Feature',
-                        geometry: this._json
-                    };
-                }
+                    this.addProperties(properties);
+                } else {
+                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                        this._json = {
+                            type: 'Feature',
+                            geometry: this._json
+                        };
+                    }
 
-                if (this._json.type == 'Feature') {
-                    this._json = {
-                        type: 'FeatureCollection',
-                        features: [this._json]
-                    };
-                }
+                    if (this._json.type == 'Feature') {
+                        this._json = {
+                            type: 'FeatureCollection',
+                            features: [this._json]
+                        };
+                    }
 
-                if (this._json.type == 'FeatureCollection') {
-                    this._json.features.push({
-                        type: 'Feature',
-                        geometry: geometry,
-                        properties: properties
-                    });
+                    if (this._json.type == 'FeatureCollection') {
+                        this._json.features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: properties
+                        });
+                    }
                 }
             }
 
@@ -3330,8 +3406,20 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             pickPortionOn: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::pick-portion-on');
             },
+            pickDistrictOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-district-on');
+            },
+            pickFieldOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-field-on');
+            },
             defineFarmOn: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::define-farm-on');
+            },
+            defineServiceAreaOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-service-area-on');
+            },
+            defineFieldGroupOn: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-field-group-on');
             },
             featureClickOn: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-on');
@@ -3339,11 +3427,26 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             pickPortionOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::pick-portion-off');
             },
+            pickDistrictOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-district-off');
+            },
+            pickFieldOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::pick-field-off');
+            },
             defineFarmOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
             },
+            defineServiceAreaOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
+            },
+            defineFieldGroupOff: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::define-field-group-off');
+            },
             featureClickOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-off');
+            },
+            printMap: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::print-map');
             }
         };
 
@@ -3568,8 +3671,24 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
             _this._map.on('click', _this.pickPortion, _this);
         });
 
+        scope.$on('mapbox-' + id + '::pick-district-on', function(event, args) {
+            _this._map.on('click', _this.pickDistrict, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::pick-field-on', function(event, args) {
+            _this._map.on('click', _this.pickField, _this);
+        });
+
         scope.$on('mapbox-' + id + '::define-farm-on', function(event, args) {
             _this._map.on('click', _this.defineNewFarm, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::define-service-area-on', function(event, args) {
+            _this._map.on('click', _this.defineServiceArea, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::define-field-group-on', function(event, args) {
+            _this._map.on('click', _this.defineFieldGroup, _this);
         });
 
         scope.$on('mapbox-' + id + '::feature-click-on', function(event, args) {
@@ -3580,12 +3699,39 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
             _this._map.off('click', _this.pickPortion, _this);
         });
 
+        scope.$on('mapbox-' + id + '::pick-field-off', function(event, args) {
+            _this._map.off('click', _this.pickField, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::pick-district-off', function(event, args) {
+            _this._map.off('click', _this.pickDistrict, _this);
+        });
+
         scope.$on('mapbox-' + id + '::define-farm-off', function(event, args) {
             _this._map.off('click', _this.defineNewFarm, _this);
         });
 
+        scope.$on('mapbox-' + id + '::define-service-area-off', function(event, args) {
+            _this._map.off('click', _this.defineServiceArea, _this);
+        });
+
+        scope.$on('mapbox-' + id + '::define-field-group-off', function(event, args) {
+            _this._map.off('click', _this.defineFieldGroup, _this);
+        });
+
         scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
             _this._featureClickable = false;
+        });
+
+        scope.$on('mapbox-' + id + '::print-map', function(event, args) {
+            leafletImage(_this._map, function(err, canvas) {
+                var img = document.createElement('img');
+                var dimensions = _this._map.getSize();
+                img.width = dimensions.x;
+                img.height = dimensions.y;
+                img.src = canvas.toDataURL();
+                $rootScope.$broadcast('mapbox-' + id + '::print-map-done', img);
+            });
         });
     };
 
@@ -4068,7 +4214,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         this._draw.controlOptions = controlOptions || {};
         this._draw.controls = {};
 
-        if(controls instanceof Array) {
+        if(controls instanceof Array && typeof L.Control.Draw == 'function') {
             this._draw.controls.polyline = new L.Control.Draw({
                 draw: {
                     polyline: (controls.indexOf('polyline') != -1),
@@ -4235,6 +4381,78 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
                     _this.updateDrawControls();
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.pickDistrict = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/district-polygon' + params)
+                .success(function (district) {
+                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.defineServiceArea = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/district-polygon' + params)
+                .success(function (district) {
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: mdName});
+
+                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                    _this.updateDrawControls();
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.pickField = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/field-polygon' + params)
+                .success(function (district) {
+                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {});
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
+                }).error(function(err) {
+                    console.log(err);
+                });
+        }
+    };
+
+    Mapbox.prototype.defineFieldGroup = function (e) {
+        var _this = this;
+
+        if (_this._editing == false) {
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/field-polygon' + params)
+                .success(function (field) {
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
+
+                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                    _this.updateDrawControls();
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                 }).error(function(err) {
                     console.log(err);
                 });
