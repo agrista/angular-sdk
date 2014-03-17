@@ -3662,7 +3662,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         var _this = this;
 
         if (_this._editing == false) {
-            $http.get('/api/portion-polygon/' + e.latlng.lat + '/' + e.latlng.lng)
+            $http.get('/api/geo/portion-polygon/' + e.latlng.lat + '/' + e.latlng.lng)
                 .success(function (portion) {
                     _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                     _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
@@ -3678,7 +3678,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         var _this = this;
 
         if (_this._editing == false) {
-            $http.get('/api/portion-polygon/' + e.latlng.lat + '/' + e.latlng.lng)
+            $http.get('/api/geo/portion-polygon/' + e.latlng.lat + '/' + e.latlng.lng)
                 .success(function (portion) {
                     _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
 
