@@ -2189,7 +2189,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
 
     var _listServiceMap = function (item) {
-        var title = _getTaskTitle(item.todo) + ' for ' + item.organization.name + ' ' + item.id;
+        var title = item.documentKey;
         var mappedItems = _.filter(item.subtasks, function (task) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
@@ -2213,7 +2213,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         return {
             id: item.documentId,
             title: item.organization.name,
-            subtitle: _getTaskTitle(item.todo),
+            subtitle: item.documentKey,
             status: {
                 text: item.status || ' ',
                 label: _getStatusLabelClass(item.status)
