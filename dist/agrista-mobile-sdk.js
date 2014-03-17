@@ -1084,13 +1084,14 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
     }]
 });
 
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', []);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
 
-sdkHelperFarmerApp.factory('farmerHelper', [function() {
+sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.operationType
+            subtitle: item.operationType,
+            profileImage : item.profilePhotoSrc
         }
     };
 
@@ -1102,6 +1103,27 @@ sdkHelperFarmerApp.factory('farmerHelper', [function() {
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+        getFarmerLocation: function(farmer) {
+            if (farmer) {
+                if (farmer.data && farmer.data.loc) {
+                    return farmer.data.loc.coordinates;
+                } else if (farmer.legalEntities) {
+                    var geojson = geoJSONHelper();
+
+                    angular.forEach(farmer.legalEntities, function (entity) {
+                        if (entity.assets) {
+                            angular.forEach(entity.assets, function (asset) {
+                                geojson.addGeometry(asset.loc);
+                            });
+                        }
+                    });
+
+                    return geojson.getCenter();
+                }
+            }
+
+            return null;
         }
     }
 }]);
@@ -1251,19 +1273,20 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 
         if (typeof item.actor === 'object') {
             // User is the actor
-            if (item.actor.name) {
-                map.title = item.actor.name;
-                map.subtitle = item.actor.name;
+            if (item.actor.displayName) {
+                map.title = item.actor.displayName;
+                map.subtitle = item.actor.displayName;
             }
             else {
                 map.title = item.actor.firstName + ' ' + item.actor.lastName;
                 map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
             }
 
-            if (item.company) {
-                map.company += item.company;
-                map.subtitle += ' (' + item.company + ')';
+            if (item.actor.position) {
+                map.title += ' (' + item.actor.position + ')';
             }
+
+            map.profilePhotoSrc = item.actor.profilePhotoSrc;
         } else if (item.organization) {
             // Organization is the actor
             map.title = item.organization.name;
@@ -1292,45 +1315,55 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
             }
 
             map.referenceState = 'customer.details';
-        } else if (item.referenceType == 'document' && item[item.referenceType] !== undefined) {
-            map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + item[item.referenceType].docType;
-            map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
-            if (item.organization && item.organization.name) {
-                map.subtitle = item.action == 'share' ? map.subtitle + ' with ' : map.subtitle + ' for ';
-                map.subtitle += item.organization.name;
-            }
         } else {
-            map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            if (item[item.referenceType] !== undefined) {
+                if (item.referenceType == 'document') {
+                    map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
+                } else if (item.referenceType == 'task') {
+                    map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+                } else {
+                    map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+                }
+            } else {
+                map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            }
+
+            if (item.actor && item.organization && item.organization.name) {
+                map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
+            }
         }
 
         return map;
     };
 
+    var _getActionPreposition = function (action) {
+        return _actionPrepositionExceptionMap[action] || 'for';
+    };
+
     var _getActionVerb = function (action) {
-        return _actionVerbMap[action] || (action.indexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
+        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
     };
 
     var _getReferenceArticle = function (reference) {
-        return _referenceArticleMap[reference] || 'a'
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        return _referenceArticleExceptionMap[reference] || (vowels.indexOf(reference.substr(0, 1)) != -1 ? 'an' : 'a');
     };
 
-    var _actionVerbMap = {
+    var _actionPrepositionExceptionMap = {
+        'share': 'with',
+        'sent': 'to'
+    };
+
+    var _actionVerbExceptionMap = {
         'register': 'accepted',
-        'create': 'created',
-        'decline': 'declined',
-        'delete': 'deleted',
-        'invite': 'invited',
-        'reject': 'rejected',
-        'review': 'reviewed',
-        'update': 'updated'
+        'sent': 'sent'
     };
 
-    var _referenceArticleMap = {
-        'asset register': 'an',
-        'document': 'a',
-        'farmer': 'a',
-        'team': 'a',
-        'farm valuation': 'a'
+    var _referenceArticleExceptionMap = {
+        'asset register': 'an'
     };
 
     return {
@@ -1372,12 +1405,16 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
             title: 'Import',
             state: 'import'
         },
-        'review': {
-            title: 'Review',
+        'view': {
+            title: 'View',
             state: 'view'
         },
-        'new': {
-            title: 'New',
+        'reject': {
+            title: 'Reassign',
+            state: 'manage'
+        },
+        'review': {
+            title: 'Review',
             state: 'view'
         }
     };
@@ -1483,6 +1520,10 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         return _taskStatusTitles[taskStatus] || taskStatus || ' ';
     };
 
+    var _getActionTitle = function (taskAction) {
+        return _taskActionTitles[taskAction] || taskAction || ' ';
+    };
+
     var _getStatusLabelClass = function (status) {
         switch (status) {
             case 'in progress':
@@ -1500,7 +1541,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'assigned': 'Assigned',
         'in progress': 'In Progress',
         'in review': 'In Review',
-        'done': 'Done'
+        'done': 'Done',
+        'archive': 'Archived'
+    };
+
+    var _taskActionTitles = {
+        'accept': 'Accept',
+        'decline': 'Decline',
+        'assign': 'Assign',
+        'start': 'Start',
+        'complete': 'Complete',
+        'approve': 'Approve',
+        'reject': 'Reject',
+        'release': 'Release'
     };
 
     var _taskStatusMap = {
@@ -1530,6 +1583,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             getTaskState: _getTaskState,
             getTaskTitle: _getTaskTitle,
             getTaskStatusTitle: _getStatusTitle,
+            getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
             getTaskStatus: function (status) {
                 return _taskStatusMap[status];
@@ -1900,7 +1954,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 center[1] += coordinate[1];
             });
 
-            return [(center[0] / bounds.length), (center[1] / bounds.length)];
+            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
         },
         getBounds: function () {
             var features = this._json.features || [this._json];
@@ -1936,31 +1990,33 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return _this;
         },
         addGeometry: function (geometry, properties) {
-            if (this._json === undefined) {
-                this._json = geometry;
+            if (geometry) {
+                if (this._json === undefined) {
+                    this._json = geometry;
 
-                this.addProperties(properties);
-            } else {
-                if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
-                    this._json = {
-                        type: 'Feature',
-                        geometry: this._json
-                    };
-                }
+                    this.addProperties(properties);
+                } else {
+                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                        this._json = {
+                            type: 'Feature',
+                            geometry: this._json
+                        };
+                    }
 
-                if (this._json.type == 'Feature') {
-                    this._json = {
-                        type: 'FeatureCollection',
-                        features: [this._json]
-                    };
-                }
+                    if (this._json.type == 'Feature') {
+                        this._json = {
+                            type: 'FeatureCollection',
+                            features: [this._json]
+                        };
+                    }
 
-                if (this._json.type == 'FeatureCollection') {
-                    this._json.features.push({
-                        type: 'Feature',
-                        geometry: geometry,
-                        properties: properties
-                    });
+                    if (this._json.type == 'FeatureCollection') {
+                        this._json.features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: properties
+                        });
+                    }
                 }
             }
 
