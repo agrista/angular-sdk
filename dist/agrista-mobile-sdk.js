@@ -1091,7 +1091,20 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         return {
             title: item.name,
             subtitle: item.operationType,
-            profileImage : item.profilePhotoSrc
+            profileImage : item.profilePhotoSrc,
+            searchingIndex: searchingIndex(item)
+        };
+        
+        function searchingIndex(item) {
+            var index = [];
+            item.legalEntities.forEach(function(entity) {
+                index.push(entity.name);
+                
+                if(entity.registrationNumber) {
+                    index.push(entity.registrationNumber);
+                }
+            });
+            return index;
         }
     };
 
@@ -1136,7 +1149,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
         };
     };
 
-    var _legalEntityTypes = ['Close Corporation', 'Co-operation', 'Incorporated Company', 'Private Company', 'Partnership', 'Public Company', 'State Owned Company', 'Sole Proprietor', 'Trust', 'Association', 'Government', 'Individual', 'Strategic Business Unit', 'Limited', 'Unknown', 'Other'];
+    var _legalEntityTypes = ['Individual', 'Sole Proprietor', 'Close Corporation', 'Trust', 'Party Limited Company', 'Co-operative', 'Partnership', 'State Owned Company', 'Association'];
 
     var _enterpriseTypes = {
         'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],

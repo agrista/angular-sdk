@@ -410,6 +410,13 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                 }, promise.reject);
             });
         },
+        uploadEntityAttachments: function(id, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/legalentity/' + id +'/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
+        },
         getEntity: function (id) {
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/legalentity/' + id, {withCredentials: true}).then(function (res) {
