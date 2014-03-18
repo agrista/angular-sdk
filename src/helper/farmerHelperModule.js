@@ -11,13 +11,15 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         
         function searchingIndex(item) {
             var index = [];
-            item.legalEntities.forEach(function(entity) {
+
+            angular.forEach(item.legalEntities, function(entity) {
                 index.push(entity.name);
                 
                 if(entity.registrationNumber) {
                     index.push(entity.registrationNumber);
                 }
             });
+
             return index;
         }
     };
