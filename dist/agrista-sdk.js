@@ -138,6 +138,13 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
         getNotifications: function (page) {
             return pagingService.page(_host + 'api/notifications', page);
         },
+        createNotification: function(notificationData) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/notification', notificationData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getNotification: function (id) {
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/notification/' + id, {withCredentials: true}).then(function (res) {
