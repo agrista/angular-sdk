@@ -940,7 +940,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         'plantation': ['Plantation'],
         'vme': [],
         'water right': landUseHelper.landUseTypes()
-    }
+    };
 
     return {
         assetTypes: function() {
@@ -1002,6 +1002,43 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
     }
 }]);
 
+sdkHelperAssetApp.factory('assetValuationHelper', function () {
+    var _listServiceMap = function(item) {
+        if (item.data && item.data.valuations) {
+            var mappedItems = [];
+
+            angular.forEach(item.data.valuations, function (valuation) {
+                var map = {
+                    title: valuation.organization.name,
+                    date: valuation.date
+                };
+
+                mappedItems.push(map);
+            });
+
+            return mappedItems;
+        }
+    };
+
+    return {
+        listServiceMap: function () {
+            return _listServiceMap;
+        },
+        calculateValuation: function (asset, valuation) {
+            if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
+                valuation.assetValue = asset.data.quantity * (valuation.unitValue || 0);
+            } else if (asset.type == 'livestock' && isNaN(valuation.totalStock) == false) {
+                valuation.assetValue = valuation.totalStock * (valuation.unitValue || 0);
+            } else if (asset.type == 'crop' && isNaN(valuation.expectedYield) == false) {
+                valuation.assetValue = valuation.expectedYield * (valuation.unitValue || 0);
+            } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
+                valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
+            }
+
+            return valuation;
+        }
+    }
+});
 var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', []);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
@@ -1097,13 +1134,15 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         
         function searchingIndex(item) {
             var index = [];
-            item.legalEntities.forEach(function(entity) {
+
+            angular.forEach(item.legalEntities, function(entity) {
                 index.push(entity.name);
                 
                 if(entity.registrationNumber) {
                     index.push(entity.registrationNumber);
                 }
             });
+
             return index;
         }
     };
@@ -3663,7 +3702,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
         if (_this._editing == false) {
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get('/api/geo/portion-polygon/' + params)
+            $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
                     _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                     _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
@@ -3680,7 +3719,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
         if (_this._editing == false) {
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get('/api/geo/portion-polygon/' + params)
+            $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
                     _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
 
@@ -4037,24 +4076,32 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             if (app) {
                 var group = _.findWhere(_groupedApps, {title: app.group});
 
+                // Find if the group exists
                 if (group === undefined) {
+                    // Add the group
                     group = {
                         title: app.group,
                         order: _groupOrder[app.group] || 100,
                         items: []
                     };
 
-                    app.active = $state.includes(app.state);
-
                     _groupedApps.push(group);
                     _groupedApps = _groupedApps.sort(_sortItems);
                 }
 
-                group.items.push(app);
-                group.items = group.items.sort(_sortItems);
+                // Find if the app exists in the group
+                var groupItem = _.findWhere(group.items, {title: app.title});
 
-                $rootScope.$broadcast('navigation::items__changed', _groupedApps);
-                $rootScope.$broadcast('navigation::app__allowed', app);
+                if (groupItem === undefined) {
+                    // Add the app to the group
+                    app.active = $state.includes(app.state);
+
+                    group.items.push(app);
+                    group.items = group.items.sort(_sortItems);
+
+                    $rootScope.$broadcast('navigation::items__changed', _groupedApps);
+                    $rootScope.$broadcast('navigation::app__allowed', app);
+                }
             }
         };
 
