@@ -55,24 +55,32 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             if (app) {
                 var group = _.findWhere(_groupedApps, {title: app.group});
 
+                // Find if the group exists
                 if (group === undefined) {
+                    // Add the group
                     group = {
                         title: app.group,
                         order: _groupOrder[app.group] || 100,
                         items: []
                     };
 
-                    app.active = $state.includes(app.state);
-
                     _groupedApps.push(group);
                     _groupedApps = _groupedApps.sort(_sortItems);
                 }
 
-                group.items.push(app);
-                group.items = group.items.sort(_sortItems);
+                // Find if the app exists in the group
+                var groupItem = _.findWhere(group.items, {title: app.title});
 
-                $rootScope.$broadcast('navigation::items__changed', _groupedApps);
-                $rootScope.$broadcast('navigation::app__allowed', app);
+                if (groupItem === undefined) {
+                    // Add the app to the group
+                    app.active = $state.includes(app.state);
+
+                    group.items.push(app);
+                    group.items = group.items.sort(_sortItems);
+
+                    $rootScope.$broadcast('navigation::items__changed', _groupedApps);
+                    $rootScope.$broadcast('navigation::app__allowed', app);
+                }
             }
         };
 
