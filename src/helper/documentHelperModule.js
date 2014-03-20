@@ -33,6 +33,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 title: (item.author ? item.author : ''),
                 subtitle: '',
                 docType: item.docType,
+                group: docMap.title,
                 updatedAt: item.updatedAt
             };
 
