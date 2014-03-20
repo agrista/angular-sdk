@@ -2074,8 +2074,8 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
                 map.subtitle += 'your request to join Agrista';
             } else if (item.action == 'create') {
                 map.subtitle += 'a customer portfolio for ' + item.organization.name;
-            } else if (item.action == 'register') {
-                map.subtitle += 'on Agrista';
+            } else if (item.action == 'decline') {
+                map.subtitle += 'a task for ' + item.organization.name;
             } else {
                 map.subtitle += 'the portfolio of ' + item.organization.name;
             }
