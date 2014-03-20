@@ -159,9 +159,9 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
                 }, promise.reject);
             });
         },
-        deleteNotification: function (id) {
+        acceptNotification: function (id) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/notification/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/notification/' + id + '/accept', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
