@@ -41,6 +41,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     var _setScroll = function (infinite) {
         if (_infiniteScroll !== infinite) {
             if (infinite !== undefined) {
+                _items = [];
                 _infiniteScroll = infinite;
             } else {
                 _infiniteScroll = undefined;
