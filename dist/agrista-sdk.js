@@ -702,7 +702,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
     return {
         getAttachmentUri: function(key) {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/attachment/' + key, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/file-attachment/' + key + '/url', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1787,6 +1787,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 title: (item.author ? item.author : ''),
                 subtitle: '',
                 docType: item.docType,
+                group: docMap.title,
                 updatedAt: item.updatedAt
             };
 
