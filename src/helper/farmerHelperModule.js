@@ -79,7 +79,9 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
      * @constructor
      */
     function EnterpriseEditor (enterprises) {
-        this.enterprises = enterprises || [];
+        this.enterprises = _.map(enterprises || [], function (item) {
+            return (item.name ? item.name : item);
+        });
 
         this.selection = {
             category: undefined,

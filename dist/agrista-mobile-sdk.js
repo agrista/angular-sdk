@@ -1203,7 +1203,9 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
      * @constructor
      */
     function EnterpriseEditor (enterprises) {
-        this.enterprises = enterprises || [];
+        this.enterprises = _.map(enterprises || [], function (item) {
+            return (item.name ? item.name : item);
+        });
 
         this.selection = {
             category: undefined,
@@ -1486,8 +1488,6 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
     }
 }]);
 
-var sdkHelperApp = angular.module('ag.sdk.helper', ['ag.sdk.helper.asset', 'ag.sdk.helper.farmer', 'ag.sdk.helper.document', 'ag.sdk.helper.favourites', 'ag.sdk.helper.merchant', 'ag.sdk.helper.task', 'ag.sdk.helper.user']);
-
 var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', []);
 
 sdkHelperMerchantApp.factory('merchantHelper', [function() {
@@ -1679,6 +1679,64 @@ sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
         }
     }
 });
+
+var sdkHelperTeamApp = angular.module('ag.sdk.helper.team', []);
+
+sdkHelperTeamApp.factory('teamHelper', [function() {
+
+    /**
+     * @name TeamEditor
+     * @param availableTeams
+     * @param teams
+     * @constructor
+     */
+    function TeamEditor (/**Array=*/availableTeams, /**Array=*/teams) {
+        availableTeams = availableTeams || [];
+
+        this.teams = _.map(teams || [], function (item) {
+            return (item.name ? item.name : item);
+        });
+
+        this.selection = {
+            list: availableTeams,
+            mode: (availableTeams.length == 0 ? 'add' : 'select'),
+            text: ''
+        };
+    }
+
+    TeamEditor.prototype.toggleMode = function() {
+        if (this.selection.list.length > 0) {
+            // Allow toggle
+            this.selection.mode = (this.selection.mode == 'select' ? 'add' : 'select');
+            this.selection.text = '';
+        }
+    };
+
+    TeamEditor.prototype.addTeam = function (team) {
+        team = team || this.selection.text;
+
+        if (this.teams.indexOf(team) == -1) {
+            this.teams.push(team);
+            this.selection.text = '';
+        }
+    };
+
+    TeamEditor.prototype.removeTeam = function (indexOrTeam) {
+        if (typeof indexOrTeam == 'string') {
+            indexOrTeam = this.teams.indexOf(indexOrTeam);
+        }
+
+        if (indexOrTeam !== -1) {
+            this.teams.splice(indexOrTeam, 1);
+        }
+    };
+
+    return {
+        teamEditor: function (/**Array=*/availableTeams, /**Array=*/teams) {
+            return new TeamEditor(availableTeams, teams);
+        }
+    }
+}]);
 
 var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 
@@ -6785,4 +6843,31 @@ mobileSdkDataApp.provider('dataStore', [function () {
     }];
 }]);
 
-var mobileSdkApp = angular.module('ag.mobile-sdk', ['ag.sdk.authorization', 'ag.sdk.id', 'ag.sdk.utilities', 'ag.sdk.monitor', 'ag.sdk.interface.map', 'ag.sdk.helper', 'ag.mobile-sdk.helper', 'ag.mobile-sdk.api', 'ag.mobile-sdk.data']);
+angular.module('ag.sdk.helper', [
+    'ag.sdk.helper.asset',
+    'ag.sdk.helper.document',
+    'ag.sdk.helper.farmer',
+    'ag.sdk.helper.favourites',
+    'ag.sdk.helper.merchant',
+    'ag.sdk.helper.task',
+    'ag.sdk.helper.team',
+    'ag.sdk.helper.user'
+]);
+
+angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.list',
+    'ag.sdk.interface.map',
+    'ag.sdk.interface.navigation'
+]);
+
+angular.module('ag.mobile-sdk', [
+    'ag.sdk.authorization',
+    'ag.sdk.id',
+    'ag.sdk.utilities',
+    'ag.sdk.monitor',
+    'ag.sdk.interface.map',
+    'ag.sdk.helper',
+    'ag.mobile-sdk.helper',
+    'ag.mobile-sdk.api',
+    'ag.mobile-sdk.data'
+]);
