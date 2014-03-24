@@ -4,6 +4,9 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
     var _registeredApps = {};
     var _groupedApps = [];
 
+    var _leftButtons = [];
+    var _rightButtons = [];
+
     var _groupOrder = {
         'Favourites': 1,
         'Assets': 2,
@@ -131,6 +134,32 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                 }
 
                 return _footerText;
+            },
+
+            /*
+             * Buttons
+             */
+            leftButtons: function (/**Array=*/buttons) {
+                if (buttons) {
+                    if ((buttons instanceof Array) === false) {
+                        buttons = [buttons];
+                    }
+
+                    _leftButtons = buttons;
+                }
+
+                return _leftButtons;
+            },
+            rightButtons: function (/**Array=*/buttons) {
+                if (buttons) {
+                    if ((buttons instanceof Array) === false) {
+                        buttons = [buttons];
+                    }
+
+                    _rightButtons = buttons;
+                }
+
+                return _rightButtons;
             }
         }
     }];
