@@ -142,10 +142,13 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             leftButtons: function (/**Array=*/buttons) {
                 if (buttons) {
                     if ((buttons instanceof Array) === false) {
-                        buttons = [buttons];
+                        _leftButtons.push(buttons);
+                    } else {
+                        _leftButtons = buttons;
                     }
 
-                    _leftButtons = buttons;
+                    $rootScope.$broadcast('navigation::left-buttons__changed', _leftButtons);
+                    $rootScope.$broadcast('navigation::buttons__changed');
                 }
 
                 return _leftButtons;
@@ -153,10 +156,13 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             rightButtons: function (/**Array=*/buttons) {
                 if (buttons) {
                     if ((buttons instanceof Array) === false) {
-                        buttons = [buttons];
+                        _rightButtons.push(buttons);
+                    } else {
+                        _rightButtons = buttons;
                     }
 
-                    _rightButtons = buttons;
+                    $rootScope.$broadcast('navigation::right-buttons__changed', _rightButtons);
+                    $rootScope.$broadcast('navigation::buttons__changed');
                 }
 
                 return _rightButtons;
