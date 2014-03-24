@@ -838,36 +838,41 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, mapboxService, geoJSONHelper, objectId) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $timeout, mapboxService, geoJSONHelper, objectId) {
     var _instances = {};
     
-    function Mapbox(id, scope) {
-        this._id = id;
+    function Mapbox(attrs, scope) {
+        _this._id = id;
 
-        this._optionSchema = {};
-        this._editing = false;
-        this._editableLayer;
-        this._editableFeature = L.featureGroup();
-        this._featureClickable;
+        _this._optionSchema = {};
+        _this._editing = false;
+        _this._editableLayer;
+        _this._editableFeature = L.featureGroup();
+        _this._featureClickable;
 
-        this._geoJSON = {};
-        this._layers = {};
-        this._layerControls = {
+        _this._geoJSON = {};
+        _this._layers = {};
+        _this._layerControls = {
             baseTile: '',
             baseLayers: {},
             overlays: {}
         };
-        this._draw = {
+        _this._draw = {
             exclude: false,
             addLayer: true,
             options: {},
             controls: {}
         };
 
-        this.mapInit();
-        this.addListeners(scope);
+        // Init
+        attrs.delay = attrs.delay || 0;
 
-        $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::init', this._map);
+        $timeout(function () {
+            _this.mapInit();
+            _this.addListeners(scope);
+
+            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::init', _this._map);
+        }, attrs.delay);
     }
 
     /*
@@ -2000,7 +2005,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         transclude: true,
         link: function (scope, element, attrs) {
             if (_instances[attrs.id] === undefined) {
-                _instances[attrs.id] = new Mapbox(attrs.id, scope);
+                _instances[attrs.id] = new Mapbox(attrs, scope);
             }
         },
         controller: function ($scope, $attrs) {
