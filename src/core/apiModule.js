@@ -124,7 +124,17 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
                     promise.resolve(res.data);
                 }, promise.reject);
             });
-        },
+        }
+    };
+}]);
+
+/**
+ * OrganizationalUnit API
+ */
+sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
         getOrganizationalUnits: function() {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/organizational-units', {withCredentials: true}).then(function (res) {
