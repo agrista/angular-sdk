@@ -129,6 +129,37 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
 }]);
 
 /**
+ * Organizational Unit API
+ */
+sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getOrganizationalUnits: function() {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/organizational-units', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getOrganizationalUnit: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/organizational-unit/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateOrganizationalUnit: function(unitData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/organizational-unit/' + unitData.id, unitData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Notification API
  */
 sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
@@ -4642,7 +4673,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/district-polygon' + params)
                 .success(function (district) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: mdName});
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.mdName});
 
                     _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                     _this.updateDrawControls();
