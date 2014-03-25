@@ -3420,12 +3420,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
     Mapbox.prototype.setBounds = function (bounds) {
         if (this._map && bounds.coordinates) {
             if (bounds.coordinates instanceof Array) {
-                if (bounds.coordinates.length > 0) {
-                    this._map.setView(bounds.coordinates[0], 6);
-
-                    if (bounds.coordinates.length > 1) {
-                        this._map.fitBounds(bounds.coordinates, bounds.options);
-                    }
+                if (bounds.coordinates.length > 1) {
+                    this._map.fitBounds(bounds.coordinates, bounds.options);
                 }
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
