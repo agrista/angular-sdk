@@ -124,6 +124,27 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getOrganizationalUnits: function() {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/organizational-units', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getOrganizationalUnit: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/organizational-unit/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateOrganizationalUnit: function(unitData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/organizational-unit/' + unitData.id, unitData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
