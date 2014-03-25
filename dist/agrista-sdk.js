@@ -4673,7 +4673,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/district-polygon' + params)
                 .success(function (district) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.mdName});
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
 
                     _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                     _this.updateDrawControls();
