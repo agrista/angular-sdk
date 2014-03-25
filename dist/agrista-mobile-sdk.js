@@ -2684,12 +2684,10 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 return this._config.bounds;
             },
             setBounds: function (coordinates, options) {
-                if (coordinates instanceof Array) {
-                    this._config.bounds = {
-                        coordinates: coordinates,
-                        options: options || {
-                            reset: false
-                        }
+                this._config.bounds = {
+                    coordinates: coordinates,
+                    options: options || {
+                        reset: false
                     }
                 }
 
@@ -2927,7 +2925,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
     var _instances = {};
     
     function Mapbox(attrs, scope) {
-        _this._id = id;
+        var _this = this;
+        _this._id = attrs.id;
 
         _this._optionSchema = {};
         _this._editing = false;
@@ -3419,10 +3418,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
     };
 
     Mapbox.prototype.setBounds = function (bounds) {
-        if (this._map && bounds.coordinates && bounds.coordinates.length > 0) {
-            this._map.setView(bounds.coordinates[0], 6);
+        if (this._map && bounds.coordinates) {
+            if (bounds.coordinates instanceof Array) {
+                if (bounds.coordinates.length > 0) {
+                    this._map.setView(bounds.coordinates[0], 6);
 
-            if (bounds.coordinates.length > 1) {
+                    if (bounds.coordinates.length > 1) {
+                        this._map.fitBounds(bounds.coordinates, bounds.options);
+                    }
+                }
+            } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
             }
         }
