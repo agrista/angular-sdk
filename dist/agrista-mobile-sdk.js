@@ -389,7 +389,7 @@ sdkIdApp.factory('generateUUID', function () {
     };
 
     return function() {
-        return new GenerateUUID();
+        return GenerateUUID();
     };
 });
 
