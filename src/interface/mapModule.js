@@ -1227,7 +1227,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
         if (_this._layerControls.control === undefined) {
             _this._layerControls.control = L.control.layers({}, {});
 
-            if (options.layerControl) {
+            if (options.layersControl) {
                 _this._map.addControl(_this._layerControls.control);
             }
         }
