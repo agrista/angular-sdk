@@ -1609,15 +1609,11 @@ sdkHelperTaskApp.provider('taskHelper', function() {
     var _taskTodoMap = {};
 
     var _getTaskState = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.state || undefined;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
     var _getTaskTitle = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.title || taskType;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
@@ -1660,15 +1656,6 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'release': 'Release'
     };
 
-    var _taskStatusMap = {
-        'rejected': -2,
-        'unassigned': -1,
-        'pending': 0,
-        'assigned': 1,
-        'in progress': 2,
-        'complete': 3
-    };
-
     /*
      * Provider functions
      */
@@ -1684,15 +1671,18 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             parentListServiceMap: function() {
                 return _parentListServiceMap;
             },
+
             getTaskState: _getTaskState,
             getTaskTitle: _getTaskTitle,
             getTaskStatusTitle: _getStatusTitle,
             getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
-            getTaskStatus: function (status) {
-                return _taskStatusMap[status];
-            },
 
+            filterTasks: function (tasks) {
+                return _.filter(tasks, function (task) {
+                    return (_getTaskState(task.todo) !== undefined);
+                });
+            },
             updateListService: function (id, todo, tasks, organization) {
                 listService.addItems(dataMapService({
                     id: tasks[0].parentTaskId,
@@ -2425,6 +2415,11 @@ sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMa
  */
 sdkInterfaceMapApp.provider('mapboxService', function () {
     var _defaultConfig = {
+        options: {
+            zoomControl: true,
+            attributionControl: true,
+            layersControl: true
+        },
         layerControl: {
             baseTile: 'agrista.map-65ftbmpi',
             baseLayers: {
@@ -2549,6 +2544,20 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             invalidateSize: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::invalidate-size', {});
+            },
+
+            /*
+             * Options
+             */
+            getOptions: function () {
+                return this._config.options;
+            },
+            setOptions: function (options) {
+                var _this = this;
+
+                angular.forEach(options, function(value, key) {
+                    _this._config.options[key] = value;
+                });
             },
 
             /*
@@ -2968,8 +2977,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
         // Setup map
         var view = this._mapboxServiceInstance.getView();
+        var options = this._mapboxServiceInstance.getOptions();
 
-        this._map = L.map(this._id).setView(view.coordinates, view.zoom);
+        this._map = L.map(this._id, options).setView(view.coordinates, view.zoom);
 
         this._editableFeature = L.featureGroup();
         this._editableFeature.addTo(this._map);
@@ -3287,10 +3297,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
     Mapbox.prototype.setBaseLayers = function (layers) {
         var _this = this;
+        var options = _this._mapboxServiceInstance.getOptions();
 
         if (_this._layerControls.control === undefined) {
             _this._layerControls.control = L.control.layers({}, {});
-            _this._map.addControl(_this._layerControls.control);
+
+            if (options.layerControl) {
+                _this._map.addControl(_this._layerControls.control);
+            }
         }
 
         angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
@@ -5223,6 +5237,7 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
             return promiseService.wrap(function(promise) {
                 _getFarmers()
                     .then(_getDocuments)
+                    .then(_getTasks)
                     .then(promise.resolve, promise.reject);
             });
         };

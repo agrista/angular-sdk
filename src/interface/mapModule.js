@@ -340,6 +340,11 @@ sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMa
  */
 sdkInterfaceMapApp.provider('mapboxService', function () {
     var _defaultConfig = {
+        options: {
+            zoomControl: true,
+            attributionControl: true,
+            layersControl: true
+        },
         layerControl: {
             baseTile: 'agrista.map-65ftbmpi',
             baseLayers: {
@@ -464,6 +469,20 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             invalidateSize: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::invalidate-size', {});
+            },
+
+            /*
+             * Options
+             */
+            getOptions: function () {
+                return this._config.options;
+            },
+            setOptions: function (options) {
+                var _this = this;
+
+                angular.forEach(options, function(value, key) {
+                    _this._config.options[key] = value;
+                });
             },
 
             /*
@@ -883,8 +902,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
         // Setup map
         var view = this._mapboxServiceInstance.getView();
+        var options = this._mapboxServiceInstance.getOptions();
 
-        this._map = L.map(this._id).setView(view.coordinates, view.zoom);
+        this._map = L.map(this._id, options).setView(view.coordinates, view.zoom);
 
         this._editableFeature = L.featureGroup();
         this._editableFeature.addTo(this._map);
@@ -1202,10 +1222,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
     Mapbox.prototype.setBaseLayers = function (layers) {
         var _this = this;
+        var options = _this._mapboxServiceInstance.getOptions();
 
         if (_this._layerControls.control === undefined) {
             _this._layerControls.control = L.control.layers({}, {});
-            _this._map.addControl(_this._layerControls.control);
+
+            if (options.layerControl) {
+                _this._map.addControl(_this._layerControls.control);
+            }
         }
 
         angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
