@@ -270,6 +270,7 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
             return promiseService.wrap(function(promise) {
                 _getFarmers()
                     .then(_getDocuments)
+                    .then(_getTasks)
                     .then(promise.resolve, promise.reject);
             });
         };
