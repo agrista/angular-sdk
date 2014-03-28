@@ -1,4 +1,4 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'ngCookies']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -91,7 +91,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        $get: ['$rootScope', '$cookieStore', 'authorizationApi', 'promiseService', function ($rootScope, $cookieStore, authorizationApi, promiseService) {
+        $get: ['$rootScope', 'authorizationApi', 'localStore', 'promiseService', function ($rootScope, authorizationApi, localStore, promiseService) {
             var _user = _getUser();
 
             authorizationApi.getUser().then(function (res) {
@@ -99,11 +99,13 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     _user = _setUser(res.user);
 
                     $rootScope.$broadcast('authorization::login', _user);
+                } else if (_user.isActive !== true) {
+                    $rootScope.$broadcast('authorization::unauthorized');
                 }
             });
 
             function _getUser() {
-                return $cookieStore.get('user') || _defaultUser;
+                return localStore.getItem('user') || _defaultUser;
             }
 
             function _setUser(user) {
@@ -113,7 +115,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
                 }
 
-                $cookieStore.put('user', user);
+                localStore.setItem('user', user);
 
                 return user;
             }
@@ -271,9 +273,9 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         }
     }
 }]);
-var sdkIdApp = angular.module('ag.sdk.id', ['ngCookies']);
+var sdkIdApp = angular.module('ag.sdk.id', ['ag.sdk.utilities']);
 
-sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
+sdkIdApp.factory('objectId', ['localStore', function(localStore) {
     /*
      *
      * Copyright (c) 2011 Justin Dearing (zippy1981@gmail.com)
@@ -295,14 +297,14 @@ sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
         var machine = Math.floor(Math.random() * (16777216));
 
         // Get local stored machine id
-        var mongoMachineId = parseInt($cookieStore.get('mongoMachineId'));
+        var mongoMachineId = parseInt(localStore.getItem('mongoMachineId'));
 
         if (mongoMachineId >= 0 && mongoMachineId <= 16777215) {
-            machine = Math.floor($cookieStore.get('mongoMachineId'));
+            machine = Math.floor(localStore.getItem('mongoMachineId'));
         }
 
         // Just always stick the value in.
-        $cookieStore.get('mongoMachineId', machine);
+        localStore.setItem('mongoMachineId', machine);
 
         function ObjId() {
             if (!(this instanceof ObjectId)) {
@@ -566,7 +568,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
     }
 }]);
 
-var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
 
 skdUtilitiesApp.run(['stateResolver', function (stateResolver) {
     // Initialize stateResolver
@@ -773,6 +775,32 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
             return _wrapAll(action, {});
         },
         defer: _defer
+    }
+}]);
+
+skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($cookieStore, $window) {
+    return {
+        setItem: function (key, value) {
+            if ($window.localStorage) {
+                $window.localStorage.setItem(key, JSON.stringify(value));
+            } else {
+                $cookieStore.put(key, value);
+            }
+        },
+        getItem: function (key) {
+            if ($window.localStorage) {
+                return JSON.parse($window.localStorage.getItem(key));
+            } else {
+                return $cookieStore.get(key);
+            }
+        },
+        removeItem: function (key) {
+            if ($window.localStorage) {
+                $window.localStorage.removeItem(key);
+            } else {
+                $cookieStore.remove(key);
+            }
+        }
     }
 }]);
 
@@ -3302,7 +3330,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
         if (_this._layerControls.control === undefined) {
             _this._layerControls.control = L.control.layers({}, {});
 
-            if (options.layerControl) {
+            if (options.layersControl) {
                 _this._map.addControl(_this._layerControls.control);
             }
         }
