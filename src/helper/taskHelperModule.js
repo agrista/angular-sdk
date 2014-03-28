@@ -39,15 +39,11 @@ sdkHelperTaskApp.provider('taskHelper', function() {
     var _taskTodoMap = {};
 
     var _getTaskState = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.state || undefined;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
     var _getTaskTitle = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.title || taskType;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
@@ -90,15 +86,6 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'release': 'Release'
     };
 
-    var _taskStatusMap = {
-        'rejected': -2,
-        'unassigned': -1,
-        'pending': 0,
-        'assigned': 1,
-        'in progress': 2,
-        'complete': 3
-    };
-
     /*
      * Provider functions
      */
@@ -114,15 +101,18 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             parentListServiceMap: function() {
                 return _parentListServiceMap;
             },
+
             getTaskState: _getTaskState,
             getTaskTitle: _getTaskTitle,
             getTaskStatusTitle: _getStatusTitle,
             getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
-            getTaskStatus: function (status) {
-                return _taskStatusMap[status];
-            },
 
+            filterTasks: function (tasks) {
+                return _.filter(tasks, function (task) {
+                    return (_getTaskState(task.todo) !== undefined);
+                });
+            },
             updateListService: function (id, todo, tasks, organization) {
                 listService.addItems(dataMapService({
                     id: tasks[0].parentTaskId,
