@@ -6,6 +6,7 @@
         "grunt": "~0.4.3",
         "grunt-contrib-concat": "~0.1.2",
         "grunt-contrib-uglify": "^0.4.0",
-        "grunt-contrib-connect": "~0.7.1"
+        "grunt-contrib-connect": "~0.7.1",
+        "grunt-sloc": "latest"
     }
 }

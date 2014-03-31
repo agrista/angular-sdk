@@ -18,11 +18,21 @@ module.exports = function(grunt) {
                 }
             }
         },
-        connect: {
-            server: {
+        sloc: {
+            client: {
                 options: {
-                    port: 8000,
-                    keepalive: true
+                    torelant: true
+                },
+                files: {
+                    'dist': ['agrista-sdk.js']
+                }
+            },
+            mobile: {
+                options: {
+                    torelant: true
+                },
+                files: {
+                    'dist': ['agrista-mobile-sdk.js']
                 }
             }
         }
@@ -30,8 +40,7 @@ module.exports = function(grunt) {
 
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-concat');
-    grunt.loadNpmTasks('grunt-contrib-connect');
+    grunt.loadNpmTasks('grunt-sloc');
 
     grunt.registerTask('default', ['concat', 'uglify']);
-    grunt.registerTask('server', ['default', 'connect']);
 };
