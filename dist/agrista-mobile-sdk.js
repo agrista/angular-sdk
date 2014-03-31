@@ -2444,9 +2444,10 @@ sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMa
 sdkInterfaceMapApp.provider('mapboxService', function () {
     var _defaultConfig = {
         options: {
-            zoomControl: true,
             attributionControl: true,
-            layersControl: true
+            layersControl: true,
+            scrollWheelZoom: false,
+            zoomControl: true
         },
         layerControl: {
             baseTile: 'agrista.map-65ftbmpi',
@@ -2461,15 +2462,6 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 }
             },
             overlays: {}
-        },
-        handlers: {
-            zoom: {
-                scrollWheelZoom: false,
-                dragging: true,
-                touchZoom: true,
-                doubleClickZoom: true,
-                tap: true
-            }
         },
         events: {},
         view: {
@@ -2644,22 +2636,6 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 
                     delete _this._config.layerControl.overlays[name];
                 });
-            },
-
-            /*
-             * Map handlers
-             */
-            getHandlers: function (type) {
-                return this._config.handlers[type];
-            },
-            setHandlers: function (type, data) {
-                var handler = this._config.handlers[type];
-
-                angular.forEach(data, function(value, key) {
-                    handler[key] = value;
-                });
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::set-' + type + '-handlers', handler);
             },
 
             /*
@@ -3012,7 +2988,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
         this._editableFeature = L.featureGroup();
         this._editableFeature.addTo(this._map);
 
-        this.setZoomHandlers(this._mapboxServiceInstance.getHandlers('zoom'));
         this.setEventHandlers(this._mapboxServiceInstance.getEventHandlers());
         this.resetLayers(this._mapboxServiceInstance.getLayers());
         this.resetGeoJSON(this._mapboxServiceInstance.getGeoJSON());
@@ -3063,11 +3038,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
         scope.$on('mapbox-' + id + '::remove-overlay', function (event, args) {
             _this.removeOverlay(args);
-        });
-
-        // Map Handlers
-        scope.$on('mapbox-' + id + '::set-zoom-handlers', function (event, args) {
-            _this.setZoomHandlers(args);
         });
 
         // Event Handlers
@@ -3412,23 +3382,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
             delete this._layerControls.overlays[name];
         }
-    };
-
-    /*
-     * Map Handlers
-     */
-    Mapbox.prototype.setZoomHandlers = function (handlers) {
-        var _this = this;
-
-        angular.forEach(handlers, function(enabled, handler) {
-            if (_this._map[handler]) {
-                if (enabled) {
-                    _this._map[handler].enable();
-                } else {
-                    _this._map[handler].disable();
-                }
-            }
-        });
     };
 
     /*
