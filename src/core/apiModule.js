@@ -677,6 +677,7 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                         promise.reject({status: status});
                     });
             });
+        }
     };
 }]);
 
