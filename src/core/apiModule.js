@@ -647,11 +647,31 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                         'Accept': 'application/pdf'
                     }
                 };
-                $http.post(_host + 'api/document/pdf', data, options)
+                $http.post(_host + 'api/document/pdf/get', data, options)
                     .success(function (res, status) {
                         var blob = new Blob([res], {type: "application/pdf"});
                         var objectUrl = URL.createObjectURL(blob);
                         promise.resolve({status: status, url: objectUrl});
+                    })
+                    .error(function (res, status) {
+                        promise.reject({status: status});
+                    });
+            });
+        },
+        saveDocumentPdf: function (data) {
+            return promiseService.wrap(function (promise) {
+                var m = encodeURIComponent(data).match(/%[89ABab]/g);
+                var options = {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Length': data.length + (m ? m.length : 0),
+                        Connection: 'keep-alive',
+                        'Transfer-Encoding': 'chunked'
+                    }
+                };
+                $http.post(_host + 'api/document/pdf/save', data, options)
+                    .success(function (res, status) {
+                        promise.resolve(res);
                     })
                     .error(function (res, status) {
                         promise.reject({status: status});
