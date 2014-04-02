@@ -1,6 +1,6 @@
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
-sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
+sdkMonitorApp.factory('queueService', ['$log', '$q', 'promiseService', function ($log, $q, promiseService) {
     function QueueService(options, callback) {
         // Check if instance of QueueService
         if (!(this instanceof QueueService)) {
@@ -51,7 +51,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
         var pop = function () {
             callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
 
-            console.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
+            $log.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
 
             if (_queue.length === 0 && _progress.total === _progress.complete) {
                 _progress.total = 0;
@@ -102,7 +102,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
     };
 }]);
 
-sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
+sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
     function PromiseMonitor(callback) {
         if (!(this instanceof PromiseMonitor)) {
             return new PromiseMonitor(callback);
@@ -120,7 +120,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
             _stats.complete++;
             _stats.percent = (100.0 / _stats.total) * _stats.complete;
 
-            console.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
+            $log.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
 
             safeApply(function () {
                 if (_stats.complete == _stats.total) {

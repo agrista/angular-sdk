@@ -629,7 +629,7 @@ mobileSdkApiApp.factory('documentApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
+mobileSdkApiApp.factory('attachmentApi', ['$http', '$log', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, $log, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
     var attachmentStore = api({plural: 'attachments', singular: 'attachment'});
 
     return {
@@ -658,7 +658,7 @@ mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'data
                             return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
                         }, promise.reject)
                         .then(function () {
-                            console.log('update attachment');
+                            $log.log('update attachment');
                             attachment.__local = false;
 
                             attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);

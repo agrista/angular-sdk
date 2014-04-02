@@ -831,7 +831,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $timeout, mapboxService, geoJSONHelper, objectId) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $log, $timeout, mapboxService, geoJSONHelper, objectId) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -1718,7 +1718,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -1737,7 +1737,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -1754,7 +1754,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -1773,7 +1773,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -1790,7 +1790,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -1809,7 +1809,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };

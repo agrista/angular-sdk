@@ -77,8 +77,6 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return {
             responseError: function (err) {
                 if (err.status === 401) {
-                    console.warn('Not authorized');
-
                     $rootScope.$broadcast('authorization::unauthorized');
                 }
 
@@ -393,7 +391,7 @@ sdkIdApp.factory('generateUUID', function () {
 
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
-sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
+sdkMonitorApp.factory('queueService', ['$log', '$q', 'promiseService', function ($log, $q, promiseService) {
     function QueueService(options, callback) {
         // Check if instance of QueueService
         if (!(this instanceof QueueService)) {
@@ -444,7 +442,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
         var pop = function () {
             callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
 
-            console.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
+            $log.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
 
             if (_queue.length === 0 && _progress.total === _progress.complete) {
                 _progress.total = 0;
@@ -495,7 +493,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
     };
 }]);
 
-sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
+sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
     function PromiseMonitor(callback) {
         if (!(this instanceof PromiseMonitor)) {
             return new PromiseMonitor(callback);
@@ -513,7 +511,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
             _stats.complete++;
             _stats.percent = (100.0 / _stats.total) * _stats.complete;
 
-            console.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
+            $log.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
 
             safeApply(function () {
                 if (_stats.complete == _stats.total) {
@@ -1093,29 +1091,31 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$injector', function ($injector) {
         var _listServiceMap = function (item) {
-            var docMap = _documentMap[item.docType];
-            var map = {
-                title: (item.author ? item.author : ''),
-                subtitle: '',
-                docType: item.docType,
-                group: docMap.title,
-                updatedAt: item.updatedAt
-            };
+            if (_documentMap[item.docType]) {
+                var docMap = _documentMap[item.docType];
+                var map = {
+                    title: (item.author ? item.author : ''),
+                    subtitle: '',
+                    docType: item.docType,
+                    group: docMap.title,
+                    updatedAt: item.updatedAt
+                };
 
-            if (item.organization && item.organization.name) {
-                map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
-                map.title = item.organization.name;
-            }
-
-            if (item.data && docMap && docMap.listServiceMap) {
-                if (docMap.listServiceMap instanceof Array) {
-                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                if (item.organization && item.organization.name) {
+                    map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
+                    map.title = item.organization.name;
                 }
 
-                docMap.listServiceMap(map, item);
-            }
+                if (item.data && docMap && docMap.listServiceMap) {
+                    if (docMap.listServiceMap instanceof Array) {
+                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                    }
 
-            return map;
+                    docMap.listServiceMap(map, item);
+                }
+
+                return map;
+            }
         };
 
         return {
@@ -2930,7 +2930,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $timeout, mapboxService, geoJSONHelper, objectId) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $log, $timeout, mapboxService, geoJSONHelper, objectId) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -3817,7 +3817,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3836,7 +3836,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3853,7 +3853,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3872,7 +3872,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3889,7 +3889,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3908,7 +3908,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -4504,9 +4504,9 @@ var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.u
  * @example
 
  cameraService.capture(50).then(function (res) {
-            console.log('Photo taken');
+            $log.log('Photo taken');
         }, function (err) {
-            console.log(err);
+            $log.log(err);
         });
 
  */
@@ -4658,13 +4658,13 @@ var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', 
  * @example
 
  function onLocation(res) {
-            console.log('Success: geolocationService.watchPosition');
-            console.log(res);
+            $log.log('Success: geolocationService.watchPosition');
+            $log.log(res);
         }
 
  function onError(err) {
-            console.log('Error: geolocationService.watchPosition');
-            console.log(err);
+            $log.log('Error: geolocationService.watchPosition');
+            $log.log(err);
         }
 
  var watch = geolocationService.watchPosition(onLocation, onError);
@@ -4779,7 +4779,7 @@ var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk
  * @description File Storage Service
  * @return {object} Angular Service
  **/
-cordovaStorageApp.factory('fileStorageService', ['promiseService', function (promiseService) {
+cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', function ($log, promiseService) {
     var _fileSystem = undefined;
     var _errors = {
         noFileSystem: {err: 'NoFileSystem', msg: 'Could not initialize file system'},
@@ -4838,7 +4838,7 @@ cordovaStorageApp.factory('fileStorageService', ['promiseService', function (pro
         return defer.promise;
     };
 
-    console.log('Initialized storageService');
+    $log.log('Initialized storageService');
 
     return {
         /**
@@ -5643,7 +5643,7 @@ mobileSdkApiApp.factory('documentApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
+mobileSdkApiApp.factory('attachmentApi', ['$http', '$log', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, $log, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
     var attachmentStore = api({plural: 'attachments', singular: 'attachment'});
 
     return {
@@ -5672,7 +5672,7 @@ mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'data
                             return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
                         }, promise.reject)
                         .then(function () {
-                            console.log('update attachment');
+                            $log.log('update attachment');
                             attachment.__local = false;
 
                             attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);
@@ -6083,10 +6083,10 @@ mobileSdkDataApp.provider('dataPurge', function () {
     }];
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', function () {
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
     return {
         parseRequest: function (templateUrl, schemaData) {
-            console.log('Unresolved: ' + templateUrl);
+            $log.log('Unresolved: ' + templateUrl);
 
             if (templateUrl !== undefined) {
                 for (var key in schemaData) {
@@ -6098,7 +6098,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
                 }
             }
 
-            console.log('Resolved: ' + templateUrl);
+            $log.log('Resolved: ' + templateUrl);
 
             return templateUrl;
         },
@@ -6123,7 +6123,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
             };
         }
     }
-});
+}]);
 
 /**
  * @name dataStore
@@ -6164,7 +6164,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$q', '$http', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($q, $http, $rootScope, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$q', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $q, $rootScope, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
 
         /**
@@ -6177,17 +6177,17 @@ mobileSdkDataApp.provider('dataStore', [function () {
             var migrationSteps = [];
 
             function _processMigration(db) {
-                console.log('_processMigration');
+                $log.log('_processMigration');
 
                 if (migrationSteps.length > 0) {
                     var migration = migrationSteps[0];
                     migrationSteps.splice(0, 1);
 
                     if (migration.current === db.version) {
-                        console.log('Database (' + db.version + ') has a newer version ' + migration.next);
+                        $log.log('Database (' + db.version + ') has a newer version ' + migration.next);
 
                         db.changeVersion(migration.current, migration.next, migration.process, _errorCallback, function () {
-                            console.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
+                            $log.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
                             _processMigration(db);
                         });
                     } else {
@@ -6295,12 +6295,12 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             function _traceCallback() {
-                console.warn('_traceCallback');
-                console.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
+                $log.warn('_traceCallback');
+                $log.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
             }
 
             function _dataCallback(tx, res) {
-                console.log('SQL complete: ' + res.rowsAffected);
+                $log.log('SQL complete: ' + res.rowsAffected);
             }
 
             function _errorCallback(tx, err) {
@@ -6310,17 +6310,17 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 }
 
                 if (typeof err === 'string') {
-                    console.warn('Error: ' + err);
+                    $log.warn('Error: ' + err);
                 } else if (err.message !== undefined) {
-                    console.warn('Error: ' + err.message + '(' + err.code + ')');
+                    $log.warn('Error: ' + err.message + '(' + err.code + ')');
                 } else {
-                    console.warn(err);
+                    $log.warn(err);
                 }
             }
 
             function _getItemIndex(item, id) {
                 if (item[_config.indexerProperty] === undefined) {
-                    console.warn('Configured indexer property not defined');
+                    $log.warn('Configured indexer property not defined');
                 }
 
                 return (item[_config.indexerProperty] || item.id || id);
@@ -6331,7 +6331,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getLocal = function (uri, options, glCallback) {
-                console.log('_getLocal');
+                $log.log('_getLocal');
                 if (typeof glCallback !== 'function') glCallback = angular.noop;
 
                 _localDatabase.transaction(function (tx) {
@@ -6359,7 +6359,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _findLocal = function (key, column, options, flCallback) {
-                console.log('_findLocal');
+                $log.log('_findLocal');
 
                 if (typeof flCallback !== 'function') flCallback = angular.noop;
 
@@ -6387,7 +6387,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _syncLocal = function (dataItems, uri, slCallback) {
-                console.log('_syncLocal');
+                $log.log('_syncLocal');
                 if (typeof slCallback !== 'function') slCallback = angular.noop;
 
                 _deleteAllLocal(uri, function () {
@@ -6398,7 +6398,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _updateLocal = function (dataItems, options, ulCallback) {
-                console.log('_updateLocal');
+                $log.log('_updateLocal');
                 if (typeof options === 'function') {
                     ulCallback = options;
                     options = {};
@@ -6442,7 +6442,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteLocal = function (dataItems, dlCallback) {
-                console.log('_deleteLocal');
+                $log.log('_deleteLocal');
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 if (dataItems.length > 0) {
@@ -6464,7 +6464,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteAllLocal = function (uri, options, dalCallback) {
-                console.log('_deleteAllLocal');
+                $log.log('_deleteAllLocal');
                 if (typeof options === 'function') {
                     dalCallback = options;
                     options = {};
@@ -6475,31 +6475,31 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 var asyncMon = new AsyncMonitor(1, dalCallback);
 
                 var handleSuccess = function () {
-                    console.log('handleSuccess');
+                    $log.log('handleSuccess');
                     asyncMon.done();
                 };
 
                 var handleError = function (tx, err) {
-                    console.log('handleError');
+                    $log.log('handleError');
                     _errorCallback(tx, err);
                     asyncMon.done();
                 };
 
-                console.log(uri);
+                $log.log(uri);
 
                 _localDatabase.transaction(function (tx) {
-                    console.log('_deleteAllLocal transaction');
+                    $log.log('_deleteAllLocal transaction');
 
                     if (options.force === true) {
-                        console.log('_deleteAllLocal force');
+                        $log.log('_deleteAllLocal force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ?', [uri], handleSuccess, handleError);
                     } else {
-                        console.log('_deleteAllLocal not force');
+                        $log.log('_deleteAllLocal not force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], handleSuccess, handleError);
                     }
                 });
 
-                console.log('_deleteAllLocal end');
+                $log.log('_deleteAllLocal end');
             };
 
             /**
@@ -6507,7 +6507,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getRemote = function (uri, grCallback) {
-                console.log('_getRemote');
+                $log.log('_getRemote');
                 if (typeof grCallback !== 'function') grCallback = angular.noop;
 
                 if (_config.apiTemplate !== undefined) {
@@ -6561,7 +6561,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _updateRemote = function (dataItems, writeUri, writeSchema, urCallback) {
-                console.log('_updateRemote');
+                $log.log('_updateRemote');
                 if (typeof writeSchema === 'function') {
                     urCallback = writeSchema;
                     writeSchema = {};
@@ -6638,7 +6638,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _deleteRemote = function (dataItems, writeUri, writeSchema, drCallback) {
-                console.log('_deleteRemote');
+                $log.log('_deleteRemote');
                 if (typeof writeSchema === 'function') {
                     drCallback = writeSchema;
                     writeSchema = {};
@@ -6951,7 +6951,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             _initializeTable(function () {
-                console.log('table initialized');
+                $log.log('table initialized');
 
                 _dataStoreInitialized = true;
                 _processTransactionQueue();
@@ -6980,7 +6980,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
         _initializeDatabase(function (db) {
             _localDatabase = db;
 
-            console.log('database initialized');
+            $log.log('database initialized');
         });
 
         /**

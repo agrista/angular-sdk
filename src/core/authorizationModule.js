@@ -77,8 +77,6 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return {
             responseError: function (err) {
                 if (err.status === 401) {
-                    console.warn('Not authorized');
-
                     $rootScope.$broadcast('authorization::unauthorized');
                 }
 

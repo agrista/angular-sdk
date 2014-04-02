@@ -892,8 +892,6 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return {
             responseError: function (err) {
                 if (err.status === 401) {
-                    console.warn('Not authorized');
-
                     $rootScope.$broadcast('authorization::unauthorized');
                 }
 
@@ -1208,7 +1206,7 @@ sdkIdApp.factory('generateUUID', function () {
 
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
-sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
+sdkMonitorApp.factory('queueService', ['$log', '$q', 'promiseService', function ($log, $q, promiseService) {
     function QueueService(options, callback) {
         // Check if instance of QueueService
         if (!(this instanceof QueueService)) {
@@ -1259,7 +1257,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
         var pop = function () {
             callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
 
-            console.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
+            $log.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
 
             if (_queue.length === 0 && _progress.total === _progress.complete) {
                 _progress.total = 0;
@@ -1310,7 +1308,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
     };
 }]);
 
-sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
+sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
     function PromiseMonitor(callback) {
         if (!(this instanceof PromiseMonitor)) {
             return new PromiseMonitor(callback);
@@ -1328,7 +1326,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
             _stats.complete++;
             _stats.percent = (100.0 / _stats.total) * _stats.complete;
 
-            console.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
+            $log.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
 
             safeApply(function () {
                 if (_stats.complete == _stats.total) {
@@ -1908,29 +1906,31 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$injector', function ($injector) {
         var _listServiceMap = function (item) {
-            var docMap = _documentMap[item.docType];
-            var map = {
-                title: (item.author ? item.author : ''),
-                subtitle: '',
-                docType: item.docType,
-                group: docMap.title,
-                updatedAt: item.updatedAt
-            };
+            if (_documentMap[item.docType]) {
+                var docMap = _documentMap[item.docType];
+                var map = {
+                    title: (item.author ? item.author : ''),
+                    subtitle: '',
+                    docType: item.docType,
+                    group: docMap.title,
+                    updatedAt: item.updatedAt
+                };
 
-            if (item.organization && item.organization.name) {
-                map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
-                map.title = item.organization.name;
-            }
-
-            if (item.data && docMap && docMap.listServiceMap) {
-                if (docMap.listServiceMap instanceof Array) {
-                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                if (item.organization && item.organization.name) {
+                    map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
+                    map.title = item.organization.name;
                 }
 
-                docMap.listServiceMap(map, item);
-            }
+                if (item.data && docMap && docMap.listServiceMap) {
+                    if (docMap.listServiceMap instanceof Array) {
+                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                    }
 
-            return map;
+                    docMap.listServiceMap(map, item);
+                }
+
+                return map;
+            }
         };
 
         return {
@@ -3745,7 +3745,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $timeout, mapboxService, geoJSONHelper, objectId) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $log, $timeout, mapboxService, geoJSONHelper, objectId) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -4632,7 +4632,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -4651,7 +4651,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -4668,7 +4668,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -4687,7 +4687,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -4704,7 +4704,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -4723,7 +4723,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$timeout', 'mapb
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
