@@ -28,29 +28,31 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$injector', function ($injector) {
         var _listServiceMap = function (item) {
-            var docMap = _documentMap[item.docType];
-            var map = {
-                title: (item.author ? item.author : ''),
-                subtitle: '',
-                docType: item.docType,
-                group: docMap.title,
-                updatedAt: item.updatedAt
-            };
+            if (_documentMap[item.docType]) {
+                var docMap = _documentMap[item.docType];
+                var map = {
+                    title: (item.author ? item.author : ''),
+                    subtitle: '',
+                    docType: item.docType,
+                    group: docMap.title,
+                    updatedAt: item.updatedAt
+                };
 
-            if (item.organization && item.organization.name) {
-                map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
-                map.title = item.organization.name;
-            }
-
-            if (item.data && docMap && docMap.listServiceMap) {
-                if (docMap.listServiceMap instanceof Array) {
-                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                if (item.organization && item.organization.name) {
+                    map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
+                    map.title = item.organization.name;
                 }
 
-                docMap.listServiceMap(map, item);
-            }
+                if (item.data && docMap && docMap.listServiceMap) {
+                    if (docMap.listServiceMap instanceof Array) {
+                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                    }
 
-            return map;
+                    docMap.listServiceMap(map, item);
+                }
+
+                return map;
+            }
         };
 
         return {
