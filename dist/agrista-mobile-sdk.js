@@ -4225,7 +4225,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         var _updateUserApps = function (currentUser) {
             var authUser = currentUser || authorization.currentUser();
             var roleApps = (authUser.userRole ? _.pluck(authUser.userRole.apps, 'name') : []);
-            var orgServices = _.pluck(authUser.organization.services, 'serviceType');
+            var orgServices = (authUser.organization ? _.pluck(authUser.organization.services, 'serviceType') : []);
 
             _revokeAllApps();
 
@@ -4277,6 +4277,11 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             unregisterApps: function () {
                 _registeredApps = {};
                 _groupedApps = [];
+            },
+            allowApp: function (appName) {
+                if (_registeredApps[appName]) {
+                    _allowApp(_registeredApps[appName]);
+                }
             },
             /*
              * Control slim toggle
