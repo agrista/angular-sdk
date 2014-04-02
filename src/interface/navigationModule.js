@@ -4,14 +4,16 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
     var _registeredApps = {};
     var _groupedApps = [];
 
-    var _leftButtons = [];
-    var _rightButtons = [];
-
     var _groupOrder = {
         'Favourites': 1,
         'Assets': 2,
         'Apps': 3,
         'Administration': 4
+    };
+
+    var _buttons = {
+        left: [],
+        right: []
     };
 
     var _sortItems = function (a, b) {
@@ -33,7 +35,20 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         });
     };
 
-    this.$get = ['$rootScope', '$state', function($rootScope, $state) {
+    var _setButtons = function (position, buttons) {
+        if (buttons) {
+            if ((buttons instanceof Array) === false) {
+                _buttons[position].push(buttons);
+            } else {
+                _buttons[position] = buttons;
+            }
+
+            $rootScope.$broadcast('navigation::' + position + '-buttons__changed', _buttons[position]);
+            $rootScope.$broadcast('navigation::buttons__changed');
+        }
+    };
+
+    this.$get = ['$rootScope', '$state', 'authorization', function($rootScope, $state, authorization) {
         var _slim = false;
         var _footerText = '';
 
@@ -140,32 +155,14 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
              * Buttons
              */
             leftButtons: function (/**Array=*/buttons) {
-                if (buttons) {
-                    if ((buttons instanceof Array) === false) {
-                        _leftButtons.push(buttons);
-                    } else {
-                        _leftButtons = buttons;
-                    }
+                _setButtons('left', buttons);
 
-                    $rootScope.$broadcast('navigation::left-buttons__changed', _leftButtons);
-                    $rootScope.$broadcast('navigation::buttons__changed');
-                }
-
-                return _leftButtons;
+                return _buttons.left;
             },
             rightButtons: function (/**Array=*/buttons) {
-                if (buttons) {
-                    if ((buttons instanceof Array) === false) {
-                        _rightButtons.push(buttons);
-                    } else {
-                        _rightButtons = buttons;
-                    }
+                _setButtons('right', buttons);
 
-                    $rootScope.$broadcast('navigation::right-buttons__changed', _rightButtons);
-                    $rootScope.$broadcast('navigation::buttons__changed');
-                }
-
-                return _rightButtons;
+                return _buttons.right;
             }
         }
     }];
