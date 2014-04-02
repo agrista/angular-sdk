@@ -149,6 +149,11 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                 _registeredApps = {};
                 _groupedApps = [];
             },
+            allowApp: function (appName) {
+                if (_registeredApps[appName]) {
+                    _allowApp(_registeredApps[appName]);
+                }
+            },
             /*
              * Control slim toggle
              */
