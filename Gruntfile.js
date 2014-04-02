@@ -2,7 +2,7 @@ module.exports = function(grunt) {
     grunt.initConfig({
         concat: {
             sdk: {
-                src: ['src/core/*.js', 'src/helper/*.js', 'src/interface/*.js', 'src/sdk.js'],
+                src: ['src/core/*.js', 'src/helper/*.js', 'src/interface/*.js', 'src/test/*.js', 'src/sdk.js'],
                 dest: 'dist/agrista-sdk.js'
             },
             mobilesdk: {

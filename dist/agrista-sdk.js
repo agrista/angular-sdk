@@ -647,11 +647,31 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                         'Accept': 'application/pdf'
                     }
                 };
-                $http.post(_host + 'api/document/pdf', data, options)
+                $http.post(_host + 'api/document/pdf/get', data, options)
                     .success(function (res, status) {
                         var blob = new Blob([res], {type: "application/pdf"});
                         var objectUrl = URL.createObjectURL(blob);
                         promise.resolve({status: status, url: objectUrl});
+                    })
+                    .error(function (res, status) {
+                        promise.reject({status: status});
+                    });
+            });
+        },
+        saveDocumentPdf: function (data) {
+            return promiseService.wrap(function (promise) {
+                var m = encodeURIComponent(data).match(/%[89ABab]/g);
+                var options = {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Length': data.length + (m ? m.length : 0),
+                        Connection: 'keep-alive',
+                        'Transfer-Encoding': 'chunked'
+                    }
+                };
+                $http.post(_host + 'api/document/pdf/save', data, options)
+                    .success(function (res, status) {
+                        promise.resolve(res);
                     })
                     .error(function (res, status) {
                         promise.reject({status: status});
@@ -5099,6 +5119,56 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
     }];
 });
 
+var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id']);
+
+sdkTestDataApp.provider('mockDataService', [function () {
+    var _mockData = {};
+    var _config = {
+        localStore: true
+    };
+
+    this.config = function (options) {
+        _config = _.defaults(options, _config);
+    };
+
+    this.$get = ['localStore', 'objectId', function (localStore, objectId) {
+        if (_config.localStore) {
+            _mockData = localStore.getItem('mockdata') || {};
+        }
+
+        return {
+            setItem: function (type, data) {
+                if (data instanceof Array) {
+                    _mockData[type] = {};
+
+                    angular.forEach(data, function (item) {
+                        item.id = item.id || objectId().toString();
+
+                        _mockData[type][item.id] = item;
+                    });
+                } else {
+                    data.id = data.id || ObjectId().toString();
+
+                    _mockData[type] = _mockData[type] || {};
+                    _mockData[type][data.id] = data;
+                }
+
+                if (_config.localStore) {
+                    localStore.setItem('mockdata', _mockData);
+                }
+            },
+            getItem: function (type, id) {
+                _mockData[type] = _mockData[type] || {};
+
+                if (id === undefined) {
+                    return _.toArray(_mockData[type] || {});
+                } else {
+                    return _mockData[type][id];
+                }
+            }
+        }
+    }];
+}]);
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
     'ag.sdk.helper.document',
@@ -5116,11 +5186,16 @@ angular.module('ag.sdk.interface', [
     'ag.sdk.interface.navigation'
 ]);
 
+angular.module('ag.sdk.test', [
+    'ag.sdk.test.data'
+]);
+
 angular.module('ag.sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
     'ag.sdk.utilities',
     'ag.sdk.api',
     'ag.sdk.helper',
-    'ag.sdk.interface.map'
+    'ag.sdk.interface.map',
+    'ag.sdk.test'
 ]);
