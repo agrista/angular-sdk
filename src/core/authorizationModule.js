@@ -131,13 +131,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
 
                 isAllowed: function (level) {
-                    console.log('authorization.allowed: ' + level + ' ' + _user.role + ' = ' + (level & _user.role));
-
                     return (level & _user.role) != 0;
                 },
                 isLoggedIn: function () {
-                    console.log('authorization.loggedIn: ' + _accessLevels.user + ' ' + _user.role + ' = ' + (_accessLevels.user & _user.role));
-
                     return (_accessLevels.user & _user.role) != 0;
                 },
                 login: function (email, password) {
