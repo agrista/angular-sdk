@@ -101,7 +101,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             _revokeAllApps();
 
             angular.forEach(_registeredApps, function (app) {
-                if (typeof app.include == 'function' && app.include(app, roleApps, orgServices) || app.include) {
+                if (typeof app.include == 'function' && app.include(app, roleApps, orgServices) || app.include === true) {
                     _allowApp(app);
                 }
             });
