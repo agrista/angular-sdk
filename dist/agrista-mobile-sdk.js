@@ -4177,19 +4177,6 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         });
     };
 
-    var _setButtons = function (position, buttons) {
-        if (buttons) {
-            if ((buttons instanceof Array) === false) {
-                _buttons[position].push(buttons);
-            } else {
-                _buttons[position] = buttons;
-            }
-
-            $rootScope.$broadcast('navigation::' + position + '-buttons__changed', _buttons[position]);
-            $rootScope.$broadcast('navigation::buttons__changed');
-        }
-    };
-
     this.$get = ['$rootScope', '$state', 'authorization', function($rootScope, $state, authorization) {
         var _slim = false;
         var _footerText = '';
@@ -4244,6 +4231,19 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                     _allowApp(app);
                 }
             });
+        };
+
+        var _setButtons = function (position, buttons) {
+            if (buttons) {
+                if ((buttons instanceof Array) === false) {
+                    _buttons[position].push(buttons);
+                } else {
+                    _buttons[position] = buttons;
+                }
+
+                $rootScope.$broadcast('navigation::' + position + '-buttons__changed', _buttons[position]);
+                $rootScope.$broadcast('navigation::buttons__changed');
+            }
         };
 
         // Event handlers
