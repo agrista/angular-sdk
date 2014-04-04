@@ -10,7 +10,7 @@ sdkTestDataApp.provider('mockDataService', [function () {
         _config = _.defaults(options, _config);
     };
 
-    this.$get = ['localStore', 'objectId', function (localStore, objectId) {
+    this.$get = ['localStore', 'objectId', 'promiseService', function (localStore, objectId, promiseService) {
         if (_config.localStore) {
             _mockData = localStore.getItem('mockdata') || {};
         }
@@ -37,13 +37,19 @@ sdkTestDataApp.provider('mockDataService', [function () {
                 }
             },
             getItem: function (type, id) {
-                _mockData[type] = _mockData[type] || {};
+                return promiseService.wrap(function (promise) {
+                    _mockData[type] = _mockData[type] || {};
 
-                if (id === undefined) {
-                    return _.toArray(_mockData[type] || {});
-                } else {
-                    return _mockData[type][id];
-                }
+                    if (id === undefined) {
+                        promise.resolve(_.toArray(_mockData[type] || {}));
+                    } else {
+                        if (_mockData[type][id]) {
+                            promise.resolve(_mockData[type][id]);
+                        } else {
+                            promise.reject();
+                        }
+                    }
+                });
             }
         }
     }];
