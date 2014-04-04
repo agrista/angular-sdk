@@ -382,12 +382,13 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
         * @param id
         * @constructor
         */
-        function MapboxServiceInstance(id) {
+        function MapboxServiceInstance(id, options) {
             var _this = this;
 
             _this._id = id;
-            _this._show = false;
             _this._ready = false;
+            _this._options = options;
+            _this._show = _this._options.show || false;
 
             _this._config = angular.copy(_defaultConfig);
             _this._requestQueue = [];
@@ -399,7 +400,10 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 
             $rootScope.$on('mapbox-' + _this._id + '::destroy', function () {
                 _this._ready = false;
-                _this._config = angular.copy(_defaultConfig);
+
+                if (_this._options.persist !== true) {
+                    _this._config = angular.copy(_defaultConfig);
+                }
             });
         }
 
@@ -818,9 +822,15 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
         /*
          * Get or create a MapboxServiceInstance
          */
-        return function (id) {
+        return function (id, options) {
+            options = options || {};
+
             if (_instances[id] === undefined) {
-                _instances[id] = new MapboxServiceInstance(id);
+                _instances[id] = new MapboxServiceInstance(id, options);
+            }
+
+            if (options.clean === true) {
+                _instances[id].reset();
             }
 
             return _instances[id];
