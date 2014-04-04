@@ -3032,8 +3032,8 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
     }
 });
 
-sdkInterfaceMapApp.factory('mapMarkerHelper', function () {
-    var _getMarker = function (name, state, options) {
+sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
+    var _createMarker = function (name, state, options) {
         return _.defaults(options || {}, {
             iconUrl: 'img/icons/' + name + '.' + state + '.png',
             shadowUrl: 'img/icons/' + name + '.shadow.png',
@@ -3045,34 +3045,40 @@ sdkInterfaceMapApp.factory('mapMarkerHelper', function () {
         });
     };
 
-    return {
-        getMarker: function (name, options) {
-            var marker = {};
+    var _getMarker = this.getMarker = function (name, options) {
+        var marker = {};
 
-            if (typeof name === 'string') {
-                marker = _getMarker(name, 'default', options)
-            }
-
-            return marker;
-        },
-        getMarkerStates: function (name, states, options) {
-            var markers = {};
-
-            if (typeof name === 'string') {
-                angular.forEach(states, function(state) {
-                    markers[state] = _getMarker(name, state, options);
-                });
-            }
-
-            return markers;
+        if (typeof name === 'string') {
+            marker = _createMarker(name, 'default', options)
         }
-    }
+
+        return marker;
+    };
+
+    var _getMarkerStates = this.getMarkerStates = function (name, states, options) {
+        var markers = {};
+
+        if (typeof name === 'string') {
+            angular.forEach(states, function(state) {
+                markers[state] = _createMarker(name, state, options);
+            });
+        }
+
+        return markers;
+    };
+
+    this.$get = function() {
+        return {
+            getMarker: _getMarker,
+            getMarkerStates: _getMarkerStates
+        }
+    };
 });
 
-sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMarkerHelper) {
+sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {
-        improvement: mapMarkerHelper.getMarkerStates('improvement', ['default', 'success']),
-        homestead: mapMarkerHelper.getMarkerStates('homestead', ['default', 'success'])
+        improvement: mapMarkerHelperProvider.getMarkerStates('improvement', ['default', 'success']),
+        homestead: mapMarkerHelperProvider.getMarkerStates('homestead', ['default', 'success'])
     };
 
     var _mapStyles = {
@@ -3235,18 +3241,23 @@ sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMa
                 }
             }
         }
-
     };
 
-    return {
-        getStyle: function(composition, layerName) {
-            return (_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
-        },
-        setStyle: function(composition, layerName, style) {
-            _mapStyles[composition] = _mapStyles[composition] || {};
-            _mapStyles[composition][layerName] = style;
+    var _getStyle = this.getStyle = function (composition, layerName) {
+        return (_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+    };
+
+    var _setStyle = this.setStyle = function(composition, layerName, style) {
+        _mapStyles[composition] = _mapStyles[composition] || {};
+        _mapStyles[composition][layerName] = style;
+    };
+
+    this.$get = function() {
+        return {
+            getStyle: _getStyle,
+            setStyle: _setStyle
         }
-    }
+    };
 }]);
 
 /**
