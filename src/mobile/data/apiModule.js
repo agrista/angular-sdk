@@ -702,7 +702,17 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
         var _relationTable = {
             organization: {
                 hydrate: function (obj, type) {
-                    return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
+                    return promiseService.wrap(function (promise) {
+                        farmerApi.findFarmer({key: obj.organizationId, options: {one: true}}).then(function (farmer) {
+                            promiseService.all({
+                                farms: _relationTable.farms.hydrate(farmer, type),
+                                legalEntities: _relationTable.legalEntities.hydrate(farmer, type),
+                                assets: _relationTable.assets.hydrate(farmer, type)
+                            }).then(function (results) {
+                                promise.resolve(_.extend(farmer, results));
+                            }, promise.reject);
+                        }, promise.reject);
+                    });
                 },
                 dehydrate: function (obj, type) {
                     return farmerApi.createFarmer({data: obj.organization, options: {replace: false, dirty: false}});
