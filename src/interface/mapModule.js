@@ -1627,7 +1627,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
     };
 
     Mapbox.prototype.setOptionSchema = function (options) {
-        this._optionSchema = options;
+        this._optionSchema = options || {};
     };
 
     Mapbox.prototype.updateDrawControls = function () {
