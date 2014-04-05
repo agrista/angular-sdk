@@ -1,4 +1,4 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'ngCookies']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -77,8 +77,6 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return {
             responseError: function (err) {
                 if (err.status === 401) {
-                    console.warn('Not authorized');
-
                     $rootScope.$broadcast('authorization::unauthorized');
                 }
 
@@ -91,7 +89,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        $get: ['$rootScope', '$cookieStore', 'authorizationApi', 'promiseService', function ($rootScope, $cookieStore, authorizationApi, promiseService) {
+        $get: ['$rootScope', 'authorizationApi', 'localStore', 'promiseService', function ($rootScope, authorizationApi, localStore, promiseService) {
             var _user = _getUser();
 
             authorizationApi.getUser().then(function (res) {
@@ -99,11 +97,13 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     _user = _setUser(res.user);
 
                     $rootScope.$broadcast('authorization::login', _user);
+                } else if (_user.isActive !== true) {
+                    $rootScope.$broadcast('authorization::unauthorized');
                 }
             });
 
             function _getUser() {
-                return $cookieStore.get('user') || _defaultUser;
+                return localStore.getItem('user') || _defaultUser;
             }
 
             function _setUser(user) {
@@ -113,7 +113,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
                 }
 
-                $cookieStore.put('user', user);
+                localStore.setItem('user', user);
 
                 return user;
             }
@@ -129,13 +129,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
 
                 isAllowed: function (level) {
-                    console.log('authorization.allowed: ' + level + ' ' + _user.role + ' = ' + (level & _user.role));
-
                     return (level & _user.role) != 0;
                 },
                 isLoggedIn: function () {
-                    console.log('authorization.loggedIn: ' + _accessLevels.user + ' ' + _user.role + ' = ' + (_accessLevels.user & _user.role));
-
                     return (_accessLevels.user & _user.role) != 0;
                 },
                 login: function (email, password) {

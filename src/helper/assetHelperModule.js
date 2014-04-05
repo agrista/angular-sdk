@@ -162,7 +162,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         'plantation': ['Plantation'],
         'vme': [],
         'water right': landUseHelper.landUseTypes()
-    }
+    };
 
     return {
         assetTypes: function() {
@@ -223,3 +223,41 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         }
     }
 }]);
+
+sdkHelperAssetApp.factory('assetValuationHelper', function () {
+    var _listServiceMap = function(item) {
+        if (item.data && item.data.valuations) {
+            var mappedItems = [];
+
+            angular.forEach(item.data.valuations, function (valuation) {
+                var map = {
+                    title: valuation.organization.name,
+                    date: valuation.date
+                };
+
+                mappedItems.push(map);
+            });
+
+            return mappedItems;
+        }
+    };
+
+    return {
+        listServiceMap: function () {
+            return _listServiceMap;
+        },
+        calculateValuation: function (asset, valuation) {
+            if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
+                valuation.assetValue = asset.data.quantity * (valuation.unitValue || 0);
+            } else if (asset.type == 'livestock' && isNaN(valuation.totalStock) == false) {
+                valuation.assetValue = valuation.totalStock * (valuation.unitValue || 0);
+            } else if (asset.type == 'crop' && isNaN(valuation.expectedYield) == false) {
+                valuation.assetValue = valuation.expectedYield * (valuation.unitValue || 0);
+            } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
+                valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
+            }
+
+            return valuation;
+        }
+    }
+});

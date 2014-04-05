@@ -1,10 +1,26 @@
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', []);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
 
-sdkHelperFarmerApp.factory('farmerHelper', [function() {
+sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.operationType
+            subtitle: item.operationType,
+            profileImage : item.profilePhotoSrc,
+            searchingIndex: searchingIndex(item)
+        };
+        
+        function searchingIndex(item) {
+            var index = [];
+
+            angular.forEach(item.legalEntities, function(entity) {
+                index.push(entity.name);
+                
+                if(entity.registrationNumber) {
+                    index.push(entity.registrationNumber);
+                }
+            });
+
+            return index;
         }
     };
 
@@ -16,6 +32,27 @@ sdkHelperFarmerApp.factory('farmerHelper', [function() {
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+        getFarmerLocation: function(farmer) {
+            if (farmer) {
+                if (farmer.data && farmer.data.loc) {
+                    return farmer.data.loc.coordinates;
+                } else if (farmer.legalEntities) {
+                    var geojson = geoJSONHelper();
+
+                    angular.forEach(farmer.legalEntities, function (entity) {
+                        if (entity.assets) {
+                            angular.forEach(entity.assets, function (asset) {
+                                geojson.addGeometry(asset.loc);
+                            });
+                        }
+                    });
+
+                    return geojson.getCenter();
+                }
+            }
+
+            return null;
         }
     }
 }]);
@@ -28,7 +65,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
         };
     };
 
-    var _legalEntityTypes = ['Close Corporation', 'Co-operation', 'Incorporated Company', 'Private Company', 'Partnership', 'Public Company', 'State Owned Company', 'Sole Proprietor', 'Trust', 'Association', 'Government', 'Individual', 'Strategic Business Unit', 'Limited', 'Unknown', 'Other'];
+    var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Clubs', 'Body Corporates'];
 
     var _enterpriseTypes = {
         'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
@@ -42,7 +79,9 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
      * @constructor
      */
     function EnterpriseEditor (enterprises) {
-        this.enterprises = enterprises || [];
+        this.enterprises = _.map(enterprises || [], function (item) {
+            return (item.name ? item.name : item);
+        });
 
         this.selection = {
             category: undefined,

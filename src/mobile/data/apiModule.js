@@ -270,6 +270,7 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
             return promiseService.wrap(function(promise) {
                 _getFarmers()
                     .then(_getDocuments)
+                    .then(_getTasks)
                     .then(promise.resolve, promise.reject);
             });
         };
@@ -628,7 +629,7 @@ mobileSdkApiApp.factory('documentApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
+mobileSdkApiApp.factory('attachmentApi', ['$http', '$log', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, $log, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
     var attachmentStore = api({plural: 'attachments', singular: 'attachment'});
 
     return {
@@ -657,7 +658,7 @@ mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'data
                             return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
                         }, promise.reject)
                         .then(function () {
-                            console.log('update attachment');
+                            $log.log('update attachment');
                             attachment.__local = false;
 
                             attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);
@@ -701,7 +702,17 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
         var _relationTable = {
             organization: {
                 hydrate: function (obj, type) {
-                    return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
+                    return promiseService.wrap(function (promise) {
+                        farmerApi.findFarmer({key: obj.organizationId, options: {one: true}}).then(function (farmer) {
+                            promiseService.all({
+                                farms: _relationTable.farms.hydrate(farmer, type),
+                                legalEntities: _relationTable.legalEntities.hydrate(farmer, type),
+                                assets: _relationTable.assets.hydrate(farmer, type)
+                            }).then(function (results) {
+                                promise.resolve(_.extend(farmer, results));
+                            }, promise.reject);
+                        }, promise.reject);
+                    });
                 },
                 dehydrate: function (obj, type) {
                     return farmerApi.createFarmer({data: obj.organization, options: {replace: false, dirty: false}});

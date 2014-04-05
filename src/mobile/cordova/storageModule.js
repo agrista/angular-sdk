@@ -6,7 +6,7 @@ var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk
  * @description File Storage Service
  * @return {object} Angular Service
  **/
-cordovaStorageApp.factory('fileStorageService', ['promiseService', function (promiseService) {
+cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', function ($log, promiseService) {
     var _fileSystem = undefined;
     var _errors = {
         noFileSystem: {err: 'NoFileSystem', msg: 'Could not initialize file system'},
@@ -65,7 +65,7 @@ cordovaStorageApp.factory('fileStorageService', ['promiseService', function (pro
         return defer.promise;
     };
 
-    console.log('Initialized storageService');
+    $log.log('Initialized storageService');
 
     return {
         /**

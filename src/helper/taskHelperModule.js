@@ -4,7 +4,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
 
     var _listServiceMap = function (item) {
-        var title = _getTaskTitle(item.todo) + ' for ' + item.organization.name + ' ' + item.id;
+        var title = item.documentKey;
         var mappedItems = _.filter(item.subtasks, function (task) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
@@ -28,7 +28,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         return {
             id: item.documentId,
             title: item.organization.name,
-            subtitle: _getTaskTitle(item.todo),
+            subtitle: item.documentKey,
             status: {
                 text: item.status || ' ',
                 label: _getStatusLabelClass(item.status)
@@ -39,19 +39,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
     var _taskTodoMap = {};
 
     var _getTaskState = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.state || undefined;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
     var _getTaskTitle = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.title || taskType;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
         return _taskStatusTitles[taskStatus] || taskStatus || ' ';
+    };
+
+    var _getActionTitle = function (taskAction) {
+        return _taskActionTitles[taskAction] || taskAction || ' ';
     };
 
     var _getStatusLabelClass = function (status) {
@@ -71,16 +71,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'assigned': 'Assigned',
         'in progress': 'In Progress',
         'in review': 'In Review',
-        'done': 'Done'
+        'done': 'Done',
+        'archive': 'Archived'
     };
 
-    var _taskStatusMap = {
-        'rejected': -2,
-        'unassigned': -1,
-        'pending': 0,
-        'assigned': 1,
-        'in progress': 2,
-        'complete': 3
+    var _taskActionTitles = {
+        'accept': 'Accept',
+        'decline': 'Decline',
+        'assign': 'Assign',
+        'start': 'Start',
+        'complete': 'Complete',
+        'approve': 'Approve',
+        'reject': 'Reject',
+        'release': 'Release'
     };
 
     /*
@@ -98,14 +101,18 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             parentListServiceMap: function() {
                 return _parentListServiceMap;
             },
+
             getTaskState: _getTaskState,
             getTaskTitle: _getTaskTitle,
             getTaskStatusTitle: _getStatusTitle,
+            getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
-            getTaskStatus: function (status) {
-                return _taskStatusMap[status];
-            },
 
+            filterTasks: function (tasks) {
+                return _.filter(tasks, function (task) {
+                    return (_getTaskState(task.todo) !== undefined);
+                });
+            },
             updateListService: function (id, todo, tasks, organization) {
                 listService.addItems(dataMapService({
                     id: tasks[0].parentTaskId,

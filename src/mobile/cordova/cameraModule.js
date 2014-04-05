@@ -7,9 +7,9 @@ var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.u
  * @example
 
  cameraService.capture(50).then(function (res) {
-            console.log('Photo taken');
+            $log.log('Photo taken');
         }, function (err) {
-            console.log(err);
+            $log.log(err);
         });
 
  */

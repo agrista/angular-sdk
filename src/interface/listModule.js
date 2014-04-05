@@ -41,6 +41,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     var _setScroll = function (infinite) {
         if (_infiniteScroll !== infinite) {
             if (infinite !== undefined) {
+                _items = [];
                 _infiniteScroll = infinite;
             } else {
                 _infiniteScroll = undefined;
@@ -114,10 +115,14 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     });
 
     $rootScope.$on('list::item__selected', function(event, args) {
-        if(args.id) {
-            _setActiveItem(args.id);
+        if (typeof args == 'object') {
+            if(args.id) {
+                _setActiveItem(args.id);
+            } else {
+                _setActiveItem(args.type);
+            }
         } else {
-            _setActiveItem(args.type);
+            _setActiveItem(args);
         }
     });
 
@@ -237,7 +242,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                             if (id == _items[x].id) {
                                 _items.splice(x, 1);
 
-                                if (id == _activeItemId) {
+                                if (id == _activeItemId && _items.length) {
                                     var next = (_items[x] ? _items[x] : _items[x - 1]);
                                     $rootScope.$broadcast('list::item__selected', next);
                                 }
@@ -248,6 +253,10 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                     } else {
                         delete _items[id];
                     }
+                }
+
+                if (_items instanceof Array && _items.length == 0) {
+                    $rootScope.$broadcast('list::items__empty');
                 }
 
                 $rootScope.$broadcast('list::items__changed', _items);

@@ -1,4 +1,4 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'ngCookies']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -77,8 +77,6 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return {
             responseError: function (err) {
                 if (err.status === 401) {
-                    console.warn('Not authorized');
-
                     $rootScope.$broadcast('authorization::unauthorized');
                 }
 
@@ -91,7 +89,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        $get: ['$rootScope', '$cookieStore', 'authorizationApi', 'promiseService', function ($rootScope, $cookieStore, authorizationApi, promiseService) {
+        $get: ['$rootScope', 'authorizationApi', 'localStore', 'promiseService', function ($rootScope, authorizationApi, localStore, promiseService) {
             var _user = _getUser();
 
             authorizationApi.getUser().then(function (res) {
@@ -99,11 +97,13 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     _user = _setUser(res.user);
 
                     $rootScope.$broadcast('authorization::login', _user);
+                } else if (_user.isActive !== true) {
+                    $rootScope.$broadcast('authorization::unauthorized');
                 }
             });
 
             function _getUser() {
-                return $cookieStore.get('user') || _defaultUser;
+                return localStore.getItem('user') || _defaultUser;
             }
 
             function _setUser(user) {
@@ -113,7 +113,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
                 }
 
-                $cookieStore.put('user', user);
+                localStore.setItem('user', user);
 
                 return user;
             }
@@ -129,13 +129,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
 
                 isAllowed: function (level) {
-                    console.log('authorization.allowed: ' + level + ' ' + _user.role + ' = ' + (level & _user.role));
-
                     return (level & _user.role) != 0;
                 },
                 isLoggedIn: function () {
-                    console.log('authorization.loggedIn: ' + _accessLevels.user + ' ' + _user.role + ' = ' + (_accessLevels.user & _user.role));
-
                     return (_accessLevels.user & _user.role) != 0;
                 },
                 login: function (email, password) {
@@ -271,9 +267,9 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         }
     }
 }]);
-var sdkIdApp = angular.module('ag.sdk.id', ['ngCookies']);
+var sdkIdApp = angular.module('ag.sdk.id', ['ag.sdk.utilities']);
 
-sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
+sdkIdApp.factory('objectId', ['localStore', function(localStore) {
     /*
      *
      * Copyright (c) 2011 Justin Dearing (zippy1981@gmail.com)
@@ -295,14 +291,14 @@ sdkIdApp.factory('objectId', ['$cookieStore', function($cookieStore) {
         var machine = Math.floor(Math.random() * (16777216));
 
         // Get local stored machine id
-        var mongoMachineId = parseInt($cookieStore.get('mongoMachineId'));
+        var mongoMachineId = parseInt(localStore.getItem('mongoMachineId'));
 
         if (mongoMachineId >= 0 && mongoMachineId <= 16777215) {
-            machine = Math.floor($cookieStore.get('mongoMachineId'));
+            machine = Math.floor(localStore.getItem('mongoMachineId'));
         }
 
         // Just always stick the value in.
-        $cookieStore.get('mongoMachineId', machine);
+        localStore.setItem('mongoMachineId', machine);
 
         function ObjId() {
             if (!(this instanceof ObjectId)) {
@@ -389,13 +385,13 @@ sdkIdApp.factory('generateUUID', function () {
     };
 
     return function() {
-        return new GenerateUUID();
+        return GenerateUUID();
     };
 });
 
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
-sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, promiseService) {
+sdkMonitorApp.factory('queueService', ['$log', '$q', 'promiseService', function ($log, $q, promiseService) {
     function QueueService(options, callback) {
         // Check if instance of QueueService
         if (!(this instanceof QueueService)) {
@@ -446,7 +442,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
         var pop = function () {
             callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
 
-            console.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
+            $log.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
 
             if (_queue.length === 0 && _progress.total === _progress.complete) {
                 _progress.total = 0;
@@ -497,7 +493,7 @@ sdkMonitorApp.factory('queueService', ['$q', 'promiseService', function ($q, pro
     };
 }]);
 
-sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
+sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
     function PromiseMonitor(callback) {
         if (!(this instanceof PromiseMonitor)) {
             return new PromiseMonitor(callback);
@@ -515,7 +511,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
             _stats.complete++;
             _stats.percent = (100.0 / _stats.total) * _stats.complete;
 
-            console.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
+            $log.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
 
             safeApply(function () {
                 if (_stats.complete == _stats.total) {
@@ -566,7 +562,7 @@ sdkMonitorApp.factory('promiseMonitor', ['safeApply', function (safeApply) {
     }
 }]);
 
-var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
 
 skdUtilitiesApp.run(['stateResolver', function (stateResolver) {
     // Initialize stateResolver
@@ -776,6 +772,32 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     }
 }]);
 
+skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($cookieStore, $window) {
+    return {
+        setItem: function (key, value) {
+            if ($window.localStorage) {
+                $window.localStorage.setItem(key, JSON.stringify(value));
+            } else {
+                $cookieStore.put(key, value);
+            }
+        },
+        getItem: function (key) {
+            if ($window.localStorage) {
+                return JSON.parse($window.localStorage.getItem(key));
+            } else {
+                return $cookieStore.get(key);
+            }
+        },
+        removeItem: function (key) {
+            if ($window.localStorage) {
+                $window.localStorage.removeItem(key);
+            } else {
+                $cookieStore.remove(key);
+            }
+        }
+    }
+}]);
+
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
@@ -940,7 +962,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         'plantation': ['Plantation'],
         'vme': [],
         'water right': landUseHelper.landUseTypes()
-    }
+    };
 
     return {
         assetTypes: function() {
@@ -1002,6 +1024,43 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
     }
 }]);
 
+sdkHelperAssetApp.factory('assetValuationHelper', function () {
+    var _listServiceMap = function(item) {
+        if (item.data && item.data.valuations) {
+            var mappedItems = [];
+
+            angular.forEach(item.data.valuations, function (valuation) {
+                var map = {
+                    title: valuation.organization.name,
+                    date: valuation.date
+                };
+
+                mappedItems.push(map);
+            });
+
+            return mappedItems;
+        }
+    };
+
+    return {
+        listServiceMap: function () {
+            return _listServiceMap;
+        },
+        calculateValuation: function (asset, valuation) {
+            if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
+                valuation.assetValue = asset.data.quantity * (valuation.unitValue || 0);
+            } else if (asset.type == 'livestock' && isNaN(valuation.totalStock) == false) {
+                valuation.assetValue = valuation.totalStock * (valuation.unitValue || 0);
+            } else if (asset.type == 'crop' && isNaN(valuation.expectedYield) == false) {
+                valuation.assetValue = valuation.expectedYield * (valuation.unitValue || 0);
+            } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
+                valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
+            }
+
+            return valuation;
+        }
+    }
+});
 var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', []);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
@@ -1032,28 +1091,31 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$injector', function ($injector) {
         var _listServiceMap = function (item) {
-            var docMap = _documentMap[item.docType];
-            var map = {
-                title: (item.author ? item.author : ''),
-                subtitle: '',
-                docType: item.docType,
-                updatedAt: item.updatedAt
-            };
+            if (_documentMap[item.docType]) {
+                var docMap = _documentMap[item.docType];
+                var map = {
+                    title: (item.author ? item.author : ''),
+                    subtitle: '',
+                    docType: item.docType,
+                    group: docMap.title,
+                    updatedAt: item.updatedAt
+                };
 
-            if (item.organization && item.organization.name) {
-                map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
-                map.title = item.organization.name;
-            }
-
-            if (item.data && docMap && docMap.listServiceMap) {
-                if (docMap.listServiceMap instanceof Array) {
-                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                if (item.organization && item.organization.name) {
+                    map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
+                    map.title = item.organization.name;
                 }
 
-                docMap.listServiceMap(map, item);
-            }
+                if (item.data && docMap && docMap.listServiceMap) {
+                    if (docMap.listServiceMap instanceof Array) {
+                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                    }
 
-            return map;
+                    docMap.listServiceMap(map, item);
+                }
+
+                return map;
+            }
         };
 
         return {
@@ -1084,13 +1146,29 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
     }]
 });
 
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', []);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
 
-sdkHelperFarmerApp.factory('farmerHelper', [function() {
+sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.operationType
+            subtitle: item.operationType,
+            profileImage : item.profilePhotoSrc,
+            searchingIndex: searchingIndex(item)
+        };
+        
+        function searchingIndex(item) {
+            var index = [];
+
+            angular.forEach(item.legalEntities, function(entity) {
+                index.push(entity.name);
+                
+                if(entity.registrationNumber) {
+                    index.push(entity.registrationNumber);
+                }
+            });
+
+            return index;
         }
     };
 
@@ -1102,6 +1180,27 @@ sdkHelperFarmerApp.factory('farmerHelper', [function() {
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+        getFarmerLocation: function(farmer) {
+            if (farmer) {
+                if (farmer.data && farmer.data.loc) {
+                    return farmer.data.loc.coordinates;
+                } else if (farmer.legalEntities) {
+                    var geojson = geoJSONHelper();
+
+                    angular.forEach(farmer.legalEntities, function (entity) {
+                        if (entity.assets) {
+                            angular.forEach(entity.assets, function (asset) {
+                                geojson.addGeometry(asset.loc);
+                            });
+                        }
+                    });
+
+                    return geojson.getCenter();
+                }
+            }
+
+            return null;
         }
     }
 }]);
@@ -1114,7 +1213,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
         };
     };
 
-    var _legalEntityTypes = ['Close Corporation', 'Co-operation', 'Incorporated Company', 'Private Company', 'Partnership', 'Public Company', 'State Owned Company', 'Sole Proprietor', 'Trust', 'Association', 'Government', 'Individual', 'Strategic Business Unit', 'Limited', 'Unknown', 'Other'];
+    var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Clubs', 'Body Corporates'];
 
     var _enterpriseTypes = {
         'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
@@ -1128,7 +1227,9 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
      * @constructor
      */
     function EnterpriseEditor (enterprises) {
-        this.enterprises = enterprises || [];
+        this.enterprises = _.map(enterprises || [], function (item) {
+            return (item.name ? item.name : item);
+        });
 
         this.selection = {
             category: undefined,
@@ -1251,19 +1352,20 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 
         if (typeof item.actor === 'object') {
             // User is the actor
-            if (item.actor.name) {
-                map.title = item.actor.name;
-                map.subtitle = item.actor.name;
+            if (item.actor.displayName) {
+                map.title = item.actor.displayName;
+                map.subtitle = item.actor.displayName;
             }
             else {
                 map.title = item.actor.firstName + ' ' + item.actor.lastName;
                 map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
             }
 
-            if (item.company) {
-                map.company += item.company;
-                map.subtitle += ' (' + item.company + ')';
+            if (item.actor.position) {
+                map.title += ' (' + item.actor.position + ')';
             }
+
+            map.profilePhotoSrc = item.actor.profilePhotoSrc;
         } else if (item.organization) {
             // Organization is the actor
             map.title = item.organization.name;
@@ -1285,52 +1387,62 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
                 map.subtitle += 'your request to join Agrista';
             } else if (item.action == 'create') {
                 map.subtitle += 'a customer portfolio for ' + item.organization.name;
-            } else if (item.action == 'register') {
-                map.subtitle += 'on Agrista';
+            } else if (item.action == 'decline') {
+                map.subtitle += 'a task for ' + item.organization.name;
             } else {
                 map.subtitle += 'the portfolio of ' + item.organization.name;
             }
 
             map.referenceState = 'customer.details';
-        } else if (item.referenceType == 'document' && item[item.referenceType] !== undefined) {
-            map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + item[item.referenceType].docType;
-            map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
-            if (item.organization && item.organization.name) {
-                map.subtitle = item.action == 'share' ? map.subtitle + ' with ' : map.subtitle + ' for ';
-                map.subtitle += item.organization.name;
-            }
         } else {
-            map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            if (item[item.referenceType] !== undefined) {
+                if (item.referenceType == 'document') {
+                    map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
+                } else if (item.referenceType == 'task') {
+                    map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
+                    map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+                } else {
+                    map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+                }
+            } else {
+                map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            }
+
+            if (item.actor && item.organization && item.organization.name) {
+                map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
+            }
         }
 
         return map;
     };
 
+    var _getActionPreposition = function (action) {
+        return _actionPrepositionExceptionMap[action] || 'for';
+    };
+
     var _getActionVerb = function (action) {
-        return _actionVerbMap[action] || (action.indexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
+        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
     };
 
     var _getReferenceArticle = function (reference) {
-        return _referenceArticleMap[reference] || 'a'
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        return _referenceArticleExceptionMap[reference] || (vowels.indexOf(reference.substr(0, 1)) != -1 ? 'an' : 'a');
     };
 
-    var _actionVerbMap = {
+    var _actionPrepositionExceptionMap = {
+        'share': 'with',
+        'sent': 'to'
+    };
+
+    var _actionVerbExceptionMap = {
         'register': 'accepted',
-        'create': 'created',
-        'decline': 'declined',
-        'delete': 'deleted',
-        'invite': 'invited',
-        'reject': 'rejected',
-        'review': 'reviewed',
-        'update': 'updated'
+        'sent': 'sent'
     };
 
-    var _referenceArticleMap = {
-        'asset register': 'an',
-        'document': 'a',
-        'farmer': 'a',
-        'team': 'a',
-        'farm valuation': 'a'
+    var _referenceArticleExceptionMap = {
+        'asset register': 'an'
     };
 
     return {
@@ -1372,12 +1484,16 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
             title: 'Import',
             state: 'import'
         },
-        'review': {
-            title: 'Review',
+        'view': {
+            title: 'View',
             state: 'view'
         },
-        'new': {
-            title: 'New',
+        'reject': {
+            title: 'Reassign',
+            state: 'manage'
+        },
+        'review': {
+            title: 'Review',
             state: 'view'
         }
     };
@@ -1396,8 +1512,6 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
     }
 }]);
 
-var sdkHelperApp = angular.module('ag.sdk.helper', ['ag.sdk.helper.asset', 'ag.sdk.helper.farmer', 'ag.sdk.helper.document', 'ag.sdk.helper.favourites', 'ag.sdk.helper.merchant', 'ag.sdk.helper.task', 'ag.sdk.helper.user']);
-
 var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', []);
 
 sdkHelperMerchantApp.factory('merchantHelper', [function() {
@@ -1414,6 +1528,53 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         standard: 'Standard'
     };
 
+    /**
+     * @name ServiceEditor
+     * @param availableServices
+     * @param services
+     * @constructor
+     */
+    function ServiceEditor (/**Array=*/availableServices, /**Array=*/services) {
+        availableServices = availableServices || [];
+
+        this.services = _.map(services || [], function (item) {
+            return (item.name ? item.name : item);
+        });
+
+        this.selection = {
+            list: availableServices,
+            mode: (availableServices.length == 0 ? 'add' : 'select'),
+            text: ''
+        };
+    }
+
+    ServiceEditor.prototype.toggleMode = function() {
+        if (this.selection.list.length > 0) {
+            // Allow toggle
+            this.selection.mode = (this.selection.mode == 'select' ? 'add' : 'select');
+            this.selection.text = '';
+        }
+    };
+
+    ServiceEditor.prototype.addService = function (service) {
+        service = service || this.selection.text;
+
+        if (this.services.indexOf(service) == -1) {
+            this.services.push(service);
+            this.selection.text = '';
+        }
+    };
+
+    ServiceEditor.prototype.removeService = function (indexOrService) {
+        if (typeof indexOrService == 'string') {
+            indexOrService = this.services.indexOf(indexOrService);
+        }
+
+        if (indexOrService !== -1) {
+            this.services.splice(indexOrService, 1);
+        }
+    };
+
     return {
         listServiceMap: function() {
             return _listServiceMap;
@@ -1423,6 +1584,10 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         },
         getPartnerType: function (type) {
             return _partnerTypes[type];
+        },
+
+        serviceEditor: function (/**Array=*/availableServices, /**Array=*/services) {
+            return new ServiceEditor(availableServices, services);
         }
     }
 }]);
@@ -1433,7 +1598,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
 
     var _listServiceMap = function (item) {
-        var title = _getTaskTitle(item.todo) + ' for ' + item.organization.name + ' ' + item.id;
+        var title = item.documentKey;
         var mappedItems = _.filter(item.subtasks, function (task) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
@@ -1457,7 +1622,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         return {
             id: item.documentId,
             title: item.organization.name,
-            subtitle: _getTaskTitle(item.todo),
+            subtitle: item.documentKey,
             status: {
                 text: item.status || ' ',
                 label: _getStatusLabelClass(item.status)
@@ -1468,19 +1633,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
     var _taskTodoMap = {};
 
     var _getTaskState = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.state || undefined;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
     var _getTaskTitle = function (taskType) {
-        var todo = _taskTodoMap[taskType] || {};
-
-        return todo.title || taskType;
+        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
         return _taskStatusTitles[taskStatus] || taskStatus || ' ';
+    };
+
+    var _getActionTitle = function (taskAction) {
+        return _taskActionTitles[taskAction] || taskAction || ' ';
     };
 
     var _getStatusLabelClass = function (status) {
@@ -1500,16 +1665,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         'assigned': 'Assigned',
         'in progress': 'In Progress',
         'in review': 'In Review',
-        'done': 'Done'
+        'done': 'Done',
+        'archive': 'Archived'
     };
 
-    var _taskStatusMap = {
-        'rejected': -2,
-        'unassigned': -1,
-        'pending': 0,
-        'assigned': 1,
-        'in progress': 2,
-        'complete': 3
+    var _taskActionTitles = {
+        'accept': 'Accept',
+        'decline': 'Decline',
+        'assign': 'Assign',
+        'start': 'Start',
+        'complete': 'Complete',
+        'approve': 'Approve',
+        'reject': 'Reject',
+        'release': 'Release'
     };
 
     /*
@@ -1527,14 +1695,18 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             parentListServiceMap: function() {
                 return _parentListServiceMap;
             },
+
             getTaskState: _getTaskState,
             getTaskTitle: _getTaskTitle,
             getTaskStatusTitle: _getStatusTitle,
+            getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
-            getTaskStatus: function (status) {
-                return _taskStatusMap[status];
-            },
 
+            filterTasks: function (tasks) {
+                return _.filter(tasks, function (task) {
+                    return (_getTaskState(task.todo) !== undefined);
+                });
+            },
             updateListService: function (id, todo, tasks, organization) {
                 listService.addItems(dataMapService({
                     id: tasks[0].parentTaskId,
@@ -1572,6 +1744,64 @@ sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
         }
     }
 });
+
+var sdkHelperTeamApp = angular.module('ag.sdk.helper.team', []);
+
+sdkHelperTeamApp.factory('teamHelper', [function() {
+
+    /**
+     * @name TeamEditor
+     * @param availableTeams
+     * @param teams
+     * @constructor
+     */
+    function TeamEditor (/**Array=*/availableTeams, /**Array=*/teams) {
+        availableTeams = availableTeams || [];
+
+        this.teams = _.map(teams || [], function (item) {
+            return (item.name ? item.name : item);
+        });
+
+        this.selection = {
+            list: availableTeams,
+            mode: (availableTeams.length == 0 ? 'add' : 'select'),
+            text: ''
+        };
+    }
+
+    TeamEditor.prototype.toggleMode = function() {
+        if (this.selection.list.length > 0) {
+            // Allow toggle
+            this.selection.mode = (this.selection.mode == 'select' ? 'add' : 'select');
+            this.selection.text = '';
+        }
+    };
+
+    TeamEditor.prototype.addTeam = function (team) {
+        team = team || this.selection.text;
+
+        if (this.teams.indexOf(team) == -1) {
+            this.teams.push(team);
+            this.selection.text = '';
+        }
+    };
+
+    TeamEditor.prototype.removeTeam = function (indexOrTeam) {
+        if (typeof indexOrTeam == 'string') {
+            indexOrTeam = this.teams.indexOf(indexOrTeam);
+        }
+
+        if (indexOrTeam !== -1) {
+            this.teams.splice(indexOrTeam, 1);
+        }
+    };
+
+    return {
+        teamEditor: function (/**Array=*/availableTeams, /**Array=*/teams) {
+            return new TeamEditor(availableTeams, teams);
+        }
+    }
+}]);
 
 var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 
@@ -1634,6 +1864,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     var _setScroll = function (infinite) {
         if (_infiniteScroll !== infinite) {
             if (infinite !== undefined) {
+                _items = [];
                 _infiniteScroll = infinite;
             } else {
                 _infiniteScroll = undefined;
@@ -1707,10 +1938,14 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     });
 
     $rootScope.$on('list::item__selected', function(event, args) {
-        if(args.id) {
-            _setActiveItem(args.id);
+        if (typeof args == 'object') {
+            if(args.id) {
+                _setActiveItem(args.id);
+            } else {
+                _setActiveItem(args.type);
+            }
         } else {
-            _setActiveItem(args.type);
+            _setActiveItem(args);
         }
     });
 
@@ -1830,7 +2065,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                             if (id == _items[x].id) {
                                 _items.splice(x, 1);
 
-                                if (id == _activeItemId) {
+                                if (id == _activeItemId && _items.length) {
                                     var next = (_items[x] ? _items[x] : _items[x - 1]);
                                     $rootScope.$broadcast('list::item__selected', next);
                                 }
@@ -1841,6 +2076,10 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                     } else {
                         delete _items[id];
                     }
+                }
+
+                if (_items instanceof Array && _items.length == 0) {
+                    $rootScope.$broadcast('list::items__empty');
                 }
 
                 $rootScope.$broadcast('list::items__changed', _items);
@@ -1900,17 +2139,20 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 center[1] += coordinate[1];
             });
 
-            return [(center[0] / bounds.length), (center[1] / bounds.length)];
+            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
         },
         getBounds: function () {
-            var features = this._json.features || [this._json];
             var bounds = [];
 
-            angular.forEach(features, function(feature) {
-                var geometry = feature.geometry || feature;
+            if (this._json) {
+                var features = this._json.features || [this._json];
 
-                _recursiveCoordinateFinder(bounds, geometry.coordinates);
-            });
+                angular.forEach(features, function(feature) {
+                    var geometry = feature.geometry || feature;
+
+                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                });
+            }
 
             return bounds;
         },
@@ -1936,31 +2178,33 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return _this;
         },
         addGeometry: function (geometry, properties) {
-            if (this._json === undefined) {
-                this._json = geometry;
+            if (geometry) {
+                if (this._json === undefined) {
+                    this._json = geometry;
 
-                this.addProperties(properties);
-            } else {
-                if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
-                    this._json = {
-                        type: 'Feature',
-                        geometry: this._json
-                    };
-                }
+                    this.addProperties(properties);
+                } else {
+                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                        this._json = {
+                            type: 'Feature',
+                            geometry: this._json
+                        };
+                    }
 
-                if (this._json.type == 'Feature') {
-                    this._json = {
-                        type: 'FeatureCollection',
-                        features: [this._json]
-                    };
-                }
+                    if (this._json.type == 'Feature') {
+                        this._json = {
+                            type: 'FeatureCollection',
+                            features: [this._json]
+                        };
+                    }
 
-                if (this._json.type == 'FeatureCollection') {
-                    this._json.features.push({
-                        type: 'Feature',
-                        geometry: geometry,
-                        properties: properties
-                    });
+                    if (this._json.type == 'FeatureCollection') {
+                        this._json.features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: properties
+                        });
+                    }
                 }
             }
 
@@ -1973,8 +2217,8 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
     }
 });
 
-sdkInterfaceMapApp.factory('mapMarkerHelper', function () {
-    var _getMarker = function (name, state, options) {
+sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
+    var _createMarker = function (name, state, options) {
         return _.defaults(options || {}, {
             iconUrl: 'img/icons/' + name + '.' + state + '.png',
             shadowUrl: 'img/icons/' + name + '.shadow.png',
@@ -1986,34 +2230,40 @@ sdkInterfaceMapApp.factory('mapMarkerHelper', function () {
         });
     };
 
-    return {
-        getMarker: function (name, options) {
-            var marker = {};
+    var _getMarker = this.getMarker = function (name, options) {
+        var marker = {};
 
-            if (typeof name === 'string') {
-                marker = _getMarker(name, 'default', options)
-            }
-
-            return marker;
-        },
-        getMarkerStates: function (name, states, options) {
-            var markers = {};
-
-            if (typeof name === 'string') {
-                angular.forEach(states, function(state) {
-                    markers[state] = _getMarker(name, state, options);
-                });
-            }
-
-            return markers;
+        if (typeof name === 'string') {
+            marker = _createMarker(name, 'default', options)
         }
-    }
+
+        return marker;
+    };
+
+    var _getMarkerStates = this.getMarkerStates = function (name, states, options) {
+        var markers = {};
+
+        if (typeof name === 'string') {
+            angular.forEach(states, function(state) {
+                markers[state] = _createMarker(name, state, options);
+            });
+        }
+
+        return markers;
+    };
+
+    this.$get = function() {
+        return {
+            getMarker: _getMarker,
+            getMarkerStates: _getMarkerStates
+        }
+    };
 });
 
-sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMarkerHelper) {
+sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {
-        improvement: mapMarkerHelper.getMarkerStates('improvement', ['default', 'success']),
-        homestead: mapMarkerHelper.getMarkerStates('homestead', ['default', 'success'])
+        improvement: mapMarkerHelperProvider.getMarkerStates('improvement', ['default', 'success']),
+        homestead: mapMarkerHelperProvider.getMarkerStates('homestead', ['default', 'success'])
     };
 
     var _mapStyles = {
@@ -2176,18 +2426,23 @@ sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMa
                 }
             }
         }
-
     };
 
-    return {
-        getStyle: function(composition, layerName) {
-            return (_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
-        },
-        setStyle: function(composition, layerName, style) {
-            _mapStyles[composition] = _mapStyles[composition] || {};
-            _mapStyles[composition][layerName] = style;
+    var _getStyle = this.getStyle = function (composition, layerName) {
+        return (_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+    };
+
+    var _setStyle = this.setStyle = function(composition, layerName, style) {
+        _mapStyles[composition] = _mapStyles[composition] || {};
+        _mapStyles[composition][layerName] = style;
+    };
+
+    this.$get = function() {
+        return {
+            getStyle: _getStyle,
+            setStyle: _setStyle
         }
-    }
+    };
 }]);
 
 /**
@@ -2195,6 +2450,12 @@ sdkInterfaceMapApp.factory('mapStyleHelper', ['mapMarkerHelper', function (mapMa
  */
 sdkInterfaceMapApp.provider('mapboxService', function () {
     var _defaultConfig = {
+        options: {
+            attributionControl: true,
+            layersControl: true,
+            scrollWheelZoom: false,
+            zoomControl: true
+        },
         layerControl: {
             baseTile: 'agrista.map-65ftbmpi',
             baseLayers: {
@@ -2208,15 +2469,6 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 }
             },
             overlays: {}
-        },
-        handlers: {
-            zoom: {
-                scrollWheelZoom: false,
-                dragging: true,
-                touchZoom: true,
-                doubleClickZoom: true,
-                tap: true
-            }
         },
         events: {},
         view: {
@@ -2240,12 +2492,13 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
         * @param id
         * @constructor
         */
-        function MapboxServiceInstance(id) {
+        function MapboxServiceInstance(id, options) {
             var _this = this;
 
             _this._id = id;
-            _this._show = false;
             _this._ready = false;
+            _this._options = options;
+            _this._show = _this._options.show || false;
 
             _this._config = angular.copy(_defaultConfig);
             _this._requestQueue = [];
@@ -2257,7 +2510,10 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 
             $rootScope.$on('mapbox-' + _this._id + '::destroy', function () {
                 _this._ready = false;
-                _this._config = angular.copy(_defaultConfig);
+
+                if (_this._options.persist !== true) {
+                    _this._config = angular.copy(_defaultConfig);
+                }
             });
         }
 
@@ -2322,6 +2578,20 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
 
             /*
+             * Options
+             */
+            getOptions: function () {
+                return this._config.options;
+            },
+            setOptions: function (options) {
+                var _this = this;
+
+                angular.forEach(options, function(value, key) {
+                    _this._config.options[key] = value;
+                });
+            },
+
+            /*
              * Map
              */
             getMapBounds: function(handler) {
@@ -2377,22 +2647,6 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 
                     delete _this._config.layerControl.overlays[name];
                 });
-            },
-
-            /*
-             * Map handlers
-             */
-            getHandlers: function (type) {
-                return this._config.handlers[type];
-            },
-            setHandlers: function (type, data) {
-                var handler = this._config.handlers[type];
-
-                angular.forEach(data, function(value, key) {
-                    handler[key] = value;
-                });
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::set-' + type + '-handlers', handler);
             },
 
             /*
@@ -2454,12 +2708,10 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 return this._config.bounds;
             },
             setBounds: function (coordinates, options) {
-                if (coordinates instanceof Array) {
-                    this._config.bounds = {
-                        coordinates: coordinates,
-                        options: options || {
-                            reset: false
-                        }
+                this._config.bounds = {
+                    coordinates: coordinates,
+                    options: options || {
+                        reset: false
                     }
                 }
 
@@ -2680,9 +2932,15 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
         /*
          * Get or create a MapboxServiceInstance
          */
-        return function (id) {
+        return function (id, options) {
+            options = options || {};
+
             if (_instances[id] === undefined) {
-                _instances[id] = new MapboxServiceInstance(id);
+                _instances[id] = new MapboxServiceInstance(id, options);
+            }
+
+            if (options.clean === true) {
+                _instances[id].reset();
             }
 
             return _instances[id];
@@ -2693,36 +2951,42 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, mapboxService, geoJSONHelper, objectId) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $log, $timeout, mapboxService, geoJSONHelper, objectId) {
     var _instances = {};
     
-    function Mapbox(id, scope) {
-        this._id = id;
+    function Mapbox(attrs, scope) {
+        var _this = this;
+        _this._id = attrs.id;
 
-        this._optionSchema = {};
-        this._editing = false;
-        this._editableLayer;
-        this._editableFeature = L.featureGroup();
-        this._featureClickable;
+        _this._optionSchema = {};
+        _this._editing = false;
+        _this._editableLayer;
+        _this._editableFeature = L.featureGroup();
+        _this._featureClickable;
 
-        this._geoJSON = {};
-        this._layers = {};
-        this._layerControls = {
+        _this._geoJSON = {};
+        _this._layers = {};
+        _this._layerControls = {
             baseTile: '',
             baseLayers: {},
             overlays: {}
         };
-        this._draw = {
+        _this._draw = {
             exclude: false,
             addLayer: true,
             options: {},
             controls: {}
         };
 
-        this.mapInit();
-        this.addListeners(scope);
+        // Init
+        attrs.delay = attrs.delay || 0;
 
-        $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::init', this._map);
+        $timeout(function () {
+            _this.mapInit();
+            _this.addListeners(scope);
+
+            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::init', _this._map);
+        }, attrs.delay);
     }
 
     /*
@@ -2734,13 +2998,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
         // Setup map
         var view = this._mapboxServiceInstance.getView();
+        var options = this._mapboxServiceInstance.getOptions();
 
-        this._map = L.map(this._id).setView(view.coordinates, view.zoom);
+        this._map = L.map(this._id, options).setView(view.coordinates, view.zoom);
 
         this._editableFeature = L.featureGroup();
         this._editableFeature.addTo(this._map);
 
-        this.setZoomHandlers(this._mapboxServiceInstance.getHandlers('zoom'));
         this.setEventHandlers(this._mapboxServiceInstance.getEventHandlers());
         this.resetLayers(this._mapboxServiceInstance.getLayers());
         this.resetGeoJSON(this._mapboxServiceInstance.getGeoJSON());
@@ -2791,11 +3055,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
         scope.$on('mapbox-' + id + '::remove-overlay', function (event, args) {
             _this.removeOverlay(args);
-        });
-
-        // Map Handlers
-        scope.$on('mapbox-' + id + '::set-zoom-handlers', function (event, args) {
-            _this.setZoomHandlers(args);
         });
 
         // Event Handlers
@@ -3053,10 +3312,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
     Mapbox.prototype.setBaseLayers = function (layers) {
         var _this = this;
+        var options = _this._mapboxServiceInstance.getOptions();
 
         if (_this._layerControls.control === undefined) {
             _this._layerControls.control = L.control.layers({}, {});
-            _this._map.addControl(_this._layerControls.control);
+
+            if (options.layersControl) {
+                _this._map.addControl(_this._layerControls.control);
+            }
         }
 
         angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
@@ -3139,23 +3402,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
     };
 
     /*
-     * Map Handlers
-     */
-    Mapbox.prototype.setZoomHandlers = function (handlers) {
-        var _this = this;
-
-        angular.forEach(handlers, function(enabled, handler) {
-            if (_this._map[handler]) {
-                if (enabled) {
-                    _this._map[handler].enable();
-                } else {
-                    _this._map[handler].disable();
-                }
-            }
-        });
-    };
-
-    /*
      * Event Handlers
      */
     Mapbox.prototype.setEventHandlers = function (handlers) {
@@ -3184,10 +3430,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
     };
 
     Mapbox.prototype.setBounds = function (bounds) {
-        if (this._map && bounds.coordinates && bounds.coordinates.length > 0) {
-            this._map.setView(bounds.coordinates[0], 6);
-
-            if (bounds.coordinates.length > 1) {
+        if (this._map && bounds.coordinates) {
+            if (bounds.coordinates instanceof Array) {
+                if (bounds.coordinates.length > 1) {
+                    this._map.fitBounds(bounds.coordinates, bounds.options);
+                }
+            } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
             }
         }
@@ -3582,14 +3830,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         var _this = this;
 
         if (_this._editing == false) {
-            $http.get('/api/portion-polygon/' + e.latlng.lat + '/' + e.latlng.lng)
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
                     _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                     _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3598,7 +3847,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         var _this = this;
 
         if (_this._editing == false) {
-            $http.get('/api/portion-polygon/' + e.latlng.lat + '/' + e.latlng.lng)
+            var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
+            $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
                     _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
 
@@ -3607,7 +3857,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3624,7 +3874,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3636,14 +3886,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/district-polygon' + params)
                 .success(function (district) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: mdName});
+                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
 
                     _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                     _this.updateDrawControls();
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3660,7 +3910,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3679,7 +3929,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                 }).error(function(err) {
-                    console.log(err);
+                    $log.log(err);
                 });
         }
     };
@@ -3853,7 +4103,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', 'mapboxService', 
         transclude: true,
         link: function (scope, element, attrs) {
             if (_instances[attrs.id] === undefined) {
-                _instances[attrs.id] = new Mapbox(attrs.id, scope);
+                _instances[attrs.id] = new Mapbox(attrs, scope);
             }
         },
         controller: function ($scope, $attrs) {
@@ -3898,7 +4148,7 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
 }]);
 
 
-var sdkInterfaceNavigiationApp = angular.module('ag.sdk.interface.navigation', []);
+var sdkInterfaceNavigiationApp = angular.module('ag.sdk.interface.navigation', ['ag.sdk.authorization']);
 
 sdkInterfaceNavigiationApp.provider('navigationService', function() {
     var _registeredApps = {};
@@ -3911,6 +4161,11 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         'Administration': 4
     };
 
+    var _buttons = {
+        left: [],
+        right: []
+    };
+
     var _sortItems = function (a, b) {
         return a.order - b.order;
     };
@@ -3921,7 +4176,10 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         angular.forEach(apps, function (app) {
             app = _.defaults(app, {
                 order: 100,
-                group: 'Apps'
+                group: 'Apps',
+                include: function (app, roleApps) {
+                    return (roleApps.indexOf(app.title) !== -1);
+                }
             });
 
             if (app.title && app.state) {
@@ -3930,43 +4188,33 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         });
     };
 
-    this.$get = ['$rootScope', '$state', function($rootScope, $state) {
+    this.$get = ['$rootScope', '$state', 'authorization', function($rootScope, $state, authorization) {
         var _slim = false;
         var _footerText = '';
 
-        $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-            for (var i = 0; i < _groupedApps.length; i++) {
-                var group = _groupedApps[i];
+        // Private functions
+        var _allowApp = function (app) {
+            var group = _.findWhere(_groupedApps, {title: app.group});
 
-                for (var j = 0; j < group.items.length; j++) {
-                    group.items[j].active = $state.includes(group.items[j].state);
-                }
+            // Find if the group exists
+            if (group === undefined) {
+                // Add the group
+                group = {
+                    title: app.group,
+                    order: _groupOrder[app.group] || 100,
+                    items: []
+                };
+
+                _groupedApps.push(group);
+                _groupedApps = _groupedApps.sort(_sortItems);
             }
-        });
 
-        $rootScope.$on('navigation::item__selected', function(event, args) {
-            console.log(args);
-            $state.go(args);
-        });
+            // Find if the app exists in the group
+            var groupItem = _.findWhere(group.items, {title: app.title});
 
-        var _allowApp = function (appName) {
-            var app = _registeredApps[appName];
-
-            if (app) {
-                var group = _.findWhere(_groupedApps, {title: app.group});
-
-                if (group === undefined) {
-                    group = {
-                        title: app.group,
-                        order: _groupOrder[app.group] || 100,
-                        items: []
-                    };
-
-                    app.active = $state.includes(app.state);
-
-                    _groupedApps.push(group);
-                    _groupedApps = _groupedApps.sort(_sortItems);
-                }
+            if (groupItem === undefined) {
+                // Add the app to the group
+                app.active = $state.includes(app.state);
 
                 group.items.push(app);
                 group.items = group.items.sort(_sortItems);
@@ -3976,6 +4224,67 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             }
         };
 
+        var _revokeAllApps = function () {
+            _groupedApps = [];
+
+            $rootScope.$broadcast('navigation::items__changed', _groupedApps);
+        };
+
+        var _updateUserApps = function (currentUser) {
+            var authUser = currentUser || authorization.currentUser();
+            var roleApps = (authUser.userRole ? _.pluck(authUser.userRole.apps, 'name') : []);
+            var orgServices = (authUser.organization ? _.pluck(authUser.organization.services, 'serviceType') : []);
+
+            _revokeAllApps();
+
+            angular.forEach(_registeredApps, function (app) {
+                if (typeof app.include == 'function' && app.include(app, roleApps, orgServices) || app.include === true) {
+                    _allowApp(app);
+                }
+            });
+        };
+
+        var _setButtons = function (position, buttons) {
+            if (buttons) {
+                if ((buttons instanceof Array) === false) {
+                    _buttons[position].push(buttons);
+                } else {
+                    _buttons[position] = buttons;
+                }
+
+                $rootScope.$broadcast('navigation::' + position + '-buttons__changed', _buttons[position]);
+                $rootScope.$broadcast('navigation::buttons__changed');
+            }
+        };
+
+        // Event handlers
+        $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+            angular.forEach(_groupedApps, function (app) {
+                angular.forEach(app.items, function (item) {
+                    item.active = $state.includes(item.state);
+                });
+            });
+        });
+
+        $rootScope.$on('navigation::item__selected', function(event, args) {
+            $state.go(args);
+        });
+
+        $rootScope.$on('authorization::login', function (event, currentUser) {
+            _updateUserApps(currentUser);
+        });
+
+        $rootScope.$on('authorization::unauthorized', function () {
+            _revokeAllApps();
+        });
+
+        $rootScope.$on('authorization::logout', function () {
+            _revokeAllApps();
+        });
+
+        _updateUserApps();
+
+        // Public functions
         return {
             getGroupedApps: function () {
                 return _groupedApps;
@@ -3990,16 +4299,10 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                 _registeredApps = {};
                 _groupedApps = [];
             },
-            /*
-             * Permission control
-             */
             allowApp: function (appName) {
-                _allowApp(appName);
-            },
-            revokeAllApps: function () {
-                _groupedApps = [];
-
-                $rootScope.$broadcast('navigation::items__changed', _groupedApps);
+                if (_registeredApps[appName]) {
+                    _allowApp(_registeredApps[appName]);
+                }
             },
             /*
              * Control slim toggle
@@ -4023,6 +4326,20 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                 }
 
                 return _footerText;
+            },
+
+            /*
+             * Buttons
+             */
+            leftButtons: function (/**Array=*/buttons) {
+                _setButtons('left', buttons);
+
+                return _buttons.left;
+            },
+            rightButtons: function (/**Array=*/buttons) {
+                _setButtons('right', buttons);
+
+                return _buttons.right;
             }
         }
     }];
@@ -4153,6 +4470,63 @@ cordovaHelperApp.factory('cameraHelper', ['promiseService', 'geolocationService'
         }
     }
 }]);
+var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id']);
+
+sdkTestDataApp.provider('mockDataService', [function () {
+    var _mockData = {};
+    var _config = {
+        localStore: true
+    };
+
+    this.config = function (options) {
+        _config = _.defaults(options, _config);
+    };
+
+    this.$get = ['localStore', 'objectId', 'promiseService', function (localStore, objectId, promiseService) {
+        if (_config.localStore) {
+            _mockData = localStore.getItem('mockdata') || {};
+        }
+
+        return {
+            setItem: function (type, data) {
+                if (data instanceof Array) {
+                    _mockData[type] = {};
+
+                    angular.forEach(data, function (item) {
+                        item.id = item.id || objectId().toString();
+
+                        _mockData[type][item.id] = item;
+                    });
+                } else {
+                    data.id = data.id || ObjectId().toString();
+
+                    _mockData[type] = _mockData[type] || {};
+                    _mockData[type][data.id] = data;
+                }
+
+                if (_config.localStore) {
+                    localStore.setItem('mockdata', _mockData);
+                }
+            },
+            getItem: function (type, id) {
+                return promiseService.wrap(function (promise) {
+                    _mockData[type] = _mockData[type] || {};
+
+                    if (id === undefined) {
+                        promise.resolve(_.toArray(_mockData[type] || {}));
+                    } else {
+                        if (_mockData[type][id]) {
+                            promise.resolve(_mockData[type][id]);
+                        } else {
+                            promise.reject();
+                        }
+                    }
+                });
+            }
+        }
+    }];
+}]);
+
 var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities']);
 
 /**
@@ -4162,9 +4536,9 @@ var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.u
  * @example
 
  cameraService.capture(50).then(function (res) {
-            console.log('Photo taken');
+            $log.log('Photo taken');
         }, function (err) {
-            console.log(err);
+            $log.log(err);
         });
 
  */
@@ -4316,13 +4690,13 @@ var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', 
  * @example
 
  function onLocation(res) {
-            console.log('Success: geolocationService.watchPosition');
-            console.log(res);
+            $log.log('Success: geolocationService.watchPosition');
+            $log.log(res);
         }
 
  function onError(err) {
-            console.log('Error: geolocationService.watchPosition');
-            console.log(err);
+            $log.log('Error: geolocationService.watchPosition');
+            $log.log(err);
         }
 
  var watch = geolocationService.watchPosition(onLocation, onError);
@@ -4437,7 +4811,7 @@ var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk
  * @description File Storage Service
  * @return {object} Angular Service
  **/
-cordovaStorageApp.factory('fileStorageService', ['promiseService', function (promiseService) {
+cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', function ($log, promiseService) {
     var _fileSystem = undefined;
     var _errors = {
         noFileSystem: {err: 'NoFileSystem', msg: 'Could not initialize file system'},
@@ -4496,7 +4870,7 @@ cordovaStorageApp.factory('fileStorageService', ['promiseService', function (pro
         return defer.promise;
     };
 
-    console.log('Initialized storageService');
+    $log.log('Initialized storageService');
 
     return {
         /**
@@ -4942,6 +5316,7 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
             return promiseService.wrap(function(promise) {
                 _getFarmers()
                     .then(_getDocuments)
+                    .then(_getTasks)
                     .then(promise.resolve, promise.reject);
             });
         };
@@ -5300,7 +5675,7 @@ mobileSdkApiApp.factory('documentApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
+mobileSdkApiApp.factory('attachmentApi', ['$http', '$log', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, $log, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
     var attachmentStore = api({plural: 'attachments', singular: 'attachment'});
 
     return {
@@ -5329,7 +5704,7 @@ mobileSdkApiApp.factory('attachmentApi', ['$http', 'api', 'configuration', 'data
                             return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
                         }, promise.reject)
                         .then(function () {
-                            console.log('update attachment');
+                            $log.log('update attachment');
                             attachment.__local = false;
 
                             attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);
@@ -5373,7 +5748,17 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
         var _relationTable = {
             organization: {
                 hydrate: function (obj, type) {
-                    return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
+                    return promiseService.wrap(function (promise) {
+                        farmerApi.findFarmer({key: obj.organizationId, options: {one: true}}).then(function (farmer) {
+                            promiseService.all({
+                                farms: _relationTable.farms.hydrate(farmer, type),
+                                legalEntities: _relationTable.legalEntities.hydrate(farmer, type),
+                                assets: _relationTable.assets.hydrate(farmer, type)
+                            }).then(function (results) {
+                                promise.resolve(_.extend(farmer, results));
+                            }, promise.reject);
+                        }, promise.reject);
+                    });
                 },
                 dehydrate: function (obj, type) {
                     return farmerApi.createFarmer({data: obj.organization, options: {replace: false, dirty: false}});
@@ -5740,10 +6125,10 @@ mobileSdkDataApp.provider('dataPurge', function () {
     }];
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', function () {
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
     return {
         parseRequest: function (templateUrl, schemaData) {
-            console.log('Unresolved: ' + templateUrl);
+            $log.log('Unresolved: ' + templateUrl);
 
             if (templateUrl !== undefined) {
                 for (var key in schemaData) {
@@ -5755,7 +6140,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
                 }
             }
 
-            console.log('Resolved: ' + templateUrl);
+            $log.log('Resolved: ' + templateUrl);
 
             return templateUrl;
         },
@@ -5780,7 +6165,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
             };
         }
     }
-});
+}]);
 
 /**
  * @name dataStore
@@ -5821,7 +6206,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$q', '$http', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($q, $http, $rootScope, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$q', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $q, $rootScope, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
 
         /**
@@ -5834,17 +6219,17 @@ mobileSdkDataApp.provider('dataStore', [function () {
             var migrationSteps = [];
 
             function _processMigration(db) {
-                console.log('_processMigration');
+                $log.log('_processMigration');
 
                 if (migrationSteps.length > 0) {
                     var migration = migrationSteps[0];
                     migrationSteps.splice(0, 1);
 
                     if (migration.current === db.version) {
-                        console.log('Database (' + db.version + ') has a newer version ' + migration.next);
+                        $log.log('Database (' + db.version + ') has a newer version ' + migration.next);
 
                         db.changeVersion(migration.current, migration.next, migration.process, _errorCallback, function () {
-                            console.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
+                            $log.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
                             _processMigration(db);
                         });
                     } else {
@@ -5952,12 +6337,12 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             function _traceCallback() {
-                console.warn('_traceCallback');
-                console.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
+                $log.warn('_traceCallback');
+                $log.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
             }
 
             function _dataCallback(tx, res) {
-                console.log('SQL complete: ' + res.rowsAffected);
+                $log.log('SQL complete: ' + res.rowsAffected);
             }
 
             function _errorCallback(tx, err) {
@@ -5967,17 +6352,17 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 }
 
                 if (typeof err === 'string') {
-                    console.warn('Error: ' + err);
+                    $log.warn('Error: ' + err);
                 } else if (err.message !== undefined) {
-                    console.warn('Error: ' + err.message + '(' + err.code + ')');
+                    $log.warn('Error: ' + err.message + '(' + err.code + ')');
                 } else {
-                    console.warn(err);
+                    $log.warn(err);
                 }
             }
 
             function _getItemIndex(item, id) {
                 if (item[_config.indexerProperty] === undefined) {
-                    console.warn('Configured indexer property not defined');
+                    $log.warn('Configured indexer property not defined');
                 }
 
                 return (item[_config.indexerProperty] || item.id || id);
@@ -5988,7 +6373,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getLocal = function (uri, options, glCallback) {
-                console.log('_getLocal');
+                $log.log('_getLocal');
                 if (typeof glCallback !== 'function') glCallback = angular.noop;
 
                 _localDatabase.transaction(function (tx) {
@@ -6016,7 +6401,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _findLocal = function (key, column, options, flCallback) {
-                console.log('_findLocal');
+                $log.log('_findLocal');
 
                 if (typeof flCallback !== 'function') flCallback = angular.noop;
 
@@ -6044,7 +6429,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _syncLocal = function (dataItems, uri, slCallback) {
-                console.log('_syncLocal');
+                $log.log('_syncLocal');
                 if (typeof slCallback !== 'function') slCallback = angular.noop;
 
                 _deleteAllLocal(uri, function () {
@@ -6055,7 +6440,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _updateLocal = function (dataItems, options, ulCallback) {
-                console.log('_updateLocal');
+                $log.log('_updateLocal');
                 if (typeof options === 'function') {
                     ulCallback = options;
                     options = {};
@@ -6099,7 +6484,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteLocal = function (dataItems, dlCallback) {
-                console.log('_deleteLocal');
+                $log.log('_deleteLocal');
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 if (dataItems.length > 0) {
@@ -6121,7 +6506,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteAllLocal = function (uri, options, dalCallback) {
-                console.log('_deleteAllLocal');
+                $log.log('_deleteAllLocal');
                 if (typeof options === 'function') {
                     dalCallback = options;
                     options = {};
@@ -6132,31 +6517,31 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 var asyncMon = new AsyncMonitor(1, dalCallback);
 
                 var handleSuccess = function () {
-                    console.log('handleSuccess');
+                    $log.log('handleSuccess');
                     asyncMon.done();
                 };
 
                 var handleError = function (tx, err) {
-                    console.log('handleError');
+                    $log.log('handleError');
                     _errorCallback(tx, err);
                     asyncMon.done();
                 };
 
-                console.log(uri);
+                $log.log(uri);
 
                 _localDatabase.transaction(function (tx) {
-                    console.log('_deleteAllLocal transaction');
+                    $log.log('_deleteAllLocal transaction');
 
                     if (options.force === true) {
-                        console.log('_deleteAllLocal force');
+                        $log.log('_deleteAllLocal force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ?', [uri], handleSuccess, handleError);
                     } else {
-                        console.log('_deleteAllLocal not force');
+                        $log.log('_deleteAllLocal not force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], handleSuccess, handleError);
                     }
                 });
 
-                console.log('_deleteAllLocal end');
+                $log.log('_deleteAllLocal end');
             };
 
             /**
@@ -6164,7 +6549,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getRemote = function (uri, grCallback) {
-                console.log('_getRemote');
+                $log.log('_getRemote');
                 if (typeof grCallback !== 'function') grCallback = angular.noop;
 
                 if (_config.apiTemplate !== undefined) {
@@ -6218,7 +6603,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _updateRemote = function (dataItems, writeUri, writeSchema, urCallback) {
-                console.log('_updateRemote');
+                $log.log('_updateRemote');
                 if (typeof writeSchema === 'function') {
                     urCallback = writeSchema;
                     writeSchema = {};
@@ -6295,7 +6680,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _deleteRemote = function (dataItems, writeUri, writeSchema, drCallback) {
-                console.log('_deleteRemote');
+                $log.log('_deleteRemote');
                 if (typeof writeSchema === 'function') {
                     drCallback = writeSchema;
                     writeSchema = {};
@@ -6608,7 +6993,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             _initializeTable(function () {
-                console.log('table initialized');
+                $log.log('table initialized');
 
                 _dataStoreInitialized = true;
                 _processTransactionQueue();
@@ -6637,7 +7022,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
         _initializeDatabase(function (db) {
             _localDatabase = db;
 
-            console.log('database initialized');
+            $log.log('database initialized');
         });
 
         /**
@@ -6654,4 +7039,36 @@ mobileSdkDataApp.provider('dataStore', [function () {
     }];
 }]);
 
-var mobileSdkApp = angular.module('ag.mobile-sdk', ['ag.sdk.authorization', 'ag.sdk.id', 'ag.sdk.utilities', 'ag.sdk.monitor', 'ag.sdk.interface.map', 'ag.sdk.helper', 'ag.mobile-sdk.helper', 'ag.mobile-sdk.api', 'ag.mobile-sdk.data']);
+angular.module('ag.sdk.helper', [
+    'ag.sdk.helper.asset',
+    'ag.sdk.helper.document',
+    'ag.sdk.helper.farmer',
+    'ag.sdk.helper.favourites',
+    'ag.sdk.helper.merchant',
+    'ag.sdk.helper.task',
+    'ag.sdk.helper.team',
+    'ag.sdk.helper.user'
+]);
+
+angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.list',
+    'ag.sdk.interface.map',
+    'ag.sdk.interface.navigation'
+]);
+
+angular.module('ag.sdk.test', [
+    'ag.sdk.test.data'
+]);
+
+angular.module('ag.mobile-sdk', [
+    'ag.sdk.authorization',
+    'ag.sdk.id',
+    'ag.sdk.utilities',
+    'ag.sdk.monitor',
+    'ag.sdk.interface.map',
+    'ag.sdk.helper',,
+    'ag.sdk.test',
+    'ag.mobile-sdk.helper',
+    'ag.mobile-sdk.api',
+    'ag.mobile-sdk.data'
+]);

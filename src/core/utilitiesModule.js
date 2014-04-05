@@ -1,4 +1,4 @@
-var skdUtilitiesApp = angular.module('ag.sdk.utilities', []);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
 
 skdUtilitiesApp.run(['stateResolver', function (stateResolver) {
     // Initialize stateResolver
@@ -205,5 +205,31 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
             return _wrapAll(action, {});
         },
         defer: _defer
+    }
+}]);
+
+skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($cookieStore, $window) {
+    return {
+        setItem: function (key, value) {
+            if ($window.localStorage) {
+                $window.localStorage.setItem(key, JSON.stringify(value));
+            } else {
+                $cookieStore.put(key, value);
+            }
+        },
+        getItem: function (key) {
+            if ($window.localStorage) {
+                return JSON.parse($window.localStorage.getItem(key));
+            } else {
+                return $cookieStore.get(key);
+            }
+        },
+        removeItem: function (key) {
+            if ($window.localStorage) {
+                $window.localStorage.removeItem(key);
+            } else {
+                $cookieStore.remove(key);
+            }
+        }
     }
 }]);

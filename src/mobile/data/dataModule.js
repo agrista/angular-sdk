@@ -39,10 +39,10 @@ mobileSdkDataApp.provider('dataPurge', function () {
     }];
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', function () {
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
     return {
         parseRequest: function (templateUrl, schemaData) {
-            console.log('Unresolved: ' + templateUrl);
+            $log.log('Unresolved: ' + templateUrl);
 
             if (templateUrl !== undefined) {
                 for (var key in schemaData) {
@@ -54,7 +54,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
                 }
             }
 
-            console.log('Resolved: ' + templateUrl);
+            $log.log('Resolved: ' + templateUrl);
 
             return templateUrl;
         },
@@ -79,7 +79,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', function () {
             };
         }
     }
-});
+}]);
 
 /**
  * @name dataStore
@@ -120,7 +120,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$q', '$http', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($q, $http, $rootScope, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$q', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $q, $rootScope, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
 
         /**
@@ -133,17 +133,17 @@ mobileSdkDataApp.provider('dataStore', [function () {
             var migrationSteps = [];
 
             function _processMigration(db) {
-                console.log('_processMigration');
+                $log.log('_processMigration');
 
                 if (migrationSteps.length > 0) {
                     var migration = migrationSteps[0];
                     migrationSteps.splice(0, 1);
 
                     if (migration.current === db.version) {
-                        console.log('Database (' + db.version + ') has a newer version ' + migration.next);
+                        $log.log('Database (' + db.version + ') has a newer version ' + migration.next);
 
                         db.changeVersion(migration.current, migration.next, migration.process, _errorCallback, function () {
-                            console.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
+                            $log.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
                             _processMigration(db);
                         });
                     } else {
@@ -251,12 +251,12 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             function _traceCallback() {
-                console.warn('_traceCallback');
-                console.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
+                $log.warn('_traceCallback');
+                $log.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
             }
 
             function _dataCallback(tx, res) {
-                console.log('SQL complete: ' + res.rowsAffected);
+                $log.log('SQL complete: ' + res.rowsAffected);
             }
 
             function _errorCallback(tx, err) {
@@ -266,17 +266,17 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 }
 
                 if (typeof err === 'string') {
-                    console.warn('Error: ' + err);
+                    $log.warn('Error: ' + err);
                 } else if (err.message !== undefined) {
-                    console.warn('Error: ' + err.message + '(' + err.code + ')');
+                    $log.warn('Error: ' + err.message + '(' + err.code + ')');
                 } else {
-                    console.warn(err);
+                    $log.warn(err);
                 }
             }
 
             function _getItemIndex(item, id) {
                 if (item[_config.indexerProperty] === undefined) {
-                    console.warn('Configured indexer property not defined');
+                    $log.warn('Configured indexer property not defined');
                 }
 
                 return (item[_config.indexerProperty] || item.id || id);
@@ -287,7 +287,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getLocal = function (uri, options, glCallback) {
-                console.log('_getLocal');
+                $log.log('_getLocal');
                 if (typeof glCallback !== 'function') glCallback = angular.noop;
 
                 _localDatabase.transaction(function (tx) {
@@ -315,7 +315,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _findLocal = function (key, column, options, flCallback) {
-                console.log('_findLocal');
+                $log.log('_findLocal');
 
                 if (typeof flCallback !== 'function') flCallback = angular.noop;
 
@@ -343,7 +343,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _syncLocal = function (dataItems, uri, slCallback) {
-                console.log('_syncLocal');
+                $log.log('_syncLocal');
                 if (typeof slCallback !== 'function') slCallback = angular.noop;
 
                 _deleteAllLocal(uri, function () {
@@ -354,7 +354,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _updateLocal = function (dataItems, options, ulCallback) {
-                console.log('_updateLocal');
+                $log.log('_updateLocal');
                 if (typeof options === 'function') {
                     ulCallback = options;
                     options = {};
@@ -398,7 +398,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteLocal = function (dataItems, dlCallback) {
-                console.log('_deleteLocal');
+                $log.log('_deleteLocal');
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 if (dataItems.length > 0) {
@@ -420,7 +420,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteAllLocal = function (uri, options, dalCallback) {
-                console.log('_deleteAllLocal');
+                $log.log('_deleteAllLocal');
                 if (typeof options === 'function') {
                     dalCallback = options;
                     options = {};
@@ -431,31 +431,31 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 var asyncMon = new AsyncMonitor(1, dalCallback);
 
                 var handleSuccess = function () {
-                    console.log('handleSuccess');
+                    $log.log('handleSuccess');
                     asyncMon.done();
                 };
 
                 var handleError = function (tx, err) {
-                    console.log('handleError');
+                    $log.log('handleError');
                     _errorCallback(tx, err);
                     asyncMon.done();
                 };
 
-                console.log(uri);
+                $log.log(uri);
 
                 _localDatabase.transaction(function (tx) {
-                    console.log('_deleteAllLocal transaction');
+                    $log.log('_deleteAllLocal transaction');
 
                     if (options.force === true) {
-                        console.log('_deleteAllLocal force');
+                        $log.log('_deleteAllLocal force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ?', [uri], handleSuccess, handleError);
                     } else {
-                        console.log('_deleteAllLocal not force');
+                        $log.log('_deleteAllLocal not force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], handleSuccess, handleError);
                     }
                 });
 
-                console.log('_deleteAllLocal end');
+                $log.log('_deleteAllLocal end');
             };
 
             /**
@@ -463,7 +463,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getRemote = function (uri, grCallback) {
-                console.log('_getRemote');
+                $log.log('_getRemote');
                 if (typeof grCallback !== 'function') grCallback = angular.noop;
 
                 if (_config.apiTemplate !== undefined) {
@@ -517,7 +517,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _updateRemote = function (dataItems, writeUri, writeSchema, urCallback) {
-                console.log('_updateRemote');
+                $log.log('_updateRemote');
                 if (typeof writeSchema === 'function') {
                     urCallback = writeSchema;
                     writeSchema = {};
@@ -594,7 +594,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _deleteRemote = function (dataItems, writeUri, writeSchema, drCallback) {
-                console.log('_deleteRemote');
+                $log.log('_deleteRemote');
                 if (typeof writeSchema === 'function') {
                     drCallback = writeSchema;
                     writeSchema = {};
@@ -907,7 +907,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             _initializeTable(function () {
-                console.log('table initialized');
+                $log.log('table initialized');
 
                 _dataStoreInitialized = true;
                 _processTransactionQueue();
@@ -936,7 +936,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
         _initializeDatabase(function (db) {
             _localDatabase = db;
 
-            console.log('database initialized');
+            $log.log('database initialized');
         });
 
         /**

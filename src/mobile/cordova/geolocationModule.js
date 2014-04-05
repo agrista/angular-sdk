@@ -7,13 +7,13 @@ var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', 
  * @example
 
  function onLocation(res) {
-            console.log('Success: geolocationService.watchPosition');
-            console.log(res);
+            $log.log('Success: geolocationService.watchPosition');
+            $log.log(res);
         }
 
  function onError(err) {
-            console.log('Error: geolocationService.watchPosition');
-            console.log(err);
+            $log.log('Error: geolocationService.watchPosition');
+            $log.log(err);
         }
 
  var watch = geolocationService.watchPosition(onLocation, onError);
