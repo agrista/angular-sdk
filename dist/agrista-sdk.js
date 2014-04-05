@@ -4550,7 +4550,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.setOptionSchema = function (options) {
-        this._optionSchema = options;
+        this._optionSchema = options || {};
     };
 
     Mapbox.prototype.updateDrawControls = function () {
