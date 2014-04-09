@@ -2470,6 +2470,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             overlays: {}
         },
+        controls: {},
         events: {},
         view: {
             coordinates: [-28.691, 24.714],
@@ -2597,6 +2598,12 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             getMapBounds: function(handler) {
                 this.enqueueRequest('mapbox-' + this._id + '::get-bounds', handler);
             },
+            getMapControl: function(control, handler) {
+                this.enqueueRequest('mapbox-' + this._id + '::get-control', {
+                    control: control,
+                    handler: handler
+                });
+            },
 
             /*
              * Layer Control
@@ -2647,6 +2654,26 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
 
                     delete _this._config.layerControl.overlays[name];
                 });
+            },
+
+            /*
+             * Controls
+             */
+            getControls: function () {
+                return this._config.controls;
+            },
+            addControl: function (control, options) {
+                this._config.controls[control] = {
+                    name: control,
+                    options: options
+                };
+
+                $rootScope.$broadcast('mapbox-' + this._id + '::add-control',  this._config.controls[control]);
+            },
+            removeControl: function (control) {
+                delete this._config.controls[control];
+
+                $rootScope.$broadcast('mapbox-' + this._id + '::remove-control', control);
             },
 
             /*
@@ -2966,6 +2993,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         _this._geoJSON = {};
         _this._layers = {};
+        _this._controls = {};
         _this._layerControls = {
             baseTile: '',
             baseLayers: {},
@@ -3009,6 +3037,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         this.resetLayers(this._mapboxServiceInstance.getLayers());
         this.resetGeoJSON(this._mapboxServiceInstance.getGeoJSON());
         this.resetLayerControls(this._mapboxServiceInstance.getBaseTile(), this._mapboxServiceInstance.getBaseLayers(), this._mapboxServiceInstance.getOverlays());
+        this.addControls(this._mapboxServiceInstance.getControls());
         this.setBounds(this._mapboxServiceInstance.getBounds());
 
         this._map.on('draw:drawstart', this.onDrawStart, this);
@@ -3028,6 +3057,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         scope.$on('mapbox-' + id + '::get-bounds', function (event, handler) {
             if (typeof handler === 'function') {
                 handler(_this._map.getBounds());
+            }
+        });
+
+        scope.$on('mapbox-' + id + '::get-control', function (event, args) {
+            if (typeof args.handler === 'function') {
+                args.handler(_this._controls[args.control]);
             }
         });
 
@@ -3055,6 +3090,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         scope.$on('mapbox-' + id + '::remove-overlay', function (event, args) {
             _this.removeOverlay(args);
+        });
+
+        // Controls
+        scope.$on('mapbox-' + id + '::add-control', function (event, args) {
+            _this.addControls({control: args});
+        });
+
+        scope.$on('mapbox-' + id + '::remove-control', function (event, args) {
+            _this.removeControl(args);
         });
 
         // Event Handlers
@@ -3127,6 +3171,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         scope.$on('mapbox-' + id + '::invalidate-size', function (event, args) {
             _this._map.invalidateSize();
         });
+
         // Editing
         scope.$on('mapbox-' + id + '::edit-on', function(events, args) {
             _this.setOptionSchema(args.styleOptions);
@@ -3402,6 +3447,29 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     /*
+     * Controls
+     */
+    Mapbox.prototype.addControls = function (controls) {
+        var _this = this;
+
+        angular.forEach(controls, function (control) {
+            if (typeof L.control[control.name] == 'function') {
+                _this.removeControl(control.name);
+
+                _this._controls[control.name] = L.control[control.name](control.options);
+                _this._map.addControl(_this._controls[control.name]);
+            }
+        });
+    };
+
+    Mapbox.prototype.removeControl = function (control) {
+        if (this._controls[control]) {
+            this._map.removeControl(this._controls[control]);
+            delete this._controls[control];
+        }
+    };
+
+    /*
      * Event Handlers
      */
     Mapbox.prototype.setEventHandlers = function (handlers) {
@@ -3560,10 +3628,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         var _this = this;
         var geojson = geoJSONHelper(feature);
 
-        if (typeof labelData === 'object') {
+        if (typeof labelData === 'object' && feature.geometry.type !== 'Point') {
             labelData.options = labelData.options || {};
 
-            if ((labelData.options.centered || labelData.options.noHide) && feature.geometry.type !== 'Point' && typeof _this._map.showLabel === 'function') {
+            if ((labelData.options.centered || labelData.options.noHide) && typeof _this._map.showLabel === 'function') {
                 var label = new L.Label(_.extend(labelData.options), {
                     offset: [6, -15]
                 });
@@ -3609,7 +3677,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         L.geoJson(geojson.getJson(), {
             style: geojsonOptions.style,
             pointToLayer: function(feature, latlng) {
-                return L.marker(latlng, geojsonOptions);
+                var marker = L.marker(latlng, geojsonOptions);
+
+                if (geojsonOptions.label) {
+                    marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
+                }
+
+                return marker;
             },
             onEachFeature: function(feature, layer) {
                 _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
