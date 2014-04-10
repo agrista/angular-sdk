@@ -15,6 +15,10 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
             return (item.name ? item.name : item);
         });
 
+        this.teamsDetails = _.map(teams || [], function (item) {
+            return item;
+        });
+
         this.selection = {
             list: availableTeams,
             mode: (availableTeams.length == 0 ? 'add' : 'select'),
@@ -35,6 +39,7 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
 
         if (this.teams.indexOf(team) == -1) {
             this.teams.push(team);
+            this.teamsDetails.push(team);
             this.selection.text = '';
         }
     };
@@ -46,6 +51,7 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
 
         if (indexOrTeam !== -1) {
             this.teams.splice(indexOrTeam, 1);
+            this.teamsDetails.splice(indexOrTeam, 1);
         }
     };
 
