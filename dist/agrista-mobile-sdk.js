@@ -194,9 +194,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     });
                 },
                 logout: function () {
+                    $rootScope.$broadcast('authorization::logout');
+
                     return authorizationApi.logout().then(function () {
                         _user = _setUser(_defaultUser);
-                        $rootScope.$broadcast('authorization::logout', _user);
                     });
                 }
             }
@@ -2434,8 +2435,14 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
         }
     };
 
-    var _getStyle = this.getStyle = function (composition, layerName) {
-        return (_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+    var _getStyle = this.getStyle = function (composition, layerName, label) {
+        var mapStyle = angular.copy(_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+
+        if (typeof label == 'object') {
+            mapStyle.label = label;
+        }
+
+        return mapStyle;
     };
 
     var _setStyle = this.setStyle = function(composition, layerName, style) {
@@ -4797,7 +4804,7 @@ cordovaGeolocationApp.factory('geolocationService', ['promiseService', function 
     };
 
     function _resolveError(code, msg) {
-        switch (code, msg) {
+        switch (code) {
             case PositionError.PERMISSION_DENIED:
                 return _errors.PermissionDenied;
             case PositionError.POSITION_UNAVAILABLE:
@@ -6170,37 +6177,23 @@ var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities',
  * @name dataPurgeService
  */
 mobileSdkDataApp.provider('dataPurge', function () {
-    this.$get = ['queueService', 'dataStore', function (queueService, dataStore) {
-        var _queue = null;
-
+    this.$get = ['promiseService', 'dataStore', function (promiseService, dataStore) {
         function _purgeDataStore(name) {
-            _queue.wrapPush(function (defer) {
+            return promiseService.wrap(function (promise) {
                 var store = dataStore(name);
 
                 store.transaction(function (tx) {
-                    tx.purgeItems({
-                        callback: function (res) {
-                            if (res) {
-                                defer.resolve();
-                            } else {
-                                defer.reject();
-                            }
-                        }
-                    });
+                    tx.purgeItems({callback: promise});
                 })
             });
         }
 
-        return function purge(dataStoreList, pCallback) {
-            if (typeof pCallback !== 'function') pCallback = angular.noop;
-
-            if (dataStoreList instanceof Array) {
-                _queue = queueService(pCallback);
-
+        return function purge(dataStoreList) {
+            return promiseService.wrapAll(function(promises) {
                 for (var i = 0; i < dataStoreList.length; i++) {
-                    _purgeDataStore(dataStoreList[i]);
+                    promises.push(_purgeDataStore(dataStoreList[i]));
                 }
-            }
+            });
         }
     }];
 });
@@ -7146,7 +7139,7 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.utilities',
     'ag.sdk.monitor',
     'ag.sdk.interface.map',
-    'ag.sdk.helper',,
+    'ag.sdk.helper',
     'ag.sdk.test',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',
