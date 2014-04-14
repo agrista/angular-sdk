@@ -329,8 +329,14 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
         }
     };
 
-    var _getStyle = this.getStyle = function (composition, layerName) {
-        return (_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+    var _getStyle = this.getStyle = function (composition, layerName, label) {
+        var mapStyle = angular.copy(_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+
+        if (typeof label == 'object') {
+            mapStyle.label = label;
+        }
+
+        return mapStyle;
     };
 
     var _setStyle = this.setStyle = function(composition, layerName, style) {
