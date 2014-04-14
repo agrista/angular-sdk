@@ -194,9 +194,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     });
                 },
                 logout: function () {
+                    $rootScope.$broadcast('authorization::logout');
+
                     return authorizationApi.logout().then(function () {
                         _user = _setUser(_defaultUser);
-                        $rootScope.$broadcast('authorization::logout', _user);
                     });
                 }
             }
