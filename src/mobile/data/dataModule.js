@@ -4,37 +4,23 @@ var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities',
  * @name dataPurgeService
  */
 mobileSdkDataApp.provider('dataPurge', function () {
-    this.$get = ['queueService', 'dataStore', function (queueService, dataStore) {
-        var _queue = null;
-
+    this.$get = ['promiseService', 'dataStore', function (promiseService, dataStore) {
         function _purgeDataStore(name) {
-            _queue.wrapPush(function (defer) {
+            return promiseService.wrap(function (promise) {
                 var store = dataStore(name);
 
                 store.transaction(function (tx) {
-                    tx.purgeItems({
-                        callback: function (res) {
-                            if (res) {
-                                defer.resolve();
-                            } else {
-                                defer.reject();
-                            }
-                        }
-                    });
+                    tx.purgeItems({callback: promise});
                 })
             });
         }
 
-        return function purge(dataStoreList, pCallback) {
-            if (typeof pCallback !== 'function') pCallback = angular.noop;
-
-            if (dataStoreList instanceof Array) {
-                _queue = queueService(pCallback);
-
+        return function purge(dataStoreList) {
+            return promiseService.wrapAll(function(promises) {
                 for (var i = 0; i < dataStoreList.length; i++) {
-                    _purgeDataStore(dataStoreList[i]);
+                    promises.push(_purgeDataStore(dataStoreList[i]));
                 }
-            }
+            });
         }
     }];
 });
