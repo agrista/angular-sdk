@@ -5077,6 +5077,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
 
         angular.forEach(apps, function (app) {
             app = _.defaults(app, {
+                id: app.title,
                 order: 100,
                 group: 'Apps',
                 include: function (app, roleApps) {
@@ -5190,6 +5191,15 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         return {
             getGroupedApps: function () {
                 return _groupedApps;
+            },
+            renameApp: function (id, title) {
+                var app = _.findWhere(_registeredApps, {id: id});
+
+                if (app) {
+                    app.title = title;
+
+                    $rootScope.$broadcast('navigation::items__changed', _groupedApps);
+                }
             },
             /*
              * App registration
