@@ -9,9 +9,14 @@ sdkHelperUserApp.factory('userHelper', [function() {
         }
     };
 
+    var _languageLit = ['English'];
+
     return {
         listServiceMap: function() {
             return _listServiceMap;
+        },
+        languageList: function() {
+            return _languageLit;
         }
     }
 }]);
