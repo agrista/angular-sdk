@@ -688,13 +688,18 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
     var _host = configuration.getServer();
 
     return {
-        getActivities: function (id, page) {
+        getActivities: function (id, type, page) {
+            if (typeof type === 'object') {
+                page = type;
+                type = undefined;
+            }
+
             if (typeof id === 'object') {
                 page = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), page);
         },
         createActivity: function (activityData) {
             return promiseService.wrap(function (promise) {
