@@ -2408,7 +2408,7 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     }
 }]);
 
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities', 'ag.sdk.interface.list']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.authorization', 'ag.sdk.utilities', 'ag.sdk.interface.list']);
 
 sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
@@ -2503,7 +2503,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         _taskTodoMap =  _.extend(_taskTodoMap, tasks);
     };
 
-    this.$get = ['listService', 'dataMapService', function (listService, dataMapService) {
+    this.$get = ['authorization', 'listService', 'dataMapService', function (authorization, listService, dataMapService) {
         return {
             listServiceMap: function() {
                 return _listServiceMap;
@@ -2524,15 +2524,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
                 });
             },
             updateListService: function (id, todo, tasks, organization) {
+                var currentUser = authorization.currentUser();
+                var task = _.findWhere(tasks, {id: id});
+
                 listService.addItems(dataMapService({
-                    id: tasks[0].parentTaskId,
+                    id: task.parentTaskId,
+                    documentKey: task.documentKey,
                     type: 'parent',
                     todo: todo,
                     organization: organization,
-                    subtasks : tasks
+                    subtasks : _.filter(tasks, function (task) {
+                        return (task && task.assignedTo == currentUser.username);
+                    })
                 }, _listServiceMap));
-
-                var task = _.findWhere(tasks, {id: id});
 
                 if (task && _validTaskStatuses.indexOf(task.status) === -1) {
                     listService.removeItems(task.id);
