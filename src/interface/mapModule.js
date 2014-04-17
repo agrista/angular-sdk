@@ -1814,10 +1814,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
-                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
+                        _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                    }
+
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -1831,12 +1834,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
 
-                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
-                    _this.updateDrawControls();
+                        _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                        _this.updateDrawControls();
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -1850,10 +1855,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/district-polygon' + params)
                 .success(function (district) {
-                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
+                        _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -1867,12 +1874,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/district-polygon' + params)
                 .success(function (district) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
 
-                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
-                    _this.updateDrawControls();
+                        _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                        _this.updateDrawControls();
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -1885,11 +1894,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/field-polygon' + params)
-                .success(function (district) {
-                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {});
+                .success(function (field) {
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
+                        _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, {});
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -1903,12 +1914,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/field-polygon' + params)
                 .success(function (field) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
 
-                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
-                    _this.updateDrawControls();
+                        _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                        _this.updateDrawControls();
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
