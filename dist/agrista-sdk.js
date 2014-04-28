@@ -818,6 +818,23 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
     };
 }]);
 
+/**
+ * Application API
+ */
+sdkApiApp.factory('applicationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getAuthenticationType: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'util/authentication-type', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
