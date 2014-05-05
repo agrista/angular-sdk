@@ -762,6 +762,13 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getPDFPreviewImage: function(key) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/attachment/pdf/preview-image/' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
