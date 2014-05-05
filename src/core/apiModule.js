@@ -574,6 +574,13 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                     promise.resolve(res.data);
                 }, promise.reject);
             })
+        },
+        getAssetGuideline: function (id, date) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/asset/' + id + '/guideline' + (date ? '?date=' + date : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -757,6 +764,13 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getPDFPreviewImage: function(key) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/attachment/pdf/preview-image/' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -809,6 +823,41 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
         },
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
+        }
+    };
+}]);
+
+/**
+ * Guideline API
+ */
+apiApp.factory('guidelineApi', ['$http', 'pagingService', 'promiseService', function($http, pagingService, promiseService) {
+    return {
+        getSubRegion: function(subregionId, versionId) {
+            return promiseService.wrap(function(promise) {
+                $http.get('/api/guidelines/' + subregionId + (versionId ? '?versionId=' + versionId : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+
+        getGuidelinesByGeo: function(x, y) {
+            //TODO: pass a point to api and get the subregion & guidelines
+//            return promiseService.wrap(function(promise) {
+//                promise.resolve([]);
+//            });
+            return promiseService.wrap(function(promise) {
+                var param = '';
+                if(x && y) {
+                    param = '?x=' + x + '&y=' + y;
+                } else {
+                    x = 26.064,
+                        y = -27.776
+                }
+                $http.get('api/aggregation/subregion' + param, {withCredentials: true}).then(function (res) {
+                    console.log(res.data);
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
