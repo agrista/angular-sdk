@@ -688,13 +688,18 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
     var _host = configuration.getServer();
 
     return {
-        getActivities: function (id, page) {
+        getActivities: function (id, type, page) {
+            if (typeof type === 'object') {
+                page = type;
+                type = undefined;
+            }
+
             if (typeof id === 'object') {
                 page = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), page);
         },
         createActivity: function (activityData) {
             return promiseService.wrap(function (promise) {
@@ -811,6 +816,23 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
         }
     };
+}]);
+
+/**
+ * Application API
+ */
+sdkApiApp.factory('applicationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getAuthenticationType: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'util/authentication-type', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);
 
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
@@ -1009,9 +1031,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     });
                 },
                 logout: function () {
+                    $rootScope.$broadcast('authorization::logout');
+
                     return authorizationApi.logout().then(function () {
                         _user = _setUser(_defaultUser);
-                        $rootScope.$broadcast('authorization::logout', _user);
                     });
                 }
             }
@@ -1613,6 +1636,38 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
+skdUtilitiesApp.directive('signature', ['$compile', function ($compile) {
+    return {
+        restrict: 'E',
+        replace: true,
+        template: '<div class="panel panel-default signature"><div class="panel-heading">{{ title }}<div class="btn btn-default btn-sm pull-right" ng-click="reset()">Clear</div></div></div>',
+        scope: {
+            onsigned: '=',
+            name: '@',
+            title: '@'
+        },
+        link: function (scope, element, attrs) {
+            var sigElement = $compile('<div class="panel-body signature-body"></div>')(scope);
+
+            element.append(sigElement);
+
+            scope.reset = function() {
+                sigElement.jSignature('reset');
+
+                scope.onsigned(attrs.name, null);
+            };
+
+            sigElement.jSignature({
+                'width': attrs.width,
+                'height': attrs.height,
+                'showUndoButton': false});
+
+            sigElement.bind('change', function() {
+                scope.onsigned(attrs.name, sigElement.jSignature('getData', 'svgbase64'));
+            });
+        }
+    };
+}]);
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
@@ -2028,7 +2083,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
         };
     };
 
-    var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Clubs', 'Body Corporates'];
+    var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];
 
     var _enterpriseTypes = {
         'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
@@ -2407,7 +2462,7 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     }
 }]);
 
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.utilities', 'ag.sdk.interface.list']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.authorization', 'ag.sdk.utilities', 'ag.sdk.interface.list']);
 
 sdkHelperTaskApp.provider('taskHelper', function() {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
@@ -2502,7 +2557,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
         _taskTodoMap =  _.extend(_taskTodoMap, tasks);
     };
 
-    this.$get = ['listService', 'dataMapService', function (listService, dataMapService) {
+    this.$get = ['authorization', 'listService', 'dataMapService', function (authorization, listService, dataMapService) {
         return {
             listServiceMap: function() {
                 return _listServiceMap;
@@ -2523,15 +2578,19 @@ sdkHelperTaskApp.provider('taskHelper', function() {
                 });
             },
             updateListService: function (id, todo, tasks, organization) {
+                var currentUser = authorization.currentUser();
+                var task = _.findWhere(tasks, {id: id});
+
                 listService.addItems(dataMapService({
-                    id: tasks[0].parentTaskId,
+                    id: task.parentTaskId,
+                    documentKey: task.documentKey,
                     type: 'parent',
                     todo: todo,
                     organization: organization,
-                    subtasks : tasks
+                    subtasks : _.filter(tasks, function (task) {
+                        return (task && task.assignedTo == currentUser.username);
+                    })
                 }, _listServiceMap));
-
-                var task = _.findWhere(tasks, {id: id});
 
                 if (task && _validTaskStatuses.indexOf(task.status) === -1) {
                     listService.removeItems(task.id);
@@ -2599,7 +2658,7 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1) {
+        if (this.teams.indexOf(team) == -1 && !_.findWhere(this.teamsDetails, team)) {
             this.teams.push(team);
             this.teamsDetails.push(team);
             this.selection.text = '';
@@ -2635,9 +2694,14 @@ sdkHelperUserApp.factory('userHelper', [function() {
         }
     };
 
+    var _languageLit = ['English'];
+
     return {
         listServiceMap: function() {
             return _listServiceMap;
+        },
+        languageList: function() {
+            return _languageLit;
         }
     }
 }]);
@@ -3249,8 +3313,14 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
         }
     };
 
-    var _getStyle = this.getStyle = function (composition, layerName) {
-        return (_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+    var _getStyle = this.getStyle = function (composition, layerName, label) {
+        var mapStyle = angular.copy(_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+
+        if (typeof label == 'object') {
+            mapStyle.label = label;
+        }
+
+        return mapStyle;
     };
 
     var _setStyle = this.setStyle = function(composition, layerName, style) {
@@ -4728,10 +4798,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
-                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
+                        _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                    }
+
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -4745,12 +4818,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/portion-polygon' + params)
                 .success(function (portion) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
 
-                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
-                    _this.updateDrawControls();
+                        _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                        _this.updateDrawControls();
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -4764,10 +4839,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/district-polygon' + params)
                 .success(function (district) {
-                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
+                        _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -4781,12 +4858,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/district-polygon' + params)
                 .success(function (district) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
 
-                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
-                    _this.updateDrawControls();
+                        _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                        _this.updateDrawControls();
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -4799,11 +4878,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/field-polygon' + params)
-                .success(function (district) {
-                    _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {});
+                .success(function (field) {
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
+                        _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, {});
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', district);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -4817,12 +4898,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
             $http.get('/api/geo/field-polygon' + params)
                 .success(function (field) {
-                    _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
+                    if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
 
-                    _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
-                    _this.updateDrawControls();
+                        _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
+                        _this.updateDrawControls();
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                    }
                 }).error(function(err) {
                     $log.log(err);
                 });
@@ -5070,6 +5153,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
 
         angular.forEach(apps, function (app) {
             app = _.defaults(app, {
+                id: app.title,
                 order: 100,
                 group: 'Apps',
                 include: function (app, roleApps) {
@@ -5183,6 +5267,15 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         return {
             getGroupedApps: function () {
                 return _groupedApps;
+            },
+            renameApp: function (id, title) {
+                var app = _.findWhere(_registeredApps, {id: id});
+
+                if (app) {
+                    app.title = title;
+
+                    $rootScope.$broadcast('navigation::items__changed', _groupedApps);
+                }
             },
             /*
              * App registration

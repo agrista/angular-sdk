@@ -37,7 +37,7 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1) {
+        if (this.teams.indexOf(team) == -1 && !_.findWhere(this.teamsDetails, team)) {
             this.teams.push(team);
             this.teamsDetails.push(team);
             this.selection.text = '';

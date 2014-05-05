@@ -34,7 +34,7 @@ cordovaGeolocationApp.factory('geolocationService', ['promiseService', function 
     };
 
     function _resolveError(code, msg) {
-        switch (code, msg) {
+        switch (code) {
             case PositionError.PERMISSION_DENIED:
                 return _errors.PermissionDenied;
             case PositionError.POSITION_UNAVAILABLE:

@@ -695,13 +695,18 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
     var _host = configuration.getServer();
 
     return {
-        getActivities: function (id, page) {
+        getActivities: function (id, type, page) {
+            if (typeof type === 'object') {
+                page = type;
+                type = undefined;
+            }
+
             if (typeof id === 'object') {
                 page = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), page);
         },
         createActivity: function (activityData) {
             return promiseService.wrap(function (promise) {
@@ -840,11 +845,7 @@ apiApp.factory('guidelineApi', ['$http', 'pagingService', 'promiseService', func
             });
         },
 
-        getGuidelinesByGeo: function(x, y) {
-            //TODO: pass a point to api and get the subregion & guidelines
-//            return promiseService.wrap(function(promise) {
-//                promise.resolve([]);
-//            });
+        getGuidelinesByGeo: function(x, y) {         
             return promiseService.wrap(function(promise) {
                 var param = '';
                 if(x && y) {
@@ -860,4 +861,21 @@ apiApp.factory('guidelineApi', ['$http', 'pagingService', 'promiseService', func
             });
         }
     };
+}]);
+
+/**
+ * Application API
+ */
+sdkApiApp.factory('applicationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getAuthenticationType: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'util/authentication-type', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);

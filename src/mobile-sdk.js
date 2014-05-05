@@ -25,7 +25,7 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.utilities',
     'ag.sdk.monitor',
     'ag.sdk.interface.map',
-    'ag.sdk.helper',,
+    'ag.sdk.helper',
     'ag.sdk.test',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',
