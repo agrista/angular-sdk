@@ -509,6 +509,9 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             /*
              * Map
              */
+            getMapCenter: function(handler) {
+                this.enqueueRequest('mapbox-' + this._id + '::get-center', handler);
+            },
             getMapBounds: function(handler) {
                 this.enqueueRequest('mapbox-' + this._id + '::get-bounds', handler);
             },
@@ -527,8 +530,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             setBaseTile: function (tile) {
                 this._config.layerControl.baseTile = tile;
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::set-basetile', tile);
+                this.enqueueRequest('mapbox-' + this._id + '::set-basetile', tile);
             },
 
             getBaseLayers: function () {
@@ -536,8 +538,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             setBaseLayers: function (layers) {
                 this._config.layerControl.baseLayers = layers;
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::set-baselayers', layers);
+                this.enqueueRequest('mapbox-' + this._id + '::set-baselayers', layers);
             },
 
             getOverlays: function () {
@@ -547,7 +548,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 if (layerName && this._config.layerControl.overlays[layerName] == undefined) {
                     this._config.layerControl.overlays[layerName] = name;
 
-                    $rootScope.$broadcast('mapbox-' + this._id + '::add-overlay', {
+                    this.enqueueRequest('mapbox-' + this._id + '::add-overlay', {
                         layerName: layerName,
                         name: name || layerName
                     });
@@ -967,6 +968,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         
         var _this = this;
         var id = this._mapboxServiceInstance.getId();
+
+        scope.$on('mapbox-' + id + '::get-center', function (event, handler) {
+            if (typeof handler === 'function') {
+                handler(_this._map.getCenter());
+            }
+        });
 
         scope.$on('mapbox-' + id + '::get-bounds', function (event, handler) {
             if (typeof handler === 'function') {
