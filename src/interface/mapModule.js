@@ -162,10 +162,7 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
 });
 
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
-    var _markerIcons = {
-        improvement: mapMarkerHelperProvider.getMarkerStates('improvement', ['default', 'success']),
-        homestead: mapMarkerHelperProvider.getMarkerStates('homestead', ['default', 'success'])
-    };
+    var _markerIcons = {};
 
     var _mapStyles = {
         foreground: {
@@ -179,6 +176,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             field: {
+                icon: 'success',
                 style: {
                     weight: 2,
                     color: 'white',
@@ -197,7 +195,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             improvement: {
-                icon: _markerIcons.improvement.success,
+                icon: 'success',
                 style: {
                     weight: 4,
                     color: 'white',
@@ -243,7 +241,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             homestead: {
-                icon: _markerIcons.homestead.success
+                icon: 'success'
             }
         },
         background: {
@@ -257,6 +255,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             field: {
+                icon: 'default',
                 style: {
                     weight: 1,
                     color: 'white',
@@ -275,7 +274,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             improvement: {
-                icon: _markerIcons.improvement.default,
+                icon: 'default',
                 style: {
                     weight: 4,
                     color: 'white',
@@ -321,7 +320,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             homestead: {
-                icon: _markerIcons.homestead.default,
+                icon: 'default',
                 label: {
                     message: 'Homestead'
                 }
@@ -330,7 +329,15 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
     };
 
     var _getStyle = this.getStyle = function (composition, layerName, label) {
-        var mapStyle = angular.copy(_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+        var mapStyle = (_mapStyles[composition] && _mapStyles[composition][layerName] ? angular.copy(_mapStyles[composition][layerName]) : {});
+
+        if (mapStyle.icon !== undefined) {
+            if (_markerIcons[layerName] === undefined) {
+                _markerIcons[layerName] = mapMarkerHelperProvider.getMarkerStates(layerName, ['default', 'success', 'error']);
+            }
+
+            mapStyle.icon = _markerIcons[layerName][mapStyle.icon];
+        }
 
         if (typeof label == 'object') {
             mapStyle.label = label;
