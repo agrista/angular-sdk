@@ -691,6 +691,20 @@ mobileSdkApiApp.factory('activityApi', ['api', function (api) {
     };
 }]);
 
+mobileSdkApiApp.factory('agriModelApi', ['api', function (api) {
+    var farmApi = api({plural: 'agrimodels', singular: 'agrimodel'});
+
+    return {
+        getAgriModels: farmApi.getItems,
+        createAgriModel: farmApi.createItem,
+        getAgriModel: farmApi.getItem,
+        findAgriModel: farmApi.findItem,
+        updateAgriModel: farmApi.updateItem,
+        postAgriModel: farmApi.postItem,
+        deleteAgriModel: farmApi.deleteItem,
+        purgeAgriModel: farmApi.purgeItem
+    };
+}]);
 
 /*
  * Handlers

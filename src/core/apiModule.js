@@ -841,3 +841,49 @@ sdkApiApp.factory('applicationApi', ['$http', 'promiseService', 'configuration',
         }
     }
 }]);
+
+/**
+ * AgriModel API
+ */
+sdkApiApp.factory('agriModelApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getAgriModels: function (id, page) {
+            if (typeof id === 'object') {
+                page = id;
+                id = undefined;
+            }
+
+            return pagingService.page(_host + 'api/agrimodels' + (id ? '/' + id : ''), page);
+        },
+        createAgriModel: function (modelData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/agrimodel', modelData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getAgriModel: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/agrimodel/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateAgriModel: function (modelData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/agrimodel/' + modelData.id, modelData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteAgriModel: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/agrimodel/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
