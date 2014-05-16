@@ -831,6 +831,23 @@ skdUtilitiesApp.directive('signature', ['$compile', function ($compile) {
         }
     };
 }]);
+var sdkHelperAgriModelApp = angular.module('ag.sdk.helper.agri-model', []);
+
+sdkHelperAgriModelApp.factory('agriModelHelper', [function() {
+    var _listServiceMap = function (item) {
+        return {
+            title: item.name,
+            subtitle: item.commodityType + ' in ' + item.region
+        }
+    };
+
+    return {
+        listServiceMap: function() {
+            return _listServiceMap;
+        }
+    }
+}]);
+
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
@@ -5220,8 +5237,8 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi',
-    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi, attachmentApi) {
+mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi', 'agriModelApi',
+    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi, attachmentApi, agriModelApi) {
         var _monitor = null;
 
         function _getFarmers () {
@@ -5278,6 +5295,20 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
                                             .then(promise.resolve, promise.reject);
                                     }, promise.reject);
                                 }));
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        function _getAgriModels () {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                agriModelApi.getAgriModels().then(function (models) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(models, function (model) {
+                                list.push(_postAgriModel(model));
                             });
                         })
                         .then(defer.resolve, defer.reject);
@@ -5388,6 +5419,16 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
             }));
         }
 
+        function _postAgriModel (model) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                if (model.__dirty === true) {
+                    agriModelApi.postAgriModel({data: model}).then(defer.resolve, defer.reject);
+                } else {
+                    defer.resolve();
+                }
+            }));
+        }
+
         return function (monitor) {
             _monitor = monitor || promiseMonitor();
 
@@ -5395,13 +5436,14 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
                 _getFarmers()
                     .then(_getDocuments)
                     .then(_getTasks)
+                    .then(_getAgriModels)
                     .then(promise.resolve, promise.reject);
             });
         }
     }]);
 
-mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility',
-    function (promiseMonitor, promiseService, farmApi, assetUtility, farmerUtility, documentUtility, taskUtility) {
+mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility', 'agriModelApi',
+    function (promiseMonitor, promiseService, farmApi, assetUtility, farmerUtility, documentUtility, taskUtility, agriModelApi) {
         var _monitor = null;
         var _readOptions = {readLocal: false, readRemote: true};
 
@@ -5475,6 +5517,10 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
             }));
         }
 
+        function _getAgriModels() {
+            return _monitor.add(agriModelApi.getAgriModels({options: _readOptions}));
+        }
+
         return function (monitor) {
             _monitor = monitor || promiseMonitor();
 
@@ -5482,6 +5528,7 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
                 _getFarmers()
                     .then(_getDocuments)
                     .then(_getTasks)
+                    .then(_getAgriModels)
                     .then(promise.resolve, promise.reject);
             });
         };
@@ -5902,6 +5949,20 @@ mobileSdkApiApp.factory('activityApi', ['api', function (api) {
     };
 }]);
 
+mobileSdkApiApp.factory('agriModelApi', ['api', function (api) {
+    var farmApi = api({plural: 'agrimodels', singular: 'agrimodel'});
+
+    return {
+        getAgriModels: farmApi.getItems,
+        createAgriModel: farmApi.createItem,
+        getAgriModel: farmApi.getItem,
+        findAgriModel: farmApi.findItem,
+        updateAgriModel: farmApi.updateItem,
+        postAgriModel: farmApi.postItem,
+        deleteAgriModel: farmApi.deleteItem,
+        purgeAgriModel: farmApi.purgeItem
+    };
+}]);
 
 /*
  * Handlers
@@ -7191,6 +7252,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
 }]);
 
 angular.module('ag.sdk.helper', [
+    'ag.sdk.helper.agri-model',
     'ag.sdk.helper.asset',
     'ag.sdk.helper.document',
     'ag.sdk.helper.farmer',

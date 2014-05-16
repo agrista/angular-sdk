@@ -842,6 +842,51 @@ sdkApiApp.factory('applicationApi', ['$http', 'promiseService', 'configuration',
     }
 }]);
 
+/**
+ * AgriModel API
+ */
+sdkApiApp.factory('agriModelApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getAgriModels: function (id, page) {
+            if (typeof id === 'object') {
+                page = id;
+                id = undefined;
+            }
+
+            return pagingService.page(_host + 'api/agrimodels' + (id ? '/' + id : ''), page);
+        },
+        createAgriModel: function (modelData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/agrimodel', modelData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getAgriModel: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/agrimodel/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateAgriModel: function (modelData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/agrimodel/' + modelData.id, modelData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteAgriModel: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/agrimodel/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
@@ -1675,6 +1720,23 @@ skdUtilitiesApp.directive('signature', ['$compile', function ($compile) {
         }
     };
 }]);
+var sdkHelperAgriModelApp = angular.module('ag.sdk.helper.agri-model', []);
+
+sdkHelperAgriModelApp.factory('agriModelHelper', [function() {
+    var _listServiceMap = function (item) {
+        return {
+            title: item.name,
+            subtitle: item.commodityType + ' in ' + item.region
+        }
+    };
+
+    return {
+        listServiceMap: function() {
+            return _listServiceMap;
+        }
+    }
+}]);
+
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
@@ -5412,6 +5474,7 @@ sdkTestDataApp.provider('mockDataService', [function () {
 }]);
 
 angular.module('ag.sdk.helper', [
+    'ag.sdk.helper.agri-model',
     'ag.sdk.helper.asset',
     'ag.sdk.helper.document',
     'ag.sdk.helper.farmer',
