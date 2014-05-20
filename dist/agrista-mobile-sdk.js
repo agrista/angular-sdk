@@ -4351,7 +4351,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                 order: 100,
                 group: 'Apps',
                 include: function (app, roleApps) {
-                    return (roleApps.indexOf(app.title) !== -1);
+                    return (roleApps.indexOf(app.id) !== -1);
                 }
             });
 
@@ -4383,7 +4383,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             }
 
             // Find if the app exists in the group
-            var groupItem = _.findWhere(group.items, {title: app.title});
+            var groupItem = _.findWhere(group.items, {id: app.id});
 
             if (groupItem === undefined) {
                 // Add the app to the group
