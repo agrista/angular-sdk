@@ -216,7 +216,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _host = 'local';
 
     var _servers = {
-        local: '/',
+        local: '',
         alpha: 'http://staging.farmer.agrista.net/',
         beta: 'http://farmer.agrista.net/'
     };
@@ -1561,6 +1561,13 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         standard: 'Standard'
     };
 
+    var _subscriptionPlans = {
+        small: 'Small',
+        medium: 'Medium',
+        large: 'Large',
+        association: 'Association'
+    };
+
     /**
      * @name ServiceEditor
      * @param availableServices
@@ -1612,11 +1619,18 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         listServiceMap: function() {
             return _listServiceMap;
         },
+
         partnerTypes: function() {
             return _partnerTypes;
         },
         getPartnerType: function (type) {
             return _partnerTypes[type];
+        },
+        subscriptionPlans: function() {
+            return _subscriptionPlans;
+        },
+        getSubscriptionPlan: function (plan) {
+            return _subscriptionPlans[plan];
         },
 
         serviceEditor: function (/**Array=*/availableServices, /**Array=*/services) {

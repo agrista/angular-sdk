@@ -9,7 +9,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _host = 'local';
 
     var _servers = {
-        local: '/',
+        local: '',
         alpha: 'http://staging.farmer.agrista.net/',
         beta: 'http://farmer.agrista.net/'
     };
