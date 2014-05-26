@@ -1551,13 +1551,13 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.primaryContact,
+            subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
         }
     };
 
     var _partnerTypes = {
-        benefit: 'Benefit Partner',
+        benefit: 'Benefit',
         standard: 'Standard'
     };
 
@@ -1566,6 +1566,14 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         medium: 'Medium',
         large: 'Large',
         association: 'Association'
+    };
+
+    var getPartnerType = function (type) {
+        return _partnerTypes[type] || '';
+    };
+
+    var getSubscriptionPlan = function (plan) {
+        return _subscriptionPlans[plan] || '';
     };
 
     /**
@@ -1623,15 +1631,11 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         partnerTypes: function() {
             return _partnerTypes;
         },
-        getPartnerType: function (type) {
-            return _partnerTypes[type];
-        },
+        getPartnerType: getPartnerType,
         subscriptionPlans: function() {
             return _subscriptionPlans;
         },
-        getSubscriptionPlan: function (plan) {
-            return _subscriptionPlans[plan];
-        },
+        getSubscriptionPlan: getSubscriptionPlan,
 
         serviceEditor: function (/**Array=*/availableServices, /**Array=*/services) {
             return new ServiceEditor(availableServices, services);
