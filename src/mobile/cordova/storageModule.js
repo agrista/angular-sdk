@@ -65,7 +65,7 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
         return defer.promise;
     };
 
-    $log.log('Initialized storageService');
+    $log.debug('Initialized storageService');
 
     return {
         /**

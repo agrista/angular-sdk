@@ -658,7 +658,7 @@ mobileSdkApiApp.factory('attachmentApi', ['$http', '$log', 'api', 'configuration
                             return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
                         }, promise.reject)
                         .then(function () {
-                            $log.log('update attachment');
+                            $log.debug('update attachment');
                             attachment.__local = false;
 
                             attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);
