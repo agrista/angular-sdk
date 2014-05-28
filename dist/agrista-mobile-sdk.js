@@ -1113,6 +1113,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             }
 
             // Allow override of document
+            doc.deletable = (doc.deletable === true);
             doc.state = doc.state || 'document.' + doc.docType.replace(' ', '-');
             _documentMap[doc.docType] = doc;
         });
