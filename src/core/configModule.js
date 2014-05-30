@@ -10,8 +10,9 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
 
     var _servers = {
         local: '',
-        alpha: 'http://staging.farmer.agrista.net/',
-        beta: 'http://farmer.agrista.net/'
+        testing: 'https://uat.enterprise.agrista.com/',
+        staging: 'https://staging.enterprise.agrista.com/',
+        production: 'https://enterprise.agrista.com/'
     };
 
     return {
