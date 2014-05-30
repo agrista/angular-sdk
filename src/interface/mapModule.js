@@ -166,6 +166,15 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
 
     var _mapStyles = {
         foreground: {
+            district: {
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#0094D6",
+                    fillOpacity: 0.5
+                }
+            },
             farmland: {
                 style: {
                     weight: 2,
@@ -245,6 +254,15 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             }
         },
         background: {
+            district: {
+                style: {
+                    weight: 1,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#0094D6",
+                    fillOpacity: 0.2
+                }
+            },
             farmland: {
                 style: {
                     weight: 1,
