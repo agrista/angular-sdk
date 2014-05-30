@@ -217,8 +217,9 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
 
     var _servers = {
         local: '',
-        alpha: 'http://staging.farmer.agrista.net/',
-        beta: 'http://farmer.agrista.net/'
+        testing: 'https://uat.enterprise.agrista.com/',
+        staging: 'https://staging.enterprise.agrista.com/',
+        production: 'https://enterprise.agrista.com/'
     };
 
     return {
@@ -837,13 +838,44 @@ sdkHelperAgriModelApp.factory('agriModelHelper', [function() {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.commodityType + ' in ' + item.region
+            subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
         }
     };
 
+    var _modelTypes = {
+        crop: 'Crop',
+        livestock: 'Livestock'
+    };
+
     return {
-        listServiceMap: function() {
+        listServiceMap: function () {
             return _listServiceMap;
+        },
+        getModelType: function (type) {
+            return _modelTypes[type] || '';
+        },
+
+        calculateTotals: function (agriModel) {
+            var income = agriModel.data.income = agriModel.data.income || {};
+            var expenses = agriModel.data.expenses = agriModel.data.expenses || [];
+            var total = agriModel.data.total = agriModel.data.total || {};
+
+            if (isNaN(income.yield) == false && isNaN(income.price) == false) {
+                total.income = income.yield * income.price;
+            }
+
+            total.expenses = 0;
+
+            angular.forEach(expenses, function (type) {
+                angular.forEach(type, function (subtype) {
+                    total.expenses += (subtype.cost || 0);
+                });
+            });
+
+            total.profit = total.income - total.expenses;
+
+            return agriModel;
+
         }
     }
 }]);
@@ -2349,6 +2381,15 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
 
     var _mapStyles = {
         foreground: {
+            district: {
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#0094D6",
+                    fillOpacity: 0.5
+                }
+            },
             farmland: {
                 style: {
                     weight: 2,
@@ -2428,6 +2469,15 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             }
         },
         background: {
+            district: {
+                style: {
+                    weight: 1,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#0094D6",
+                    fillOpacity: 0.2
+                }
+            },
             farmland: {
                 style: {
                     weight: 1,
