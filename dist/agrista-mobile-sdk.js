@@ -216,7 +216,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _host = 'local';
 
     var _servers = {
-        local: '/',
+        local: '',
         alpha: 'http://staging.farmer.agrista.net/',
         beta: 'http://farmer.agrista.net/'
     };
@@ -443,7 +443,7 @@ sdkMonitorApp.factory('queueService', ['$log', '$q', 'promiseService', function 
         var pop = function () {
             callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
 
-            $log.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
+            $log.debug('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
 
             if (_queue.length === 0 && _progress.total === _progress.complete) {
                 _progress.total = 0;
@@ -512,7 +512,7 @@ sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, sa
             _stats.complete++;
             _stats.percent = (100.0 / _stats.total) * _stats.complete;
 
-            $log.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
+            $log.debug('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
 
             safeApply(function () {
                 if (_stats.complete == _stats.total) {
@@ -1130,6 +1130,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             }
 
             // Allow override of document
+            doc.deletable = (doc.deletable === true);
             doc.state = doc.state || 'document.' + doc.docType.replace(' ', '-');
             _documentMap[doc.docType] = doc;
         });
@@ -1568,14 +1569,29 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.primaryContact,
+            subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
         }
     };
 
     var _partnerTypes = {
-        benefit: 'Benefit Partner',
+        benefit: 'Benefit',
         standard: 'Standard'
+    };
+
+    var _subscriptionPlans = {
+        small: 'Small',
+        medium: 'Medium',
+        large: 'Large',
+        association: 'Association'
+    };
+
+    var getPartnerType = function (type) {
+        return _partnerTypes[type] || '';
+    };
+
+    var getSubscriptionPlan = function (plan) {
+        return _subscriptionPlans[plan] || '';
     };
 
     /**
@@ -1629,12 +1645,15 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         listServiceMap: function() {
             return _listServiceMap;
         },
+
         partnerTypes: function() {
             return _partnerTypes;
         },
-        getPartnerType: function (type) {
-            return _partnerTypes[type];
+        getPartnerType: getPartnerType,
+        subscriptionPlans: function() {
+            return _subscriptionPlans;
         },
+        getSubscriptionPlan: getSubscriptionPlan,
 
         serviceEditor: function (/**Array=*/availableServices, /**Array=*/services) {
             return new ServiceEditor(availableServices, services);
@@ -4000,7 +4019,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     }
 
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4021,7 +4040,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4040,7 +4059,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4061,7 +4080,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4080,7 +4099,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4101,7 +4120,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4718,9 +4737,9 @@ var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.u
  * @example
 
  cameraService.capture(50).then(function (res) {
-            $log.log('Photo taken');
+            $log.debug('Photo taken');
         }, function (err) {
-            $log.log(err);
+            $log.debug(err);
         });
 
  */
@@ -4872,13 +4891,13 @@ var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', 
  * @example
 
  function onLocation(res) {
-            $log.log('Success: geolocationService.watchPosition');
-            $log.log(res);
+            $log.debug('Success: geolocationService.watchPosition');
+            $log.debug(res);
         }
 
  function onError(err) {
-            $log.log('Error: geolocationService.watchPosition');
-            $log.log(err);
+            $log.debug('Error: geolocationService.watchPosition');
+            $log.debug(err);
         }
 
  var watch = geolocationService.watchPosition(onLocation, onError);
@@ -5052,7 +5071,7 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
         return defer.promise;
     };
 
-    $log.log('Initialized storageService');
+    $log.debug('Initialized storageService');
 
     return {
         /**
@@ -5916,7 +5935,7 @@ mobileSdkApiApp.factory('attachmentApi', ['$http', '$log', 'api', 'configuration
                             return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
                         }, promise.reject)
                         .then(function () {
-                            $log.log('update attachment');
+                            $log.debug('update attachment');
                             attachment.__local = false;
 
                             attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);
@@ -6340,7 +6359,7 @@ mobileSdkDataApp.provider('dataPurge', function () {
 mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
     return {
         parseRequest: function (templateUrl, schemaData) {
-            $log.log('Unresolved: ' + templateUrl);
+            $log.debug('Unresolved: ' + templateUrl);
 
             if (templateUrl !== undefined) {
                 for (var key in schemaData) {
@@ -6352,7 +6371,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
                 }
             }
 
-            $log.log('Resolved: ' + templateUrl);
+            $log.debug('Resolved: ' + templateUrl);
 
             return templateUrl;
         },
@@ -6431,17 +6450,17 @@ mobileSdkDataApp.provider('dataStore', [function () {
             var migrationSteps = [];
 
             function _processMigration(db) {
-                $log.log('_processMigration');
+                $log.debug('_processMigration');
 
                 if (migrationSteps.length > 0) {
                     var migration = migrationSteps[0];
                     migrationSteps.splice(0, 1);
 
                     if (migration.current === db.version) {
-                        $log.log('Database (' + db.version + ') has a newer version ' + migration.next);
+                        $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
 
                         db.changeVersion(migration.current, migration.next, migration.process, _errorCallback, function () {
-                            $log.log('Database version migrated from ' + migration.current + ' to ' + migration.next);
+                            $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
                             _processMigration(db);
                         });
                     } else {
@@ -6554,7 +6573,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             }
 
             function _dataCallback(tx, res) {
-                $log.log('SQL complete: ' + res.rowsAffected);
+                $log.debug('SQL complete: ' + res.rowsAffected);
             }
 
             function _errorCallback(tx, err) {
@@ -6585,7 +6604,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getLocal = function (uri, options, glCallback) {
-                $log.log('_getLocal');
+                $log.debug('_getLocal');
                 if (typeof glCallback !== 'function') glCallback = angular.noop;
 
                 _localDatabase.transaction(function (tx) {
@@ -6613,7 +6632,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _findLocal = function (key, column, options, flCallback) {
-                $log.log('_findLocal');
+                $log.debug('_findLocal');
 
                 if (typeof flCallback !== 'function') flCallback = angular.noop;
 
@@ -6641,7 +6660,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _syncLocal = function (dataItems, uri, slCallback) {
-                $log.log('_syncLocal');
+                $log.debug('_syncLocal');
                 if (typeof slCallback !== 'function') slCallback = angular.noop;
 
                 _deleteAllLocal(uri, function () {
@@ -6652,7 +6671,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _updateLocal = function (dataItems, options, ulCallback) {
-                $log.log('_updateLocal');
+                $log.debug('_updateLocal');
                 if (typeof options === 'function') {
                     ulCallback = options;
                     options = {};
@@ -6696,7 +6715,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteLocal = function (dataItems, dlCallback) {
-                $log.log('_deleteLocal');
+                $log.debug('_deleteLocal');
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 if (dataItems.length > 0) {
@@ -6718,7 +6737,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             };
 
             var _deleteAllLocal = function (uri, options, dalCallback) {
-                $log.log('_deleteAllLocal');
+                $log.debug('_deleteAllLocal');
                 if (typeof options === 'function') {
                     dalCallback = options;
                     options = {};
@@ -6729,31 +6748,31 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 var asyncMon = new AsyncMonitor(1, dalCallback);
 
                 var handleSuccess = function () {
-                    $log.log('handleSuccess');
+                    $log.debug('handleSuccess');
                     asyncMon.done();
                 };
 
                 var handleError = function (tx, err) {
-                    $log.log('handleError');
+                    $log.debug('handleError');
                     _errorCallback(tx, err);
                     asyncMon.done();
                 };
 
-                $log.log(uri);
+                $log.debug(uri);
 
                 _localDatabase.transaction(function (tx) {
-                    $log.log('_deleteAllLocal transaction');
+                    $log.debug('_deleteAllLocal transaction');
 
                     if (options.force === true) {
-                        $log.log('_deleteAllLocal force');
+                        $log.debug('_deleteAllLocal force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ?', [uri], handleSuccess, handleError);
                     } else {
-                        $log.log('_deleteAllLocal not force');
+                        $log.debug('_deleteAllLocal not force');
                         tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], handleSuccess, handleError);
                     }
                 });
 
-                $log.log('_deleteAllLocal end');
+                $log.debug('_deleteAllLocal end');
             };
 
             /**
@@ -6761,7 +6780,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             var _getRemote = function (uri, grCallback) {
-                $log.log('_getRemote');
+                $log.debug('_getRemote');
                 if (typeof grCallback !== 'function') grCallback = angular.noop;
 
                 if (_config.apiTemplate !== undefined) {
@@ -6815,7 +6834,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _updateRemote = function (dataItems, writeUri, writeSchema, urCallback) {
-                $log.log('_updateRemote');
+                $log.debug('_updateRemote');
                 if (typeof writeSchema === 'function') {
                     urCallback = writeSchema;
                     writeSchema = {};
@@ -6892,7 +6911,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * @private
              */
             var _deleteRemote = function (dataItems, writeUri, writeSchema, drCallback) {
-                $log.log('_deleteRemote');
+                $log.debug('_deleteRemote');
                 if (typeof writeSchema === 'function') {
                     drCallback = writeSchema;
                     writeSchema = {};
@@ -7205,7 +7224,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
              */
 
             _initializeTable(function () {
-                $log.log('table initialized');
+                $log.debug('table initialized');
 
                 _dataStoreInitialized = true;
                 _processTransactionQueue();
@@ -7234,7 +7253,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
         _initializeDatabase(function (db) {
             _localDatabase = db;
 
-            $log.log('database initialized');
+            $log.debug('database initialized');
         });
 
         /**

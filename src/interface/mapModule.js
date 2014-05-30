@@ -1836,7 +1836,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     }
 
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -1857,7 +1857,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -1876,7 +1876,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -1897,7 +1897,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -1916,7 +1916,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -1937,7 +1937,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };

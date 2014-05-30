@@ -1105,7 +1105,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _host = 'local';
 
     var _servers = {
-        local: '/',
+        local: '',
         alpha: 'http://staging.farmer.agrista.net/',
         beta: 'http://farmer.agrista.net/'
     };
@@ -1332,7 +1332,7 @@ sdkMonitorApp.factory('queueService', ['$log', '$q', 'promiseService', function 
         var pop = function () {
             callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
 
-            $log.log('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
+            $log.debug('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
 
             if (_queue.length === 0 && _progress.total === _progress.complete) {
                 _progress.total = 0;
@@ -1401,7 +1401,7 @@ sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, sa
             _stats.complete++;
             _stats.percent = (100.0 / _stats.total) * _stats.complete;
 
-            $log.log('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
+            $log.debug('MONITOR TOTAL: ' + _stats.total + ' COMPLETE: ' + _stats.complete + ' PERCENT: ' + _stats.percent);
 
             safeApply(function () {
                 if (_stats.complete == _stats.total) {
@@ -2019,6 +2019,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             }
 
             // Allow override of document
+            doc.deletable = (doc.deletable === true);
             doc.state = doc.state || 'document.' + doc.docType.replace(' ', '-');
             _documentMap[doc.docType] = doc;
         });
@@ -2457,14 +2458,29 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
-            subtitle: item.primaryContact,
+            subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
         }
     };
 
     var _partnerTypes = {
-        benefit: 'Benefit Partner',
+        benefit: 'Benefit',
         standard: 'Standard'
+    };
+
+    var _subscriptionPlans = {
+        small: 'Small',
+        medium: 'Medium',
+        large: 'Large',
+        association: 'Association'
+    };
+
+    var getPartnerType = function (type) {
+        return _partnerTypes[type] || '';
+    };
+
+    var getSubscriptionPlan = function (plan) {
+        return _subscriptionPlans[plan] || '';
     };
 
     /**
@@ -2518,12 +2534,15 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
         listServiceMap: function() {
             return _listServiceMap;
         },
+
         partnerTypes: function() {
             return _partnerTypes;
         },
-        getPartnerType: function (type) {
-            return _partnerTypes[type];
+        getPartnerType: getPartnerType,
+        subscriptionPlans: function() {
+            return _subscriptionPlans;
         },
+        getSubscriptionPlan: getSubscriptionPlan,
 
         serviceEditor: function (/**Array=*/availableServices, /**Array=*/services) {
             return new ServiceEditor(availableServices, services);
@@ -4889,7 +4908,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     }
 
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4910,7 +4929,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4929,7 +4948,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4950,7 +4969,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4969,7 +4988,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
@@ -4990,7 +5009,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
-                    $log.log(err);
+                    $log.debug(err);
                 });
         }
     };
