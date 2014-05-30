@@ -922,6 +922,14 @@ sdkApiApp.factory('agriModelApi', ['$http', 'pagingService', 'promiseService', '
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        uploadAgriModelAttachments: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/agrimodel/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
         }
+
     };
 }]);
