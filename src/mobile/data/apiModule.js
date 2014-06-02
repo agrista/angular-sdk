@@ -9,8 +9,8 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi', 'agriModelApi',
-    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi, attachmentApi, agriModelApi) {
+mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi', 'enterpriseBudgetApi',
+    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi, attachmentApi, enterpriseBudgetApi) {
         var _monitor = null;
 
         function _getFarmers () {
@@ -74,13 +74,13 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
             }));
         }
 
-        function _getAgriModels () {
+        function _getEnterpriseBudgets () {
             return _monitor.add(promiseService.wrap(function (defer) {
-                agriModelApi.getAgriModels().then(function (models) {
+                enterpriseBudgetApi.getEnterpriseBudgets().then(function (budgets) {
                     promiseService
                         .arrayWrap(function (list) {
-                            angular.forEach(models, function (model) {
-                                list.push(_postAgriModel(model));
+                            angular.forEach(budgets, function (budget) {
+                                list.push(_postEnterpriseBudget(budget));
                             });
                         })
                         .then(defer.resolve, defer.reject);
@@ -191,10 +191,10 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
             }));
         }
 
-        function _postAgriModel (model) {
+        function _postEnterpriseBudget (budget) {
             return _monitor.add(promiseService.wrap(function (defer) {
-                if (model.__dirty === true) {
-                    agriModelApi.postAgriModel({data: model}).then(defer.resolve, defer.reject);
+                if (budget.__dirty === true) {
+                    enterpriseBudgetApi.postEnterpriseBudget({data: budget}).then(defer.resolve, defer.reject);
                 } else {
                     defer.resolve();
                 }
@@ -208,14 +208,14 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
                 _getFarmers()
                     .then(_getDocuments)
                     .then(_getTasks)
-                    .then(_getAgriModels)
+                    .then(_getEnterpriseBudgets)
                     .then(promise.resolve, promise.reject);
             });
         }
     }]);
 
-mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility', 'agriModelApi',
-    function (promiseMonitor, promiseService, farmApi, assetUtility, farmerUtility, documentUtility, taskUtility, agriModelApi) {
+mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility', 'enterpriseBudgetApi',
+    function (promiseMonitor, promiseService, farmApi, assetUtility, farmerUtility, documentUtility, taskUtility, enterpriseBudgetApi) {
         var _monitor = null;
         var _readOptions = {readLocal: false, readRemote: true};
 
@@ -289,8 +289,8 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
             }));
         }
 
-        function _getAgriModels() {
-            return _monitor.add(agriModelApi.getAgriModels({options: _readOptions}));
+        function _getEnterpriseBudgets() {
+            return _monitor.add(enterpriseBudgetApi.getEnterpriseBudgets({options: _readOptions}));
         }
 
         return function (monitor) {
@@ -300,7 +300,7 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
                 _getFarmers()
                     .then(_getDocuments)
                     .then(_getTasks)
-                    .then(_getAgriModels)
+                    .then(_getEnterpriseBudgets)
                     .then(promise.resolve, promise.reject);
             });
         };
@@ -721,18 +721,18 @@ mobileSdkApiApp.factory('activityApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('agriModelApi', ['api', function (api) {
-    var farmApi = api({plural: 'agrimodels', singular: 'agrimodel'});
+mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
+    var farmApi = api({plural: 'budgets', singular: 'budget'});
 
     return {
-        getAgriModels: farmApi.getItems,
-        createAgriModel: farmApi.createItem,
-        getAgriModel: farmApi.getItem,
-        findAgriModel: farmApi.findItem,
-        updateAgriModel: farmApi.updateItem,
-        postAgriModel: farmApi.postItem,
-        deleteAgriModel: farmApi.deleteItem,
-        purgeAgriModel: farmApi.purgeItem
+        getEnterpriseBudgets: farmApi.getItems,
+        createEnterpriseBudget: farmApi.createItem,
+        getEnterpriseBudget: farmApi.getItem,
+        findEnterpriseBudget: farmApi.findItem,
+        updateEnterpriseBudget: farmApi.updateItem,
+        postEnterpriseBudget: farmApi.postItem,
+        deleteEnterpriseBudget: farmApi.deleteItem,
+        purgeEnterpriseBudget: farmApi.purgeItem
     };
 }]);
 

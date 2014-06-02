@@ -881,51 +881,51 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
 }]);
 
 /**
- * AgriModel API
+ * Enterprise Budget API
  */
-sdkApiApp.factory('agriModelApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
-        getAgriModels: function (id, page) {
+        getEnterpriseBudgets: function (id, page) {
             if (typeof id === 'object') {
                 page = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/agrimodels' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
         },
-        createAgriModel: function (modelData) {
+        createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel', modelData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget', budgetData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getAgriModel: function (id) {
+        getEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrimodel/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budget/' + id, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateAgriModel: function (modelData) {
+        updateEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel/' + modelData.id, modelData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + budgetData.id, budgetData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        deleteAgriModel: function (id) {
+        deleteEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        uploadAgriModelAttachments: function (id, data) {
+        uploadEnterpriseBudgetAttachments: function (id, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
@@ -1767,54 +1767,6 @@ skdUtilitiesApp.directive('signature', ['$compile', function ($compile) {
         }
     };
 }]);
-var sdkHelperAgriModelApp = angular.module('ag.sdk.helper.agri-model', []);
-
-sdkHelperAgriModelApp.factory('agriModelHelper', [function() {
-    var _listServiceMap = function (item) {
-        return {
-            title: item.name,
-            subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
-        }
-    };
-
-    var _modelTypes = {
-        crop: 'Crop',
-        livestock: 'Livestock'
-    };
-
-    return {
-        listServiceMap: function () {
-            return _listServiceMap;
-        },
-        getModelType: function (type) {
-            return _modelTypes[type] || '';
-        },
-
-        calculateTotals: function (agriModel) {
-            var income = agriModel.data.income = agriModel.data.income || {};
-            var expenses = agriModel.data.expenses = agriModel.data.expenses || [];
-            var total = agriModel.data.total = agriModel.data.total || {};
-
-            if (isNaN(income.yield) == false && isNaN(income.price) == false) {
-                total.income = income.yield * income.price;
-            }
-
-            total.expenses = 0;
-
-            angular.forEach(expenses, function (type) {
-                angular.forEach(type, function (subtype) {
-                    total.expenses += (subtype.cost || 0);
-                });
-            });
-
-            total.profit = total.income - total.expenses;
-
-            return agriModel;
-
-        }
-    }
-}]);
-
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
@@ -2163,6 +2115,53 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         }
     }]
 });
+
+var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budget', []);
+
+sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
+    var _listServiceMap = function (item) {
+        return {
+            title: item.name,
+            subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
+        }
+    };
+
+    var _modelTypes = {
+        crop: 'Crop',
+        livestock: 'Livestock'
+    };
+
+    return {
+        listServiceMap: function () {
+            return _listServiceMap;
+        },
+        getModelType: function (type) {
+            return _modelTypes[type] || '';
+        },
+
+        calculateTotals: function (budget) {
+            var income = budget.data.income = budget.data.income || {};
+            var expenses = budget.data.expenses = budget.data.expenses || [];
+            var total = budget.data.total = budget.data.total || {};
+
+            if (isNaN(income.yield) == false && isNaN(income.price) == false) {
+                total.income = income.yield * income.price;
+            }
+
+            total.expenses = 0;
+
+            angular.forEach(expenses, function (type) {
+                angular.forEach(type, function (subtype) {
+                    total.expenses += (subtype.cost || 0);
+                });
+            });
+
+            total.profit = total.income - total.expenses;
+
+            return budget;
+        }
+    }
+}]);
 
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
 
@@ -5593,9 +5592,9 @@ sdkTestDataApp.provider('mockDataService', [function () {
 }]);
 
 angular.module('ag.sdk.helper', [
-    'ag.sdk.helper.agri-model',
     'ag.sdk.helper.asset',
     'ag.sdk.helper.document',
+    'ag.sdk.helper.enterprise-budget',
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',

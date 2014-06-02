@@ -881,51 +881,51 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
 }]);
 
 /**
- * AgriModel API
+ * Enterprise Budget API
  */
-sdkApiApp.factory('agriModelApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
-        getAgriModels: function (id, page) {
+        getEnterpriseBudgets: function (id, page) {
             if (typeof id === 'object') {
                 page = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/agrimodels' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
         },
-        createAgriModel: function (modelData) {
+        createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel', modelData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget', budgetData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getAgriModel: function (id) {
+        getEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrimodel/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budget/' + id, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateAgriModel: function (modelData) {
+        updateEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel/' + modelData.id, modelData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + budgetData.id, budgetData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        deleteAgriModel: function (id) {
+        deleteEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        uploadAgriModelAttachments: function (id, data) {
+        uploadEnterpriseBudgetAttachments: function (id, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/agrimodel/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })

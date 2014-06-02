@@ -1,6 +1,6 @@
-var sdkHelperAgriModelApp = angular.module('ag.sdk.helper.agri-model', []);
+var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budget', []);
 
-sdkHelperAgriModelApp.factory('agriModelHelper', [function() {
+sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
     var _listServiceMap = function (item) {
         return {
             title: item.name,
@@ -21,10 +21,10 @@ sdkHelperAgriModelApp.factory('agriModelHelper', [function() {
             return _modelTypes[type] || '';
         },
 
-        calculateTotals: function (agriModel) {
-            var income = agriModel.data.income = agriModel.data.income || {};
-            var expenses = agriModel.data.expenses = agriModel.data.expenses || [];
-            var total = agriModel.data.total = agriModel.data.total || {};
+        calculateTotals: function (budget) {
+            var income = budget.data.income = budget.data.income || {};
+            var expenses = budget.data.expenses = budget.data.expenses || [];
+            var total = budget.data.total = budget.data.total || {};
 
             if (isNaN(income.yield) == false && isNaN(income.price) == false) {
                 total.income = income.yield * income.price;
@@ -40,8 +40,7 @@ sdkHelperAgriModelApp.factory('agriModelHelper', [function() {
 
             total.profit = total.income - total.expenses;
 
-            return agriModel;
-
+            return budget;
         }
     }
 }]);

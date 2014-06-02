@@ -1,7 +1,7 @@
 angular.module('ag.sdk.helper', [
-    'ag.sdk.helper.agri-model',
     'ag.sdk.helper.asset',
     'ag.sdk.helper.document',
+    'ag.sdk.helper.enterprise-budget',
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
