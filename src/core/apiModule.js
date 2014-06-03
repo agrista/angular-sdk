@@ -895,6 +895,17 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 
             return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
         },
+        searchEnterpriseBudgets: function (query) {
+            query = _.chain(query).map(function (value, key) {
+                return key + '=' + value;
+            }).join('&').value();
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budgets/search?' + query, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/budget', budgetData, {withCredentials: true}).then(function (res) {
@@ -905,6 +916,20 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
         getEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/budget/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getEnterpriseBudgetPublishers: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/publishers', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getEnterpriseBudgetRegions: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/regions', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

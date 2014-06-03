@@ -895,6 +895,17 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 
             return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
         },
+        searchEnterpriseBudgets: function (query) {
+            query = _.chain(query).map(function (value, key) {
+                return key + '=' + value;
+            }).join('&').value();
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budgets/search?' + query, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/budget', budgetData, {withCredentials: true}).then(function (res) {
@@ -905,6 +916,20 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
         getEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/budget/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getEnterpriseBudgetPublishers: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/publishers', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getEnterpriseBudgetRegions: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/regions', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1933,6 +1958,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         'water right': landUseHelper.landUseTypes()
     };
 
+    var _commodityTypes = {
+        crop: 'Field Crops',
+        horticulture: 'Horticulture',
+        livestock: 'Livestock'
+    };
+
+    var _commodities = {
+        crop: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
+        horticulture: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+    };
+
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -1954,6 +1991,19 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         },
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
+        },
+        getCommodityType: function (type) {
+            return _commodityTypes[type] || '';
+        },
+        getCommodities: function (type) {
+            return _commodities[type] || '';
+        },
+
+        commodityTypes: function() {
+            return _commodityTypes;
+        },
+        commodities: function() {
+            return _commodities;
         },
         conditionTypes: function () {
             return _conditionTypes;
