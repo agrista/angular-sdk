@@ -941,6 +941,13 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                 }, promise.reject);
             });
         },
+        publishEnterpriseBudget: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget/' + id + '/publish', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         deleteEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/budget/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
