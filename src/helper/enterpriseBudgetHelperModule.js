@@ -63,7 +63,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             'Yield (t/Ha)': 'yield',
             'Price (R/Ha)': 'price'
         }
-    }
+    };
+
+    var _fruitsGrowthStages = {
+        Bananas: ['0-1', '2-10'],
+        Litchis: ['0-1', '2-3', '4-5', '6-19', '20'],
+        Mangos: ['0-1', '2', '3', '4', '5-20'],
+        Pineapples: ['0-1', '2'],
+        Strawberries: ['0-1', '2']
+    };
 
     return {
         listServiceMap: function () {
@@ -81,6 +89,13 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             }
             else {
                 return {};
+            }
+        },
+        getGrowthStages: function (assetType, commodityType) {
+            if(assetType == 'fruit') {
+                return _fruitsGrowthStages[commodityType] || [];
+            } else {
+                return [];
             }
         },
         calculateTotals: function (budget) {
