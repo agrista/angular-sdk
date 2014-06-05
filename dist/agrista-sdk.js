@@ -1992,9 +1992,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
         },
-        getCommodityType: function (type) {
-            return _commodityTypes[type] || '';
-        },
         getCommodities: function (type) {
             return _commodities[type] || '';
         },
@@ -2181,6 +2178,58 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
         livestock: 'Livestock'
     };
 
+    var _incomeTypes = {
+        crop: {
+            'Yield (t/Ha)': 'yield',
+            'Price (R/Ha)': 'price'
+        },
+        livestock: {
+            Cattle: {
+                'Bulls': {
+                    incomeSubTypeVariableName: 'bulls',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Heifers': {
+                    incomeSubTypeVariableName: 'heifers',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Cull cows': {
+                    incomeSubTypeVariableName: 'cull cows',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Calves': {
+                    incomeSubTypeVariableName: 'calves',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                }
+            },
+            Goat: {
+                'Goats income 1': {
+                    incomeSubTypeVariableName: 'goatsIncome1',
+                    perCattleVariableName: 'perGoat',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Goats income 2': {
+                    incomeSubTypeVariableName: 'goatsIncome2',
+                    perCattleVariableName: 'perGoat',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Goats income 3': {
+                    incomeSubTypeVariableName: 'goatsIncome3',
+                    perCattleVariableName: 'perGoat',
+                    perUnitVariableName: 'perUnit'
+                }
+            }
+        },
+        fruit: {
+            'Yield (t/Ha)': 'yield',
+            'Price (R/Ha)': 'price'
+        }
+    }
+
     return {
         listServiceMap: function () {
             return _listServiceMap;
@@ -2188,7 +2237,17 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
         getModelType: function (type) {
             return _modelTypes[type] || '';
         },
-
+        getIncomeList: function (assetType, commodityType) {
+            if(assetType == 'crop' || assetType == 'fruit' ) {
+                return _incomeTypes[assetType];
+            }
+            else if(assetType == 'livestock') {
+                return _incomeTypes.livestock[commodityType];
+            }
+            else {
+                return {};
+            }
+        },
         calculateTotals: function (budget) {
             var income = budget.data.income = budget.data.income || {};
             var expenses = budget.data.expenses = budget.data.expenses || [];
