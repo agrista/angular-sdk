@@ -673,7 +673,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                     options: options || {
                         reset: false
                     }
-                }
+                };
 
                 $rootScope.$broadcast('mapbox-' + this._id + '::set-bounds', this._config.bounds);
             },
@@ -743,6 +743,14 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             hideLayer: function (name) {
                 $rootScope.$broadcast('mapbox-' + this._id + '::hide-layer', name);
+            },
+            fitLayer: function (name, options) {
+                this.enqueueRequest('mapbox-' + this._id + '::fit-layer', {
+                    name: name,
+                    options: options || {
+                        reset: false
+                    }
+                });
             },
 
             /*
@@ -953,30 +961,35 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
      */
     Mapbox.prototype.mapInit = function() {
         // Setup mapboxServiceInstance
-        this._mapboxServiceInstance = mapboxService(this._id);
+        var _this = this;
+        _this._mapboxServiceInstance = mapboxService(_this._id);
 
         // Setup map
-        var view = this._mapboxServiceInstance.getView();
-        var options = this._mapboxServiceInstance.getOptions();
+        var view = _this._mapboxServiceInstance.getView();
+        var options = _this._mapboxServiceInstance.getOptions();
 
-        this._map = L.map(this._id, options).setView(view.coordinates, view.zoom);
+        _this._map = L.map(_this._id, options).setView(view.coordinates, view.zoom);
 
-        this._editableFeature = L.featureGroup();
-        this._editableFeature.addTo(this._map);
+        _this._map.whenReady(function () {
+            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::ready', _this._map);
+        });
 
-        this.setEventHandlers(this._mapboxServiceInstance.getEventHandlers());
-        this.resetLayers(this._mapboxServiceInstance.getLayers());
-        this.resetGeoJSON(this._mapboxServiceInstance.getGeoJSON());
-        this.resetLayerControls(this._mapboxServiceInstance.getBaseTile(), this._mapboxServiceInstance.getBaseLayers(), this._mapboxServiceInstance.getOverlays());
-        this.addControls(this._mapboxServiceInstance.getControls());
-        this.setBounds(this._mapboxServiceInstance.getBounds());
+        _this._editableFeature = L.featureGroup();
+        _this._editableFeature.addTo(_this._map);
 
-        this._map.on('draw:drawstart', this.onDrawStart, this);
-        this._map.on('draw:editstart', this.onDrawStart, this);
-        this._map.on('draw:deletestart', this.onDrawStart, this);
-        this._map.on('draw:drawstop', this.onDrawStop, this);
-        this._map.on('draw:editstop', this.onDrawStop, this);
-        this._map.on('draw:deletestop', this.onDrawStop, this);
+        _this.setEventHandlers(_this._mapboxServiceInstance.getEventHandlers());
+        _this.resetLayers(_this._mapboxServiceInstance.getLayers());
+        _this.resetGeoJSON(_this._mapboxServiceInstance.getGeoJSON());
+        _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
+        _this.addControls(_this._mapboxServiceInstance.getControls());
+        _this.setBounds(_this._mapboxServiceInstance.getBounds());
+
+        _this._map.on('draw:drawstart', _this.onDrawStart, _this);
+        _this._map.on('draw:editstart', _this.onDrawStart, _this);
+        _this._map.on('draw:deletestart', _this.onDrawStart, _this);
+        _this._map.on('draw:drawstop', _this.onDrawStop, _this);
+        _this._map.on('draw:editstop', _this.onDrawStop, _this);
+        _this._map.on('draw:deletestop', _this.onDrawStop, _this);
     };
 
     Mapbox.prototype.addListeners = function (scope) {
@@ -1081,6 +1094,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         scope.$on('mapbox-' + id + '::hide-layer', function (event, args) {
             _this.hideLayer(args);
+        });
+
+        scope.$on('mapbox-' + id + '::fit-layer', function (event, args) {
+            _this.fitLayer(args);
         });
 
         // GeoJSON
@@ -1531,10 +1548,22 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.hideLayer = function (name) {
-        var layer =  this._layers[name];
+        var layer = this._layers[name];
 
-        if (layer &&  this._map.hasLayer(layer)) {
+        if (layer && this._map.hasLayer(layer)) {
             this._map.removeLayer(layer);
+        }
+    };
+
+    Mapbox.prototype.fitLayer = function (args) {
+        if (args.name) {
+            var layer = this._layers[args.name];
+
+            if (layer && this._map.hasLayer(layer)) {
+                var bounds = layer.getBounds();
+
+                this._map.fitBounds(bounds, args.options);
+            }
         }
     };
 
