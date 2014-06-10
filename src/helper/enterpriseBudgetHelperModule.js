@@ -99,6 +99,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             delete budget.data.products[category];
             return this.calculateTotals(budget);
         },
+        hasCategoryProducts: function (budget, category) {
+            return (budget.data.products !== undefined && budget.data.products[category] !== undefined);
+        },
         calculateTotals: function (budget) {
             checkBudgetTemplate(budget);
 
