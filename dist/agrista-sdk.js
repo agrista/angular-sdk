@@ -2233,6 +2233,66 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
         budget.data.total = budget.data.total || {};
     }
 
+    var _incomeTypes = {
+        crop: {
+            'Yield (t/Ha)': 'yield',
+            'Price (R/Ha)': 'price'
+        },
+        livestock: {
+            Cattle: {
+                'Bulls': {
+                    incomeSubTypeVariableName: 'bulls',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Heifers': {
+                    incomeSubTypeVariableName: 'heifers',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Cull cows': {
+                    incomeSubTypeVariableName: 'cull cows',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Calves': {
+                    incomeSubTypeVariableName: 'calves',
+                    perCattleVariableName: 'perCattle',
+                    perUnitVariableName: 'perUnit'
+                }
+            },
+            Goat: {
+                'Goats income 1': {
+                    incomeSubTypeVariableName: 'goatsIncome1',
+                    perCattleVariableName: 'perGoat',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Goats income 2': {
+                    incomeSubTypeVariableName: 'goatsIncome2',
+                    perCattleVariableName: 'perGoat',
+                    perUnitVariableName: 'perUnit'
+                },
+                'Goats income 3': {
+                    incomeSubTypeVariableName: 'goatsIncome3',
+                    perCattleVariableName: 'perGoat',
+                    perUnitVariableName: 'perUnit'
+                }
+            }
+        },
+        horticulture: {
+            'Yield (t/Ha)': 'yield',
+            'Price (R/Ha)': 'price'
+        }
+    };
+
+    var _horticulturesGrowthStages = {
+        Bananas: ['0-1', '2-10'],
+        Litchis: ['0-1', '2-3', '4-5', '6-19', '20'],
+        Mangos: ['0-1', '2', '3', '4', '5-20'],
+        Pineapples: ['0-1', '2'],
+        Strawberries: ['0-1', '2']
+    };
+
     return {
         listServiceMap: function () {
             return _listServiceMap;
@@ -2270,6 +2330,24 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             delete budget.data.expenses[category];
             delete budget.data.products[category];
             return this.calculateTotals(budget);
+        },
+        getIncomeList: function (assetType, commodityType) {
+            if(assetType == 'crop' || assetType == 'horticulture' ) {
+                return _incomeTypes[assetType];
+            }
+            else if(assetType == 'livestock') {
+                return _incomeTypes.livestock[commodityType];
+            }
+            else {
+                return {};
+            }
+        },
+        getGrowthStages: function (assetType, commodityType) {
+            if(assetType == 'horticulture') {
+                return _horticulturesGrowthStages[commodityType] || [];
+            } else {
+                return [];
+            }
         },
         calculateTotals: function (budget) {
             checkBudgetTemplate(budget);
