@@ -1388,6 +1388,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
                 return this.calculateTotals(budget);
             }
         },
+        hasCategoryProducts: function (budget, category) {
+            return (budget.data.products !== undefined && budget.data.products[category] !== undefined);
+        },
         getIncomeList: function (assetType, commodityType) {
             if(assetType == 'crop' || assetType == 'horticulture' ) {
                 return _incomeTypes[assetType];
