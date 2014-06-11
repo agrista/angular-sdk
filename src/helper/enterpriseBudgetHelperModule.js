@@ -113,7 +113,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
         }
     };
 
-    var _horticulturesGrowthStages = {
+    var _horticultureStages = {
         Bananas: ['0-1', '2-10'],
         Litchis: ['0-1', '2-3', '4-5', '6-19', '20'],
         Mangos: ['0-1', '2', '3', '4', '5-20'],
@@ -138,26 +138,50 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             var expenseCategories = _expenseCategories[budget.assetType];
 
             angular.forEach(budget.data.expenses, function (value, category) {
-                if (expenseCategories.indexOf(category) == -1 || typeof value != 'number') {
-                    delete budget.data.expenses[category];
-                    delete budget.data.products[category];
+                if(budget.assetType == 'horticulture') {
+                    angular.forEach(value, function (cost, item) {
+                        if (expenseCategories.indexOf(item) == -1 || typeof cost != 'number') {
+                            delete budget.data.expenses[category][item];
+                            delete budget.data.products[category][item];
+                        }
+                    })
+                } else {
+                    if (expenseCategories.indexOf(category) == -1 || typeof value != 'number') {
+                        delete budget.data.expenses[category];
+                        delete budget.data.products[category];
+                    }
                 }
+
             });
 
             return this.calculateTotals(budget);
         },
-        addExpenseCategory: function (budget, category) {
-            if (_expenseCategories[budget.assetType].indexOf(category) != -1 && budget.data.expenses[category] === undefined) {
-                budget.data.expenses[category] = 0;
-                budget = this.calculateTotals(budget);
+        addExpenseCategory: function (budget, category, horticultureStage) {
+            if(budget.assetType == 'horticulture') {
+                if (_expenseCategories[budget.assetType].indexOf(category) != -1 && budget.data.expenses[horticultureStage][category] === undefined) {
+                    budget.data.expenses[horticultureStage][category] = 0;
+                    budget = this.calculateTotals(budget);
+                }
+            } else {
+                if (_expenseCategories[budget.assetType].indexOf(category) != -1 && budget.data.expenses[category] === undefined) {
+                    budget.data.expenses[category] = 0;
+                    budget = this.calculateTotals(budget);
+                }
             }
+
 
             return budget;
         },
-        removeExpenseCategory: function (budget, category) {
-            delete budget.data.expenses[category];
-            delete budget.data.products[category];
-            return this.calculateTotals(budget);
+        removeExpenseCategory: function (budget, category, horticultureStage) {
+            if(budget.assetType == 'horticulture') {
+                delete budget.data.expenses[horticultureStage][category];
+                delete budget.data.products[category];
+                return this.calculateTotals(budget);
+            } else {
+                delete budget.data.expenses[category];
+                delete budget.data.products[category];
+                return this.calculateTotals(budget);
+            }
         },
         hasCategoryProducts: function (budget, category) {
             return (budget.data.products !== undefined && budget.data.products[category] !== undefined);
@@ -173,9 +197,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
                 return {};
             }
         },
-        getGrowthStages: function (assetType, commodityType) {
+        getHorticultureStages: function (assetType, commodityType) {
             if(assetType == 'horticulture') {
-                return _horticulturesGrowthStages[commodityType] || [];
+                return _horticultureStages[commodityType] || [];
             } else {
                 return [];
             }
@@ -183,24 +207,68 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
         calculateTotals: function (budget) {
             checkBudgetTemplate(budget);
 
-            if (isNaN(budget.data.income.yield) == false && isNaN(budget.data.income.price) == false) {
-                budget.data.total.income = budget.data.income.yield * budget.data.income.price;
-            }
+            if(budget.assetType == 'crop') {
+                if (isNaN(budget.data.income.yield) == false && isNaN(budget.data.income.price) == false) {
+                    budget.data.total.income = 0;
+                    budget.data.total.expenses = 0;
+                    budget.data.total.income = budget.data.income.yield * budget.data.income.price;
 
-            budget.data.total.expenses = 0;
+                    angular.forEach(budget.data.expenses, function (value, type) {
+                        if (budget.data.products[type] !== undefined) {
+                            value = _.reduce(budget.data.products[type], function (total, product) {
+                                return total + product.price;
+                            }, 0);
+                        }
 
-            angular.forEach(budget.data.expenses, function (value, type) {
-                if (budget.data.products[type] !== undefined) {
-                    value = _.reduce(budget.data.products[type], function (total, product) {
-                        return total + product.price;
-                    }, 0);
+                        budget.data.expenses[type] = value;
+                        budget.data.total.expenses += value;
+                    });
+
+                    budget.data.total.profit = budget.data.total.income - budget.data.total.expenses;
                 }
+            } else if(budget.assetType == 'livestock') {
+                if(_incomeTypes.livestock[budget.commodityType]) {
+                    budget.data.total.income = 0;
+                    budget.data.total.expenses = 0;
+                    angular.forEach(_incomeTypes.livestock[budget.commodityType], function(value, type) {
+                        budget.data.total.income += budget.data.income[value.incomeSubTypeVariableName][value.perUnitVariableName];
+                    });
 
-                budget.data.expenses[type] = value;
-                budget.data.total.expenses += value;
-            });
+                    angular.forEach(budget.data.expenses, function (value, type) {
+                        if (budget.data.products[type] !== undefined) {
+                            value = _.reduce(budget.data.products[type], function (total, product) {
+                                return total + product.price;
+                            }, 0);
+                        }
 
-            budget.data.total.profit = budget.data.total.income - budget.data.total.expenses;
+                        budget.data.expenses[type] = value;
+                        budget.data.total.expenses += value;
+                    });
+
+                    budget.data.total.profit = budget.data.total.income - budget.data.total.expenses;
+                }
+            } else {
+                budget.data.total = {};
+                var stages = _horticultureStages[budget.commodityType] || [];
+                stages.forEach(function(stage, i) {
+                    budget.data.total[stage] = {};
+                    budget.data.total[stage].income = budget.data.total[stage].income > 0 ? budget.data.total[stage].income : 0;
+                    budget.data.total[stage].expenses = budget.data.total[stage].expenses > 0 ? budget.data.total[stage].expenses : 0;
+                    budget.data.total[stage].income += budget.data.income[stage].yield * budget.data.income[stage].price;
+
+                    angular.forEach(budget.data.expenses[stage], function (value, type) {
+                        if (budget.data.products[type] !== undefined) {
+                            value = _.reduce(budget.data.products[type], function (total, product) {
+                                return total + product.price;
+                            }, 0);
+                        }
+                        budget.data.expenses[stage][type] = value;
+                        budget.data.total[stage].expenses += budget.data.expenses[stage][type];
+                    });
+
+                    budget.data.total[stage].profit = budget.data.total[stage].income - budget.data.total[stage].expenses;
+                });
+            }
 
             return budget;
         }
