@@ -249,6 +249,17 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
+            zone: {
+                icon: 'success',
+                draggable: true,
+                style: {
+                    weight: 4,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#ff6666",
+                    fillOpacity: 0.8
+                }
+            },
             homestead: {
                 icon: 'success'
             }
@@ -335,6 +346,16 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     opacity: 0.8,
                     fillColor: "#00e64a",
                     fillOpacity: 0.4
+                }
+            },
+            zone: {
+                icon: 'default',
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.5,
+                    fillColor: "#ff6666",
+                    fillOpacity: 0.5
                 }
             },
             homestead: {

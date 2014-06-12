@@ -215,6 +215,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _version = '';
     var _host = 'local';
 
+    var _modules = [];
     var _servers = {
         local: '',
         testing: 'https://uat.enterprise.agrista.com/',
@@ -222,7 +223,20 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         production: 'https://enterprise.agrista.com/'
     };
 
+    var _hasModule = function (name) {
+        return (_modules.indexOf(name) !== -1);
+    };
+
+    var _addModule = function (name) {
+        if (_hasModule(name) == false) {
+            _modules.push(name);
+        }
+    };
+
     return {
+        addModule: _addModule,
+        hasModule: _hasModule,
+
         setServers: function(servers) {
             angular.forEach(servers, function (host, name) {
                 if (host.lastIndexOf('/') !== host.length - 1) {
@@ -256,6 +270,9 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         },
         $get: function() {
             return {
+                addModule: _addModule,
+                hasModule: _hasModule,
+
                 getVersion: function() {
                     return _version;
                 },
@@ -1117,6 +1134,32 @@ sdkHelperAssetApp.factory('assetValuationHelper', function () {
         }
     }
 });
+var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', []);
+
+sdkHelperCropInspectionApp.factory('cropInspectionHelper', [function() {
+    var _purposes = ['Arrears', 'Building line restriction', 'Consolidation', 'Covering Bond', 'Expropration', 'Extention of section/plan', 'Further Advance', 'New Loan', 'Notarial agreement', 'Opening of sectional title register/township', 'Progress Payment', 'Property in Possession (PIP)', 'Rectification transfer', 'Release of portions/units/sections', 'Removal of restrictive conditions', 'Replacement value', 'Rezoning', 'Securities', 'Servitude', 'Special consent', 'Subdivision', 'Township establishment', 'Other'];
+
+    var _priorities = [{
+        key: 'Priority 1',
+        value: 1
+    }, {
+        key: 'Priority 2',
+        value: 2
+    }, {
+        key: 'Priority 3',
+        value: 3
+    }];
+
+    return {
+        purposes: function() {
+            return _purposes;
+        },
+        priorities: function() {
+            return _priorities;
+        }
+    }
+}]);
+
 var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', []);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
@@ -2715,6 +2758,17 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
+            zone: {
+                icon: 'success',
+                draggable: true,
+                style: {
+                    weight: 4,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#ff6666",
+                    fillOpacity: 0.8
+                }
+            },
             homestead: {
                 icon: 'success'
             }
@@ -2801,6 +2855,16 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     opacity: 0.8,
                     fillColor: "#00e64a",
                     fillOpacity: 0.4
+                }
+            },
+            zone: {
+                icon: 'default',
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.5,
+                    fillColor: "#ff6666",
+                    fillOpacity: 0.5
                 }
             },
             homestead: {
@@ -7606,6 +7670,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
 
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
+    'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
     'ag.sdk.helper.farmer',

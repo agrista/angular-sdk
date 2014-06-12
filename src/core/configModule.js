@@ -8,6 +8,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _version = '';
     var _host = 'local';
 
+    var _modules = [];
     var _servers = {
         local: '',
         testing: 'https://uat.enterprise.agrista.com/',
@@ -15,7 +16,20 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         production: 'https://enterprise.agrista.com/'
     };
 
+    var _hasModule = function (name) {
+        return (_modules.indexOf(name) !== -1);
+    };
+
+    var _addModule = function (name) {
+        if (_hasModule(name) == false) {
+            _modules.push(name);
+        }
+    };
+
     return {
+        addModule: _addModule,
+        hasModule: _hasModule,
+
         setServers: function(servers) {
             angular.forEach(servers, function (host, name) {
                 if (host.lastIndexOf('/') !== host.length - 1) {
@@ -49,6 +63,9 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         },
         $get: function() {
             return {
+                addModule: _addModule,
+                hasModule: _hasModule,
+
                 getVersion: function() {
                     return _version;
                 },

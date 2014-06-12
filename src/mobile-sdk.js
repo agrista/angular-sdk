@@ -1,5 +1,6 @@
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
+    'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
     'ag.sdk.helper.farmer',
