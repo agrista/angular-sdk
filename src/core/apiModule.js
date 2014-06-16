@@ -156,9 +156,9 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configur
                 }, promise.reject);
             });
         },
-        getOrganizationalUnitsForCostcenters: function() {
+        getSimplifiedOrganizationalUnits: function() {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/organizational-units-for-costcenters', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/organizational-units/simplified', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
