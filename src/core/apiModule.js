@@ -135,9 +135,9 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configur
     var _host = configuration.getServer();
 
     return {
-        getOrganizationalUnits: function() {
+        getOrganizationalUnits: function(type) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/organizational-units', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/organizational-units' + (type ? '?type=' + type : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -152,13 +152,6 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configur
         updateOrganizationalUnit: function(unitData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/organizational-unit/' + unitData.id, unitData, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getSimplifiedOrganizationalUnits: function() {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/organizational-units/simplified', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
