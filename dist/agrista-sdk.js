@@ -155,6 +155,13 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configur
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getOrganizationalUnitsForCostcenters: function() {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/organizational-units-for-costcenters', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
