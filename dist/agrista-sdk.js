@@ -135,9 +135,9 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configur
     var _host = configuration.getServer();
 
     return {
-        getOrganizationalUnits: function() {
+        getOrganizationalUnits: function(type) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/organizational-units', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/organizational-units' + (type ? '?type=' + type : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -965,6 +965,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 
     };
 }]);
+
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
@@ -2110,11 +2111,11 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', [function() {
     };
 
     var _inspectionTypes = {
-        emergence: 'Emergence',
-        hail: 'Hail',
-        harvest: 'Harvest',
-        preharvest: 'Pre Harvest',
-        progress: 'Progress'
+        emergence: 'Emergence Inspection',
+        hail: 'Hail Inspection',
+        harvest: 'Harvest Inspection',
+        preharvest: 'Pre Harvest Inspection',
+        progress: 'Progress Inspection'
     };
 
     var _policyInspections = {
@@ -2841,6 +2842,10 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
     };
 
     var _notificationMap = {
+        'reassign': {
+            title: 'Reassign',
+            state: 'manage'
+        },
         'import': {
             title: 'Import',
             state: 'import'
@@ -2850,8 +2855,8 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
             state: 'view'
         },
         'reject': {
-            title: 'Reassign',
-            state: 'manage'
+            title: 'Rejected',
+            state: 'view'
         },
         'review': {
             title: 'Review',
