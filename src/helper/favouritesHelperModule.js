@@ -136,6 +136,10 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
     };
 
     var _notificationMap = {
+        'reassign': {
+            title: 'Reassign',
+            state: 'manage'
+        },
         'import': {
             title: 'Import',
             state: 'import'
@@ -145,8 +149,8 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
             state: 'view'
         },
         'reject': {
-            title: 'Reassign',
-            state: 'manage'
+            title: 'Rejected',
+            state: 'view'
         },
         'review': {
             title: 'Review',

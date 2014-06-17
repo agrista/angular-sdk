@@ -7,11 +7,11 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', [function() {
     };
 
     var _inspectionTypes = {
-        emergence: 'Emergence',
-        hail: 'Hail',
-        harvest: 'Harvest',
-        preharvest: 'Pre Harvest',
-        progress: 'Progress'
+        emergence: 'Emergence Inspection',
+        hail: 'Hail Inspection',
+        harvest: 'Harvest Inspection',
+        preharvest: 'Pre Harvest Inspection',
+        progress: 'Progress Inspection'
     };
 
     var _policyInspections = {
