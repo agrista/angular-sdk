@@ -1628,6 +1628,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
                 if (labelData.options.noHide == true) {
                     _this._map.showLabel(label);
+
+                    layer.on('add', function () {
+                        _this._map.showLabel(label);
+                    });
+                    layer.on('remove', function () {
+                        _this._map.removeLayer(label);
+                    });
                 } else {
                     layer.on('mouseover', function () {
                         _this._map.showLabel(label);
@@ -1636,10 +1643,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._map.removeLayer(label);
                     });
                 }
-
-                layer.on('remove', function () {
-                    _this._map.removeLayer(label);
-                })
             } else if (typeof layer.bindLabel === 'function') {
                 layer.bindLabel(labelData.message, labelData.options);
             }

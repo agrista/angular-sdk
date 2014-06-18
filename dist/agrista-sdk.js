@@ -2102,9 +2102,9 @@ sdkHelperAssetApp.factory('assetValuationHelper', function () {
         }
     }
 });
-var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', []);
+var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
 
-sdkHelperCropInspectionApp.factory('cropInspectionHelper', [function() {
+sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
     var _policyTypes = {
         'hail': 'Hail',
         'multi peril': 'Multi Peril'
@@ -2125,7 +2125,23 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', [function() {
         'multi peril': _inspectionTypes
     };
 
+    var _listServiceMap = function (item) {
+        var map = documentHelper.listServiceWithTaskMap()(item);
+
+        if (map && item.data.request) {
+            map.subtitle = map.title + ' - ' + item.data.enterprise;
+            map.title = item.documentId;
+            map.group = _inspectionTypes[item.data.inspectionType] || '';
+        }
+
+        return map;
+    };
+
     return {
+        listServiceMap: function () {
+            return _listServiceMap;
+        },
+
         inspectionTypes: function () {
             return _inspectionTypes;
         },
@@ -2145,7 +2161,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', [function() {
     }
 }]);
 
-var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', []);
+var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', ['ag.sdk.helper.task']);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
     var _docTypes = [];
@@ -2174,7 +2190,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', function ($injector) {
+    this.$get = ['$injector', 'taskHelper', function ($injector, taskHelper) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
@@ -2203,9 +2219,28 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             }
         };
 
+        var _listServiceWithTaskMap = function (item) {
+            if (_documentMap[item.docType]) {
+                var map = _listServiceMap(item);
+                var parentTask = _.findWhere(item.tasks, {type: 'parent'});
+
+                if (map && parentTask) {
+                    map.status = {
+                        text: parentTask.status,
+                        label: taskHelper.getTaskLabel(parentTask.status)
+                    }
+                }
+
+                return map;
+            }
+        };
+
         return {
             listServiceMap: function () {
                 return _listServiceMap;
+            },
+            listServiceWithTaskMap: function () {
+                return _listServiceWithTaskMap;
             },
             pluralMap: function (item, count) {
                 return _pluralMap(item, count);
@@ -5126,6 +5161,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
                 if (labelData.options.noHide == true) {
                     _this._map.showLabel(label);
+
+                    layer.on('add', function () {
+                        _this._map.showLabel(label);
+                    });
+                    layer.on('remove', function () {
+                        _this._map.removeLayer(label);
+                    });
                 } else {
                     layer.on('mouseover', function () {
                         _this._map.showLabel(label);
@@ -5134,10 +5176,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._map.removeLayer(label);
                     });
                 }
-
-                layer.on('remove', function () {
-                    _this._map.removeLayer(label);
-                })
             } else if (typeof layer.bindLabel === 'function') {
                 layer.bindLabel(labelData.message, labelData.options);
             }
