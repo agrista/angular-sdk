@@ -1,4 +1,4 @@
-var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', []);
+var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', ['ag.sdk.helper.task']);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
     var _docTypes = [];
@@ -27,7 +27,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', function ($injector) {
+    this.$get = ['$injector', 'taskHelper', function ($injector, taskHelper) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
@@ -56,9 +56,28 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             }
         };
 
+        var _listServiceWithTaskMap = function (item) {
+            if (_documentMap[item.docType]) {
+                var map = _listServiceMap(item);
+                var parentTask = _.findWhere(item.tasks, {type: 'parent'});
+
+                if (map && parentTask) {
+                    map.status = {
+                        text: parentTask.status,
+                        label: taskHelper.getTaskLabel(parentTask.status)
+                    }
+                }
+
+                return map;
+            }
+        };
+
         return {
             listServiceMap: function () {
                 return _listServiceMap;
+            },
+            listServiceWithTaskMap: function () {
+                return _listServiceWithTaskMap;
             },
             pluralMap: function (item, count) {
                 return _pluralMap(item, count);
