@@ -3903,7 +3903,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
     var _getStyle = this.getStyle = function (composition, layerName, label) {
         var mapStyle = (_mapStyles[composition] && _mapStyles[composition][layerName] ? angular.copy(_mapStyles[composition][layerName]) : {});
 
-        if (mapStyle.icon !== undefined) {
+        if (typeof mapStyle.icon == 'string') {
             if (_markerIcons[layerName] === undefined) {
                 _markerIcons[layerName] = mapMarkerHelperProvider.getMarkerStates(layerName, ['default', 'success', 'error']);
             }
