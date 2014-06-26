@@ -519,31 +519,43 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 if (dataItems !== undefined && _config.apiTemplate !== undefined) {
                     if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                    var postedDataItems = [];
+                    var postedDataItems = undefined;
                     var asyncMon = new AsyncMonitor(dataItems.length, function () {
                         urCallback(postedDataItems);
                     });
 
+                    var pushDataItem = function (item) {
+                        if (postedDataItems) {
+                            postedDataItems.push(item);
+                        } else {
+                            postedDataItems = [item];
+                        }
+                    };
+
                     var _makePost = function (item, uri) {
                         safeApply(function () {
                             $http.post(_hostApi + uri, item.data, {withCredentials: true}).then(function (res) {
-                                var remoteItem = dataStoreUtilities.injectMetadata({
-                                    id: _getItemIndex(res.data, item.id),
-                                    uri: item.uri,
-                                    data: item.data,
-                                    dirty: false,
-                                    local: false
-                                });
+                                if (res.status === 200) {
+                                    var remoteItem = dataStoreUtilities.injectMetadata({
+                                        id: _getItemIndex(res.data, item.id),
+                                        uri: item.uri,
+                                        data: item.data,
+                                        dirty: false,
+                                        local: false
+                                    });
 
-                                if (item.local == true) {
-                                    remoteItem.id = remoteItem.__id;
+                                    if (item.local == true) {
+                                        remoteItem.id = remoteItem.__id;
 
-                                    _deleteLocal(item);
+                                        _deleteLocal(item);
+                                    }
+
+                                    pushDataItem(remoteItem);
+                                    _updateLocal(remoteItem, {force: true}, asyncMon.done);
+                                } else {
+                                    _errorCallback(err);
+                                    asyncMon.done();
                                 }
-
-                                postedDataItems.push(remoteItem);
-
-                                _updateLocal(remoteItem, {force: true}, asyncMon.done);
                             }, function (err) {
                                 _errorCallback(err);
                                 asyncMon.done();
@@ -601,7 +613,12 @@ mobileSdkDataApp.provider('dataStore', [function () {
                     var _makeDelete = function (item, uri) {
                         safeApply(function () {
                             $http.post(_hostApi + uri, {withCredentials: true}).then(function (res) {
-                                _deleteLocal(item, asyncMon.done);
+                                if (res.status === 200) {
+                                    _deleteLocal(item, asyncMon.done);
+                                } else {
+                                    _errorCallback(err);
+                                    asyncMon.done();
+                                }
                             }, function (err) {
                                 _errorCallback(err);
                                 asyncMon.done();
