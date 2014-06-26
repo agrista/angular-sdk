@@ -320,22 +320,31 @@ mobileSdkApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 
     };
 }]);
 
-
 /*
  * API
  */
 mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promiseService, dataStore) {
-    return function (naming) {
-        if (typeof naming === 'String') {
-            naming = {
-                singular: naming,
-                plural: naming + 's'
+    return function (options) {
+        if (typeof options === 'String') {
+            options = {
+                singular: options,
+                plural: options + 's'
             }
-        } else if (naming.plural === undefined) {
-            naming.plural = naming.singular + 's'
+        }
+
+        if (options.plural === undefined) {
+            options.plural = options.singular + 's'
         }
         
-        var _itemStore = dataStore(naming.singular, {apiTemplate: naming.singular + '/:id'});
+        var _itemStore = dataStore(options.singular, {apiTemplate: options.singular + '/:id'});
+        
+        var _stripProperties = function (data) {
+            if (options.strip) {
+                return _.omit(data, options.strip);
+            }
+
+            return data;
+        };
 
         return {
             /**
@@ -359,11 +368,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                             req.options.readLocal = false;
                             req.options.readRemote = true;
 
-                            tx.getItems({template: naming.plural + '?search=:query', schema: {query: req.search}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, callback: promise});
                         } else if (req.id) {
-                            tx.getItems({template: naming.plural + '/:id', schema: {id: req.id}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, callback: promise});
                         } else {
-                            tx.getItems({template: naming.plural, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural, options: req.options, callback: promise});
                         }
                     });
                 });
@@ -383,7 +392,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options, callback: promise});
+                            tx.createItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), options: req.options, callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -447,7 +456,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.updateItems({data: req.data, options: req.options, callback: promise});
+                            tx.updateItems({data: _stripProperties(req.data), options: req.options, callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -468,7 +477,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.postItems({template: req.template, schema: req.schema, data: req.data, callback: promise});
+                            tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -487,7 +496,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.removeItems({template: naming.singular + '/:id/delete', data: req.data, callback: promise});
+                            tx.removeItems({template: options.singular + '/:id/delete', data: req.data, callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -557,7 +566,7 @@ mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('taskApi', ['api', function (api) {
-    var taskApi = api({plural: 'tasks', singular: 'task'});
+    var taskApi = api({plural: 'tasks', singular: 'task', strip: ['document', 'organization', 'subtasks']});
 
     return {
         getTasks: taskApi.getItems,
@@ -585,7 +594,7 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('farmerApi', ['api', function (api) {
-    var farmerApi = api({plural: 'farmers', singular: 'farmer'});
+    var farmerApi = api({plural: 'farmers', singular: 'farmer', strip: ['assets', 'farms', 'legalEntities']});
 
     return {
         getFarmers: farmerApi.getItems,
@@ -600,7 +609,7 @@ mobileSdkApiApp.factory('farmerApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('legalEntityApi', ['api', function (api) {
-    var entityApi = api({plural: 'legalentities', singular: 'legalentity'});
+    var entityApi = api({plural: 'legalentities', singular: 'legalentity', strip: ['assets']});
 
     return {
         getEntities: entityApi.getItems,
@@ -630,7 +639,7 @@ mobileSdkApiApp.factory('farmApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('assetApi', ['api', function (api) {
-    var assetApi = api({plural: 'assets', singular: 'asset'});
+    var assetApi = api({plural: 'assets', singular: 'asset', strip: ['farm', 'legalEntity']});
 
     return {
         getAssets: assetApi.getItems,
@@ -645,7 +654,7 @@ mobileSdkApiApp.factory('assetApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('documentApi', ['api', function (api) {
-    var documentStore = api({plural: 'documents', singular: 'document'});
+    var documentStore = api({plural: 'documents', singular: 'document', strip: ['organization', 'tasks']});
 
     return {
         getDocuments: documentStore.getItems,
@@ -811,8 +820,6 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                             .then(function () {
                                 promiseService.arrayWrap(function (promises) {
                                     angular.forEach(obj.legalEntities, function (entity) {
-                                        delete entity.assets;
-
                                         promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: obj.__id}, data: entity, options: {replace: false, dirty: false}}));
                                     });
                                 }).then(promise.resolve, promise.reject);
