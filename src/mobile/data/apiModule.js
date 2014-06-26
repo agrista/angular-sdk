@@ -9,8 +9,8 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'fileStorageService', 'assetApi', 'documentApi', 'taskApi', 'enterpriseBudgetApi',
-    function ($http, configuration, promiseMonitor, promiseService, farmerApi, farmApi, fileStorageService, assetApi, documentApi, taskApi, enterpriseBudgetApi) {
+mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'fileStorageService', 'assetApi', 'documentApi', 'taskApi', 'enterpriseBudgetApi', 'legalEntityApi',
+    function ($http, configuration, promiseMonitor, promiseService, farmerApi, farmApi, fileStorageService, assetApi, documentApi, taskApi, enterpriseBudgetApi, legalEntityApi) {
         var _monitor = null;
 
         function _getFarmers () {
@@ -22,7 +22,7 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
                                 list.push(promiseService.wrap(function(promise) {
                                     _postFarmer(farmer).then(function () {
                                         promiseService
-                                            .all([_postFarms(farmer.id), _postAssets(farmer.id)])
+                                            .all([_postFarms(farmer.id), _postLegalEntities(farmer.id)])
                                             .then(promise.resolve, promise.reject);
                                     });
                                 }));
@@ -54,7 +54,7 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
                         .arrayWrap(function (list) {
                             angular.forEach(tasks, function (task) {
                                 list.push(promiseService.wrap(function(promise) {
-                                    taskApi.getTasks({template: 'task/:id/tasks', schema: {id: task.id}}).then(function (subtasks) {
+                                    taskApi.getTasks({template: 'tasks/:id', schema: {id: task.id}}).then(function (subtasks) {
                                         promiseService
                                             .arrayWrap(function (promises) {
                                                 angular.forEach(subtasks, function (subtask) {
@@ -115,9 +115,27 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
             }));
         }
 
-        function _postAssets (fid) {
+        function _postLegalEntities (fid) {
             return _monitor.add(promiseService.wrap(function (defer) {
-                assetApi.getAssets({id: fid}).then(function (assets) {
+                legalEntityApi.getEntities({id: fid}).then(function (entities) {
+                    promiseService
+                        .arrayWrap(function (list) {
+                            angular.forEach(entities, function (entity) {
+                                if (entity.__dirty === true) {
+                                    list.push(legalEntityApi.postEntity({data: entity}));
+                                }
+
+                                list.push(_postAssets(entity.id));
+                            });
+                        })
+                        .then(defer.resolve, defer.reject);
+                });
+            }));
+        }
+
+        function _postAssets (eid) {
+            return _monitor.add(promiseService.wrap(function (defer) {
+                assetApi.getAssets({id: eid}).then(function (assets) {
                     promiseService
                         .arrayWrap(function (list) {
                             angular.forEach(assets, function (asset) {
@@ -230,9 +248,9 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
 
             return promiseService.wrap(function(promise) {
                 _getFarmers()
-                    .then(_getDocuments)
-                    .then(_getTasks)
-                    .then(_getEnterpriseBudgets)
+                    .then(_getDocuments, promise.reject)
+                    .then(_getTasks, promise.reject)
+                    .then(_getEnterpriseBudgets, promise.reject)
                     .then(promise.resolve, promise.reject);
             });
         }
@@ -250,30 +268,12 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
                     .then(function (farmers) {
                         return promiseService.arrayWrap(function (list) {
                             angular.forEach(farmers, function (farmer) {
-                                list.push(farmerUtility.hydration.dehydrate(farmer), _getAssets(farmer.id));
+                                list.push(farmerUtility.hydration.dehydrate(farmer));
                             });
                         });
                     }, defer.reject)
                     .then(defer.resolve, defer.reject);
             }));
-        }
-
-        function _getAssets(fid) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                assetUtility.api.getAssets({id: fid, options: _readOptions})
-                    .then(function (assets) {
-                        return promiseService.arrayWrap(function (list) {
-                            angular.forEach(assets, function (asset) {
-                                list.push(assetUtility.hydration.dehydrate(asset));
-                            });
-                        });
-                    }, defer.reject)
-                    .then(defer.resolve, defer.reject);
-            }));
-        }
-
-        function _getFarms(fid) {
-            return _monitor.add(farmApi.getFarms({id: fid, options: _readOptions}));
         }
 
         function _getDocuments() {
@@ -291,12 +291,6 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
             }));
         }
 
-        function _getDocument(did, options) {
-            options = options || _readOptions;
-
-            return _monitor.add(documentUtility.api.getDocument({id: did, options: options}));
-        }
-
         function _getTasks() {
             return _monitor.add(promiseService.wrap(function (defer) {
                 taskUtility.api
@@ -304,7 +298,6 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
                     .then(function (tasks) {
                         return promiseService.arrayWrap(function (promises) {
                             angular.forEach(tasks, function (task) {
-                                promises.push(_getDocument(task.documentId, {readLocal: true, fallbackRemote: true}));
                                 promises.push(taskUtility.hydration.dehydrate(task));
                             })
                         });
@@ -322,9 +315,9 @@ mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseServic
 
             return promiseService.wrap(function(promise) {
                 _getFarmers()
-                    .then(_getDocuments)
-                    .then(_getTasks)
-                    .then(_getEnterpriseBudgets)
+                    .then(_getDocuments, promise.reject)
+                    .then(_getTasks, promise.reject)
+                    .then(_getEnterpriseBudgets, promise.reject)
                     .then(promise.resolve, promise.reject);
             });
         };
@@ -767,8 +760,7 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                         farmerApi.findFarmer({key: obj.organizationId, options: {one: true}}).then(function (farmer) {
                             promiseService.all({
                                 farms: _relationTable.farms.hydrate(farmer, type),
-                                legalEntities: _relationTable.legalEntities.hydrate(farmer, type),
-                                assets: _relationTable.assets.hydrate(farmer, type)
+                                legalEntities: _relationTable.legalEntities.hydrate(farmer, type)
                             }).then(function (results) {
                                 promise.resolve(_.extend(farmer, results));
                             }, promise.reject);
@@ -776,7 +768,9 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                     });
                 },
                 dehydrate: function (obj, type) {
-                    return farmerApi.createFarmer({data: obj.organization, options: {replace: false, dirty: false}});
+                    obj.organization.id = obj.organization.id || obj.organizationId;
+
+                    return farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: false, dirty: false}});
                 }
             },
             farms: {
@@ -784,12 +778,14 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                     return farmApi.getFarms({id: obj.__id});
                 },
                 dehydrate: function (obj, type) {
+                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
                     return promiseService.wrap(function (promise) {
-                        farmApi.purgeFarm({template: 'farms/:id', schema: {id: obj.__id}, options: {force: false}})
+                        farmApi.purgeFarm({template: 'farms/:id', schema: {id: objId}, options: {force: false}})
                             .then(function () {
                                 promiseService.arrayWrap(function (promises) {
                                     angular.forEach(obj.farms, function (farm) {
-                                        promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: obj.__id}, data: farm, options: {replace: false, dirty: false}}));
+                                        promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: false, dirty: false}}));
                                     });
                                 }).then(promise.resolve, promise.reject);
                             }, promise.reject);
@@ -806,12 +802,14 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                     return assetApi.getAssets({id: obj.__id});
                 },
                 dehydrate: function (obj, type) {
+                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
                     return promiseService.wrap(function (promise) {
-                        assetApi.purgeAsset({template: 'assets/:id', schema: {id: obj.__id}, options: {force: false}})
+                        assetApi.purgeAsset({template: 'assets/:id', schema: {id: objId}, options: {force: false}})
                             .then(function () {
                                 promiseService.arrayWrap(function (promises) {
                                     angular.forEach(obj.assets, function (asset) {
-                                        promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: obj.__id}, data: asset, options: {replace: false, dirty: false}}));
+                                        promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: false, dirty: false}}));
                                     });
                                 }).then(promise.resolve, promise.reject);
                             }, promise.reject);
@@ -820,15 +818,31 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
             },
             legalEntities: {
                 hydrate: function (obj, type) {
-                    return legalEntityApi.getEntities({id: obj.__id});
+                    return promiseService.wrap(function (promise) {
+                        legalEntityApi.getEntities({id: obj.__id})
+                            .then(function (entities) {
+                                return promiseService.arrayWrap(function (promises) {
+                                    angular.forEach(entities, function (entity) {
+                                        promises.push(_relationTable.assets.hydrate(entity, type)
+                                            .then(function (assets) {
+                                                entity.assets = assets;
+                                                return entity;
+                                            }));
+                                    });
+                                });
+                            }, promise.reject).then(promise.resolve, promise.reject);
+                    });
                 },
                 dehydrate: function (obj, type) {
+                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
                     return promiseService.wrap(function (promise) {
-                        legalEntityApi.purgeEntity({template: 'legalentities/:id', schema: {id: obj.__id}, options: {force: false}})
+                        legalEntityApi.purgeEntity({template: 'legalentities/:id', schema: {id: objId}, options: {force: false}})
                             .then(function () {
                                 promiseService.arrayWrap(function (promises) {
                                     angular.forEach(obj.legalEntities, function (entity) {
-                                        promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: obj.__id}, data: entity, options: {replace: false, dirty: false}}));
+                                        promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: false, dirty: false}}));
+                                        promises.push(_relationTable.assets.dehydrate(entity, type));
                                     });
                                 }).then(promise.resolve, promise.reject);
                             }, promise.reject);
@@ -837,7 +851,16 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
             },
             legalEntity: {
                 hydrate: function (obj, type) {
-                    return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true}});
+                    return promiseService.wrap(function (promise) {
+                        legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true}})
+                            .then(function (entity) {
+                                return _relationTable.assets.hydrate(entity, type)
+                                    .then(function (assets) {
+                                        entity.assets = assets;
+                                    }, promise.reject);
+                            })
+                            .then(promise.resolve, promise.reject);
+                    });
                 }
             },
             document: {
@@ -845,20 +868,22 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                     return documentApi.findDocument({key: obj.documentId, options: {one: true}});
                 },
                 dehydrate: function (obj, type) {
-                    return documentApi.createDocument({data: obj.document, options: {replace: false, dirty: false}});
+                    return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: false, dirty: false}});
                 }
             },
             subtasks: {
                 hydrate: function (obj, type) {
-                    return taskApi.getTasks({template: 'task/:id/tasks', schema: {id: obj.__id}});
+                    return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.__id}});
                 },
                 dehydrate: function (obj, type) {
+                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
                     return promiseService.wrap(function (promise) {
-                        taskApi.purgeTask({template: 'task/:id/tasks', schema: {id: obj.__id}, options: {force: false}})
+                        taskApi.purgeTask({template: 'tasks/:id', schema: {id: objId}, options: {force: false}})
                             .then(function () {
                                 promiseService.arrayWrap(function (promises) {
                                     angular.forEach(obj.subtasks, function (subtask) {
-                                        promises.push(taskApi.createTask({template: 'task/:id/tasks', schema: {id: obj.__id}, data: subtask, options: {replace: false, dirty: false}}));
+                                        promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: false, dirty: false}}));
                                     });
                                 }).then(promise.resolve, promise.reject);
                             }, promise.reject);
@@ -952,7 +977,7 @@ mobileSdkApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi'
 }]);
 
 mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
-    var _relations = ['farms', 'legalEntities', 'assets'];
+    var _relations = ['farms', 'legalEntities'];
 
     return {
         hydration: {
