@@ -3,6 +3,7 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
+            id: item.id,
             title: item.name,
             subtitle: item.operationType,
             profileImage : item.profilePhotoSrc,
@@ -60,6 +61,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
 sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
     var _listServiceMap = function(item) {
         return {
+            id: item.id,
             title: item.name,
             subtitle: item.type
         };
@@ -183,6 +185,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
 sdkHelperFarmerApp.factory('farmHelper', [function() {
     var _listServiceMap = function(item) {
         return {
+            id: item.id,
             title: item.name
         };
     };
