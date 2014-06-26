@@ -1137,6 +1137,8 @@ sdkHelperAssetApp.factory('assetValuationHelper', function () {
 var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
 
 sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
+    var _approvalTypes = ['Approved', 'Not Approved', 'Not Planted'];
+
     var _growthStageTable = [
         ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14'],
         ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
@@ -1199,6 +1201,16 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         'multi peril': _inspectionTypes
     };
 
+    var _problemTypes = {
+        disease: 'Disease',
+        fading: 'Fading',
+        uneven: 'Uneven',
+        other: 'Other',
+        root: 'Root',
+        shortage: 'Shortage',
+        weed: 'Weed'
+    };
+
     var _listServiceMap = function (item) {
         var map = documentHelper.listServiceWithTaskMap()(item);
 
@@ -1216,6 +1228,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
             return _listServiceMap;
         },
 
+        approvalTypes: function () {
+            return _approvalTypes;
+        },
         inspectionTypes: function () {
             return _inspectionTypes;
         },
@@ -1224,6 +1239,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         },
         policyInspectionTypes: function (policyType) {
             return _policyInspections[policyType] || {};
+        },
+        problemTypes: function () {
+            return _problemTypes;
         },
 
         getGrowthStages: function (crop) {
@@ -1237,6 +1255,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         },
         getPolicyTitle: function (type) {
             return _policyTypes[type] || '';
+        },
+        getProblemTitle: function (type) {
+            return _problemTypes[type] || '';
         },
 
         hasSeedTypes: function (crop) {
@@ -2649,8 +2670,8 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return this._json.type;
         },
         getCenter: function (bounds) {
-            var bounds = bounds || this.getBounds();
             var center = [0, 0];
+            bounds = bounds || this.getBounds();
 
             angular.forEach(bounds, function(coordinate) {
                 center[0] += coordinate[0];
@@ -2658,6 +2679,12 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             });
 
             return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
+        },
+        getCenterAsGeojson: function (bounds) {
+            return {
+                coordinates: this.getCenter(bounds).reverse(),
+                type: 'Point'
+            }
         },
         getBounds: function () {
             var bounds = [];
@@ -2738,7 +2765,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
 sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
     var _createMarker = function (name, state, options) {
         return _.defaults(options || {}, {
-            iconUrl: 'img/icons/' + name + '.' + state + '.png',
+            iconUrl: 'img/icons/' + name + '.' + (state ? state : 'default') + '.png',
             shadowUrl: 'img/icons/' + name + '.shadow.png',
             iconSize: [48, 48],
             iconAnchor: [24, 48],
@@ -2748,14 +2775,13 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
         });
     };
 
-    var _getMarker = this.getMarker = function (name, options) {
-        var marker = {};
-
-        if (typeof name === 'string') {
-            marker = _createMarker(name, 'default', options)
+    var _getMarker = this.getMarker = function (name, state, options) {
+        if (typeof state == 'object') {
+            options = state;
+            state = 'default';
         }
 
-        return marker;
+        return  _createMarker(name, state, options);
     };
 
     var _getMarkerStates = this.getMarkerStates = function (name, states, options) {
@@ -2867,7 +2893,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: 'success',
+                icon: mapMarkerHelperProvider.getMarker('marker', 'success'),
                 draggable: true,
                 style: {
                     weight: 4,
@@ -2966,7 +2992,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: 'default',
+                icon: mapMarkerHelperProvider.getMarker('marker'),
                 style: {
                     weight: 2,
                     color: 'white',
@@ -3527,9 +3553,6 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             featureClickOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-off');
-            },
-            printMap: function() {
-                this.enqueueRequest('mapbox-' + this._id + '::print-map');
             }
         };
 
@@ -3590,7 +3613,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             _this.mapInit();
             _this.addListeners(scope);
 
-            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::init', _this._map);
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::init', _this._map);
         }, attrs.delay);
     }
 
@@ -3609,7 +3632,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this._map = L.map(_this._id, options).setView(view.coordinates, view.zoom);
 
         _this._map.whenReady(function () {
-            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::ready', _this._map);
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::ready', _this._map);
         });
 
         _this._editableFeature = L.featureGroup();
@@ -3660,7 +3683,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             _this.mapDestroy();
 
-            $rootScope.$broadcast('mapbox-' + id + '::destroy');
+            _this.broadcast('mapbox-' + id + '::destroy');
         });
 
         // Layer Controls
@@ -3843,17 +3866,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
             _this._featureClickable = false;
         });
-
-        scope.$on('mapbox-' + id + '::print-map', function(event, args) {
-            leafletImage(_this._map, function(err, canvas) {
-                var img = document.createElement('img');
-                var dimensions = _this._map.getSize();
-                img.width = dimensions.x;
-                img.height = dimensions.y;
-                img.src = canvas.toDataURL();
-                $rootScope.$broadcast('mapbox-' + id + '::print-map-done', img);
-            });
-        });
     };
 
     Mapbox.prototype.mapDestroy = function () {
@@ -3884,6 +3896,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         this._map.remove();
         this._map = null;
+    };
+    
+    Mapbox.prototype.broadcast = function (event, data) {
+        $log.debug(event);
+        $rootScope.$broadcast(event, data);
     };
 
     /*
@@ -4313,7 +4330,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                             }
                         }
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
                     });
                 }
             }
@@ -4519,7 +4536,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                     }
 
                 }).error(function(err) {
@@ -4542,7 +4559,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -4562,7 +4579,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -4584,7 +4601,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -4604,7 +4621,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, {});
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -4626,7 +4643,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -4637,13 +4654,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.onDrawStart = function (e) {
        this._editing = true;
 
-        $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
 
     Mapbox.prototype.onDrawStop = function (e) {
         this._editing = false;
 
-        $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
 
     Mapbox.prototype.onDrawn = function (e) {
@@ -4666,7 +4683,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     geojson.geometry.coordinates.push([latlng.lng, latlng.lat]);
                 });
 
-                $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
+                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
             case 'polygon':
                 geojson.geometry = {
@@ -4696,7 +4713,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     };
                 }
 
-                $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
+                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
             case 'marker':
                 geojson.geometry = {
@@ -4704,7 +4721,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     coordinates: [e.layer._latlng.lng, e.layer._latlng.lat]
                 };
 
-                $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
+                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
         }
 
@@ -4733,7 +4750,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 case 'Point':
                     geojson.geometry.coordinates = [layer._latlng.lng, layer._latlng.lat];
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'Polygon':
                     geojson.geometry.coordinates = [[]];
@@ -4760,7 +4777,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         };
                     }
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'LineString':
                     geojson.geometry.coordinates = [];
@@ -4769,7 +4786,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         geojson.geometry.coordinates.push([latlng.lng, latlng.lat]);
                     });
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
             }
         });
@@ -4784,13 +4801,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             e.layers.eachLayer(function(layer) {
                 _this._editableFeature.removeLayer(layer);
 
-                $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
+                _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
             });
         } else {
             // Layer is the editableFeature
             _this._editableFeature.clearLayers();
 
-            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted');
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted');
         }
 
         _this.updateDrawControls();
@@ -5765,8 +5782,8 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'taskApi', 'attachmentApi', 'enterpriseBudgetApi',
-    function (promiseMonitor, promiseService, farmerApi, farmApi, assetApi, documentApi, taskApi, attachmentApi, enterpriseBudgetApi) {
+mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'fileStorageService', 'assetApi', 'documentApi', 'taskApi', 'enterpriseBudgetApi',
+    function ($http, configuration, promiseMonitor, promiseService, farmerApi, farmApi, fileStorageService, assetApi, documentApi, taskApi, enterpriseBudgetApi) {
         var _monitor = null;
 
         function _getFarmers () {
@@ -5888,10 +5905,17 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
         function _postAsset (asset) {
             return _monitor.add(promiseService.wrap(function (defer) {
                 if (asset.__dirty === true) {
+                    var cachedAttachments = angular.copy(asset.data.attachments);
+                    asset.data.attachments = _.filter(asset.data.attachments, function (attachment) {
+                        return attachment.local !== true;
+                    });
+
                     assetApi.postAsset({data: asset})
                         .then(function (res) {
                             if (res && res.length == 1) {
-                                _postAttachments('asset', asset.id, res[0].id).then(defer.resolve, defer.reject);
+                                asset.data.attachments = cachedAttachments;
+
+                                _postAttachments('asset', res[0].id, asset).then(defer.resolve, defer.reject);
                             } else {
                                 defer.resolve();
                             }
@@ -5905,10 +5929,17 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
         function _postDocument (document) {
             return _monitor.add(promiseService.wrap(function (defer) {
                 if (document.__dirty === true) {
+                    var cachedAttachments = angular.copy(document.data.attachments);
+                    document.data.attachments = _.filter(document.data.attachments, function (attachment) {
+                        return attachment.local !== true;
+                    });
+
                     documentApi.postDocument({data: document})
                         .then(function (res) {
                             if (res && res.length == 1) {
-                                _postAttachments('document', document.id, res[0].id).then(defer.resolve, defer.reject);
+                                document.data.attachments = cachedAttachments;
+
+                                _postAttachments('document', res[0].id, document).then(defer.resolve, defer.reject);
                             } else {
                                 defer.resolve();
                             }
@@ -5919,22 +5950,32 @@ mobileSdkApiApp.factory('dataUploadService', ['promiseMonitor', 'promiseService'
             }));
         }
 
-        function _postAttachments (type, oldId, newId) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                attachmentApi.getAttachments({template: type + '/:id/attachments', schema: {id: oldId}}).then(function (attachments) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(attachments, function (attachment) {
-                                if (attachment.__dirty === true) {
-                                    attachment.uri = type + '/' + newId + '/attachments';
-
-                                    list.push(attachmentApi.postAttachment({template: type + '/:id/attach', schema: {id: newId}, data: attachment}));
-                                }
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
-                });
+        function _postAttachments (type, id, obj) {
+            return _monitor.add(promiseService.arrayWrap(function (list) {
+                if (obj.data && obj.data.attachments) {
+                    angular.forEach(obj.data.attachments, function (attachment) {
+                        if (attachment.local === true) {
+                            list.push(_postAttachment(type, id, attachment));
+                        }
+                    });
+                }
             }));
+        }
+
+        function _postAttachment (type, id, attachment) {
+            return promiseService.wrap(function (promise) {
+                var uri = 'api/' + type + '/' + id + '/attach';
+
+                fileStorageService.read(attachment.src, true)
+                    .then(function (fileData) {
+                        $http.post(configuration.getServer() + uri, {
+                            archive: _.extend(_.omit(attachment, ['src', 'local', 'key']), {
+                                filename: fileData.file,
+                                content: fileData.content.substring(fileData.content.indexOf(',') + 1)
+                            })
+                        }, {withCredentials: true}).then(promise.resolve, promise.reject);
+                    }, promise.reject);
+            });
         }
 
         function _postTask (task) {
@@ -6076,22 +6117,31 @@ mobileSdkApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 
     };
 }]);
 
-
 /*
  * API
  */
 mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promiseService, dataStore) {
-    return function (naming) {
-        if (typeof naming === 'String') {
-            naming = {
-                singular: naming,
-                plural: naming + 's'
+    return function (options) {
+        if (typeof options === 'String') {
+            options = {
+                singular: options,
+                plural: options + 's'
             }
-        } else if (naming.plural === undefined) {
-            naming.plural = naming.singular + 's'
+        }
+
+        if (options.plural === undefined) {
+            options.plural = options.singular + 's'
         }
         
-        var _itemStore = dataStore(naming.singular, {apiTemplate: naming.singular + '/:id'});
+        var _itemStore = dataStore(options.singular, {apiTemplate: options.singular + '/:id'});
+        
+        var _stripProperties = function (data) {
+            if (options.strip) {
+                return _.omit(data, options.strip);
+            }
+
+            return data;
+        };
 
         return {
             /**
@@ -6115,11 +6165,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                             req.options.readLocal = false;
                             req.options.readRemote = true;
 
-                            tx.getItems({template: naming.plural + '?search=:query', schema: {query: req.search}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, callback: promise});
                         } else if (req.id) {
-                            tx.getItems({template: naming.plural + '/:id', schema: {id: req.id}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, callback: promise});
                         } else {
-                            tx.getItems({template: naming.plural, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural, options: req.options, callback: promise});
                         }
                     });
                 });
@@ -6139,7 +6189,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options, callback: promise});
+                            tx.createItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), options: req.options, callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -6203,7 +6253,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.updateItems({data: req.data, options: req.options, callback: promise});
+                            tx.updateItems({data: _stripProperties(req.data), options: req.options, callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -6224,7 +6274,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.postItems({template: req.template, schema: req.schema, data: req.data, callback: promise});
+                            tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -6243,7 +6293,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.removeItems({template: naming.singular + '/:id/delete', data: req.data, callback: promise});
+                            tx.removeItems({template: options.singular + '/:id/delete', data: req.data, callback: promise});
                         });
                     } else {
                         promise.resolve();
@@ -6313,7 +6363,7 @@ mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('taskApi', ['api', function (api) {
-    var taskApi = api({plural: 'tasks', singular: 'task'});
+    var taskApi = api({plural: 'tasks', singular: 'task', strip: ['document', 'organization', 'subtasks']});
 
     return {
         getTasks: taskApi.getItems,
@@ -6341,7 +6391,7 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('farmerApi', ['api', function (api) {
-    var farmerApi = api({plural: 'farmers', singular: 'farmer'});
+    var farmerApi = api({plural: 'farmers', singular: 'farmer', strip: ['assets', 'farms', 'legalEntities']});
 
     return {
         getFarmers: farmerApi.getItems,
@@ -6356,7 +6406,7 @@ mobileSdkApiApp.factory('farmerApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('legalEntityApi', ['api', function (api) {
-    var entityApi = api({plural: 'legalentities', singular: 'legalentity'});
+    var entityApi = api({plural: 'legalentities', singular: 'legalentity', strip: ['assets']});
 
     return {
         getEntities: entityApi.getItems,
@@ -6386,7 +6436,7 @@ mobileSdkApiApp.factory('farmApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('assetApi', ['api', function (api) {
-    var assetApi = api({plural: 'assets', singular: 'asset'});
+    var assetApi = api({plural: 'assets', singular: 'asset', strip: ['farm', 'legalEntity']});
 
     return {
         getAssets: assetApi.getItems,
@@ -6401,7 +6451,7 @@ mobileSdkApiApp.factory('assetApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('documentApi', ['api', function (api) {
-    var documentStore = api({plural: 'documents', singular: 'document'});
+    var documentStore = api({plural: 'documents', singular: 'document', strip: ['organization', 'tasks']});
 
     return {
         getDocuments: documentStore.getItems,
@@ -6412,57 +6462,6 @@ mobileSdkApiApp.factory('documentApi', ['api', function (api) {
         postDocument: documentStore.postItem,
         deleteDocument: documentStore.deleteItem,
         purgeDocument: documentStore.purgeItem
-    };
-}]);
-
-mobileSdkApiApp.factory('attachmentApi', ['$http', '$log', 'api', 'configuration', 'dataStoreUtilities', 'promiseService', 'fileStorageService', function ($http, $log, api, configuration, dataStoreUtilities, promiseService, fileStorageService) {
-    var attachmentStore = api({plural: 'attachments', singular: 'attachment'});
-
-    return {
-        getAttachments: attachmentStore.getItems,
-        createAttachment: attachmentStore.createItem,
-        getAttachment: attachmentStore.getItem,
-        findAttachment: attachmentStore.findItem,
-        updateAttachment: attachmentStore.updateItem,
-        postAttachment: function (req) {
-            req = req || {};
-
-            return promiseService.wrap(function (promise) {
-                if (req.data) {
-                    var attachment = req.data;
-                    var uri = 'api/' + (req.template !== undefined ? dataStoreUtilities.parseRequest(req.template, req.schema) : attachment.uri);
-
-                    fileStorageService.read(attachment.src, true)
-                        .then(function (fileData) {
-                            // Set content
-                            var upload = {
-                                archive: dataStoreUtilities.extractMetadata(attachment).data
-                            };
-
-                            upload.archive.content = fileData.content.substring(fileData.content.indexOf(',') + 1);
-
-                            return $http.post(configuration.getServer() + uri, upload, {withCredentials: true});
-                        }, promise.reject)
-                        .then(function () {
-                            $log.debug('update attachment');
-                            attachment.__local = false;
-
-                            attachmentStore.updateItem({data: attachment, options: {dirty: false}}).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                } else {
-                    promise.reject();
-                }
-            });
-        },
-        deleteAttachment: function (req) {
-            req = req || {
-                data: {}
-            };
-            req.data.__local = true;
-
-            return attachmentStore.deleteItem(req);
-        },
-        purgeAttachment: attachmentStore.purgeItem
     };
 }]);
 
@@ -6492,11 +6491,46 @@ mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
     };
 }]);
 
+mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getFieldPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/field-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getPortionPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistrictPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/district-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProvincePolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/province-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
 /*
  * Handlers
  */
-mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'attachmentApi', 'legalEntityApi',
-    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi, attachmentApi, legalEntityApi) {
+mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'legalEntityApi',
+    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi, legalEntityApi) {
         // TODO: Allow for tree of hydrations/dehydrations (e.g. Farmer -> LegalEntities -> Assets)
 
         var _relationTable = {
@@ -6567,8 +6601,6 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                             .then(function () {
                                 promiseService.arrayWrap(function (promises) {
                                     angular.forEach(obj.legalEntities, function (entity) {
-                                        delete entity.assets;
-
                                         promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: obj.__id}, data: entity, options: {replace: false, dirty: false}}));
                                     });
                                 }).then(promise.resolve, promise.reject);
@@ -6587,27 +6619,6 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                 },
                 dehydrate: function (obj, type) {
                     return documentApi.createDocument({data: obj.document, options: {replace: false, dirty: false}});
-                }
-            },
-            attachments: {
-                hydrate: function (obj, type) {
-                    return attachmentApi.getAttachments({template: type + '/:id/attachments', schema: {id: obj.__id}});
-                },
-                dehydrate: function (obj, type) {
-                    return promiseService.wrap(function (promise) {
-                        attachmentApi.purgeAttachment({template: type + '/:id/attachments', schema: {id: obj.__id}, options: {force: false}})
-                            .then(function () {
-                                promiseService.arrayWrap(function (promises) {
-                                    if (obj.data && obj.data.attachments) {
-                                        angular.forEach(obj.data.attachments, function (attachment) {
-                                            promises.push(attachmentApi.createAttachment({template: type + '/:id/attachments', schema: {id: obj.__id}, data: attachment, options: {replace: false, dirty: false}}));
-                                        });
-                                    } else {
-                                        promise.resolve();
-                                    }
-                                }).then(promise.resolve, promise.reject);
-                            }, promise.reject);
-                    });
                 }
             },
             subtasks: {
@@ -6750,7 +6761,7 @@ mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmer
 }]);
 
 mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
-    var _relations = ['attachments', 'farm', 'legalEntity'];
+    var _relations = ['farm', 'legalEntity'];
 
     return {
         hydration: {
@@ -6760,22 +6771,10 @@ mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetAp
                 return promiseService.wrap(function (promise) {
                     if (typeof assetOrId !== 'object') {
                         assetApi.findAsset({key: assetOrId, options: {one: true}}).then(function (asset) {
-                            hydration.hydrate(asset, 'asset', relations).then(function (asset) {
-                                if (asset.attachments) {
-                                    asset.data.attachments = asset.attachments;
-                                    delete asset.attachments;
-                                }
-                                promise.resolve(asset);
-                            }, promise.reject);
+                            hydration.hydrate(asset, 'asset', relations).then(promise.resolve, promise.reject);
                         }, promise.reject);
                     } else {
-                        hydration.hydrate(assetOrId, 'asset', relations).then(function (asset) {
-                            if (asset.attachments) {
-                                asset.data.attachments = asset.attachments;
-                                delete asset.attachments;
-                            }
-                            promise.resolve(asset);
-                        }, promise.reject);
+                        hydration.hydrate(assetOrId, 'asset', relations).then(promise.resolve, promise.reject);
                     }
                 });
             },
@@ -6783,8 +6782,6 @@ mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetAp
                 relations = relations || _relations;
 
                 return hydration.dehydrate(asset, 'asset', relations).then(function (asset) {
-                    delete asset.data.attachments;
-
                     assetApi.updateAsset({data: asset, options: {dirty: false}});
                 })
             }
@@ -6794,7 +6791,7 @@ mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetAp
 }]);
 
 mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
-    var _relations = ['organization', 'attachments'];
+    var _relations = ['organization'];
 
     return {
         hydration: {
@@ -6804,22 +6801,10 @@ mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'docu
                 return promiseService.wrap(function (promise) {
                     if (typeof documentOrId !== 'object') {
                         documentApi.findDocument({key: documentOrId, options: {one: true}}).then(function (document) {
-                            hydration.hydrate(document, 'document', relations).then(function (document) {
-                                if (document.attachments) {
-                                    document.data.attachments = document.attachments;
-                                    delete document.attachments;
-                                }
-                                promise.resolve(document);
-                            }, promise.reject);
+                            hydration.hydrate(document, 'document', relations).then(promise.resolve, promise.reject);
                         }, promise.reject);
                     } else {
-                        hydration.hydrate(documentOrId, 'document', relations).then(function (document) {
-                            if (document.attachments) {
-                                document.data.attachments = document.attachments;
-                                delete document.attachments;
-                            }
-                            promise.resolve(document);
-                        }, promise.reject);
+                        hydration.hydrate(documentOrId, 'document', relations).then(promise.resolve, promise.reject);
                     }
                 });
             },
@@ -6827,9 +6812,6 @@ mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'docu
                 relations = relations || _relations;
 
                 return hydration.dehydrate(document, 'document', relations).then(function (document) {
-                    delete document.tasks;
-                    delete document.data.attachments;
-
                     documentApi.updateDocument({data: document, options: {dirty: false}});
                 })
             }
@@ -6892,7 +6874,8 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
                 __id: item.id,
                 __uri: item.uri,
                 __dirty: (item.dirty == 1),
-                __local: (item.local == 1)
+                __local: (item.local == 1),
+                __saved: true
             });
         },
         extractMetadata: function (item) {
@@ -6901,7 +6884,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
                 uri: item.__uri,
                 dirty: item.__dirty,
                 local: item.__local,
-                data: _.omit(item, ['__id', '__uri', '__dirty', '__local'])
+                data: _.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
             };
         }
     }
