@@ -32,8 +32,8 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return this._json.type;
         },
         getCenter: function (bounds) {
-            var bounds = bounds || this.getBounds();
             var center = [0, 0];
+            bounds = bounds || this.getBounds();
 
             angular.forEach(bounds, function(coordinate) {
                 center[0] += coordinate[0];
@@ -41,6 +41,12 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             });
 
             return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
+        },
+        getCenterAsGeojson: function (bounds) {
+            return {
+                coordinates: this.getCenter(bounds).reverse(),
+                type: 'Point'
+            }
         },
         getBounds: function () {
             var bounds = [];
