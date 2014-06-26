@@ -1,6 +1,8 @@
 var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
 
 sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
+    var _approvalTypes = ['Approved', 'Not Approved', 'Not Planted'];
+
     var _growthStageTable = [
         ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14'],
         ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
@@ -63,6 +65,16 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         'multi peril': _inspectionTypes
     };
 
+    var _problemTypes = {
+        disease: 'Disease',
+        fading: 'Fading',
+        uneven: 'Uneven',
+        other: 'Other',
+        root: 'Root',
+        shortage: 'Shortage',
+        weed: 'Weed'
+    };
+
     var _listServiceMap = function (item) {
         var map = documentHelper.listServiceWithTaskMap()(item);
 
@@ -80,6 +92,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
             return _listServiceMap;
         },
 
+        approvalTypes: function () {
+            return _approvalTypes;
+        },
         inspectionTypes: function () {
             return _inspectionTypes;
         },
@@ -88,6 +103,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         },
         policyInspectionTypes: function (policyType) {
             return _policyInspections[policyType] || {};
+        },
+        problemTypes: function () {
+            return _problemTypes;
         },
 
         getGrowthStages: function (crop) {
@@ -101,6 +119,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         },
         getPolicyTitle: function (type) {
             return _policyTypes[type] || '';
+        },
+        getProblemTitle: function (type) {
+            return _problemTypes[type] || '';
         },
 
         hasSeedTypes: function (crop) {
