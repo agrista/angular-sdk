@@ -52,7 +52,8 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
                 __id: item.id,
                 __uri: item.uri,
                 __dirty: (item.dirty == 1),
-                __local: (item.local == 1)
+                __local: (item.local == 1),
+                __saved: true
             });
         },
         extractMetadata: function (item) {
@@ -61,7 +62,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
                 uri: item.__uri,
                 dirty: item.__dirty,
                 local: item.__local,
-                data: _.omit(item, ['__id', '__uri', '__dirty', '__local'])
+                data: _.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
             };
         }
     }
