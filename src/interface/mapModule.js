@@ -915,9 +915,6 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             featureClickOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-off');
-            },
-            printMap: function() {
-                this.enqueueRequest('mapbox-' + this._id + '::print-map');
             }
         };
 
@@ -978,7 +975,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             _this.mapInit();
             _this.addListeners(scope);
 
-            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::init', _this._map);
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::init', _this._map);
         }, attrs.delay);
     }
 
@@ -997,7 +994,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this._map = L.map(_this._id, options).setView(view.coordinates, view.zoom);
 
         _this._map.whenReady(function () {
-            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::ready', _this._map);
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::ready', _this._map);
         });
 
         _this._editableFeature = L.featureGroup();
@@ -1048,7 +1045,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             _this.mapDestroy();
 
-            $rootScope.$broadcast('mapbox-' + id + '::destroy');
+            _this.broadcast('mapbox-' + id + '::destroy');
         });
 
         // Layer Controls
@@ -1231,17 +1228,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
             _this._featureClickable = false;
         });
-
-        scope.$on('mapbox-' + id + '::print-map', function(event, args) {
-            leafletImage(_this._map, function(err, canvas) {
-                var img = document.createElement('img');
-                var dimensions = _this._map.getSize();
-                img.width = dimensions.x;
-                img.height = dimensions.y;
-                img.src = canvas.toDataURL();
-                $rootScope.$broadcast('mapbox-' + id + '::print-map-done', img);
-            });
-        });
     };
 
     Mapbox.prototype.mapDestroy = function () {
@@ -1272,6 +1258,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         this._map.remove();
         this._map = null;
+    };
+    
+    Mapbox.prototype.broadcast = function (event, data) {
+        $log.debug(event);
+        $rootScope.$broadcast(event, data);
     };
 
     /*
@@ -1701,7 +1692,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                             }
                         }
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
                     });
                 }
             }
@@ -1907,7 +1898,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey});
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                     }
 
                 }).error(function(err) {
@@ -1930,7 +1921,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::portion-added', portion);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -1950,7 +1941,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -1972,7 +1963,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -1992,7 +1983,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, {});
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -2014,7 +2005,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
 
-                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::field-added', field);
                     }
                 }).error(function(err) {
                     $log.debug(err);
@@ -2025,13 +2016,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.onDrawStart = function (e) {
        this._editing = true;
 
-        $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
 
     Mapbox.prototype.onDrawStop = function (e) {
         this._editing = false;
 
-        $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
 
     Mapbox.prototype.onDrawn = function (e) {
@@ -2054,7 +2045,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     geojson.geometry.coordinates.push([latlng.lng, latlng.lat]);
                 });
 
-                $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
+                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
             case 'polygon':
                 geojson.geometry = {
@@ -2084,7 +2075,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     };
                 }
 
-                $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
+                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
             case 'marker':
                 geojson.geometry = {
@@ -2092,7 +2083,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     coordinates: [e.layer._latlng.lng, e.layer._latlng.lat]
                 };
 
-                $rootScope.$broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
+                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
         }
 
@@ -2121,7 +2112,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 case 'Point':
                     geojson.geometry.coordinates = [layer._latlng.lng, layer._latlng.lat];
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'Polygon':
                     geojson.geometry.coordinates = [[]];
@@ -2148,7 +2139,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         };
                     }
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'LineString':
                     geojson.geometry.coordinates = [];
@@ -2157,7 +2148,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                         geojson.geometry.coordinates.push([latlng.lng, latlng.lat]);
                     });
 
-                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
             }
         });
@@ -2172,13 +2163,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             e.layers.eachLayer(function(layer) {
                 _this._editableFeature.removeLayer(layer);
 
-                $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
+                _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
             });
         } else {
             // Layer is the editableFeature
             _this._editableFeature.clearLayers();
 
-            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted');
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted');
         }
 
         _this.updateDrawControls();
