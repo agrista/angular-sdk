@@ -718,6 +718,41 @@ mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
     };
 }]);
 
+mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getFieldPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/field-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getPortionPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistrictPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/district-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProvincePolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/province-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
 /*
  * Handlers
  */
