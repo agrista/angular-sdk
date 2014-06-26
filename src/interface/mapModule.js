@@ -127,7 +127,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
 sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
     var _createMarker = function (name, state, options) {
         return _.defaults(options || {}, {
-            iconUrl: 'img/icons/' + name + '.' + state + '.png',
+            iconUrl: 'img/icons/' + name + '.' + (state ? state : 'default') + '.png',
             shadowUrl: 'img/icons/' + name + '.shadow.png',
             iconSize: [48, 48],
             iconAnchor: [24, 48],
@@ -137,14 +137,13 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
         });
     };
 
-    var _getMarker = this.getMarker = function (name, options) {
-        var marker = {};
-
-        if (typeof name === 'string') {
-            marker = _createMarker(name, 'default', options)
+    var _getMarker = this.getMarker = function (name, state, options) {
+        if (typeof state == 'object') {
+            options = state;
+            state = 'default';
         }
 
-        return marker;
+        return  _createMarker(name, state, options);
     };
 
     var _getMarkerStates = this.getMarkerStates = function (name, states, options) {
@@ -256,7 +255,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: 'success',
+                icon: mapMarkerHelperProvider.getMarker('marker', 'success'),
                 draggable: true,
                 style: {
                     weight: 4,
@@ -355,7 +354,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: 'default',
+                icon: mapMarkerHelperProvider.getMarker('marker'),
                 style: {
                     weight: 2,
                     color: 'white',
