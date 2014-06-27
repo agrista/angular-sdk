@@ -3,7 +3,7 @@ var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', []);
 sdkHelperMerchantApp.factory('merchantHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.name,
             subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)

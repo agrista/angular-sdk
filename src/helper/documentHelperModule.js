@@ -32,7 +32,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
                 var map = {
-                    id: item.id,
+                    id: item.id || item.__id,
                     title: (item.author ? item.author : ''),
                     subtitle: '',
                     docType: item.docType,

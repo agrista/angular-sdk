@@ -3,7 +3,7 @@ var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.fa
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
     var _listServiceMap = function(item, metadata) {
         var map = {
-            id: item.id,
+            id: item.id || item.__id,
             type: item.type,
             updatedAt: item.updatedAt
         };

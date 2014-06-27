@@ -3,7 +3,7 @@ var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budg
 sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.name,
             subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
         }
