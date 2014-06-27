@@ -197,13 +197,11 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
 
         function _postAttachments (type, id, obj) {
             return _monitor.add(promiseService.arrayWrap(function (list) {
-                if (obj.data && obj.data.attachments) {
-                    angular.forEach(obj.data.attachments, function (attachment) {
-                        if (attachment.local === true) {
-                            list.push(_postAttachment(type, id, attachment));
-                        }
-                    });
-                }
+                angular.forEach(obj.data.attachments, function (attachment) {
+                    if (attachment.local === true) {
+                        list.push(_postAttachment(type, id, attachment));
+                    }
+                });
             }));
         }
 
@@ -827,7 +825,7 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                                             .then(function (assets) {
                                                 entity.assets = assets;
                                                 return entity;
-                                            }));
+                                            }, promise.reject));
                                     });
                                 });
                             }, promise.reject).then(promise.resolve, promise.reject);
@@ -857,6 +855,7 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                                 return _relationTable.assets.hydrate(entity, type)
                                     .then(function (assets) {
                                         entity.assets = assets;
+                                        return entity;
                                     }, promise.reject);
                             })
                             .then(promise.resolve, promise.reject);
