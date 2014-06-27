@@ -854,7 +854,7 @@ var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.fa
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
     var _listServiceMap = function(item, metadata) {
         var map = {
-            id: item.id,
+            id: item.id || item.__id,
             type: item.type,
             updatedAt: item.updatedAt
         };
@@ -1301,7 +1301,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
                 var map = {
-                    id: item.id,
+                    id: item.id || item.__id,
                     title: (item.author ? item.author : ''),
                     subtitle: '',
                     docType: item.docType,
@@ -1378,7 +1378,7 @@ var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budg
 sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.name,
             subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
         }
@@ -1656,7 +1656,7 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
             profileImage : item.profilePhotoSrc,
@@ -1714,7 +1714,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
 sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
     var _listServiceMap = function(item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.name,
             subtitle: item.type
         };
@@ -1838,7 +1838,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
 sdkHelperFarmerApp.factory('farmHelper', [function() {
     var _listServiceMap = function(item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.name
         };
     };
@@ -1855,7 +1855,7 @@ var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk
 sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(documentHelper) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id,
+            id: item.id || item.__id,
             date: item.date
         };
 
@@ -1966,7 +1966,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHelper', function (taskHelper, documentHelper) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.sender,
             subtitle: _notificationMap[item.notificationType].title,
             state: _notificationState(item.notificationType, item.dataType)
@@ -2031,7 +2031,7 @@ var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', []);
 sdkHelperMerchantApp.factory('merchantHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.name,
             subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
@@ -2136,7 +2136,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
                 return {
-                    id: task.id,
+                    id: task.id || item.__id,
                     title: item.organization.name,
                     subtitle: _getTaskTitle(task.todo),
                     todo: task.todo,
@@ -2351,21 +2351,21 @@ var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 sdkHelperUserApp.factory('userHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id,
+            id: item.id || item.__id,
             title: item.firstName + ' ' + item.lastName,
             subtitle: item.position,
             teams: item.teams
         }
     };
 
-    var _languageLit = ['English'];
+    var _languageList = ['English'];
 
     return {
         listServiceMap: function() {
             return _listServiceMap;
         },
         languageList: function() {
-            return _languageLit;
+            return _languageList;
         }
     }
 }]);
@@ -6610,7 +6610,7 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                                             .then(function (assets) {
                                                 entity.assets = assets;
                                                 return entity;
-                                            }));
+                                            }, promise.reject));
                                     });
                                 });
                             }, promise.reject).then(promise.resolve, promise.reject);
@@ -6640,6 +6640,7 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                                 return _relationTable.assets.hydrate(entity, type)
                                     .then(function (assets) {
                                         entity.assets = assets;
+                                        return entity;
                                     }, promise.reject);
                             })
                             .then(promise.resolve, promise.reject);
@@ -6888,13 +6889,9 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
             $log.debug('Unresolved: ' + templateUrl);
 
             if (templateUrl !== undefined) {
-                for (var key in schemaData) {
-                    if (schemaData.hasOwnProperty(key)) {
-                        var schemaKey = (schemaData[key] !== undefined ? schemaData[key] : '');
-
-                        templateUrl = templateUrl.replace(':' + key, schemaKey);
-                    }
-                }
+                angular.forEach(schemaData, function (data, key) {
+                    templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
+                });
             }
 
             $log.debug('Resolved: ' + templateUrl);
