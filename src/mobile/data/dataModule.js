@@ -31,13 +31,9 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
             $log.debug('Unresolved: ' + templateUrl);
 
             if (templateUrl !== undefined) {
-                for (var key in schemaData) {
-                    if (schemaData.hasOwnProperty(key)) {
-                        var schemaKey = (schemaData[key] !== undefined ? schemaData[key] : '');
-
-                        templateUrl = templateUrl.replace(':' + key, schemaKey);
-                    }
-                }
+                angular.forEach(schemaData, function (data, key) {
+                    templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
+                });
             }
 
             $log.debug('Resolved: ' + templateUrl);
