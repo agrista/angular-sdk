@@ -31,6 +31,24 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
         getType: function () {
             return this._json.type;
         },
+        getGeometryType: function () {
+            return (this._json.geometry ? this._json.geometry.type : this._json.type);
+        },
+        getBounds: function () {
+            var bounds = [];
+
+            if (this._json) {
+                var features = this._json.features || [this._json];
+
+                angular.forEach(features, function(feature) {
+                    var geometry = feature.geometry || feature;
+
+                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                });
+            }
+
+            return bounds;
+        },
         getCenter: function (bounds) {
             var center = [0, 0];
             bounds = bounds || this.getBounds();
@@ -48,20 +66,17 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 type: 'Point'
             }
         },
-        getBounds: function () {
-            var bounds = [];
-
-            if (this._json) {
-                var features = this._json.features || [this._json];
-
-                angular.forEach(features, function(feature) {
-                    var geometry = feature.geometry || feature;
-
-                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
-                });
+        getProperty: function (name) {
+            return (this._json && this._json.properties ? this._json.properties[name] : undefined);
+        },
+        setCoordinates: function (coordinates) {
+            if (this._json && this._json.type != 'FeatureCollection') {
+                if (this._json.geometry) {
+                    this._json.geometry.coordinates = coordinates;
+                } else {
+                    this._json.coordinates = coordinates;
+                }
             }
-
-            return bounds;
         },
         addProperties: function (properties) {
             var _this = this;
