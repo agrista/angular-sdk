@@ -214,7 +214,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
         },
 
         isFieldApplicable: function (type, field) {
-            var fieldHasLandUse = (_assetLandUse[type].indexOf(field.landUse) !== -1);
+            var fieldHasLandUse = (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
 
             if (type == 'irrigated cropland') {
                 return (fieldHasLandUse && field.irrigated);
