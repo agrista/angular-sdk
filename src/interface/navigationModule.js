@@ -1,6 +1,6 @@
-var sdkInterfaceNavigiationApp = angular.module('ag.sdk.interface.navigation', ['ag.sdk.authorization']);
+var sdkInterfaceNavigiationApp = angular.module('ag.sdk.interface.navigation', ['ag.sdk.authorization', 'ag.sdk.library']);
 
-sdkInterfaceNavigiationApp.provider('navigationService', function() {
+sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function (underscore) {
     var _registeredApps = {};
     var _groupedApps = [];
 
@@ -24,7 +24,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         apps = (apps instanceof Array ? apps : [apps]);
 
         angular.forEach(apps, function (app) {
-            app = _.defaults(app, {
+            app = underscore.defaults(app, {
                 id: app.title,
                 order: 100,
                 group: 'Apps',
@@ -45,7 +45,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
 
         // Private functions
         var _allowApp = function (app) {
-            var group = _.findWhere(_groupedApps, {title: app.group});
+            var group = underscore.findWhere(_groupedApps, {title: app.group});
 
             // Find if the group exists
             if (group === undefined) {
@@ -61,7 +61,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             }
 
             // Find if the app exists in the group
-            var groupItem = _.findWhere(group.items, {id: app.id});
+            var groupItem = underscore.findWhere(group.items, {id: app.id});
 
             if (groupItem === undefined) {
                 // Add the app to the group
@@ -83,8 +83,8 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
 
         var _updateUserApps = function (currentUser) {
             var authUser = currentUser || authorization.currentUser();
-            var roleApps = (authUser.userRole ? _.pluck(authUser.userRole.apps, 'name') : []);
-            var orgServices = (authUser.organization ? _.pluck(authUser.organization.services, 'serviceType') : []);
+            var roleApps = (authUser.userRole ? underscore.pluck(authUser.userRole.apps, 'name') : []);
+            var orgServices = (authUser.organization ? underscore.pluck(authUser.organization.services, 'serviceType') : []);
 
             _revokeAllApps();
 
@@ -141,7 +141,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                 return _groupedApps;
             },
             renameApp: function (id, title) {
-                var app = _.findWhere(_registeredApps, {id: id});
+                var app = underscore.findWhere(_registeredApps, {id: id});
 
                 if (app) {
                     app.title = title;
@@ -203,4 +203,4 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             }
         }
     }];
-});
+}]);

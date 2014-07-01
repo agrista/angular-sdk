@@ -1,4 +1,4 @@
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library']);
 
 /**
  * @name dataPurgeService
@@ -25,7 +25,7 @@ mobileSdkDataApp.provider('dataPurge', function () {
     }];
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'underscore', function ($log, underscore) {
     return {
         parseRequest: function (templateUrl, schemaData) {
             $log.debug('Unresolved: ' + templateUrl);
@@ -44,7 +44,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
             return 2000000000 + Math.round(Math.random() * 147483647);
         },
         injectMetadata: function (item) {
-            return _.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
+            return underscore.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
                 __id: item.id,
                 __uri: item.uri,
                 __dirty: (item.dirty == 1),
@@ -58,7 +58,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
                 uri: item.__uri,
                 dirty: item.__dirty,
                 local: item.__local,
-                data: _.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
+                data: underscore.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
             };
         }
     }
@@ -67,7 +67,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
 /**
  * @name dataStore
  */
-mobileSdkDataApp.provider('dataStore', [function () {
+mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
     var _defaultOptions = {
         pageLimit: 10,
         dbName: undefined,
@@ -96,7 +96,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
      * @param options
      */
     this.config = function (options) {
-        _defaultOptions = _.defaults((options || {}), _defaultOptions);
+        _defaultOptions = underscore.defaults((options || {}), _defaultOptions);
     };
 
     /**
@@ -181,7 +181,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                     readRemote: true
                 }
              */
-            var _config = _.defaults((config || {}), {
+            var _config = underscore.defaults((config || {}), {
                 apiTemplate: undefined,
                 paging: undefined,
                 indexerProperty: 'id',
@@ -191,7 +191,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             });
 
             if (_config.paging !== undefined) {
-                _config.paging = _.defaults(_config.paging, {
+                _config.paging = underscore.defaults(_config.paging, {
                     template: '',
                     schema: {},
                     data: {
@@ -347,7 +347,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 if (dataItems.length > 0) {
-                    options = _.defaults(options || {}, {
+                    options = underscore.defaults(options || {}, {
                         replace: true,
                         force: false
                     });
@@ -409,7 +409,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                     options = {};
                 }
 
-                options = _.defaults((options || {}), {force: false});
+                options = underscore.defaults((options || {}), {force: false});
 
                 var asyncMon = new AsyncMonitor(1, dalCallback);
 
@@ -568,7 +568,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                                     delete item.data[_config.indexerProperty];
                                 }
 
-                                _makePost(item, dataStoreUtilities.parseRequest(writeUri || _config.apiTemplate, _.extend(writeSchema, {id: item.local ? undefined : item.id})));
+                                _makePost(item, dataStoreUtilities.parseRequest(writeUri || _config.apiTemplate, underscore.extend(writeSchema, {id: item.local ? undefined : item.id})));
                             } else {
                                 _makePost(item, item.uri);
                             }
@@ -626,7 +626,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         var item = dataStoreUtilities.extractMetadata(dataItems[i]);
 
                         if (item.local === false) {
-                            _makeDelete(item, dataStoreUtilities.parseRequest(writeUri, _.defaults(writeSchema, {id: item.id})));
+                            _makeDelete(item, dataStoreUtilities.parseRequest(writeUri, underscore.defaults(writeSchema, {id: item.id})));
                         } else {
                             asyncMon.done();
                         }
@@ -709,7 +709,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
 
                 return {
                     createItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
                             data: [],
@@ -734,7 +734,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
 
                             _updateLocal(dataStoreUtilities.injectMetadata({
                                 id: id,
-                                uri: dataStoreUtilities.parseRequest(request.template, _.defaults(request.schema, {id: id})),
+                                uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                 data: data,
                                 dirty: request.options.dirty,
                                 local: request.options.dirty
@@ -742,7 +742,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     getItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
                             options: {
@@ -790,7 +790,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         }
                     },
                     findItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             key: '',
                             column: 'id',
                             options: {
@@ -805,7 +805,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     updateItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             data: [],
                             options: {
                                 dirty: true
@@ -828,7 +828,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     postItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
                             data: [],
@@ -844,7 +844,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     removeItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: undefined,
                             schema: {},
                             data: [],
@@ -868,7 +868,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     purgeItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: undefined,
                             schema: {},
                             options: {

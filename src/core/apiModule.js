@@ -1,4 +1,4 @@
-var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities']);
+var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
  * User API
@@ -883,7 +883,7 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
 /**
  * Enterprise Budget API
  */
-sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -896,7 +896,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
         },
         searchEnterpriseBudgets: function (query) {
-            query = _.chain(query).map(function (value, key) {
+            query = underscore.chain(query).map(function (value, key) {
                 return key + '=' + value;
             }).join('&').value();
 

@@ -1,6 +1,6 @@
-var sdkHelperTeamApp = angular.module('ag.sdk.helper.team', []);
+var sdkHelperTeamApp = angular.module('ag.sdk.helper.team', ['ag.sdk.library']);
 
-sdkHelperTeamApp.factory('teamHelper', [function() {
+sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
 
     /**
      * @name TeamEditor
@@ -11,11 +11,11 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
     function TeamEditor (/**Array=*/availableTeams, /**Array=*/teams) {
         availableTeams = availableTeams || [];
 
-        this.teams = _.map(teams || [], function (item) {
+        this.teams = underscore.map(teams || [], function (item) {
             return (item.name ? item.name : item);
         });
 
-        this.teamsDetails = _.map(teams || [], function (item) {
+        this.teamsDetails = underscore.map(teams || [], function (item) {
             return item;
         });
 
@@ -37,7 +37,7 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1 && !_.findWhere(this.teamsDetails, team)) {
+        if (this.teams.indexOf(team) == -1 && !underscore.findWhere(this.teamsDetails, team)) {
             this.teams.push(team);
             this.teamsDetails.push(team);
             this.selection.text = '';

@@ -1,4 +1,4 @@
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -9,8 +9,8 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'fileStorageService', 'assetApi', 'documentApi', 'taskApi', 'enterpriseBudgetApi', 'legalEntityApi',
-    function ($http, configuration, promiseMonitor, promiseService, farmerApi, farmApi, fileStorageService, assetApi, documentApi, taskApi, enterpriseBudgetApi, legalEntityApi) {
+mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'fileStorageService', 'assetApi', 'documentApi', 'taskApi', 'enterpriseBudgetApi', 'legalEntityApi', 'underscore',
+    function ($http, configuration, promiseMonitor, promiseService, farmerApi, farmApi, fileStorageService, assetApi, documentApi, taskApi, enterpriseBudgetApi, legalEntityApi, underscore) {
         var _monitor = null;
 
         function _getFarmers () {
@@ -151,7 +151,7 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
             return _monitor.add(promiseService.wrap(function (defer) {
                 if (asset.__dirty === true) {
                     var cachedAttachments = angular.copy(asset.data.attachments);
-                    asset.data.attachments = _.filter(asset.data.attachments, function (attachment) {
+                    asset.data.attachments = underscore.filter(asset.data.attachments, function (attachment) {
                         return attachment.local !== true;
                     });
 
@@ -175,8 +175,8 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
             return _monitor.add(promiseService.wrap(function (defer) {
                 if (document.__dirty === true) {
                     var cachedAttachments = angular.copy(document.data.attachments);
-                    document.data.attachments = _.filter(document.data.attachments, function (attachment) {
-                        return attachment.local !== true;
+                    document.data.attachments = underscore.reject(document.data.attachments, function (attachment) {
+                        return attachment.local === true;
                     });
 
                     documentApi.postDocument({data: document})
@@ -212,7 +212,7 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
                 fileStorageService.read(attachment.src, true)
                     .then(function (fileData) {
                         $http.post(configuration.getServer() + uri, {
-                            archive: _.extend(_.omit(attachment, ['src', 'local', 'key']), {
+                            archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key']), {
                                 filename: fileData.file,
                                 content: fileData.content.substring(fileData.content.indexOf(',') + 1)
                             })
@@ -338,7 +338,7 @@ mobileSdkApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 
 /*
  * API
  */
-mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promiseService, dataStore) {
+mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', function (promiseService, dataStore, underscore) {
     return function (options) {
         if (typeof options === 'String') {
             options = {
@@ -355,7 +355,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', function (promise
         
         var _stripProperties = function (data) {
             if (options.strip) {
-                return _.omit(data, options.strip);
+                return underscore.omit(data, options.strip);
             }
 
             return data;
@@ -747,8 +747,8 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
 /*
  * Handlers
  */
-mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'legalEntityApi',
-    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi, legalEntityApi) {
+mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'legalEntityApi', 'underscore',
+    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi, legalEntityApi, underscore) {
         // TODO: Allow for tree of hydrations/dehydrations (e.g. Farmer -> LegalEntities -> Assets)
 
         var _relationTable = {
@@ -760,7 +760,7 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                                 farms: _relationTable.farms.hydrate(farmer, type),
                                 legalEntities: _relationTable.legalEntities.hydrate(farmer, type)
                             }).then(function (results) {
-                                promise.resolve(_.extend(farmer, results));
+                                promise.resolve(underscore.extend(farmer, results));
                             }, promise.reject);
                         }, promise.reject);
                     });
@@ -906,9 +906,9 @@ mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 
                         });
                     })
                     .then(function (results) {
-                        promise.resolve(_.extend(obj, results));
+                        promise.resolve(underscore.extend(obj, results));
                     }, function (results) {
-                        promise.resolve(_.extend(obj, results));
+                        promise.resolve(underscore.extend(obj, results));
                     });
             });
         };

@@ -1,4 +1,4 @@
-var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', ['ag.sdk.helper.task']);
+var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', ['ag.sdk.helper.task', 'ag.sdk.library']);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
     var _docTypes = [];
@@ -27,7 +27,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', 'taskHelper', function ($injector, taskHelper) {
+    this.$get = ['$injector', 'taskHelper', 'underscore', function ($injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
@@ -60,7 +60,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         var _listServiceWithTaskMap = function (item) {
             if (_documentMap[item.docType]) {
                 var map = _listServiceMap(item);
-                var parentTask = _.findWhere(item.tasks, {type: 'parent'});
+                var parentTask = underscore.findWhere(item.tasks, {type: 'parent'});
 
                 if (map && parentTask) {
                     map.status = {
@@ -88,7 +88,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 return _docTypes;
             },
             documentTitles: function () {
-                return _.pluck(_documentMap, 'title');
+                return underscore.pluck(_documentMap, 'title');
             },
 
             getDocumentTitle: function (docType) {

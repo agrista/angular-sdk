@@ -1,6 +1,6 @@
-var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
+var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.library']);
 
-sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscore', function($filter, landUseHelper, underscore) {
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -70,7 +70,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         }
 
         if (metadata) {
-            map = _.extend(map, metadata);
+            map = underscore.extend(map, metadata);
         }
 
         return map;

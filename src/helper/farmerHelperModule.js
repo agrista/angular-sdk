@@ -1,4 +1,4 @@
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.library']);
 
 sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
@@ -58,7 +58,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     }
 }]);
 
-sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
+sdkHelperFarmerApp.factory('legalEntityHelper', ['underscore', function (underscore) {
     var _listServiceMap = function(item) {
         return {
             id: item.id || item.__id,
@@ -81,7 +81,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
      * @constructor
      */
     function EnterpriseEditor (enterprises) {
-        this.enterprises = _.map(enterprises || [], function (item) {
+        this.enterprises = underscore.map(enterprises || [], function (item) {
             return (item.name ? item.name : item);
         });
 

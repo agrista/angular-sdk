@@ -1,4 +1,4 @@
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config']);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config', 'ag.sdk.library']);
 
 /*
  * GeoJson
@@ -124,9 +124,9 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
     }
 });
 
-sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
+sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (underscore) {
     var _createMarker = function (name, state, options) {
-        return _.defaults(options || {}, {
+        return underscore.defaults(options || {}, {
             iconUrl: 'img/icons/' + name + '.' + (state ? state : 'default') + '.png',
             shadowUrl: 'img/icons/' + name + '.shadow.png',
             iconSize: [48, 48],
@@ -164,7 +164,7 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
             getMarkerStates: _getMarkerStates
         }
     };
-});
+}]);
 
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {};
@@ -406,7 +406,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
 /**
  * Maps
  */
-sdkInterfaceMapApp.provider('mapboxService', function () {
+sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore) {
     var _defaultConfig = {
         options: {
             attributionControl: true,
@@ -442,7 +442,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
     var _instances = {};
     
     this.config = function (options) {
-        _defaultConfig = _.defaults(options || {}, _defaultConfig);
+        _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
     };
 
     this.$get = ['$rootScope', 'objectId', function ($rootScope, objectId) {
@@ -800,7 +800,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 return null;
             },
             addGeoJSON: function(layerName, geojson, options, properties, onAddCallback) {
-                properties = _.defaults(properties || {},  {
+                properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
 
@@ -935,12 +935,12 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             return _instances[id];
         };
     }];
-});
+}]);
 
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, objectId) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, objectId, underscore) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -1615,7 +1615,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             labelData.options = labelData.options || {};
 
             if ((labelData.options.centered || labelData.options.noHide) && typeof _this._map.showLabel === 'function') {
-                var label = new L.Label(_.extend(labelData.options), {
+                var label = new L.Label(underscore.extend(labelData.options), {
                     offset: [6, -15]
                 });
 

@@ -1,6 +1,6 @@
-var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budget', []);
+var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budget', ['ag.sdk.library']);
 
-sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
+sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', function(underscore) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.__id,
@@ -216,7 +216,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
 
                     angular.forEach(budget.data.expenses, function (value, type) {
                         if (budget.data.products[type] !== undefined) {
-                            value = _.reduce(budget.data.products[type], function (total, product) {
+                            value = underscore.reduce(budget.data.products[type], function (total, product) {
                                 return total + product.price;
                             }, 0);
                         }
@@ -237,7 +237,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
 
                     angular.forEach(budget.data.expenses, function (value, type) {
                         if (budget.data.products[type] !== undefined) {
-                            value = _.reduce(budget.data.products[type], function (total, product) {
+                            value = underscore.reduce(budget.data.products[type], function (total, product) {
                                 return total + product.price;
                             }, 0);
                         }
@@ -259,7 +259,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
 
                     angular.forEach(budget.data.expenses[stage], function (value, type) {
                         if (budget.data.products[type] !== undefined) {
-                            value = _.reduce(budget.data.products[type], function (total, product) {
+                            value = underscore.reduce(budget.data.products[type], function (total, product) {
                                 return total + product.price;
                             }, 0);
                         }
