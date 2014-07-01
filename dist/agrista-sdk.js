@@ -1,4 +1,4 @@
-var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities']);
+var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
  * User API
@@ -883,7 +883,7 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
 /**
  * Enterprise Budget API
  */
-sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -896,7 +896,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
         },
         searchEnterpriseBudgets: function (query) {
-            query = _.chain(query).map(function (value, key) {
+            query = underscore.chain(query).map(function (value, key) {
                 return key + '=' + value;
             }).join('&').value();
 
@@ -1376,109 +1376,16 @@ sdkIdApp.factory('generateUUID', function () {
     };
 });
 
+var sdkLibraryApp = angular.module('ag.sdk.library', []);
+
+/**
+ * This module includes other required third party libraries
+ */
+sdkLibraryApp.constant('underscore', window._);
+
+sdkLibraryApp.constant('geojsonUtils', window.gju);
+
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
-
-sdkMonitorApp.factory('queueService', ['$log', '$q', 'promiseService', function ($log, $q, promiseService) {
-    function QueueService(options, callback) {
-        // Check if instance of QueueService
-        if (!(this instanceof QueueService)) {
-            return new QueueService(options, callback);
-        }
-
-        // Validate parameters
-        if (typeof options === 'function') {
-            callback = options;
-            options = { limit: 1 };
-        }
-        if (typeof options !== 'object') options = { limit: 1 };
-        if (typeof callback !== 'function') callback = angular.noop;
-
-        var _queue = [];
-        var _limit = options.limit || 1;
-        var _progress = {
-            total: 0,
-            complete: 0
-        };
-
-        // Private Functions
-        var _next = function () {
-            _limit++;
-
-            if (_progress.complete < _progress.total) {
-                _progress.complete++;
-            }
-
-            pop();
-        };
-
-        var _success = _next;
-        var _error = function () {
-            callback({type: 'error'});
-
-            _next();
-        };
-
-        // Public Functions
-        var push = function (action, deferred) {
-            _progress.total++;
-            _queue.push([action, deferred]);
-
-            pop();
-        };
-
-        var pop = function () {
-            callback({type: 'progress', percent: (100.0 / _progress.total) * _progress.complete});
-
-            $log.debug('QUEUE TOTAL: ' + _progress.total + ' COMPLETE: ' + _progress.complete + ' PERCENT: ' + (100.0 / _progress.total) * _progress.complete);
-
-            if (_queue.length === 0 && _progress.total === _progress.complete) {
-                _progress.total = 0;
-                _progress.complete = 0;
-
-                callback({type: 'complete'});
-            }
-
-            if (_limit <= 0 || _queue.length === 0) {
-                return;
-            }
-
-            _limit--;
-
-            var buffer = _queue.shift(),
-                action = buffer[0],
-                deferred = buffer[1];
-
-            deferred.promise.then(_success, _error);
-
-            action(deferred);
-        };
-
-        var clear = function () {
-            _progress.total = 0;
-            _progress.complete = 0;
-            _queue.length = 0;
-        };
-
-        var wrapPush = function (action) {
-            var deferred = promiseService.defer();
-
-            push(action, deferred);
-
-            return deferred.promise;
-        };
-
-        return {
-            wrapPush: wrapPush,
-            push: push,
-            pop: pop,
-            clear: clear
-        }
-    }
-
-    return function (options, callback) {
-        return new QueueService(options, callback);
-    };
-}]);
 
 sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
     function PromiseMonitor(callback) {
@@ -1550,49 +1457,6 @@ sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, sa
 }]);
 
 var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
-
-skdUtilitiesApp.run(['stateResolver', function (stateResolver) {
-    // Initialize stateResolver
-}]);
-
-skdUtilitiesApp.provider('stateResolver', function () {
-    var _stateTable = {};
-
-    this.when = function (states, resolverInjection) {
-        if (states instanceof Array) {
-            angular.forEach(states, function (state) {
-                _stateTable[state] = resolverInjection;
-            })
-        } else {
-            _stateTable[states] = resolverInjection;
-        }
-
-        return this;
-    };
-
-    this.resolver = function () {
-        return {
-            data: ['stateResolver', function (stateResolver) {
-                return stateResolver.getData();
-            }]
-        }
-    };
-
-    this.$get = ['$rootScope', '$state', '$injector', function ($rootScope, $state, $injector) {
-        var nextState = undefined;
-
-        $rootScope.$on('$stateChangeStart', function (event, toState) {
-            nextState = toState;
-        });
-
-        return {
-            getData: function () {
-                return (nextState && _stateTable[nextState.name] ? $injector.invoke(_stateTable[nextState.name]) : undefined);
-            }
-        }
-    }];
-});
-
 
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
@@ -1817,9 +1681,9 @@ skdUtilitiesApp.directive('signature', ['$compile', function ($compile) {
         }
     };
 }]);
-var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
+var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.library']);
 
-sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscore', function($filter, landUseHelper, underscore) {
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -1889,7 +1753,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         }
 
         if (metadata) {
-            map = _.extend(map, metadata);
+            map = underscore.extend(map, metadata);
         }
 
         return map;
@@ -2033,7 +1897,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         },
 
         isFieldApplicable: function (type, field) {
-            var fieldHasLandUse = (_assetLandUse[type].indexOf(field.landUse) !== -1);
+            var fieldHasLandUse = (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
 
             if (type == 'irrigated cropland') {
                 return (fieldHasLandUse && field.irrigated);
@@ -2235,7 +2099,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
     }
 }]);
 
-var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', ['ag.sdk.helper.task']);
+var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', ['ag.sdk.helper.task', 'ag.sdk.library']);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
     var _docTypes = [];
@@ -2264,7 +2128,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', 'taskHelper', function ($injector, taskHelper) {
+    this.$get = ['$injector', 'taskHelper', 'underscore', function ($injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
@@ -2297,7 +2161,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         var _listServiceWithTaskMap = function (item) {
             if (_documentMap[item.docType]) {
                 var map = _listServiceMap(item);
-                var parentTask = _.findWhere(item.tasks, {type: 'parent'});
+                var parentTask = underscore.findWhere(item.tasks, {type: 'parent'});
 
                 if (map && parentTask) {
                     map.status = {
@@ -2325,7 +2189,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 return _docTypes;
             },
             documentTitles: function () {
-                return _.pluck(_documentMap, 'title');
+                return underscore.pluck(_documentMap, 'title');
             },
 
             getDocumentTitle: function (docType) {
@@ -2341,9 +2205,9 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
     }]
 });
 
-var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budget', []);
+var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budget', ['ag.sdk.library']);
 
-sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
+sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', function(underscore) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.__id,
@@ -2559,7 +2423,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
 
                     angular.forEach(budget.data.expenses, function (value, type) {
                         if (budget.data.products[type] !== undefined) {
-                            value = _.reduce(budget.data.products[type], function (total, product) {
+                            value = underscore.reduce(budget.data.products[type], function (total, product) {
                                 return total + product.price;
                             }, 0);
                         }
@@ -2580,7 +2444,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
 
                     angular.forEach(budget.data.expenses, function (value, type) {
                         if (budget.data.products[type] !== undefined) {
-                            value = _.reduce(budget.data.products[type], function (total, product) {
+                            value = underscore.reduce(budget.data.products[type], function (total, product) {
                                 return total + product.price;
                             }, 0);
                         }
@@ -2602,7 +2466,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
 
                     angular.forEach(budget.data.expenses[stage], function (value, type) {
                         if (budget.data.products[type] !== undefined) {
-                            value = _.reduce(budget.data.products[type], function (total, product) {
+                            value = underscore.reduce(budget.data.products[type], function (total, product) {
                                 return total + product.price;
                             }, 0);
                         }
@@ -2619,7 +2483,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
     }
 }]);
 
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map']);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.library']);
 
 sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
     var _listServiceMap = function (item) {
@@ -2679,7 +2543,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     }
 }]);
 
-sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
+sdkHelperFarmerApp.factory('legalEntityHelper', ['underscore', function (underscore) {
     var _listServiceMap = function(item) {
         return {
             id: item.id || item.__id,
@@ -2702,7 +2566,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', [function() {
      * @constructor
      */
     function EnterpriseEditor (enterprises) {
-        this.enterprises = _.map(enterprises || [], function (item) {
+        this.enterprises = underscore.map(enterprises || [], function (item) {
             return (item.name ? item.name : item);
         });
 
@@ -2763,7 +2627,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
         'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
         'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chilly', 'Cucumber', 'Cucurbit', 'Dry Pea', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
         'Plantation': ['Bluegum', 'Pine', 'Wattle'],
-        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium'],
+        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
     };
 
     return {
@@ -2799,11 +2663,10 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
         isTerrainRequired: function (landUse) {
             return (landUse == 'Grazing');
         }
-
     }
 });
 
-sdkHelperFarmerApp.factory('farmHelper', [function() {
+sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
     var _listServiceMap = function(item) {
         return {
             id: item.id || item.__id,
@@ -2812,8 +2675,40 @@ sdkHelperFarmerApp.factory('farmHelper', [function() {
     };
 
     return {
-        listServiceMap: function() {
+        listServiceMap: function () {
             return _listServiceMap;
+        },
+
+        containsPoint: function (geometry, assets, farm) {
+            var found = false;
+
+            angular.forEach(assets, function (asset) {
+                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
+                    if (geojsonUtils.pointInPolygon(geometry, asset.data.loc)) {
+                        found = true;
+                    }
+                }
+            });
+
+            return found;
+        },
+        getCenter: function (assets, farm) {
+            var geojson = geoJSONHelper();
+
+            angular.forEach(assets, function(asset) {
+                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
+                    geojson.addGeometry(asset.data.loc);
+                }
+            });
+
+            return geojson.getCenterAsGeojson();
+        },
+
+        validateFieldName: function (farm, newField, oldField) {
+            newField.fieldName = newField.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, '');
+            var foundField = underscore.findWhere(farm.data.fields, {fieldName: newField.fieldName});
+
+            return (foundField === undefined || (oldField === undefined || foundField.fieldName === oldField.fieldName));
         }
     }
 }]);
@@ -2994,9 +2889,9 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
     }
 }]);
 
-var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', []);
+var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.library']);
 
-sdkHelperMerchantApp.factory('merchantHelper', [function() {
+sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (underscore) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.__id,
@@ -3035,7 +2930,7 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     function ServiceEditor (/**Array=*/availableServices, /**Array=*/services) {
         availableServices = availableServices || [];
 
-        this.services = _.map(services || [], function (item) {
+        this.services = underscore.map(services || [], function (item) {
             return (item.name ? item.name : item);
         });
 
@@ -3093,14 +2988,14 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     }
 }]);
 
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.authorization', 'ag.sdk.utilities', 'ag.sdk.interface.list']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.authorization', 'ag.sdk.utilities', 'ag.sdk.interface.list', 'ag.sdk.library']);
 
-sdkHelperTaskApp.provider('taskHelper', function() {
+sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
 
     var _listServiceMap = function (item) {
         var title = item.documentKey;
-        var mappedItems = _.filter(item.subtasks, function (task) {
+        var mappedItems = underscore.filter(item.subtasks, function (task) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
                 return {
@@ -3185,7 +3080,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
      * Provider functions
      */
     this.addTasks = function (tasks) {
-        _taskTodoMap =  _.extend(_taskTodoMap, tasks);
+        _taskTodoMap = underscore.extend(_taskTodoMap, tasks);
     };
 
     this.$get = ['authorization', 'listService', 'dataMapService', function (authorization, listService, dataMapService) {
@@ -3204,13 +3099,13 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             getTaskLabel: _getStatusLabelClass,
 
             filterTasks: function (tasks) {
-                return _.filter(tasks, function (task) {
+                return underscore.filter(tasks, function (task) {
                     return (_getTaskState(task.todo) !== undefined);
                 });
             },
             updateListService: function (id, todo, tasks, organization) {
                 var currentUser = authorization.currentUser();
-                var task = _.findWhere(tasks, {id: id});
+                var task = underscore.findWhere(tasks, {id: id});
 
                 listService.addItems(dataMapService({
                     id: task.parentTaskId,
@@ -3218,7 +3113,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
                     type: 'parent',
                     todo: todo,
                     organization: organization,
-                    subtasks : _.filter(tasks, function (task) {
+                    subtasks : underscore.filter(tasks, function (task) {
                         return (task && task.assignedTo == currentUser.username);
                     })
                 }, _listServiceMap));
@@ -3229,7 +3124,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             }
         }
     }];
-});
+}]);
 
 sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
     var _taskActions = {
@@ -3250,9 +3145,9 @@ sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
     }
 });
 
-var sdkHelperTeamApp = angular.module('ag.sdk.helper.team', []);
+var sdkHelperTeamApp = angular.module('ag.sdk.helper.team', ['ag.sdk.library']);
 
-sdkHelperTeamApp.factory('teamHelper', [function() {
+sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
 
     /**
      * @name TeamEditor
@@ -3263,11 +3158,11 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
     function TeamEditor (/**Array=*/availableTeams, /**Array=*/teams) {
         availableTeams = availableTeams || [];
 
-        this.teams = _.map(teams || [], function (item) {
+        this.teams = underscore.map(teams || [], function (item) {
             return (item.name ? item.name : item);
         });
 
-        this.teamsDetails = _.map(teams || [], function (item) {
+        this.teamsDetails = underscore.map(teams || [], function (item) {
             return item;
         });
 
@@ -3289,7 +3184,7 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1 && !_.findWhere(this.teamsDetails, team)) {
+        if (this.teams.indexOf(team) == -1 && !underscore.findWhere(this.teamsDetails, team)) {
             this.teams.push(team);
             this.teamsDetails.push(team);
             this.selection.text = '';
@@ -3614,7 +3509,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     }
 }]);
 
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config']);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config', 'ag.sdk.library']);
 
 /*
  * GeoJson
@@ -3647,6 +3542,24 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
         getType: function () {
             return this._json.type;
         },
+        getGeometryType: function () {
+            return (this._json.geometry ? this._json.geometry.type : this._json.type);
+        },
+        getBounds: function () {
+            var bounds = [];
+
+            if (this._json) {
+                var features = this._json.features || [this._json];
+
+                angular.forEach(features, function(feature) {
+                    var geometry = feature.geometry || feature;
+
+                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                });
+            }
+
+            return bounds;
+        },
         getCenter: function (bounds) {
             var center = [0, 0];
             bounds = bounds || this.getBounds();
@@ -3664,20 +3577,17 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 type: 'Point'
             }
         },
-        getBounds: function () {
-            var bounds = [];
-
-            if (this._json) {
-                var features = this._json.features || [this._json];
-
-                angular.forEach(features, function(feature) {
-                    var geometry = feature.geometry || feature;
-
-                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
-                });
+        getProperty: function (name) {
+            return (this._json && this._json.properties ? this._json.properties[name] : undefined);
+        },
+        setCoordinates: function (coordinates) {
+            if (this._json && this._json.type != 'FeatureCollection') {
+                if (this._json.geometry) {
+                    this._json.geometry.coordinates = coordinates;
+                } else {
+                    this._json.coordinates = coordinates;
+                }
             }
-
-            return bounds;
         },
         addProperties: function (properties) {
             var _this = this;
@@ -3740,9 +3650,9 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
     }
 });
 
-sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
+sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (underscore) {
     var _createMarker = function (name, state, options) {
-        return _.defaults(options || {}, {
+        return underscore.defaults(options || {}, {
             iconUrl: 'img/icons/' + name + '.' + (state ? state : 'default') + '.png',
             shadowUrl: 'img/icons/' + name + '.shadow.png',
             iconSize: [48, 48],
@@ -3780,7 +3690,7 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
             getMarkerStates: _getMarkerStates
         }
     };
-});
+}]);
 
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {};
@@ -4022,7 +3932,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
 /**
  * Maps
  */
-sdkInterfaceMapApp.provider('mapboxService', function () {
+sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore) {
     var _defaultConfig = {
         options: {
             attributionControl: true,
@@ -4058,7 +3968,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
     var _instances = {};
     
     this.config = function (options) {
-        _defaultConfig = _.defaults(options || {}, _defaultConfig);
+        _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
     };
 
     this.$get = ['$rootScope', 'objectId', function ($rootScope, objectId) {
@@ -4416,7 +4326,7 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 return null;
             },
             addGeoJSON: function(layerName, geojson, options, properties, onAddCallback) {
-                properties = _.defaults(properties || {},  {
+                properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
 
@@ -4551,12 +4461,12 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             return _instances[id];
         };
     }];
-});
+}]);
 
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'objectId', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, objectId) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, objectId, underscore) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -5231,7 +5141,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             labelData.options = labelData.options || {};
 
             if ((labelData.options.centered || labelData.options.noHide) && typeof _this._map.showLabel === 'function') {
-                var label = new L.Label(_.extend(labelData.options), {
+                var label = new L.Label(underscore.extend(labelData.options), {
                     offset: [6, -15]
                 });
 
@@ -5843,9 +5753,9 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
 }]);
 
 
-var sdkInterfaceNavigiationApp = angular.module('ag.sdk.interface.navigation', ['ag.sdk.authorization']);
+var sdkInterfaceNavigiationApp = angular.module('ag.sdk.interface.navigation', ['ag.sdk.authorization', 'ag.sdk.library']);
 
-sdkInterfaceNavigiationApp.provider('navigationService', function() {
+sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function (underscore) {
     var _registeredApps = {};
     var _groupedApps = [];
 
@@ -5869,7 +5779,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
         apps = (apps instanceof Array ? apps : [apps]);
 
         angular.forEach(apps, function (app) {
-            app = _.defaults(app, {
+            app = underscore.defaults(app, {
                 id: app.title,
                 order: 100,
                 group: 'Apps',
@@ -5890,7 +5800,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
 
         // Private functions
         var _allowApp = function (app) {
-            var group = _.findWhere(_groupedApps, {title: app.group});
+            var group = underscore.findWhere(_groupedApps, {title: app.group});
 
             // Find if the group exists
             if (group === undefined) {
@@ -5906,7 +5816,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             }
 
             // Find if the app exists in the group
-            var groupItem = _.findWhere(group.items, {id: app.id});
+            var groupItem = underscore.findWhere(group.items, {id: app.id});
 
             if (groupItem === undefined) {
                 // Add the app to the group
@@ -5928,8 +5838,8 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
 
         var _updateUserApps = function (currentUser) {
             var authUser = currentUser || authorization.currentUser();
-            var roleApps = (authUser.userRole ? _.pluck(authUser.userRole.apps, 'name') : []);
-            var orgServices = (authUser.organization ? _.pluck(authUser.organization.services, 'serviceType') : []);
+            var roleApps = (authUser.userRole ? underscore.pluck(authUser.userRole.apps, 'name') : []);
+            var orgServices = (authUser.organization ? underscore.pluck(authUser.organization.services, 'serviceType') : []);
 
             _revokeAllApps();
 
@@ -5986,7 +5896,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
                 return _groupedApps;
             },
             renameApp: function (id, title) {
-                var app = _.findWhere(_registeredApps, {id: id});
+                var app = underscore.findWhere(_registeredApps, {id: id});
 
                 if (app) {
                     app.title = title;
@@ -6048,18 +5958,18 @@ sdkInterfaceNavigiationApp.provider('navigationService', function() {
             }
         }
     }];
-});
+}]);
 
-var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id']);
+var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
-sdkTestDataApp.provider('mockDataService', [function () {
+sdkTestDataApp.provider('mockDataService', ['underscore', function (underscore) {
     var _mockData = {};
     var _config = {
         localStore: true
     };
 
     this.config = function (options) {
-        _config = _.defaults(options, _config);
+        _config = underscore.defaults(options, _config);
     };
 
     this.$get = ['localStore', 'objectId', 'promiseService', function (localStore, objectId, promiseService) {
@@ -6078,7 +5988,7 @@ sdkTestDataApp.provider('mockDataService', [function () {
                         _mockData[type][item.id] = item;
                     });
                 } else {
-                    data.id = data.id || ObjectId().toString();
+                    data.id = data.id || objectId().toString();
 
                     _mockData[type] = _mockData[type] || {};
                     _mockData[type][data.id] = data;
@@ -6093,7 +6003,7 @@ sdkTestDataApp.provider('mockDataService', [function () {
                     _mockData[type] = _mockData[type] || {};
 
                     if (id === undefined) {
-                        promise.resolve(_.toArray(_mockData[type] || {}));
+                        promise.resolve(underscore.toArray(_mockData[type] || {}));
                     } else {
                         if (_mockData[type][id]) {
                             promise.resolve(_mockData[type][id]);
@@ -6136,6 +6046,7 @@ angular.module('ag.sdk', [
     'ag.sdk.utilities',
     'ag.sdk.api',
     'ag.sdk.helper',
+    'ag.sdk.library',
     'ag.sdk.interface.map',
     'ag.sdk.test'
 ]);

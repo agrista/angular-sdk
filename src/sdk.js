@@ -27,6 +27,7 @@ angular.module('ag.sdk', [
     'ag.sdk.utilities',
     'ag.sdk.api',
     'ag.sdk.helper',
+    'ag.sdk.library',
     'ag.sdk.interface.map',
     'ag.sdk.test'
 ]);
