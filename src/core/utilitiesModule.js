@@ -1,48 +1,5 @@
 var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
 
-skdUtilitiesApp.run(['stateResolver', function (stateResolver) {
-    // Initialize stateResolver
-}]);
-
-skdUtilitiesApp.provider('stateResolver', function () {
-    var _stateTable = {};
-
-    this.when = function (states, resolverInjection) {
-        if (states instanceof Array) {
-            angular.forEach(states, function (state) {
-                _stateTable[state] = resolverInjection;
-            })
-        } else {
-            _stateTable[states] = resolverInjection;
-        }
-
-        return this;
-    };
-
-    this.resolver = function () {
-        return {
-            data: ['stateResolver', function (stateResolver) {
-                return stateResolver.getData();
-            }]
-        }
-    };
-
-    this.$get = ['$rootScope', '$state', '$injector', function ($rootScope, $state, $injector) {
-        var nextState = undefined;
-
-        $rootScope.$on('$stateChangeStart', function (event, toState) {
-            nextState = toState;
-        });
-
-        return {
-            getData: function () {
-                return (nextState && _stateTable[nextState.name] ? $injector.invoke(_stateTable[nextState.name]) : undefined);
-            }
-        }
-    }];
-});
-
-
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
         if ($rootScope.$$phase) {
