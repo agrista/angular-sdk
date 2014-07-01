@@ -196,12 +196,26 @@ mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promise
         }
 
         function _postAttachments (type, id, obj) {
-            return _monitor.add(promiseService.arrayWrap(function (list) {
+            var promiseChain = null;
+
+            return _monitor.add(promiseService.wrap(function (promise) {
                 angular.forEach(obj.data.attachments, function (attachment) {
                     if (attachment.local === true) {
-                        list.push(_postAttachment(type, id, attachment));
+                        if (promiseChain) {
+                            promiseChain.then(function () {
+                                return _postAttachment(type, id, attachment);
+                            }, promise.reject);
+                        } else {
+                            promiseChain = _postAttachment(type, id, attachment);
+                        }
                     }
                 });
+
+                if (promiseChain) {
+                    promiseChain.then(promise.resolve, promise.reject);
+                } else {
+                    promise.resolve();
+                }
             }));
         }
 
