@@ -2708,7 +2708,7 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
             newField.fieldName = newField.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, '');
             var foundField = underscore.findWhere(farm.data.fields, {fieldName: newField.fieldName});
 
-            return (foundField === undefined || (oldField === undefined || foundField.fieldName === oldField.fieldName));
+            return (angular.isObject(foundField) ? (angular.isObject(oldField) && foundField.fieldName === oldField.fieldName) : true);
         }
     }
 }]);
