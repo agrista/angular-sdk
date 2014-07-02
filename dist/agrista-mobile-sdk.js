@@ -3451,6 +3451,11 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
                 return null;
             },
             addGeoJSON: function(layerName, geojson, options, properties, onAddCallback) {
+                if (typeof properties == 'function') {
+                    onAddCallback = properties;
+                    properties = {};
+                }
+                
                 properties = _.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
