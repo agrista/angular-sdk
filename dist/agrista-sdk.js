@@ -3773,7 +3773,10 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
 });
 
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
-    var _markerIcons = {};
+    var _markerIcons = {
+        asset: mapMarkerHelperProvider.getMarkerStates('asset', ['default', 'success', 'error']),
+        zone: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
+    };
 
     var _mapStyles = {
         foreground: {
@@ -3806,6 +3809,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             crop: {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -3825,6 +3829,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             'irrigated cropland': {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -3834,6 +3839,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             pasture: {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -3843,6 +3849,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             'permanent crop': {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -3852,6 +3859,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             plantation: {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -3861,7 +3869,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: mapMarkerHelperProvider.getMarker('marker', 'success'),
+                icon: _markerIcons.zone.success,
                 draggable: true,
                 style: {
                     weight: 4,
@@ -3905,6 +3913,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             crop: {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -3924,6 +3933,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             'irrigated cropland': {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -3933,6 +3943,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             pasture: {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -3942,6 +3953,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             'permanent crop': {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -3951,6 +3963,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             plantation: {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -3960,7 +3973,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: mapMarkerHelperProvider.getMarker('marker'),
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 2,
                     color: 'white',
