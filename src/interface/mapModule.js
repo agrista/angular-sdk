@@ -288,6 +288,9 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
+            farmgate: {
+                icon: 'success'
+            },
             homestead: {
                 icon: 'success'
             }
@@ -390,6 +393,9 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillColor: "#ff6666",
                     fillOpacity: 0.5
                 }
+            },
+            farmgate: {
+                icon: 'default'
             },
             homestead: {
                 icon: 'default',
