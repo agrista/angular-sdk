@@ -130,9 +130,9 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
             iconUrl: 'img/icons/' + name + '.' + (state ? state : 'default') + '.png',
             shadowUrl: 'img/icons/' + name + '.shadow.png',
             iconSize: [48, 48],
-            iconAnchor: [24, 48],
+            iconAnchor: [22, 42],
             shadowSize: [73, 48],
-            shadowAnchor: [24, 48],
+            shadowAnchor: [22, 40],
             labelAnchor: [12, -24]
         });
     };
