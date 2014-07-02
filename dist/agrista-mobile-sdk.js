@@ -3371,6 +3371,11 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 return null;
             },
             addGeoJSON: function(layerName, geojson, options, properties, onAddCallback) {
+                if (typeof properties == 'function') {
+                    onAddCallback = properties;
+                    properties = {};
+                }
+                
                 properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
