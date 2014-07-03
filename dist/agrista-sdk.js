@@ -131,16 +131,17 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
 /**
  * Organizational Unit API
  */
-sdkApiApp.factory('organizationalUnitApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
-        getOrganizationalUnits: function(type) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/organizational-units' + (type ? '?type=' + type : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        getOrganizationalUnits: function (type, page) {
+            if (typeof type == 'object') {
+                page = type;
+                type = undefined;
+            }
+
+            return pagingService.page(_host + 'api/organizational-units' + (type ? '?type=' + type : ''), page);
         },
         getOrganizationalUnit: function(id) {
             return promiseService.wrap(function (promise) {
@@ -1528,13 +1529,9 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                         _scroll.busy = true;
 
                         requestor(_scroll.page).then(function(res) {
-                            _scroll.page = res.paging;
-                            _scroll.complete = (_scroll.page === undefined);
+                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                            _scroll.complete = (res.length !== _scroll.page.limit);
                             _scroll.busy = false;
-
-                            if (_scroll.page !== undefined) {
-                                res = res.data;
-                            }
 
                             if (dataMap) {
                                 res = dataMapService(res, dataMap);

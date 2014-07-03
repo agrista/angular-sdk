@@ -70,13 +70,9 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                         _scroll.busy = true;
 
                         requestor(_scroll.page).then(function(res) {
-                            _scroll.page = res.paging;
-                            _scroll.complete = (_scroll.page === undefined);
+                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                            _scroll.complete = (res.length !== _scroll.page.limit);
                             _scroll.busy = false;
-
-                            if (_scroll.page !== undefined) {
-                                res = res.data;
-                            }
 
                             if (dataMap) {
                                 res = dataMapService(res, dataMap);
