@@ -65,40 +65,51 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                 disabled: function() {
                     return (_scroll.busy || _scroll.complete);
                 },
-                request: function() {
+                request: function(params) {
+                    var requestParams = params || _scroll.page;
+
                     return promiseService.wrap(function(promise) {
-                        _scroll.busy = true;
+                        if (requestParams.search !== undefined && requestParams.search === _scroll.search) {
+                            promise.reject();
+                        } else {
+                            _scroll.busy = true;
 
-                        requestor(_scroll.page).then(function(res) {
-                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                            _scroll.complete = (res.length !== _scroll.page.limit);
-                            _scroll.busy = false;
+                            requestor(requestParams).then(function(res) {
+                                if (requestParams.search === undefined) {
+                                    _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                                    _scroll.complete = (res.length !== _scroll.page.limit);
+                                } else {
+                                    _scroll.search = requestParams.search;
+                                }
 
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
+                                _scroll.busy = false;
 
-                            itemStore(res);
+                                if (dataMap) {
+                                    res = dataMapService(res, dataMap);
+                                }
 
-                            promise.resolve(res);
-                        }, promise.reject);
+                                itemStore(res);
+
+                                promise.resolve(res);
+                            }, promise.reject);
+                        }
                     });
                 }
             };
 
             return _scroll;
         },
-        page: function(endPoint, paging) {
+        page: function(endPoint, params) {
             return promiseService.wrap(function(promise) {
                 var _handleResponse = function (res) {
                     promise.resolve(res.data);
                 };
 
-                if (paging !== undefined) {
-                    if (typeof paging === 'string') {
-                        $http.get(paging, {withCredentials: true}).then(_handleResponse, promise.reject);
+                if (params !== undefined) {
+                    if (typeof params === 'string') {
+                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
                     } else {
-                        $http.get(endPoint, {params: paging, withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
                     }
                 } else {
                     $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);

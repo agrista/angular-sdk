@@ -7,8 +7,8 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
     var _host = configuration.getServer();
 
     return {
-        getUsers: function (page) {
-            return pagingService.page(_host + 'api/users', page);
+        getUsers: function (params) {
+            return pagingService.page(_host + 'api/users', params);
         },
         getUsersByRole: function (id, role) {
             return promiseService.wrap(function (promise) {
@@ -135,13 +135,14 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
     var _host = configuration.getServer();
 
     return {
-        getOrganizationalUnits: function (type, page) {
-            if (typeof type == 'object') {
-                page = type;
-                type = undefined;
+        getOrganizationalUnits: function (params) {
+            if (typeof params == 'string') {
+                params = {
+                    type: params
+                };
             }
 
-            return pagingService.page(_host + 'api/organizational-units' + (type ? '?type=' + type : ''), page);
+            return pagingService.page(_host + 'api/organizational-units', params);
         },
         getOrganizationalUnit: function(id) {
             return promiseService.wrap(function (promise) {
@@ -167,8 +168,8 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
     var _host = configuration.getServer();
 
     return {
-        getNotifications: function (page) {
-            return pagingService.page(_host + 'api/notifications', page);
+        getNotifications: function (params) {
+            return pagingService.page(_host + 'api/notifications', params);
         },
         createNotification: function (notificationData) {
             return promiseService.wrap(function (promise) {
@@ -208,8 +209,8 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
     var _host = configuration.getServer();
 
     return {
-        getTasks: function (page) {
-            return pagingService.page(_host + 'api/tasks', page);
+        getTasks: function (params) {
+            return pagingService.page(_host + 'api/tasks', params);
         },
         createTask: function (taskData) {
             return promiseService.wrap(function (promise) {
@@ -270,8 +271,8 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
     var _host = configuration.getServer();
 
     return {
-        getMerchants: function (page) {
-            return pagingService.page(_host + 'api/merchants', page);
+        getMerchants: function (params) {
+            return pagingService.page(_host + 'api/merchants', params);
         },
         searchMerchants: function (query) {
             return promiseService.wrap(function (promise) {
@@ -346,8 +347,8 @@ sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'co
     var _host = configuration.getServer();
 
     return {
-        getServices: function (page) {
-            return pagingService.page(_host + 'api/services', page);
+        getServices: function (params) {
+            return pagingService.page(_host + 'api/services', params);
         },
         getServiceTypes: function () {
             return promiseService.wrap(function (promise) {
@@ -373,13 +374,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
     var _host = configuration.getServer();
 
     return {
-        getFarmers: function (id, page) {
+        getFarmers: function (id, params) {
             if (typeof id === 'object') {
-                page = id;
+                params = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/farmers' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/farmers' + (id ? '/' + id : ''), params);
         },
         searchFarmers: function (query) {
             return promiseService.wrap(function (promise) {
@@ -434,13 +435,13 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
     var _host = configuration.getServer();
 
     return {
-        getEntities: function (id, page) {
+        getEntities: function (id, params) {
             if (typeof id === 'object') {
-                page = id;
+                params = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/legalentities' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/legalentities' + (id ? '/' + id : ''), params);
         },
         updateEntity: function (data) {
             return promiseService.wrap(function (promise) {
@@ -487,13 +488,13 @@ sdkApiApp.factory('farmApi', ['$http', 'pagingService', 'promiseService', 'confi
     var _host = configuration.getServer();
 
     return {
-        getFarms: function (id, page) {
+        getFarms: function (id, params) {
             if (typeof id === 'object') {
-                page = id;
+                params = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/farms' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/farms' + (id ? '/' + id : ''), params);
         },
         createFarm: function (farmData) {
             return promiseService.wrap(function (promise) {
@@ -533,13 +534,13 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
     var _host = configuration.getServer();
 
     return {
-        getAssets: function (id, page) {
+        getAssets: function (id, params) {
             if (typeof id === 'object') {
-                page = id;
+                params = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/assets' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/assets' + (id ? '/' + id : ''), params);
         },
         createAsset: function (assetData) {
             return promiseService.wrap(function (promise) {
@@ -586,13 +587,13 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
     var _host = configuration.getServer();
 
     return {
-        getDocuments: function (id, page) {
+        getDocuments: function (id, params) {
             if (typeof id === 'object') {
-                page = id;
+                params = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/documents' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/documents' + (id ? '/' + id : ''), params);
         },
         createDocument: function (documentData) {
             return promiseService.wrap(function (promise) {
@@ -689,18 +690,18 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
     var _host = configuration.getServer();
 
     return {
-        getActivities: function (id, type, page) {
+        getActivities: function (id, type, params) {
             if (typeof type === 'object') {
-                page = type;
+                params = type;
                 type = undefined;
             }
 
             if (typeof id === 'object') {
-                page = id;
+                params = id;
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), page);
+            return pagingService.page(_host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), params);
         },
         createActivity: function (activityData) {
             return promiseService.wrap(function (promise) {
