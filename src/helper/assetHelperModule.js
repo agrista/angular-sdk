@@ -263,6 +263,12 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 valuation.assetValue = valuation.totalStock * (valuation.unitValue || 0);
             } else if (asset.type == 'crop' && isNaN(valuation.expectedYield) == false) {
                 valuation.assetValue = valuation.expectedYield * (valuation.unitValue || 0);
+            } else if (asset.type == 'improvement' && isNaN(valuation.replacementValue) == false) {
+                valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation'], function (total, type) {
+                    return isNaN(valuation[type]) ? total : total + (valuation[type] / 100);
+                }, 0);
+
+                valuation.assetValue = Math.round(valuation.replacementValue * (1 - Math.min(valuation.totalDepreciation, 1)));
             } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
                 valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
             }
