@@ -1428,7 +1428,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
         'Other costs'];
 
     var _sections = {
-        expense: {
+        expenses: {
             code: 'EXP',
             name: 'Expenses'
         },
@@ -1894,12 +1894,12 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
 
     var _categoryOptions = {
         crop: {
-            income:{
+            income: {
                 'Crop Sales': [
                     _categories['INC-HVT-CROP']
                 ]
             },
-            expense:{
+            expenses: {
                 'Preharvest': [
                     _categories['EXP-HVP-SEED'],
                     _categories['EXP-HVP-FERT'],
@@ -1930,12 +1930,12 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             }
         },
         horticulture: {
-            income:{
+            income: {
                 'Fruit Sales': [
                     _categories['INC-HVT-FRUT']
                 ]
             },
-            expense:{
+            expenses: {
                 'Preharvest': [
                     _categories['EXP-HVP-PLTM'],
                     _categories['EXP-HVP-FERT'],
@@ -1985,7 +1985,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
                         _categories['INC-LSP-MILK']
                     ]
                 },
-                expense: {
+                expenses: {
                     'Replacements': [
                         _categories['EXP-RPM-CCALV'],
                         _categories['EXP-RPM-CWEN'],
@@ -2033,7 +2033,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
                         _categories['INC-LSP-MILK']
                     ]
                 },
-                expense: {
+                expenses: {
                     'Replacements': [
                         _categories['EXP-RPM-GID'],
                         _categories['EXP-RPM-GWEAN'],
@@ -2082,7 +2082,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
                         _categories['INC-LSP-MILK']
                     ]
                 },
-                expense: {
+                expenses: {
                     'Replacements': [
                         _categories['EXP-RPM-SLAMB'],
                         _categories['EXP-RPM-SWEAN'],
@@ -2291,7 +2291,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             checkBudgetTemplate(budget);
             return this.calculateTotals(budget);
         },
-        addExpenseCategory: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
+        addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             console.log(budget, sectionName, groupName, categoryCode);
             var category = angular.copy(_categories[categoryCode]);
             category.quantity = 0;
