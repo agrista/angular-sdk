@@ -3267,9 +3267,11 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             category.quantity = 0;
             category.pricePerUnit = 0;
             category.value = 0;
-            category.valuePerLSU = 0;
-            if(budget.assetType == 'livestock' && _conversionRate[budget.commodityType][category.name]) {
-                category.conversionRate = _conversionRate[budget.commodityType][category.name];
+            if(budget.assetType == 'livestock') {
+                category.valuePerLSU = 0;
+                if(_conversionRate[budget.commodityType][category.name]) {
+                    category.conversionRate = _conversionRate[budget.commodityType][category.name];
+                }
             }
 
             var noSuchSection = true;
@@ -3322,15 +3324,17 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', [function() {
             var income = 0;
             var costs = 0;
             budget.data.sections.forEach(function(section, i) {
-                section.total = {
-                    value: 0,
-                    valuePerLSU: 0
-                };
+                section.total = {};
+                section.total.value = 0;
+                if(budget.assetType == 'livestock') {
+                    section.total.valuePerLSU = 0;
+                }
                 section.productCategoryGroups.forEach(function(group, j) {
-                    group.total = {
-                        value: 0,
-                        valuePerLSU: 0
-                    };
+                    group.total = {};
+                    group.total.value = 0;
+                    if(budget.assetType == 'livestock') {
+                        group.total.valuePerLSU = 0;
+                    }
                     group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
                             var groupSum = 0;
