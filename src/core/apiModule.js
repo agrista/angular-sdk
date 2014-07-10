@@ -988,14 +988,14 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
         },
         addAssumptionGroup: function(data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/demand-assumption', data).then(function (res) {
+                $http.post(_host + 'api/demand-assumption', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateProductDemandAssumption: function(id, data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/demand-assumption/' + id, data).then(function (res) {
+                $http.post(_host + 'api/demand-assumption/' + id, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1003,7 +1003,7 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
         deleteProductDemandAssumption: function(data) {
             // data takes the form { id: 5, year: "2014"}, where either an id OR a year is given to specify which records to delete
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/demand-assumption/delete', data).then(function (res) {
+                $http.post(_host + 'api/demand-assumption/delete', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
