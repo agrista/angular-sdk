@@ -16,7 +16,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
     };
 
     var _sections = {
-        expense: {
+        expenses: {
             code: 'EXP',
             name: 'Expenses'
         },
@@ -469,7 +469,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             name: 'Crop transport',
             unit: 't'
         }
-    }
+    };
 
     // todo: extend the categories with products for future features.
 //    var _productsMap = {
@@ -482,12 +482,12 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
 
     var _categoryOptions = {
         crop: {
-            income:{
+            income: {
                 'Crop Sales': [
                     _categories['INC-HVT-CROP']
                 ]
             },
-            expense:{
+            expenses: {
                 'Preharvest': [
                     _categories['EXP-HVP-SEED'],
                     _categories['EXP-HVP-FERT'],
@@ -518,12 +518,12 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             }
         },
         horticulture: {
-            income:{
+            income: {
                 'Fruit Sales': [
                     _categories['INC-HVT-FRUT']
                 ]
             },
-            expense:{
+            expenses: {
                 'Preharvest': [
                     _categories['EXP-HVP-PLTM'],
                     _categories['EXP-HVP-FERT'],
@@ -573,7 +573,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                         _categories['INC-LSP-MILK']
                     ]
                 },
-                expense: {
+                expenses: {
                     'Replacements': [
                         _categories['EXP-RPM-CCALV'],
                         _categories['EXP-RPM-CWEN'],
@@ -621,7 +621,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                         _categories['INC-LSP-MILK']
                     ]
                 },
-                expense: {
+                expenses: {
                     'Replacements': [
                         _categories['EXP-RPM-GID'],
                         _categories['EXP-RPM-GWEAN'],
@@ -670,7 +670,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                         _categories['INC-LSP-MILK']
                     ]
                 },
-                expense: {
+                expenses: {
                     'Replacements': [
                         _categories['EXP-RPM-SLAMB'],
                         _categories['EXP-RPM-SWEAN'],
@@ -797,7 +797,6 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             }
 
             // remove the income / expense items which exists in the budget, from the categories
-//            console.log(budget.data);
             angular.forEach(budget.data.sections, function(section, i) {
                 if(section.name.toLowerCase().indexOf(sectionType) > -1) {
                     if(budget.assetType != 'horticulture' || (budget.assetType == 'horticulture' && section.horticultureStage == horticultureStage)) {
@@ -833,15 +832,17 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             checkBudgetTemplate(budget);
             return this.calculateTotals(budget);
         },
-        addExpenseCategory: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
+        addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             var category = angular.copy(_categories[categoryCode]);
             category.quantity = 0;
             category.pricePerUnit = 0;
             category.value = 0;
-            category.valuePerLSU = 0;
-
-            if(budget.assetType == 'livestock' && _conversionRate[budget.commodityType][category.name]) {
-                category.conversionRate = _conversionRate[budget.commodityType][category.name];
+            
+            if(budget.assetType == 'livestock') {
+                category.valuePerLSU = 0;
+                if(_conversionRate[budget.commodityType][category.name]) {
+                    category.conversionRate = _conversionRate[budget.commodityType][category.name];
+                }
             }
 
             var noSuchSection = true;
@@ -897,20 +898,25 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
 
             var income = 0;
             var costs = 0;
-
-            angular.forEach(budget.data.sections, function(section, i) {
+            budget.data.sections.forEach(function(section, i) {
                 section.total = {
-                    value: 0,
-                    valuePerLSU: 0
+                    value: 0
                 };
-
-                angular.forEach(section.productCategoryGroups, function(group, j) {
+                
+                if(budget.assetType == 'livestock') {
+                    section.total.valuePerLSU = 0;
+                }
+                
+                section.productCategoryGroups.forEach(function(group, j) {
                     group.total = {
-                        value: 0,
-                        valuePerLSU: 0
+                        value: 0
                     };
-
-                    angular.forEach(group.productCategories, function(category, k) {
+                    
+                    if(budget.assetType == 'livestock') {
+                        group.total.valuePerLSU = 0;
+                    }
+                    
+                    group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
                             var groupSum = 0;
 
