@@ -933,6 +933,22 @@ sdkInterfaceMapApp.provider('mapboxService', function () {
             },
             featureClickOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-off');
+            },
+
+            /*
+             * Sidebar
+             */
+            enableSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::enable-sidebar');
+            },
+            showSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::sidebar-show');
+            },
+            hideSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::sidebar-hide');
+            },
+            toggleSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::sidebar-toggle');
             }
         };
 
@@ -1245,6 +1261,34 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
             _this._featureClickable = false;
+        });
+
+        scope.$on('mapbox-' + id + '::enable-sidebar', function(event, args) {
+            var sidebar = L.control.sidebar('sidebar', {closeButton: true, position: 'right'});
+            _this._sidebar = sidebar;
+            _this._map.addControl(sidebar);
+//            setTimeout(function () {
+//                sidebar.show();
+//            }, 500);
+        });
+
+        // Sidebar
+        scope.$on('mapbox-' + id + '::sidebar-show', function(event, args) {
+            if(null != _this._sidebar) {
+                _this._sidebar.show();
+            }
+        });
+
+        scope.$on('mapbox-' + id + '::sidebar-hide', function(event, args) {
+            if(null != _this._sidebar) {
+                _this._sidebar.hide();
+            }
+        });
+
+        scope.$on('mapbox-' + id + '::sidebar-toggle', function(event, args) {
+            if(null != _this._sidebar) {
+                _this._sidebar.toggle();
+            }
         });
     };
 
