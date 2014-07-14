@@ -963,6 +963,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
     var _listServiceMap = function (item) {
         return {
             title: item.organization.name,
+            subtitle: 'Valued at ' + item.currency + ' ' + item.assetValue,
             date: item.date
         };
     };
@@ -995,16 +996,41 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
             }
 
+            valuation.assetValue = Math.round(valuation.assetValue * 100) / 100;
+
             return valuation;
         },
-        getApplicableGuideline: function (guidelines, asset, field) {
+        calculateAssetValue: function (asset) {
+            if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
+                asset.data.assetValue = asset.data.quantity * (asset.data.unitValue || 0);
+            } else if (asset.type == 'livestock' && isNaN(asset.data.totalStock) == false) {
+                asset.data.assetValue = asset.data.totalStock * (asset.data.unitValue || 0);
+            } else if (asset.type == 'crop' && isNaN(asset.data.expectedYield) == false) {
+                asset.data.assetValue = asset.data.expectedYield * (asset.data.unitValue || 0);
+            } else if (asset.type == 'improvement' && isNaN(asset.data.replacementValue) == false) {
+                asset.data.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation'], function (total, type) {
+                    return isNaN(asset.data[type]) ? total : total + (asset.data[type] / 100);
+                }, 0);
+
+                asset.data.assetValue = Math.round(asset.data.replacementValue * (1 - Math.min(asset.data.totalDepreciation, 1)));
+            } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
+                asset.data.assetValue = asset.data.size * (asset.data.unitValue || 0);
+            }
+
+            asset.data.assetValue = Math.round(asset.data.assetValue * 100) / 100;
+        },
+        getApplicableGuidelines: function (guidelines, asset, field) {
             var assetLandUse = assetHelper.getAssetLandUse(asset.type);
             var chain = underscore.chain(guidelines).filter(function(item) {
                 return (assetLandUse.indexOf(item.assetClass) !== -1);
             });
 
-            if (asset.type === 'crop' || asset.type === 'irrigated cropland') {
+            if (asset.type === 'crop') {
                 chain = chain.where({assetClass: field.landUse}).filter(function (item) {
+                    return (item.soilPotential === undefined || item.soilPotential === field.croppingPotential)
+                });
+            } else if (asset.type === 'irrigated cropland') {
+                chain = chain.filter(function (item) {
                     return (item.soilPotential === undefined || item.soilPotential === field.croppingPotential)
                 });
             } else if (asset.type === 'pasture') {
@@ -1034,7 +1060,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 });
             }
 
-            return chain.first().value();
+            return chain.value();
         }
     }
 }]);
@@ -1747,7 +1773,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             name: 'Crop transport',
             unit: 't'
         }
-    }
+    };
 
     // todo: extend the categories with products for future features.
 //    var _productsMap = {
@@ -2075,7 +2101,6 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             }
 
             // remove the income / expense items which exists in the budget, from the categories
-//            console.log(budget.data);
             angular.forEach(budget.data.sections, function(section, i) {
                 if(section.name.toLowerCase().indexOf(sectionType) > -1) {
                     if(budget.assetType != 'horticulture' || (budget.assetType == 'horticulture' && section.horticultureStage == horticultureStage)) {
