@@ -895,7 +895,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
         },
         searchEnterpriseBudgets: function (query) {
             query = underscore.chain(query).map(function (value, key) {
@@ -965,6 +965,49 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             })
         }
 
+    };
+}]);
+
+/**
+ * Market Assumptions API
+ */
+sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductDemandAssumptions: function(query) {
+            query = _.chain(query).map(function (value, key) {
+                return key + '=' + value;
+            }).join('&').value();
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        addAssumptionGroup: function(data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductDemandAssumption: function(id, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProductDemandAssumption: function(data) {
+            // data takes the form { id: 5, year: "2014"}, where either an id OR a year is given to specify which records to delete
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption/delete', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
     };
 }]);
 
@@ -5257,6 +5300,22 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             featureClickOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::feature-click-off');
+            },
+
+            /*
+             * Sidebar
+             */
+            enableSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::enable-sidebar');
+            },
+            showSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::sidebar-show');
+            },
+            hideSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::sidebar-hide');
+            },
+            toggleSidebar: function() {
+                this.enqueueRequest('mapbox-' + this._id + '::sidebar-toggle');
             }
         };
 
@@ -5569,6 +5628,34 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         scope.$on('mapbox-' + id + '::feature-click-off', function(event, args) {
             _this._featureClickable = false;
+        });
+
+        scope.$on('mapbox-' + id + '::enable-sidebar', function(event, args) {
+            var sidebar = L.control.sidebar('sidebar', {closeButton: true, position: 'right'});
+            _this._sidebar = sidebar;
+            _this._map.addControl(sidebar);
+//            setTimeout(function () {
+//                sidebar.show();
+//            }, 500);
+        });
+
+        // Sidebar
+        scope.$on('mapbox-' + id + '::sidebar-show', function(event, args) {
+            if(null != _this._sidebar) {
+                _this._sidebar.show();
+            }
+        });
+
+        scope.$on('mapbox-' + id + '::sidebar-hide', function(event, args) {
+            if(null != _this._sidebar) {
+                _this._sidebar.hide();
+            }
+        });
+
+        scope.$on('mapbox-' + id + '::sidebar-toggle', function(event, args) {
+            if(null != _this._sidebar) {
+                _this._sidebar.toggle();
+            }
         });
     };
 

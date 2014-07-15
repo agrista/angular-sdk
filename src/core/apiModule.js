@@ -895,7 +895,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/budgets' + (id ? '/' + id : ''), page);
+            return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
         },
         searchEnterpriseBudgets: function (query) {
             query = underscore.chain(query).map(function (value, key) {
@@ -965,5 +965,48 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             })
         }
 
+    };
+}]);
+
+/**
+ * Market Assumptions API
+ */
+sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductDemandAssumptions: function(query) {
+            query = _.chain(query).map(function (value, key) {
+                return key + '=' + value;
+            }).join('&').value();
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        addAssumptionGroup: function(data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductDemandAssumption: function(id, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProductDemandAssumption: function(data) {
+            // data takes the form { id: 5, year: "2014"}, where either an id OR a year is given to specify which records to delete
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption/delete', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
     };
 }]);
