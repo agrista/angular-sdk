@@ -3357,7 +3357,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         getFarmerLocation: function(farmer) {
             if (farmer) {
                 if (farmer.data && farmer.data.loc) {
-                    return farmer.data.loc.coordinates;
+                    return (farmer.data.loc.geometry ? farmer.data.loc.geometry.coordinates : farmer.data.loc.coordinates);
                 } else if (farmer.legalEntities) {
                     var geojson = geoJSONHelper();
 
