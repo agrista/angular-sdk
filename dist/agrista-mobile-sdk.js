@@ -1213,7 +1213,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         }
     };
 
-    var _businessEntityTypes = ['Commercial', 'Cooperative', 'Corporate', 'Smallholder'];
+    var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
 
     return {
         listServiceMap: function() {
