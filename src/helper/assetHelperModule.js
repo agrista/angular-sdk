@@ -22,7 +22,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.summary = (item.data.description || '');
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
-                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : '') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : 'Non irrigable ' + item.type) + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
                 map.subtitle = 'Area: ' + item.data.size.toFixed(2) + 'Ha';
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
