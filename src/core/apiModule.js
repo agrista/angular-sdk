@@ -891,7 +891,7 @@ apiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseServic
     return {
         getSubRegions: function (withGeometries, paging) {
             if (withGeometries && typeof withGeometries != 'boolean') {
-                console.log(withGeometries);
+                $log.debug(withGeometries);
                 paging = withGeometries;
                 withGeometries = undefined;
             }
