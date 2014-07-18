@@ -885,7 +885,7 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
 /**
  * SubRegion API
  */
-apiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
