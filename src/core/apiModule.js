@@ -883,6 +883,33 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
 }]);
 
 /**
+ * SubRegion API
+ */
+apiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getSubRegions: function (withGeometries, limit, offset) {
+            if (typeof withGeometries != 'boolean') {
+                console.log(withGeometries);
+                offset = limit;
+                limit = withGeometries;
+                withGeometries = undefined;
+            }
+
+            return pagingService.page(_host + 'api/guidelines/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), limit, offset);
+        },
+        getSubRegion: function(subregionId, versionId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/guidelines/' + subregionId + (versionId ? '?versionId=' + versionId : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Enterprise Budget API
  */
 sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
