@@ -889,15 +889,14 @@ apiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseServic
     var _host = configuration.getServer();
 
     return {
-        getSubRegions: function (withGeometries, limit, offset) {
-            if (typeof withGeometries != 'boolean') {
+        getSubRegions: function (withGeometries, paging) {
+            if (withGeometries && typeof withGeometries != 'boolean') {
                 console.log(withGeometries);
-                offset = limit;
-                limit = withGeometries;
+                paging = withGeometries;
                 withGeometries = undefined;
             }
 
-            return pagingService.page(_host + 'api/guidelines/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), limit, offset);
+            return pagingService.page(_host + 'api/guidelines/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
         },
         getSubRegion: function(subregionId, versionId) {
             return promiseService.wrap(function(promise) {
