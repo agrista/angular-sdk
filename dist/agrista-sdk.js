@@ -1892,9 +1892,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.subtitle = item.data.type + ' - ' + item.data.category;
                 map.summary = (item.data.description || '');
                 map.groupby = item.farmId;
-            } else if (item.type == 'irrigated cropland') {
-                map.title = item.data.irrigation + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = 'Equipped Area: ' + item.data.size.toFixed(2) + 'Ha';
+            } else if (item.type == 'cropland') {
+                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : '') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.subtitle = 'Area: ' + item.data.size.toFixed(2) + 'Ha';
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
                 map.title = item.data.type + ' - ' + item.data.category;
@@ -1918,6 +1918,10 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.subtitle = 'Quantity: ' + item.data.quantity;
                 map.summary = (item.data.description || '');
                 map.groupby = item.data.type;
+            } else if (item.type == 'wasteland') {
+                map.title = 'Wasteland';
+                map.subtitle = 'Area: ' + item.data.size.toFixed(2) + 'Ha';
+                map.groupby = item.farmId;
             } else if (item.type == 'water right') {
                 map.title = item.data.waterSource + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
                 map.subtitle = 'Irrigatable Extent: ' + item.data.size.toFixed(2) + 'Ha';
@@ -1950,12 +1954,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         'crop': 'Crops',
         'farmland': 'Farmlands',
         'improvement': 'Fixed Improvements',
-        'irrigated cropland': 'Irrigated Cropland',
+        'cropland': 'Cropland',
         'livestock': 'Livestock',
         'pasture': 'Pastures',
         'permanent crop': 'Permanent Crops',
         'plantation': 'Plantations',
         'vme': 'Vehicles, Machinery & Equipment',
+        'wasteland': 'Wasteland',
         'water right': 'Water Rights'
     };
 
@@ -2026,12 +2031,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         'crop': ['Cropland'],
         'farmland': landUseHelper.landUseTypes(),
         'improvement': [],
-        'irrigated cropland': ['Cropland'],
+        'cropland': ['Cropland', 'Irrigated Cropland'],
         'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
         'pasture': ['Grazing', 'Planted Pastures', 'Conservation'],
         'permanent crop': ['Horticulture (Perennial)'],
         'plantation': ['Plantation'],
         'vme': [],
+        'wasteland': ['Structures (Handling)', 'Structures (Processing)', 'Structures (Storage)', 'Utilities', 'Wasteland'],
         'water right': landUseHelper.landUseTypes()
     };
 
@@ -2084,19 +2090,15 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         },
 
         isFieldApplicable: function (type, field) {
-            var fieldHasLandUse = (_assetLandUse[type].indexOf(field.landUse) !== -1);
-
-            if (type == 'irrigated cropland') {
-                return (fieldHasLandUse && field.irrigated);
-            }
-
-            return fieldHasLandUse;
+            return (_assetLandUse[type].indexOf(field.landUse) !== -1);
         },
 
         cleanAssetData: function (asset) {
             if (asset.type == 'vme') {
                 asset.data.quantity = (asset.data.identificationNo && asset.data.identificationNo.length > 0 ? 1 : asset.data.quantity);
                 asset.data.identificationNo = (asset.data.quantity != 1 ? '' : asset.data.identificationNo);
+            } else if (asset.type == 'cropland') {
+                asset.data.equipped = (asset.data.irrigated ? asset.data.equipped : false);
             }
 
             return asset;
@@ -3469,7 +3471,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         }
     };
 
-    var _businessEntityTypes = ['Commercial', 'Cooperative', 'Corporate', 'Smallholder'];
+    var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
 
     return {
         listServiceMap: function() {
@@ -4655,7 +4657,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
-            'irrigated cropland': {
+            'cropland': {
                 icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
@@ -4759,7 +4761,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.5
                 }
             },
-            'irrigated cropland': {
+            'cropland': {
                 icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
