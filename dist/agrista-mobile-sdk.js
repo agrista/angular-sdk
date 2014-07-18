@@ -889,7 +889,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
         'permanent crop': ['Horticulture (Perennial)'],
         'plantation': ['Plantation'],
         'vme': [],
-        'wasteland': ['Structures (Handling)', 'Structures (Processing)', 'Structures (Storage)', 'Utilities', 'Wasteland'],
+        'wasteland': ['Grazing', 'Structures (Handling)', 'Structures (Processing)', 'Structures (Storage)', 'Utilities', 'Wasteland'],
         'water right': ['Water Right']
     };
 
@@ -1027,21 +1027,17 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 return (assetLandUse.indexOf(item.assetClass) !== -1);
             });
 
-            if (asset.type === 'crop') {
-                chain = chain.where({assetClass: field.landUse}).filter(function (item) {
-                    return (item.soilPotential === undefined || item.soilPotential === field.croppingPotential)
-                });
-            } else if (asset.type === 'irrigated cropland') {
+            if (asset.type === 'cropland') {
                 chain = chain.filter(function (item) {
-                    return (item.soilPotential === undefined || item.soilPotential === field.croppingPotential)
+                    return (field.irrigated === true && item.assetClass === 'Irrigated Cropland') ||
+                        (field.irrigated !== true && item.assetClass === 'Cropland' &&
+                            (item.soilPotential === undefined || item.soilPotential === field.croppingPotential));
                 });
-            } else if (asset.type === 'pasture') {
+            } else if (asset.type === 'pasture' || asset.type === 'wasteland') {
                 chain = chain.where({assetClass: field.landUse}).filter(function (item) {
-                    return (item.crop === undefined || item.crop.indexOf(asset.data.crop) !== -1) &&
-                        (item.terrain === undefined || item.terrain === field.terrain) &&
-                        (item.minFarmSize === undefined || field.size >= item.minFarmSize) &&
-                        (item.maxFarmSize === undefined || field.size < item.maxFarmSize);
-                })
+                    return ((asset.data.crop === undefined && item.crop === undefined) || item.crop.indexOf(asset.data.crop) !== -1) &&
+                        ((field.terrain === undefined && item.terrain === undefined) || item.terrain === field.terrain);
+                });
             } else if (asset.type === 'permanent crop') {
                 var establishedDate = new Date(Date.parse(asset.data.establishedDate));
                 var monthsFromEstablised = monthDiff(establishedDate, new Date());
