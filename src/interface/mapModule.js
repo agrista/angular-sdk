@@ -206,7 +206,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
-            'irrigated cropland': {
+            'cropland': {
                 style: {
                     weight: 2,
                     color: 'white',
@@ -284,7 +284,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.5
                 }
             },
-            'irrigated cropland': {
+            'cropland': {
                 style: {
                     weight: 1,
                     color: 'white',
