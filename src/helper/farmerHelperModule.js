@@ -44,12 +44,12 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
                     angular.forEach(farmer.legalEntities, function (entity) {
                         if (entity.assets) {
                             angular.forEach(entity.assets, function (asset) {
-                                geojson.addGeometry(asset.loc);
+                                geojson.addGeometry(asset.data.loc);
                             });
                         }
                     });
 
-                    return geojson.getCenter();
+                    return geojson.getCenter().reverse();
                 }
             }
 

@@ -745,7 +745,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
                 map.summary = (item.data.description || '');
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
-                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : '') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : 'Non irrigable ' + item.type) + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
                 map.subtitle = 'Area: ' + item.data.size.toFixed(2) + 'Ha';
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
@@ -1066,6 +1066,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
         }
     }
 }]);
+
 var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
 
 sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
@@ -2353,12 +2354,12 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
                     angular.forEach(farmer.legalEntities, function (entity) {
                         if (entity.assets) {
                             angular.forEach(entity.assets, function (asset) {
-                                geojson.addGeometry(asset.loc);
+                                geojson.addGeometry(asset.data.loc);
                             });
                         }
                     });
 
-                    return geojson.getCenter();
+                    return geojson.getCenter().reverse();
                 }
             }
 
