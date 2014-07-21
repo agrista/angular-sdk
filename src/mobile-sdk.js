@@ -6,6 +6,7 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
+    'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',
     'ag.sdk.helper.user'

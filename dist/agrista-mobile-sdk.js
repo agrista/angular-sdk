@@ -2809,6 +2809,31 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
     }
 }]);
 
+var sdkHelperRegionApp = angular.module('ag.sdk.helper.region', []);
+
+sdkHelperRegionApp.factory('regionHelper', [function() {
+    var _listServiceMap = function(item) {
+        var map = {
+            title: item.name,
+            subtitle: item.region.province,
+            region: item.region.name
+        };
+        if(item.subRegionNumber) {
+            map.subtitle += ' - ' +item.subRegionNumber;
+        }
+        if(item.plotCode) {
+            map.subtitle += ' - ' +item.plotCode;
+        }
+
+        return map;
+    };
+
+    return {
+        listServiceMap: function() {
+            return _listServiceMap;
+        }
+    }
+}]);
 var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.authorization', 'ag.sdk.utilities', 'ag.sdk.interface.list', 'ag.sdk.library']);
 
 sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
@@ -8599,6 +8624,7 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
+    'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',
     'ag.sdk.helper.user'
