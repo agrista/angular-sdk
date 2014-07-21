@@ -1012,6 +1012,13 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
                 }, promise.reject);
             });
         },
+        getMapData: function(options) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumptions/map-data', options, {withCredentials: true}).then(function(res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         addAssumptionGroup: function(data) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/demand-assumption', data, {withCredentials: true}).then(function (res) {
