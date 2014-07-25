@@ -1734,38 +1734,6 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-skdUtilitiesApp.directive('signature', ['$compile', function ($compile) {
-    return {
-        restrict: 'E',
-        replace: true,
-        template: '<div class="panel panel-default signature"><div class="panel-heading">{{ title }}<div class="btn btn-default btn-sm pull-right" ng-click="reset()">Clear</div></div></div>',
-        scope: {
-            onsigned: '=',
-            name: '@',
-            title: '@'
-        },
-        link: function (scope, element, attrs) {
-            var sigElement = $compile('<div class="panel-body signature-body"></div>')(scope);
-
-            element.append(sigElement);
-
-            scope.reset = function() {
-                sigElement.jSignature('reset');
-
-                scope.onsigned(attrs.name, null);
-            };
-
-            sigElement.jSignature({
-                'width': attrs.width,
-                'height': attrs.height,
-                'showUndoButton': false});
-
-            sigElement.bind('change', function() {
-                scope.onsigned(attrs.name, sigElement.jSignature('getData', 'svgbase64'));
-            });
-        }
-    };
-}]);
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscore', function($filter, landUseHelper, underscore) {
@@ -1994,6 +1962,23 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
 
+        generateAssetKey: function (asset, legalEntity, farm) {
+            asset.assetKey = 'entity.' + legalEntity.uuid +
+                (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (asset.type === 'crop' && asset.data.season ? '-s.' + asset.data.season : '') +
+                (asset.data.fieldName ? '-fi.' + asset.data.fieldName : '') +
+                (asset.data.crop ? '-c.' + asset.data.crop : '') +
+                (asset.type === 'cropland' && asset.data.irrigated ? '-i.' + asset.data.irrigation : '') +
+                (asset.type === 'farmland' && asset.data.sgKey ? '-' + asset.data.sgKey : '') +
+                (asset.type === 'improvement' || asset.type === 'livestock' || asset.type === 'vme' ?
+                    (asset.data.type ? '-t.' + asset.data.type : '') +
+                    (asset.data.category ? '-c.' + asset.data.category : '') +
+                    (asset.data.name ? '-n.' + asset.data.name : '') +
+                    (asset.data.purpose ? '-p.' + asset.data.purpose : '') +
+                    (asset.data.model ? '-m.' + asset.data.model : '') +
+                    (asset.data.identificationNo ? '-in.' + asset.data.identificationNo : '') : '') +
+                (asset.data.waterSource ? '-ws.' + asset.data.waterSource : '');
+        },
         cleanAssetData: function (asset) {
             if (asset.type == 'vme') {
                 asset.data.quantity = (asset.data.identificationNo && asset.data.identificationNo.length > 0 ? 1 : asset.data.quantity);
@@ -2027,27 +2012,6 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
         listServiceMap: function () {
             return _listServiceMap;
         },
-        calculateValuation: function (asset, valuation) {
-            if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
-                valuation.assetValue = asset.data.quantity * (valuation.unitValue || 0);
-            } else if (asset.type == 'livestock' && isNaN(valuation.totalStock) == false) {
-                valuation.assetValue = valuation.totalStock * (valuation.unitValue || 0);
-            } else if (asset.type == 'crop' && isNaN(valuation.expectedYield) == false) {
-                valuation.assetValue = valuation.expectedYield * (valuation.unitValue || 0);
-            } else if (asset.type == 'improvement' && isNaN(valuation.replacementValue) == false) {
-                valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation'], function (total, type) {
-                    return isNaN(valuation[type]) ? total : total + (valuation[type] / 100);
-                }, 0);
-
-                valuation.assetValue = Math.round(valuation.replacementValue * (1 - Math.min(valuation.totalDepreciation, 1)));
-            } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
-                valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
-            }
-
-            valuation.assetValue = Math.round(valuation.assetValue * 100) / 100;
-
-            return valuation;
-        },
         calculateAssetValue: function (asset) {
             if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
                 asset.data.assetValue = asset.data.quantity * (asset.data.unitValue || 0);
@@ -2055,12 +2019,13 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 asset.data.assetValue = asset.data.totalStock * (asset.data.unitValue || 0);
             } else if (asset.type == 'crop' && isNaN(asset.data.expectedYield) == false) {
                 asset.data.assetValue = asset.data.expectedYield * (asset.data.unitValue || 0);
-            } else if (asset.type == 'improvement' && isNaN(asset.data.replacementValue) == false) {
-                asset.data.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation'], function (total, type) {
-                    return isNaN(asset.data[type]) ? total : total + (asset.data[type] / 100);
+            } else if (asset.type == 'improvement') {
+                asset.data.valuation = asset.data.valuation || {};
+                asset.data.valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation', 'purchaserResistance'], function (total, type) {
+                    return isNaN(asset.data.valuation[type]) ? total : total + (asset.data.valuation[type] / 100);
                 }, 0);
 
-                asset.data.assetValue = Math.round(asset.data.replacementValue * (1 - Math.min(asset.data.totalDepreciation, 1)));
+                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * (1 - Math.min(asset.data.valuation.totalDepreciation, 1)));
             } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
                 asset.data.assetValue = asset.data.size * (asset.data.unitValue || 0);
             }
