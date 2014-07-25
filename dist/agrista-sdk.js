@@ -1512,41 +1512,58 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                 $rootScope.$broadcast('paging::items', data);
             };
 
+            var _pagingDefaults = {
+                limit: 50
+            };
+
             var _scroll = {
-                page: {limit: 50},
+                page: _.clone(_pagingDefaults),
                 busy: false,
                 complete: false,
-                disabled: function() {
-                    return (_scroll.busy || _scroll.complete);
+                disabled: function () {
+                    return (_scroll.busy || _scroll.complete || (_scroll.searching !== undefined && _scroll.searching.complete));
                 },
-                request: function(params) {
-                    var requestParams = params || _scroll.page;
+                search: function (query) {
+                    if (query && query.length > 0) {
+                        if (_scroll.searching === undefined || (_scroll.searching.complete === false || _scroll.searching.search !== query)) {
+                            _scroll.searching = _.defaults({
+                                search: query
+                            }, _pagingDefaults);
+                        }
+
+                        _scroll.request();
+                    } else {
+                        delete _scroll.searching;
+                    }
+                },
+                request: function (params) {
+                    params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
+
+                    _scroll.busy = true;
 
                     return promiseService.wrap(function(promise) {
-                        if (requestParams.search !== undefined && requestParams.search === _scroll.search) {
-                            promise.reject();
-                        } else {
-                            _scroll.busy = true;
+                        delete params.complete;
 
-                            requestor(requestParams).then(function(res) {
-                                if (requestParams.search === undefined) {
-                                    _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                                    _scroll.complete = (res.length !== _scroll.page.limit);
-                                } else {
-                                    _scroll.search = requestParams.search;
-                                }
+                        requestor(params).then(function(res) {
+                            if (params.search === undefined) {
+                                _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                                _scroll.complete = (res.length !== _scroll.page.limit);
+                            } else {
+                                _scroll.searching = params;
+                                _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                                _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                            }
 
-                                _scroll.busy = false;
+                            _scroll.busy = false;
 
-                                if (dataMap) {
-                                    res = dataMapService(res, dataMap);
-                                }
+                            if (dataMap) {
+                                res = dataMapService(res, dataMap);
+                            }
 
-                                itemStore(res);
+                            itemStore(res);
 
-                                promise.resolve(res);
-                            }, promise.reject);
-                        }
+                            promise.resolve(res);
+                        }, promise.reject);
                     });
                 }
             };
