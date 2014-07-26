@@ -89,7 +89,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
     };
 
     var _actionPrepositionExceptionMap = {
-        'share': 'with',
+        'share': 'of',
         'sent': 'to'
     };
 
