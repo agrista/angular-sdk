@@ -661,14 +661,15 @@ skdUtilitiesApp.factory('dataMapService', [function() {
 
 skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', function($rootScope, $http, promiseService, dataMapService) {
     return {
-        initialize: function(requestor, dataMap, itemStore) {
+        initialize: function(requestor, dataMap, itemStore, options) {
             itemStore = itemStore || function (data) {
                 $rootScope.$broadcast('paging::items', data);
             };
 
-            var _pagingDefaults = {
-                limit: 50
-            };
+            var _pagingDefaults = _.defaults(options || {}, {
+                limit: 50,
+                type: 'simple'
+            });
 
             var _scroll = {
                 page: _.clone(_pagingDefaults),
