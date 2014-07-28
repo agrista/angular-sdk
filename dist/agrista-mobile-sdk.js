@@ -766,6 +766,37 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         }
     };
 
+    var _chainAll = function (action, init) {
+        var list = init;
+        var deferred = $q.defer();
+        var chain = deferred.promise;
+        var results = [];
+
+        action(list);
+
+        var chainItem = function(item) {
+            return chain.then(function (result) {
+                if (result instanceof Array) {
+                    results = results.concat(result);
+                } else if (result) {
+                    results = results.push(result);
+                }
+
+                return (item ? item() : results);
+            }, function (err) {
+                return $q.reject(err);
+            });
+        };
+
+        angular.forEach(list, function (item) {
+            chain = chainItem(item);
+        });
+
+        deferred.resolve();
+
+        return chainItem();
+    };
+
     var _wrapAll = function (action, init) {
         var list = init;
 
@@ -777,6 +808,9 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     return {
         all: function (promises) {
             return $q.all(promises);
+        },
+        chain: function (action) {
+            return _chainAll(action, []);
         },
         wrap: function(action) {
             var deferred = _defer();
