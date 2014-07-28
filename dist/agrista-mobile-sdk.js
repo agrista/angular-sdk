@@ -668,7 +668,7 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
             var _pagingDefaults = _.defaults(options || {}, {
                 limit: 50,
-                type: 'simple'
+                resulttype: 'simple'
             });
 
             var _scroll = {
