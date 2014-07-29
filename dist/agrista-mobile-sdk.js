@@ -666,7 +666,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
 
                 return (item ? item() : results);
             }, function (err) {
-                return $q.reject(err);
+                throw err;
             });
         };
 
