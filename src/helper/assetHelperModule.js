@@ -200,6 +200,23 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
             return (_assetLandUse[type].indexOf(field.landUse) !== -1);
         },
 
+        generateAssetKey: function (asset, legalEntity, farm) {
+            asset.assetKey = 'entity.' + legalEntity.uuid +
+                (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (asset.type === 'crop' && asset.data.season ? '-s.' + asset.data.season : '') +
+                (asset.data.fieldName ? '-fi.' + asset.data.fieldName : '') +
+                (asset.data.crop ? '-c.' + asset.data.crop : '') +
+                (asset.type === 'cropland' && asset.data.irrigated ? '-i.' + asset.data.irrigation : '') +
+                (asset.type === 'farmland' && asset.data.sgKey ? '-' + asset.data.sgKey : '') +
+                (asset.type === 'improvement' || asset.type === 'livestock' || asset.type === 'vme' ?
+                    (asset.data.type ? '-t.' + asset.data.type : '') +
+                        (asset.data.category ? '-c.' + asset.data.category : '') +
+                        (asset.data.name ? '-n.' + asset.data.name : '') +
+                        (asset.data.purpose ? '-p.' + asset.data.purpose : '') +
+                        (asset.data.model ? '-m.' + asset.data.model : '') +
+                        (asset.data.identificationNo ? '-in.' + asset.data.identificationNo : '') : '') +
+                (asset.data.waterSource ? '-ws.' + asset.data.waterSource : '');
+        },
         cleanAssetData: function (asset) {
             if (asset.type == 'vme') {
                 asset.data.quantity = (asset.data.identificationNo && asset.data.identificationNo.length > 0 ? 1 : asset.data.quantity);
