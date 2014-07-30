@@ -1092,6 +1092,13 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
                 }, promise.reject);
             });
         },
+        updateUser: function (id, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/user/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         logout: function() {
             return $http.post(_host + 'logout');
         }
@@ -1211,8 +1218,12 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     return authorizationApi.changePassword(_user.id, oldPassword, newPassword);
                 },
                 changeUserDetails: function (userDetails) {
-                    return authorizationApi.updateUser(_user.id, userDetails).then(function (res) {
-                        _user = _setUser(userDetails);
+                    return authorizationApi.updateUser(_user.id, userDetails).then(function (result) {
+                        _user = _setUser(result);
+
+                        $rootScope.$broadcast('authorization::user-details__changed', _user);
+
+                        return result;
                     });
                 },
                 register: function(data) {
