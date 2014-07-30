@@ -1934,6 +1934,7 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
         if (indexOrTeam !== -1) {
             this.teams.splice(indexOrTeam, 1);
             this.teamsDetails.splice(indexOrTeam, 1);
+            this.selection.text = '';
         }
     };
 
