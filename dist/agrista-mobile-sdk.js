@@ -3062,6 +3062,7 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
         if (indexOrTeam !== -1) {
             this.teams.splice(indexOrTeam, 1);
             this.teamsDetails.splice(indexOrTeam, 1);
+            this.selection.text = '';
         }
     };
 
