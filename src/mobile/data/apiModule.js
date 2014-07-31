@@ -9,345 +9,246 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('dataUploadService', ['$http', 'configuration', 'promiseMonitor', 'promiseService', 'farmerApi', 'farmApi', 'fileStorageService', 'assetApi', 'documentApi', 'taskApi', 'enterpriseBudgetApi', 'legalEntityApi', 'underscore',
-    function ($http, configuration, promiseMonitor, promiseService, farmerApi, farmApi, fileStorageService, assetApi, documentApi, taskApi, enterpriseBudgetApi, legalEntityApi, underscore) {
-        var _monitor = null;
+mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'promiseService', 'assetApi', 'configuration', 'documentUtility', 'enterpriseBudgetApi', 'farmApi', 'farmerUtility', 'fileStorageService', 'legalEntityApi', 'taskUtility', 'underscore',
+    function ($http, $log, promiseService, assetApi, configuration, documentUtility, enterpriseBudgetApi, farmApi, farmerUtility, fileStorageService, legalEntityApi, taskUtility, underscore) {
+        var _readOptions = {readLocal: false, readRemote: true};
 
         function _getFarmers () {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                farmerApi.getFarmers().then(function (farmers) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(farmers, function (farmer) {
-                                list.push(promiseService.wrap(function(promise) {
-                                    _postFarmer(farmer).then(function () {
-                                        promiseService
-                                            .all([_postFarms(farmer.id), _postLegalEntities(farmer.id)])
-                                            .then(promise.resolve, promise.reject);
-                                    });
-                                }));
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
+            return farmerUtility.api.getFarmers({options: _readOptions}).then(function (farmers) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(farmers, function (farmer) {
+                        chain.push(function () {
+                            return farmerUtility.hydration.dehydrate(farmer);
+                        });
+                    });
                 });
-            }));
+            }, promiseService.throwError);
         }
 
         function _getDocuments () {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                documentApi.getDocuments().then(function (documents) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(documents, function (document) {
-                                list.push(_postDocument(document));
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
+            return documentUtility.api.getDocuments({options: _readOptions}).then(function (documents) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(documents, function (document) {
+                        chain.push(function () {
+                            return documentUtility.hydration.dehydrate(document);
+                        });
+                    });
                 });
-            }));
+            }, promiseService.throwError);
         }
 
         function _getTasks () {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                taskApi.getTasks().then(function (tasks) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(tasks, function (task) {
-                                list.push(promiseService.wrap(function(promise) {
-                                    taskApi.getTasks({template: 'tasks/:id', schema: {id: task.id}}).then(function (subtasks) {
-                                        promiseService
-                                            .arrayWrap(function (promises) {
-                                                angular.forEach(subtasks, function (subtask) {
-                                                    promises.push(_postTask(subtask));
-                                                });
-                                            })
-                                            .then(function () {
-                                                return _postTask(task);
-                                            }, promise.reject)
-                                            .then(promise.resolve, promise.reject);
-                                    }, promise.reject);
-                                }));
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
-                });
-            }));
-        }
-
-        function _getEnterpriseBudgets () {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                enterpriseBudgetApi.getEnterpriseBudgets().then(function (budgets) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(budgets, function (budget) {
-                                list.push(_postEnterpriseBudget(budget));
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
-                });
-            }));
-        }
-
-        function _postFarmer (farmer) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                if (farmer.__dirty === true) {
-                    farmerApi.postFarmer({data: farmer}).then(defer.resolve, defer.reject);
-                } else {
-                    defer.resolve();
-                }
-            }));
-        }
-
-        function _postFarms (fid) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                farmApi.getFarms({id: fid}).then(function (farms) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(farms, function (farm) {
-                                if (farm.__dirty === true) {
-                                    list.push(farmApi.postFarm({data: farm}));
-                                }
-
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
-                });
-            }));
-        }
-
-        function _postLegalEntities (fid) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                legalEntityApi.getEntities({id: fid}).then(function (entities) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(entities, function (entity) {
-                                if (entity.__dirty === true) {
-                                    list.push(legalEntityApi.postEntity({data: entity}));
-                                }
-
-                                list.push(_postAssets(entity.id));
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
-                });
-            }));
-        }
-
-        function _postAssets (eid) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                assetApi.getAssets({id: eid}).then(function (assets) {
-                    promiseService
-                        .arrayWrap(function (list) {
-                            angular.forEach(assets, function (asset) {
-                                list.push(_postAsset(asset));
-                            });
-                        })
-                        .then(defer.resolve, defer.reject);
-                });
-            }));
-        }
-
-        function _postAsset (asset) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                if (asset.__dirty === true) {
-                    var cachedAttachments = angular.copy(asset.data.attachments);
-                    asset.data.attachments = underscore.filter(asset.data.attachments, function (attachment) {
-                        return attachment.local !== true;
+            return taskUtility.api.getTasks({options: _readOptions}).then(function (tasks) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(tasks, function (task) {
+                        chain.push(function () {
+                            return taskUtility.hydration.dehydrate(task);
+                        });
                     });
-
-                    assetApi.postAsset({data: asset})
-                        .then(function (res) {
-                            if (res && res.length == 1) {
-                                asset.data.attachments = cachedAttachments;
-
-                                _postAttachments('asset', res[0].id, asset).then(defer.resolve, defer.reject);
-                            } else {
-                                defer.resolve();
-                            }
-                        }, defer.reject);
-                } else {
-                    defer.resolve();
-                }
-            }));
-        }
-
-        function _postDocument (document) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                if (document.__dirty === true) {
-                    var cachedAttachments = angular.copy(document.data.attachments);
-                    document.data.attachments = underscore.reject(document.data.attachments, function (attachment) {
-                        return attachment.local === true;
-                    });
-
-                    documentApi.postDocument({data: document})
-                        .then(function (res) {
-                            if (res && res.length == 1) {
-                                document.data.attachments = cachedAttachments;
-
-                                _postAttachments('document', res[0].id, document).then(defer.resolve, defer.reject);
-                            } else {
-                                defer.resolve();
-                            }
-                        }, defer.reject)
-                } else {
-                    defer.resolve();
-                }
-            }));
-        }
-
-        function _postAttachments (type, id, obj) {
-            var promiseChain = null;
-
-            return _monitor.add(promiseService.wrap(function (promise) {
-                angular.forEach(obj.data.attachments, function (attachment) {
-                    if (attachment.local === true) {
-                        if (promiseChain) {
-                            promiseChain.then(function () {
-                                return _postAttachment(type, id, attachment);
-                            }, promise.reject);
-                        } else {
-                            promiseChain = _postAttachment(type, id, attachment);
-                        }
-                    }
                 });
-
-                if (promiseChain) {
-                    promiseChain.then(promise.resolve, promise.reject);
-                } else {
-                    promise.resolve();
-                }
-            }));
-        }
-
-        function _postAttachment (type, id, attachment) {
-            return promiseService.wrap(function (promise) {
-                var uri = 'api/' + type + '/' + id + '/attach';
-
-                fileStorageService.read(attachment.src, true)
-                    .then(function (fileData) {
-                        $http.post(configuration.getServer() + uri, {
-                            archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key']), {
-                                filename: fileData.file,
-                                content: fileData.content.substring(fileData.content.indexOf(',') + 1)
-                            })
-                        }, {withCredentials: true}).then(promise.resolve, promise.reject);
-                    }, promise.reject);
-            });
-        }
-
-        function _postTask (task) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                if (task.__dirty === true) {
-                    taskApi.postTask({template: 'task/:id', schema: {id: task.id}, data: task}).then(defer.resolve, defer.reject);
-                } else {
-                    defer.resolve();
-                }
-            }));
-        }
-
-        function _postEnterpriseBudget (budget) {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                if (budget.__dirty === true) {
-                    enterpriseBudgetApi.postEnterpriseBudget({data: budget}).then(defer.resolve, defer.reject);
-                } else {
-                    defer.resolve();
-                }
-            }));
-        }
-
-        return function (monitor) {
-            _monitor = monitor || promiseMonitor();
-
-            return promiseService.wrap(function(promise) {
-                _getFarmers()
-                    .then(_getDocuments, promise.reject)
-                    .then(_getTasks, promise.reject)
-                    .then(_getEnterpriseBudgets, promise.reject)
-                    .then(promise.resolve, promise.reject);
-            });
-        }
-    }]);
-
-mobileSdkApiApp.factory('dataDownloadService', ['promiseMonitor', 'promiseService', 'farmApi', 'assetUtility', 'farmerUtility', 'documentUtility', 'taskUtility', 'enterpriseBudgetApi',
-    function (promiseMonitor, promiseService, farmApi, assetUtility, farmerUtility, documentUtility, taskUtility, enterpriseBudgetApi) {
-        var _monitor = null;
-        var _readOptions = {readLocal: false, readRemote: true};
-
-        function _getFarmers() {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                farmerUtility.api
-                    .getFarmers({options: _readOptions})
-                    .then(function (farmers) {
-                        return promiseService.arrayWrap(function (list) {
-                            angular.forEach(farmers, function (farmer) {
-                                list.push(farmerUtility.hydration.dehydrate(farmer));
-                            });
-                        });
-                    }, defer.reject)
-                    .then(defer.resolve, defer.reject);
-            }));
-        }
-
-        function _getDocuments() {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                documentUtility.api
-                    .getDocuments({options: _readOptions})
-                    .then(function (documents) {
-                        return promiseService.arrayWrap(function (promises) {
-                            angular.forEach(documents, function (document) {
-                                promises.push(documentUtility.hydration.dehydrate(document));
-                            })
-                        });
-                    }, defer.reject)
-                    .then(defer.resolve, defer.reject);
-            }));
-        }
-
-        function _getTasks() {
-            return _monitor.add(promiseService.wrap(function (defer) {
-                taskUtility.api
-                    .getTasks({options: _readOptions})
-                    .then(function (tasks) {
-                        return promiseService.arrayWrap(function (promises) {
-                            angular.forEach(tasks, function (task) {
-                                promises.push(taskUtility.hydration.dehydrate(task));
-                            })
-                        });
-                    }, defer.reject)
-                    .then(defer.resolve, defer.reject);
-            }));
+            }, promiseService.throwError);
         }
 
         function _getEnterpriseBudgets() {
-            return _monitor.add(enterpriseBudgetApi.getEnterpriseBudgets({options: _readOptions}));
+            return enterpriseBudgetApi.getEnterpriseBudgets({options: _readOptions});
         }
 
-        return function (monitor) {
-            _monitor = monitor || promiseMonitor();
 
-            return promiseService.wrap(function(promise) {
-                _getFarmers()
-                    .then(_getDocuments, promise.reject)
-                    .then(_getTasks, promise.reject)
-                    .then(_getEnterpriseBudgets, promise.reject)
-                    .then(promise.resolve, promise.reject);
+        function _postFarmers () {
+            return farmerUtility.api.getFarmers().then(function (farmers) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(farmers, function (farmer) {
+                        chain.push(function () {
+                            return _postFarmer(farmer);
+                        });
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postFarmer (farmer) {
+            return promiseService.chain(function (chain) {
+                if (farmer.__dirty === true) {
+                    chain.push(function () {
+                        return farmerUtility.api.postFarmer({data: farmer});
+                    });
+                }
+
+                chain.push(function () {
+                    return _postFarms(farmer.id);
+                }, function () {
+                    return _postLegalEntities(farmer.id);
+                });
             });
+        }
+
+        function _postFarms (farmerId) {
+            return farmApi.getFarms({id: farmerId}).then(function (farms) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(farms, function (farm) {
+                        if (farm.__dirty === true) {
+                            chain.push(function () {
+                                return farmApi.postFarm({data: farm});
+                            });
+                        }
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postLegalEntities (farmerId) {
+            return legalEntityApi.getEntities({id: farmerId}).then(function (entities) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(entities, function (entity) {
+                        if (entity.__dirty === true) {
+                            chain.push(function () {
+                                return legalEntityApi.postEntity({data: entity});
+                            });
+                        }
+
+                        chain.push(function () {
+                            return _postAssets(entity.id);
+                        });
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postAssets (entityId) {
+            return assetApi.getAssets({id: entityId}).then(function (assets) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(assets, function (asset) {
+                        if (asset.__dirty === true) {
+                            chain.push(function () {
+                                return _postAsset(asset);
+                            });
+                        }
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postAsset (asset) {
+            var cachedAttachments = angular.copy(asset.data.attachments);
+            var toBeAttached = underscore.where(cachedAttachments, {local: true});
+            asset.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
+
+            return assetApi.postAsset({data: asset}).then(function (result) {
+                result = (result && result.length ? result[0] : result);
+
+                return promiseService.chain(function (chain) {
+                    angular.forEach(toBeAttached, function (attachment) {
+                        chain.push(function () {
+                            return _postAttachment('asset', result.id, attachment);
+                        });
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postDocuments () {
+            return documentUtility.api.getDocuments().then(function (documents) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(documents, function (document) {
+                        if (document.__dirty === true) {
+                            chain.push(function () {
+                                return _postDocument(document);
+                            });
+                        }
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postDocument (document) {
+            var cachedAttachments = angular.copy(document.data.attachments);
+            var toBeAttached = underscore.where(cachedAttachments, {local: true});
+            document.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
+
+            return documentUtility.api.postDocument({data: document}).then(function (result) {
+                result = (result && result.length ? result[0] : result);
+
+                return promiseService.chain(function (chain) {
+                    angular.forEach(toBeAttached, function (attachment) {
+                        chain.push(function () {
+                            return _postAttachment('document', result.id, attachment);
+                        });
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postTasks (task) {
+            var query = (task !== undefined ? {template: 'tasks/:id', schema: {id: task.id}} : task);
+
+            return taskUtility.api.getTasks(query).then(function (subtasks) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(subtasks, function (subtask) {
+                        if (query === undefined) {
+                            chain.push(function () {
+                                return _postTasks(subtask);
+                            });
+                        } else if (subtask.__dirty === true) {
+                            chain.push(function () {
+                                return _postTask(subtask);
+                            });
+                        }
+                    });
+
+                    if (task && task.__dirty === true) {
+                        chain.push(function () {
+                            return _postTask(task);
+                        });
+                    }
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postTask (task) {
+            var cachedAttachments = angular.copy(task.data.attachments);
+            var toBeAttached = underscore.where(cachedAttachments, {local: true});
+            task.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
+
+            return taskUtility.api.postTask({data: task}).then(function (result) {
+                result = (result && result.length ? result[0] : result);
+
+                return promiseService.chain(function (chain) {
+                    angular.forEach(toBeAttached, function (attachment) {
+                        chain.push(function () {
+                            return _postAttachment('task', result.id, attachment);
+                        });
+                    });
+                });
+            }, promiseService.throwError);
+        }
+
+        function _postAttachment (type, id, attachment) {
+            return fileStorageService.read(attachment.src, true).then(function (fileData) {
+                return $http.post(configuration.getServer() + 'api/' + type + '/' + id + '/attach', {
+                    archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key']), {
+                        filename: fileData.file,
+                        content: fileData.content.substring(fileData.content.indexOf(',') + 1)
+                    })
+                }, {withCredentials: true})
+            }, promiseService.throwError);
+        }
+
+        return {
+            synchronize: function () {
+                return this.upload().then(this.download);
+            },
+            upload: function () {
+                return promiseService.chain(function (chain) {
+                    chain.push(_postFarmers, _postDocuments, _postTasks);
+                });
+            },
+            download: function () {
+                return promiseService.chain(function (chain) {
+                    chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets);
+                });
+            }
         };
     }]);
-
-mobileSdkApiApp.factory('dataSyncService', ['promiseMonitor', 'promiseService', 'dataUploadService', 'dataDownloadService', function (promiseMonitor, promiseService, dataUploadService, dataDownloadService) {
-    var _monitor = null;
-
-    return function (callback) {
-        _monitor = promiseMonitor(callback);
-
-        _monitor.add(promiseService.wrap(function (promise) {
-            dataUploadService(_monitor).then(function () {
-                dataDownloadService(_monitor).then(promise.resolve, promise.reject);
-            }, promise.reject);
-        }));
-    };
-}]);
 
 /*
  * API
