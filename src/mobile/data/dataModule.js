@@ -761,10 +761,12 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                                     _syncLocal(res, _uri, function (res, err) {
                                         _responseHandler(request.callback, res, err);
                                     });
-                                } else {
+                                } else if (request.options.readLocal === true) {
                                     _getLocal(_uri, request.options, function (res, err) {
                                         _responseHandler(request.callback, res, err);
                                     });
+                                } else {
+                                    _responseHandler(request.callback, res, err);
                                 }
                             });
                         };
