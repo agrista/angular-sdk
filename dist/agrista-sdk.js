@@ -1766,8 +1766,8 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.subtitle = (item.data.season ? item.data.season : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'farmland') {
-                map.title = (item.data.portionNumber == 0 ? 'Remainder of farm' : 'Portion ' + item.data.portionNumber);
-                map.subtitle = 'Area: ' + item.data.area.toFixed(2) + 'Ha';
+                map.title = (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm');
+                map.subtitle = (item.data.area !== undefined ? 'Area: ' + item.data.area.toFixed(2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
                 map.title = item.data.name;
@@ -1776,7 +1776,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
                 map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : 'Non irrigable ' + item.type) + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = 'Area: ' + item.data.size.toFixed(2) + 'Ha';
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
                 map.title = item.data.type + ' - ' + item.data.category;
@@ -1802,26 +1802,21 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.groupby = item.data.type;
             } else if (item.type == 'wasteland') {
                 map.title = 'Wasteland';
-                map.subtitle = 'Area: ' + item.data.size.toFixed(2) + 'Ha';
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'water right') {
                 map.title = item.data.waterSource + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = 'Irrigatable Extent: ' + item.data.size.toFixed(2) + 'Ha';
+                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             }
 
             if (item.data.attachments) {
-                var validImages = ['png', 'jpg', 'jpeg', 'gif'];
-
-                for (var i = 0; i < item.data.attachments.length; i++) {
-                    var attachment = item.data.attachments[i];
-
-                    for (var x = 0; x < validImages.length; x++) {
-                        if (attachment.key.indexOf(validImages[x]) != -1) {
-                            map.image = attachment.src;
-                        }
-                    }
-                }
+                map.image = _.chain(item.data.attachments)
+                    .filter(function (attachment) {
+                        return (attachment.mimeType.indexOf('image') !== -1);
+                    }).reverse().map(function (attachment) {
+                        return attachment.src;
+                    }).first().value();
             }
         }
 
