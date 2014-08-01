@@ -817,7 +817,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
             if (item.data.attachments) {
                 map.image = underscore.chain(item.data.attachments)
                     .filter(function (attachment) {
-                        return (attachment.mimeType !== undefined && attachment.mimeType.indexOf('image') !== -1);
+                        return (attachment.mimeType && attachment.mimeType.indexOf('image') !== -1);
                     }).reverse().map(function (attachment) {
                         return attachment.src;
                     }).first().value();
