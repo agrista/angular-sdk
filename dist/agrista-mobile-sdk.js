@@ -6732,7 +6732,9 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'promiseS
         }
 
         function _postAsset (asset) {
-            var cachedAttachments = angular.copy(asset.data.attachments);
+            asset.data = asset.data || {};
+
+            var cachedAttachments = (asset.data.attachments ? angular.copy(asset.data.attachments) : []);
             var toBeAttached = underscore.where(cachedAttachments, {local: true});
             asset.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
 
@@ -6764,7 +6766,9 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'promiseS
         }
 
         function _postDocument (document) {
-            var cachedAttachments = angular.copy(document.data.attachments);
+            document.data = document.data || {};
+
+            var cachedAttachments = (document.data.attachments ? angular.copy(document.data.attachments) : []);
             var toBeAttached = underscore.where(cachedAttachments, {local: true});
             document.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
 
@@ -6808,7 +6812,9 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'promiseS
         }
 
         function _postTask (task) {
-            var cachedAttachments = angular.copy(task.data.attachments);
+            task.data = task.data || {};
+
+            var cachedAttachments = (task.data.attachments ? angular.copy(task.data.attachments) : []);
             var toBeAttached = underscore.where(cachedAttachments, {local: true});
             task.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
 
