@@ -1813,7 +1813,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
             if (item.data.attachments) {
                 map.image = _.chain(item.data.attachments)
                     .filter(function (attachment) {
-                        return (attachment.mimeType !== undefined && attachment.mimeType.indexOf('image') !== -1);
+                        return (attachment.mimeType && attachment.mimeType.indexOf('image') !== -1);
                     }).reverse().map(function (attachment) {
                         return attachment.src;
                     }).first().value();
@@ -2028,6 +2028,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', function () {
         }
     }
 });
+
 var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', []);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
