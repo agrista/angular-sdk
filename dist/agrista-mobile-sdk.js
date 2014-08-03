@@ -1262,14 +1262,13 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 var map = {
                     id: item.id || item.__id,
                     title: (item.author ? item.author : ''),
-                    subtitle: '',
+                    subtitle: (item.documentId ? item.documentId : ''),
                     docType: item.docType,
                     group: docMap.title,
                     updatedAt: item.updatedAt
                 };
 
                 if (item.organization && item.organization.name) {
-                    map.subtitle = (item.author ? 'From ' + item.author + ': ' : '');
                     map.title = item.organization.name;
                 }
 
