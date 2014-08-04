@@ -163,12 +163,21 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', function () {
 
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {
-        improvement: mapMarkerHelperProvider.getMarkerStates('improvement', ['default', 'success']),
-        homestead: mapMarkerHelperProvider.getMarkerStates('homestead', ['default', 'success'])
+        asset: mapMarkerHelperProvider.getMarkerStates('asset', ['default', 'success', 'error']),
+        zone: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
     };
 
     var _mapStyles = {
         foreground: {
+            district: {
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#0094D6",
+                    fillOpacity: 0.5
+                }
+            },
             farmland: {
                 style: {
                     weight: 2,
@@ -179,6 +188,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             field: {
+                icon: 'success',
                 style: {
                     weight: 2,
                     color: 'white',
@@ -188,6 +198,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             crop: {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -197,7 +208,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             improvement: {
-                icon: _markerIcons.improvement.success,
+                icon: 'success',
                 style: {
                     weight: 4,
                     color: 'white',
@@ -206,7 +217,8 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
-            'cropland': {
+            cropland: {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -216,6 +228,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             pasture: {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -225,6 +238,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             'permanent crop': {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -234,6 +248,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             plantation: {
+                icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -242,11 +257,34 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
+            zone: {
+                icon: _markerIcons.zone.success,
+                draggable: true,
+                style: {
+                    weight: 4,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#ff6666",
+                    fillOpacity: 0.8
+                }
+            },
+            farmgate: {
+                icon: 'success'
+            },
             homestead: {
-                icon: _markerIcons.homestead.success
+                icon: 'success'
             }
         },
         background: {
+            district: {
+                style: {
+                    weight: 1,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#0094D6",
+                    fillOpacity: 0.2
+                }
+            },
             farmland: {
                 style: {
                     weight: 1,
@@ -257,6 +295,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             field: {
+                icon: 'default',
                 style: {
                     weight: 1,
                     color: 'white',
@@ -266,6 +305,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             crop: {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -275,7 +315,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             improvement: {
-                icon: _markerIcons.improvement.default,
+                icon: 'default',
                 style: {
                     weight: 4,
                     color: 'white',
@@ -284,7 +324,8 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.5
                 }
             },
-            'cropland': {
+            cropland: {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -294,6 +335,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             pasture: {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -303,6 +345,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             'permanent crop': {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -312,6 +355,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             plantation: {
+                icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
                     color: 'white',
@@ -320,8 +364,21 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.4
                 }
             },
+            zone: {
+                icon: _markerIcons.asset.default,
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.5,
+                    fillColor: "#ff6666",
+                    fillOpacity: 0.5
+                }
+            },
+            farmgate: {
+                icon: 'default'
+            },
             homestead: {
-                icon: _markerIcons.homestead.default,
+                icon: 'default',
                 label: {
                     message: 'Homestead'
                 }
@@ -330,7 +387,15 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
     };
 
     var _getStyle = this.getStyle = function (composition, layerName, label) {
-        var mapStyle = angular.copy(_mapStyles[composition] ? (_mapStyles[composition][layerName] || {}) : {});
+        var mapStyle = (_mapStyles[composition] && _mapStyles[composition][layerName] ? angular.copy(_mapStyles[composition][layerName]) : {});
+
+        if (typeof mapStyle.icon == 'string') {
+            if (_markerIcons[layerName] === undefined) {
+                _markerIcons[layerName] = mapMarkerHelperProvider.getMarkerStates(layerName, ['default', 'success', 'error']);
+            }
+
+            mapStyle.icon = _markerIcons[layerName][mapStyle.icon];
+        }
 
         if (typeof label == 'object') {
             mapStyle.label = label;
