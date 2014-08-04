@@ -58,7 +58,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 center[1] += coordinate[1];
             });
 
-            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : null);
+            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : center);
         },
         getCenterAsGeojson: function (bounds) {
             return {
@@ -699,7 +699,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     if (_this._config.events[event] !== undefined) {
                         $rootScope.$broadcast('mapbox-' + _this._id + '::remove-event-handler', {
                             event: event,
-                            handler: _this._config.events[handler]
+                            handler: _this._config.events[event]
                         });
 
                         delete _this._config.events[event];
