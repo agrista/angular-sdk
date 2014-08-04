@@ -3620,7 +3620,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
-            'cropland': {
+            cropland: {
                 icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
@@ -3727,7 +3727,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.5
                 }
             },
-            'cropland': {
+            cropland: {
                 icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
