@@ -79,6 +79,11 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             listServiceWithTaskMap: function () {
                 return _listServiceWithTaskMap;
             },
+            filterDocuments: function (documents) {
+                return underscore.filter(documents, function (document) {
+                    return (_documentMap[document.docType] !== undefined);
+                });
+            },
             pluralMap: function (item, count) {
                 return _pluralMap(item, count);
             },
