@@ -3725,22 +3725,12 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 
 sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHelper', function (taskHelper, documentHelper) {
     var _listServiceMap = function(item) {
-        var map = {
+        return {
             id: item.id || item.__id,
             title: item.sender,
-            subtitle: _notificationMap[item.notificationType].title,
+            subtitle: item.message,
             state: _notificationState(item.notificationType, item.dataType)
         };
-
-        if (item.dataType == 'task') {
-            map.subtitle += ' ' + taskHelper.getTaskTitle(item.sharedData.todo);
-        } else if (item.dataType == 'document') {
-            map.subtitle +=  ' ' + documentHelper.getDocumentTitle(item.sharedData.docType);
-        }
-
-        map.subtitle += ' ' + item.dataType + (item.organization == null ? '' : ' for ' + item.organization.name);
-
-        return map;
     };
 
     var _notificationState = function (notificationType, dataType) {
