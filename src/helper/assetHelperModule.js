@@ -305,7 +305,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 });
             } else if (asset.type === 'pasture' || asset.type === 'wasteland') {
                 chain = chain.where({assetClass: field.landUse}).filter(function (item) {
-                    return ((asset.data.crop === undefined && item.crop === undefined) || item.crop.indexOf(asset.data.crop) !== -1) &&
+                    return ((asset.data.crop === undefined && item.crop === undefined) || (item.crop !== undefined && item.crop.indexOf(asset.data.crop) !== -1)) &&
                         ((field.terrain === undefined && item.terrain === undefined) || item.terrain === field.terrain);
                 });
             } else if (asset.type === 'permanent crop') {
