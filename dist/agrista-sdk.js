@@ -804,6 +804,13 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        updateProductionRegion: function(region) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/subregion/' + region.id, region, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -1126,9 +1133,9 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
                 }, promise.reject);
             });
         },
-        updateUser: function (id, data) {
+        updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/user/' + id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'current-user', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1191,6 +1198,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 }
             });
 
+            $rootScope.$on('authorization::unauthorized', function () {
+                localStore.removeItem('user');
+            });
+
             function _getUser() {
                 return localStore.getItem('user') || _defaultUser;
             }
@@ -1238,12 +1249,12 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                     message: 'The entered e-mail and/or password is incorrect. Please try again.'
                                 };
 
-                                _user = _setUser(_defaultUser);
+                                localStore.removeItem('user');
                                 promise.reject();
                             }
 
                         }, function (err) {
-                            _user = _setUser(_defaultUser);
+                            localStore.removeItem('user');
                             promise.reject(err);
                         });
                     });
@@ -1254,7 +1265,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     return authorizationApi.changePassword(_user.id, oldPassword, newPassword);
                 },
                 changeUserDetails: function (userDetails) {
-                    return authorizationApi.updateUser(_user.id, userDetails).then(function (result) {
+                    return authorizationApi.updateUser(userDetails).then(function (result) {
                         _user = _setUser(result);
 
                         $rootScope.$broadcast('authorization::user-details__changed', _user);
@@ -1272,7 +1283,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                                 $rootScope.$broadcast('authorization::login', _user);
                             } else {
-                                _user = _setUser(_defaultUser);
+                                localStore.removeItem('user');
                                 promise.reject();
                             }
                         }, function (err) {
@@ -1281,7 +1292,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 message: 'There is already an Agrista account associated with this email address. Please login.'
                             };
 
-                            _user = _setUser(_defaultUser);
+                            localStore.removeItem('user');
                             promise.reject(err);
                         });
                     });
@@ -1290,7 +1301,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     $rootScope.$broadcast('authorization::logout');
 
                     return authorizationApi.logout().then(function () {
-                        _user = _setUser(_defaultUser);
+                        localStore.removeItem('user');
                     });
                 }
             }
