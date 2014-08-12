@@ -111,6 +111,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 }
             });
 
+            $rootScope.$on('authorization::unauthorized', function () {
+                localStore.removeItem('user');
+            });
+
             function _getUser() {
                 return localStore.getItem('user') || _defaultUser;
             }
@@ -158,12 +162,12 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                     message: 'The entered e-mail and/or password is incorrect. Please try again.'
                                 };
 
-                                _user = _setUser(_defaultUser);
+                                localStore.removeItem('user');
                                 promise.reject();
                             }
 
                         }, function (err) {
-                            _user = _setUser(_defaultUser);
+                            localStore.removeItem('user');
                             promise.reject(err);
                         });
                     });
@@ -192,7 +196,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                                 $rootScope.$broadcast('authorization::login', _user);
                             } else {
-                                _user = _setUser(_defaultUser);
+                                localStore.removeItem('user');
                                 promise.reject();
                             }
                         }, function (err) {
@@ -201,7 +205,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 message: 'There is already an Agrista account associated with this email address. Please login.'
                             };
 
-                            _user = _setUser(_defaultUser);
+                            localStore.removeItem('user');
                             promise.reject(err);
                         });
                     });
@@ -210,7 +214,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     $rootScope.$broadcast('authorization::logout');
 
                     return authorizationApi.logout().then(function () {
-                        _user = _setUser(_defaultUser);
+                        localStore.removeItem('user');
                     });
                 }
             }
