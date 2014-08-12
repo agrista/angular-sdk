@@ -933,9 +933,9 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
                 }, promise.reject);
             });
         },
-        updateUser: function (id, data) {
+        updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/user/' + id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'current-user', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1065,7 +1065,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     return authorizationApi.changePassword(_user.id, oldPassword, newPassword);
                 },
                 changeUserDetails: function (userDetails) {
-                    return authorizationApi.updateUser(_user.id, userDetails).then(function (result) {
+                    return authorizationApi.updateUser(userDetails).then(function (result) {
                         _user = _setUser(result);
 
                         $rootScope.$broadcast('authorization::user-details__changed', _user);
