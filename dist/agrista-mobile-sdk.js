@@ -1338,7 +1338,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
         }
     };
 
