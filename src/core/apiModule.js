@@ -776,6 +776,47 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
 }]);
 
 /**
+ * productionRegion API
+ */
+sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductionRegions: function (withGeometries, paging) {
+            if (withGeometries && typeof withGeometries != 'boolean') {
+                $log.debug(withGeometries);
+                paging = withGeometries;
+                withGeometries = undefined;
+            }
+
+            return pagingService.page(_host + 'api/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
+        },
+        getProductionRegion: function(subregionId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/subregion/' + subregionId, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProductionRegionsByRegion: function (regionId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/subregions/' + regionId, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductionRegion: function(region) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/subregion/' + region.id, region, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+
+/**
  * Aggregation API
  */
 sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', function ($http, configuration, promiseService, pagingService) {

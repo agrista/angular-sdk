@@ -776,6 +776,47 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
 }]);
 
 /**
+ * productionRegion API
+ */
+sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductionRegions: function (withGeometries, paging) {
+            if (withGeometries && typeof withGeometries != 'boolean') {
+                $log.debug(withGeometries);
+                paging = withGeometries;
+                withGeometries = undefined;
+            }
+
+            return pagingService.page(_host + 'api/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
+        },
+        getProductionRegion: function(subregionId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/subregion/' + subregionId, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProductionRegionsByRegion: function (regionId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/subregions/' + regionId, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductionRegion: function(region) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/subregion/' + region.id, region, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+
+/**
  * Aggregation API
  */
 sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', function ($http, configuration, promiseService, pagingService) {
@@ -1092,9 +1133,9 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
                 }, promise.reject);
             });
         },
-        updateUser: function (id, data) {
+        updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/user/' + id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'current-user', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1130,7 +1171,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return {
             responseError: function (err) {
                 if (err.status === 401) {
-                    $rootScope.$broadcast('authorization::unauthorized');
+                    $rootScope.$broadcast('authorization::unauthorized', err);
+                } else if (err.status === 403) {
+                    $rootScope.$broadcast('authorization::forbidden', err);
                 }
 
                 return $q.reject(err);
@@ -1153,6 +1196,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 } else if (_user.isActive !== true) {
                     $rootScope.$broadcast('authorization::unauthorized');
                 }
+            });
+
+            $rootScope.$on('authorization::unauthorized', function () {
+                localStore.removeItem('user');
             });
 
             function _getUser() {
@@ -1202,12 +1249,12 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                     message: 'The entered e-mail and/or password is incorrect. Please try again.'
                                 };
 
-                                _user = _setUser(_defaultUser);
+                                localStore.removeItem('user');
                                 promise.reject();
                             }
 
                         }, function (err) {
-                            _user = _setUser(_defaultUser);
+                            localStore.removeItem('user');
                             promise.reject(err);
                         });
                     });
@@ -1218,7 +1265,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     return authorizationApi.changePassword(_user.id, oldPassword, newPassword);
                 },
                 changeUserDetails: function (userDetails) {
-                    return authorizationApi.updateUser(_user.id, userDetails).then(function (result) {
+                    return authorizationApi.updateUser(userDetails).then(function (result) {
                         _user = _setUser(result);
 
                         $rootScope.$broadcast('authorization::user-details__changed', _user);
@@ -1236,7 +1283,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                                 $rootScope.$broadcast('authorization::login', _user);
                             } else {
-                                _user = _setUser(_defaultUser);
+                                localStore.removeItem('user');
                                 promise.reject();
                             }
                         }, function (err) {
@@ -1245,7 +1292,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 message: 'There is already an Agrista account associated with this email address. Please login.'
                             };
 
-                            _user = _setUser(_defaultUser);
+                            localStore.removeItem('user');
                             promise.reject(err);
                         });
                     });
@@ -1254,7 +1301,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     $rootScope.$broadcast('authorization::logout');
 
                     return authorizationApi.logout().then(function () {
-                        _user = _setUser(_defaultUser);
+                        localStore.removeItem('user');
                     });
                 }
             }
@@ -2107,7 +2154,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 });
             } else if (asset.type === 'pasture' || asset.type === 'wasteland') {
                 chain = chain.where({assetClass: field.landUse}).filter(function (item) {
-                    return ((asset.data.crop === undefined && item.crop === undefined) || item.crop.indexOf(asset.data.crop) !== -1) &&
+                    return ((asset.data.crop === undefined && item.crop === undefined) || (item.crop !== undefined && item.crop.indexOf(asset.data.crop) !== -1)) &&
                         ((field.terrain === undefined && item.terrain === undefined) || item.terrain === field.terrain);
                 });
             } else if (asset.type === 'permanent crop') {
