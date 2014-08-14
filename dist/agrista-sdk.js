@@ -970,7 +970,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             }).join('&').value();
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/search?' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budgets/search?resulttype=simple&' + query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -982,9 +982,9 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                 }, promise.reject);
             });
         },
-        getEnterpriseBudget: function (id) {
+        getEnterpriseBudget: function (id, requesttype) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budget/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -2436,7 +2436,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
         }
     };
 
