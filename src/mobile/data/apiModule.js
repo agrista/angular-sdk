@@ -9,44 +9,95 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'promiseService', 'assetApi', 'configuration', 'documentUtility', 'enterpriseBudgetApi', 'farmApi', 'farmerUtility', 'fileStorageService', 'legalEntityApi', 'taskUtility', 'underscore',
-    function ($http, $log, promiseService, assetApi, configuration, documentUtility, enterpriseBudgetApi, farmApi, farmerUtility, fileStorageService, legalEntityApi, taskUtility, underscore) {
+mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi', 'configuration', 'documentUtility', 'enterpriseBudgetApi', 'farmApi', 'farmerUtility', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskUtility', 'underscore',
+    function ($http, $log, assetApi, configuration, documentUtility, enterpriseBudgetApi, farmApi, farmerUtility, fileStorageService, legalEntityApi, pagingService, promiseService, taskUtility, underscore) {
         var _readOptions = {readLocal: false, readRemote: true};
 
-        function _getFarmers () {
-            return farmerUtility.api.getFarmers({options: _readOptions}).then(function (farmers) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(farmers, function (farmer) {
-                        chain.push(function () {
-                            return farmerUtility.hydration.dehydrate(farmer);
-                        });
-                    });
-                });
-            }, promiseService.throwError);
+        function _getFarmers (pageOptions) {
+            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+
+            return promiseService.wrap(function (promise) {
+                var paging = pagingService.initialize(function (page) {
+                    return farmerUtility.api.getFarmers({paging: page, options: _readOptions});
+                }, function (farmers) {
+                    promiseService
+                        .chain(function (chain) {
+                            if (paging.complete === false) {
+                                paging.request().then(angular.noop, promiseService.throwError);
+                            }
+
+                            angular.forEach(farmers, function (farmer) {
+                                chain.push(function () {
+                                    return farmerUtility.hydration.dehydrate(farmer);
+                                });
+                            });
+                        }).then(function () {
+                            if (paging.complete) {
+                                promise.resolve();
+                            }
+                        }, promiseService.throwError);
+                }, pageOptions);
+
+                paging.request().then(angular.noop, promiseService.throwError);
+            });
         }
 
-        function _getDocuments () {
-            return documentUtility.api.getDocuments({options: _readOptions}).then(function (documents) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(documents, function (document) {
-                        chain.push(function () {
-                            return documentUtility.hydration.dehydrate(document);
-                        });
-                    });
-                });
-            }, promiseService.throwError);
+        function _getDocuments (pageOptions) {
+            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+
+            return promiseService.wrap(function (promise) {
+                var paging = pagingService.initialize(function (page) {
+                    return documentUtility.api.getDocuments({paging: page, options: _readOptions});
+                }, function (documents) {
+                    promiseService
+                        .chain(function (chain) {
+                            if (paging.complete === false) {
+                                paging.request().then(angular.noop, promiseService.throwError);
+                            }
+
+                            angular.forEach(documents, function (document) {
+                                chain.push(function () {
+                                    return documentUtility.hydration.dehydrate(document);
+                                });
+                            });
+                        }).then(function () {
+                            if (paging.complete) {
+                                promise.resolve();
+                            }
+                        }, promiseService.throwError);
+                }, pageOptions);
+
+                paging.request().then(angular.noop, promiseService.throwError);
+            });
         }
 
-        function _getTasks () {
-            return taskUtility.api.getTasks({options: _readOptions}).then(function (tasks) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(tasks, function (task) {
-                        chain.push(function () {
-                            return taskUtility.hydration.dehydrate(task);
-                        });
-                    });
-                });
-            }, promiseService.throwError);
+        function _getTasks (pageOptions) {
+            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+
+            return promiseService.wrap(function (promise) {
+                var paging = pagingService.initialize(function (page) {
+                    return taskUtility.api.getTasks({paging: page, options: _readOptions});
+                }, function (tasks) {
+                    promiseService
+                        .chain(function (chain) {
+                            if (paging.complete === false) {
+                                paging.request().then(angular.noop, promiseService.throwError);
+                            }
+
+                            angular.forEach(tasks, function (task) {
+                                chain.push(function () {
+                                    return taskUtility.hydration.dehydrate(task);
+                                });
+                            });
+                        }).then(function () {
+                            if (paging.complete) {
+                                promise.resolve();
+                            }
+                        }, promiseService.throwError);
+                }, pageOptions);
+
+                paging.request().then(angular.noop, promiseService.throwError);
+            });
         }
 
         function _getEnterpriseBudgets() {
