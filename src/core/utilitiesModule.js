@@ -54,6 +54,18 @@ skdUtilitiesApp.factory('dataMapService', [function() {
 skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', function($rootScope, $http, promiseService, dataMapService) {
     return {
         initialize: function(requestor, dataMap, itemStore, options) {
+            if (typeof itemStore == 'object') {
+                options = itemStore;
+                itemStore = dataMap;
+                dataMap = undefined;
+            }
+
+            if (typeof dataMap == 'object') {
+                options = dataMap;
+                itemStore = undefined;
+                dataMap = undefined;
+            }
+
             itemStore = itemStore || function (data) {
                 $rootScope.$broadcast('paging::items', data);
             };
@@ -110,7 +122,7 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                             itemStore(res);
 
                             promise.resolve(res);
-                        }, promise.reject);
+                        }, promiseService.throwError);
                     });
                 }
             };
