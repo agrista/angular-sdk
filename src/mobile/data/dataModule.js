@@ -445,13 +445,18 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
              * Remote data storage
              */
 
-            var _getRemote = function (uri, grCallback) {
+            var _getRemote = function (uri, paging, grCallback) {
                 $log.debug('_getRemote');
-                if (typeof grCallback !== 'function') grCallback = angular.noop;
+                if (typeof paging == 'function') {
+                    grCallback = paging;
+                    paging = undefined;
+                }
+
+                if (typeof grCallback != 'function') grCallback = angular.noop;
 
                 if (_config.apiTemplate !== undefined) {
                     safeApply(function () {
-                        $http.get(_hostApi + uri, {withCredentials: true}).then(function (res) {
+                        $http.get(_hostApi + uri, {params: paging, withCredentials: true}).then(function (res) {
                             if (res.data != null && res.data !== 'null') {
                                 var data = res.data;
 
@@ -746,8 +751,6 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                             template: _config.apiTemplate,
                             schema: {},
                             options: {
-                                page: 1,
-                                limit: _defaultOptions.pageLimit,
                                 readLocal: _config.readLocal,
                                 readRemote: _config.readRemote,
                                 fallbackRemote: false
@@ -756,11 +759,17 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         });
 
                         var handleRemote = function (_uri) {
-                            _getRemote(_uri, function (res, err) {
+                            _getRemote(_uri, request.paging, function (res, err) {
                                 if (res) {
-                                    _syncLocal(res, _uri, function (res, err) {
-                                        _responseHandler(request.callback, res, err);
-                                    });
+                                    if (request.paging === undefined && request.options.readLocal === true) {
+                                        _syncLocal(res, _uri, function (res, err) {
+                                            _responseHandler(request.callback, res, err);
+                                        });
+                                    } else {
+                                        _updateLocal(res, function (res, err) {
+                                            _responseHandler(request.callback, res, err);
+                                        });
+                                    }
                                 } else if (request.options.readLocal === true) {
                                     _getLocal(_uri, request.options, function (res, err) {
                                         _responseHandler(request.callback, res, err);
