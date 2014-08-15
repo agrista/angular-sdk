@@ -291,6 +291,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @param req.search {String} Optional
              * @param req.id {Number} Optional
              * @param req.options {Object} Optional
+             * @param req.paging {Object} Optional
              * @returns {Promise}
              */
             getItems: function (req) {
@@ -299,16 +300,16 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
                 return promiseService.wrap(function (promise) {
                     _itemStore.transaction(function (tx) {
                         if (req.template) {
-                            tx.getItems({template: req.template, schema: req.schema, options: req.options, callback: promise});
+                            tx.getItems({template: req.template, schema: req.schema, options: req.options, paging: req.paging, callback: promise});
                         } else if (req.search) {
                             req.options.readLocal = false;
                             req.options.readRemote = true;
 
-                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, paging: req.paging, callback: promise});
                         } else if (req.id) {
-                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, paging: req.paging, callback: promise});
                         } else {
-                            tx.getItems({template: options.plural, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural, options: req.options, paging: req.paging, callback: promise});
                         }
                     });
                 });
