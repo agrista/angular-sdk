@@ -137,12 +137,12 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                 if (params !== undefined) {
                     if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(params, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     }
                 } else {
-                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
+                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                 }
             });
         }
