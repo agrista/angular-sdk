@@ -48,7 +48,7 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
         },
         updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'current-user', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'current-user', _.omit(data, 'profilePhotoSrc'), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

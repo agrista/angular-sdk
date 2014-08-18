@@ -151,9 +151,9 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
                 }, promise.reject);
             });
         },
-        updateOrganizationalUnit: function(unitData) {
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/organizational-unit/' + unitData.id, unitData, {withCredentials: true}).then(function (res) {
+        updateOrganizationalUnit: function(data) {
+            return promiseService.wrap(function (data) {
+                $http.post(_host + 'api/organizational-unit/' + data.id, _.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -185,9 +185,9 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
                 }, promise.reject);
             });
         },
-        rejectNotification: function (id, rejectData) {
+        rejectNotification: function (id, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/notification/' + id + '/reject', rejectData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/notification/' + id + '/reject', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -212,9 +212,9 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
         getTasks: function (params) {
             return pagingService.page(_host + 'api/tasks', params);
         },
-        createTask: function (taskData) {
+        createTask: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task', taskData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task', _.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -233,23 +233,9 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
                 }, promise.reject);
             });
         },
-        updateTask: function (taskData) {
+        updateTask: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + taskData.id, taskData, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        updateTaskStatus: function (taskData) {
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + taskData.id + '/status', taskData, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        updateTaskAssignment: function (taskData) {
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + taskData.id, taskData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task/' + data.id, _.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -288,9 +274,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        createMerchant: function (merchantData) {
+        createMerchant: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/merchant', merchantData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/merchant', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -323,9 +309,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        updateMerchant: function (merchantData) {
+        updateMerchant: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/merchant/' + merchantData.id, merchantData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/merchant/' + data.id, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -389,9 +375,9 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                 }, promise.reject);
             });
         },
-        createFarmer: function (farmData) {
+        createFarmer: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer', farmData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer', _.omit(data, ['farms', 'legalEntities']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -411,9 +397,9 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                 }, promise.reject);
             });
         },
-        updateFarmer: function (farmData) {
+        updateFarmer: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/' + farmData.id, farmData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer/' + data.id, _.omit(data, ['farms', 'legalEntities']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -445,7 +431,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
         },
         updateEntity: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity/' + data.id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity/' + data.id, _.omit(data, ['assets']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -466,7 +452,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
         },
         createEntity: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity', _.omit(data, ['assets']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -542,9 +528,9 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
 
             return pagingService.page(_host + 'api/assets' + (id ? '/' + id : ''), params);
         },
-        createAsset: function (assetData) {
+        createAsset: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset', assetData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -556,9 +542,9 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                 }, promise.reject);
             });
         },
-        updateAsset: function (assetData) {
+        updateAsset: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset/' + assetData.id, assetData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset/' + data.id, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -595,9 +581,9 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
 
             return pagingService.page(_host + 'api/documents' + (id ? '/' + id : ''), params);
         },
-        createDocument: function (documentData) {
+        createDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document', documentData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document', _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -609,16 +595,16 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        sendDocument: function (id, requestData) {
+        sendDocument: function (id, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + id + '/send', requestData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + id + '/send', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateDocument: function (documentData) {
+        updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + documentData.id, documentData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + data.id, _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -703,9 +689,9 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
 
             return pagingService.page(_host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), params);
         },
-        createActivity: function (activityData) {
+        createActivity: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/activity', activityData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/activity', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -935,7 +921,7 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
         },
         updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'current-user', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'current-user', _.omit(data, 'profilePhotoSrc'), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
