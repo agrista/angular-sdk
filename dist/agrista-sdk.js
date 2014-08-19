@@ -4588,6 +4588,64 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             }
 
             return this;
+        },
+        formatGeoJson: function (geoJson, toType) {
+            //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
+            if(toType.toLowerCase() == 'point') {
+                switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
+                    // type of Feature
+                    case 'feature':
+                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                            console.log(geoJson.geometry);
+                            return geoJson.geometry;
+                        }
+                        break;
+                    // type of FeatureCollection
+                    case 'featurecollection':
+                        break;
+                    // type of GeometryCollection
+                    case 'geometrycollection':
+                        break;
+                    // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                    default:
+                        break;
+                }
+            }
+
+            return geoJson;
+        },
+        validGeoJson: function (geoJson, typeRestriction) {
+            var validate = true;
+            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+                return false;
+            }
+
+            // valid type, and type matches the restriction, then validate the geometry / features / geometries / coordinates fields
+            switch (geoJson.type.toLowerCase()) {
+                // type of Feature
+                case 'feature':
+                    break;
+                // type of FeatureCollection
+                case 'featurecollection':
+                    break;
+                // type of GeometryCollection
+                case 'geometrycollection':
+                    break;
+                // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                default:
+                    if(!geoJson.coordinates || !geoJson.coordinates instanceof Array) {
+                        return false;
+                    }
+                    var flattenedCoordinates = _.flatten(geoJson.coordinates);
+                    flattenedCoordinates.forEach(function(element, i) {
+                        if(typeof element != 'number') {
+                            validate = false;
+                        }
+                    });
+                    break;
+            }
+
+            return validate;
         }
     };
 
