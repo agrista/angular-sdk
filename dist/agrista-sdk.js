@@ -136,13 +136,13 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
 
     return {
         getOrganizationalUnits: function (params) {
-            if (typeof params == 'string') {
-                params = {
-                    type: params
-                };
-            }
-
             return pagingService.page(_host + 'api/organizational-units', params);
+        },
+        getOrganizationalUnitBranches: function (params) {
+            return pagingService.page(_host + 'api/organizational-units/branches', params);
+        },
+        getOrganizationalUnitRegions: function (params) {
+            return pagingService.page(_host + 'api/organizational-units/regions', params);
         },
         getOrganizationalUnit: function(id) {
             return promiseService.wrap(function (promise) {
