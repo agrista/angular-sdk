@@ -247,9 +247,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                     " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
                     "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
             }
-            if (!asset.data.portionNumber) {
-                asset.data.remainder = true;
-            }
         }
     }
 }]);
