@@ -152,7 +152,7 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
             });
         },
         updateOrganizationalUnit: function(data) {
-            return promiseService.wrap(function (data) {
+            return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/organizational-unit/' + data.id, _.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
