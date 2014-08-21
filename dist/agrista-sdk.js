@@ -5348,10 +5348,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         if(e.layers.getLayers().length > 0) {
             // Layer is within the editableFeature
-            e.layers.eachLayer(function(layer) {
-                _this._editableFeature.removeLayer(layer);
+            e.layers.eachLayer(function(deletedLayer) {
+                _this._editableFeature.eachLayer(function (editableLayer) {
+                    if (editableLayer == deletedLayer || editableLayer.hasLayer(deletedLayer)) {
+                        _this._editableFeature.removeLayer(editableLayer);
 
-                $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', editableLayer.feature.properties.featureId);
+                    }
+                });
             });
         } else {
             // Layer is the editableFeature
