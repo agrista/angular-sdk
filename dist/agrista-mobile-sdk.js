@@ -1156,7 +1156,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                     'Rem. extent');
                 asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
                     _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
-                asset.data.label = asset.data.portionLabel + (farmName && _.words(asset.data.farmLabel).length > 0 ?
+                asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
                     " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
                     "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
             }
