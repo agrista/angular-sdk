@@ -1799,7 +1799,8 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.subtitle = (item.data.season ? item.data.season : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'farmland') {
-                map.title = (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm');
+                map.title = (item.data.portionLabel? item.data.portionLabel :
+                    (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm'));
                 map.subtitle = (item.data.area !== undefined ? 'Area: ' + item.data.area.toFixed(2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
@@ -2020,6 +2021,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
             }
 
             return valuation;
+        },
+        generateFarmlandAssetLabels: function(asset) {
+            if (asset.type == 'farmland') {
+                asset.data.portionLabel = (asset.data.portionNumber ?
+                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Portion ' + asset.data.portionNumber) :
+                    'Rem. extent');
+                asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
+                    _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
+                asset.data.label = asset.data.portionLabel + (farmName && _.words(asset.data.farmLabel).length > 0 ?
+                    " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
+                    "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
+            }
         }
     }
 }]);
