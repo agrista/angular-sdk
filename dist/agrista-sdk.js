@@ -2104,7 +2104,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
                     'Rem. extent');
                 asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
                     _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
-                asset.data.label = asset.data.portionLabel + (farmName && _.words(asset.data.farmLabel).length > 0 ?
+                asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
                     " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
                     "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
             }
@@ -3467,6 +3467,11 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     };
 
     var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
+    var _businessEntityDescriptions = {
+        Commercial: 'Large scale agricultural production',
+        Recreational: 'Leisure or hobby farming',
+        Smallholder: 'Small farm, limited production'
+    };
 
     return {
         listServiceMap: function() {
@@ -3474,6 +3479,10 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+
+        getBusinessEntityDescription: function (businessEntity) {
+            return _businessEntityDescriptions[businessEntity] || '';
         },
         getFarmerLocation: function(farmer) {
             if (farmer) {
