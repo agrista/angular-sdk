@@ -1314,6 +1314,11 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     };
 
     var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
+    var _businessEntityDescriptions = {
+        Commercial: 'Large scale agricultural production',
+        Recreational: 'Leisure or hobby farming',
+        Smallholder: 'Small farm, limited production'
+    };
 
     return {
         listServiceMap: function() {
@@ -1321,6 +1326,10 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+
+        getBusinessEntityDescription: function (businessEntity) {
+            return _businessEntityDescriptions[businessEntity] || '';
         },
         getFarmerLocation: function(farmer) {
             if (farmer) {
