@@ -2299,16 +2299,24 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.onDeleted = function (e) {
         var _this = this;
 
+        var _removeLayer = function (layer) {
+            _this._editableFeature.removeLayer(layer);
+
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
+        };
+
         if(e.layers.getLayers().length > 0) {
             // Layer is within the editableFeature
             e.layers.eachLayer(function(deletedLayer) {
-                _this._editableFeature.eachLayer(function (editableLayer) {
-                    if (editableLayer == deletedLayer || editableLayer.hasLayer(deletedLayer)) {
-                        _this._editableFeature.removeLayer(editableLayer);
-
-                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', editableLayer.feature.properties.featureId);
-                    }
-                });
+                if (deletedLayer.feature !== undefined) {
+                    _removeLayer(deletedLayer);
+                } else {
+                    _this._editableFeature.eachLayer(function (editableLayer) {
+                        if (editableLayer.hasLayer(deletedLayer)) {
+                            _removeLayer(editableLayer);
+                        }
+                    });
+                }
             });
         } else {
             // Layer is the editableFeature
