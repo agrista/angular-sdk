@@ -2207,7 +2207,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     if (editableLayer == deletedLayer || editableLayer.hasLayer(deletedLayer)) {
                         _this._editableFeature.removeLayer(editableLayer);
 
-                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', editableLayer.feature.properties.featureId);
+                        $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', editableLayer.feature.properties.featureId);
                     }
                 });
             });
