@@ -1,6 +1,6 @@
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.library']);
 
-sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscore', function($filter, landUseHelper, underscore) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -59,14 +59,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
                 map.groupby = item.farmId;
             }
 
-            if (item.data.attachments) {
-                map.image = underscore.chain(item.data.attachments)
-                    .filter(function (attachment) {
-                        return (attachment.mimeType && attachment.mimeType.indexOf('image') !== -1);
-                    }).reverse().map(function (attachment) {
-                        return attachment.src;
-                    }).first().value();
-            }
+            map.image = attachmentHelper.getThumbnail(item.data.attachments);
         }
 
         if (metadata) {

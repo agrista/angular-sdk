@@ -67,13 +67,19 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     }
 }]);
 
-sdkHelperFarmerApp.factory('legalEntityHelper', ['underscore', function (underscore) {
+sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
     var _listServiceMap = function(item) {
-        return {
+        var map = {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.type
         };
+
+        if (item.data) {
+            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+        }
+
+        return map;
     };
 
     var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];

@@ -1835,7 +1835,7 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
 
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.library']);
 
-sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscore', function($filter, landUseHelper, underscore) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -1894,14 +1894,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
                 map.groupby = item.farmId;
             }
 
-            if (item.data.attachments) {
-                map.image = underscore.chain(item.data.attachments)
-                    .filter(function (attachment) {
-                        return (attachment.mimeType && attachment.mimeType.indexOf('image') !== -1);
-                    }).reverse().map(function (attachment) {
-                        return attachment.src;
-                    }).first().value();
-            }
+            map.image = attachmentHelper.getThumbnail(item.data.attachments);
         }
 
         if (metadata) {
@@ -2194,6 +2187,36 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
     }
 }]);
 
+var sdkHelperAttachmentApp = angular.module('ag.sdk.helper.attachment', ['ag.sdk.library']);
+
+sdkHelperAttachmentApp.factory('attachmentHelper', ['underscore', function (underscore) {
+    var _getResizedAttachment = function (attachments, size) {
+        if (attachments !== undefined) {
+            if ((attachments instanceof Array) == false) {
+                attachments = [attachments];
+            }
+
+            return underscore.chain(attachments)
+                .filter(function (attachment) {
+                    return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
+                }).map(function (attachment) {
+                    return attachment.sizes[size].src;
+                }).last().value();
+        }
+
+        return attachments;
+    };
+
+    return {
+        getSize: function (attachments, size) {
+            return _getResizedAttachment(attachments, size);
+        },
+        getThumbnail: function (attachments) {
+            return _getResizedAttachment(attachments, 'thumb');
+        }
+    };
+}]);
+
 var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
 
 sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
@@ -2360,21 +2383,21 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', 'taskHelper', 'underscore', function ($injector, taskHelper, underscore) {
+    this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
                 var map = {
                     id: item.id || item.__id,
-                    title: (item.author ? item.author : ''),
-                    subtitle: (item.documentId ? item.documentId : ''),
+                    title: (item.documentId ? item.documentId : ''),
+                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                     docType: item.docType,
-                    group: docMap.title,
-                    updatedAt: item.updatedAt
+                    group: docMap.title
                 };
 
                 if (item.organization && item.organization.name) {
                     map.title = item.organization.name;
+                    map.subtitle = (item.documentId ? item.documentId : '');
                 }
 
                 if (item.data && docMap && docMap.listServiceMap) {
@@ -3508,13 +3531,19 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     }
 }]);
 
-sdkHelperFarmerApp.factory('legalEntityHelper', ['underscore', function (underscore) {
+sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
     var _listServiceMap = function(item) {
-        return {
+        var map = {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.type
         };
+
+        if (item.data) {
+            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+        }
+
+        return map;
     };
 
     var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];
@@ -7138,6 +7167,7 @@ sdkTestDataApp.provider('mockDataService', ['underscore', function (underscore) 
 
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
+    'ag.sdk.helper.attachment',
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
