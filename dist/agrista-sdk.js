@@ -5348,7 +5348,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     geojson.geometry.coordinates = [[]];
 
                     layer.eachLayer(function (childLayer) {
-                        geojson.geometry.coordinates[0].push([_getCoordinates(childLayer, geojson)]);
+                        geojson.geometry.coordinates[0].push(_getCoordinates(childLayer, geojson));
                     });
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
