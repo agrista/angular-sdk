@@ -5296,6 +5296,43 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
             };
 
+            if (_this._draw.controls.polygon.options.draw.polygon.showArea) {
+                geojson.properties.area = {
+                    m_sq: 0,
+                    ha: 0,
+                    mi_sq: 0,
+                    acres: 0,
+                    yd_sq: 0
+                };
+            }
+
+            var _getCoordinates = function (layer, geojson) {
+                var polygonCoordinates = [];
+
+                angular.forEach(layer._latlngs, function(latlng) {
+                    polygonCoordinates.push([latlng.lng, latlng.lat]);
+                });
+
+                // Add a closing coordinate if there is not a matching starting one
+                if (polygonCoordinates.length > 0 && polygonCoordinates[0] != polygonCoordinates[polygonCoordinates.length - 1]) {
+                    polygonCoordinates.push(polygonCoordinates[0]);
+                }
+
+                // Add area
+                if (geojson.properties.area !== undefined) {
+                    var geodesicArea = L.GeometryUtil.geodesicArea(layer._latlngs);
+                    var yards = (geodesicArea * 1.19599);
+
+                    geojson.properties.area.m_sq += geodesicArea;
+                    geojson.properties.area.ha += (geodesicArea * 0.0001);
+                    geojson.properties.area.mi_sq += (yards / 3097600);
+                    geojson.properties.area.acres += (yards / 4840);
+                    geojson.properties.area.yd_sq += yards;
+                }
+
+                return polygonCoordinates;
+            };
+
             switch(layer.feature.geometry.type) {
                 case 'Point':
                     geojson.geometry.coordinates = [layer._latlng.lng, layer._latlng.lat];
@@ -5303,29 +5340,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'Polygon':
+                    geojson.geometry.coordinates = [_getCoordinates(layer, geojson)];
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    break;
+                case 'MultiPolygon':
                     geojson.geometry.coordinates = [[]];
 
-                    angular.forEach(layer._latlngs, function(latlng) {
-                        geojson.geometry.coordinates[0].push([latlng.lng, latlng.lat]);
+                    layer.eachLayer(function (childLayer) {
+                        geojson.geometry.coordinates[0].push([_getCoordinates(childLayer, geojson)]);
                     });
-
-                    // Add a closing coordinate if there is not a matching starting one
-                    if (geojson.geometry.coordinates[0].length > 0 && geojson.geometry.coordinates[0][0] != geojson.geometry.coordinates[0][geojson.geometry.coordinates[0].length - 1]) {
-                        geojson.geometry.coordinates[0].push(geojson.geometry.coordinates[0][0]);
-                    }
-
-                    if (_this._draw.controls.polygon.options.draw.polygon.showArea) {
-                        var geodesicArea = L.GeometryUtil.geodesicArea(layer._latlngs);
-                        var yards = (geodesicArea * 1.19599);
-
-                        geojson.properties.area = {
-                            m_sq: geodesicArea,
-                            ha: (geodesicArea * 0.0001),
-                            mi_sq: (yards / 3097600),
-                            acres: (yards / 4840),
-                            yd_sq: yards
-                        };
-                    }
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
@@ -5346,16 +5370,24 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.onDeleted = function (e) {
         var _this = this;
 
+        var _removeLayer = function (layer) {
+            _this._editableFeature.removeLayer(layer);
+
+            $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
+        };
+
         if(e.layers.getLayers().length > 0) {
             // Layer is within the editableFeature
             e.layers.eachLayer(function(deletedLayer) {
-                _this._editableFeature.eachLayer(function (editableLayer) {
-                    if (editableLayer == deletedLayer || editableLayer.hasLayer(deletedLayer)) {
-                        _this._editableFeature.removeLayer(editableLayer);
-
-                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', editableLayer.feature.properties.featureId);
-                    }
-                });
+                if (deletedLayer.feature !== undefined) {
+                    _removeLayer(deletedLayer);
+                } else {
+                    _this._editableFeature.eachLayer(function (editableLayer) {
+                        if (editableLayer.hasLayer(deletedLayer)) {
+                            _removeLayer(editableLayer);
+                        }
+                    });
+                }
             });
         } else {
             // Layer is the editableFeature
