@@ -27,21 +27,21 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', 'taskHelper', 'underscore', function ($injector, taskHelper, underscore) {
+    this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
                 var map = {
                     id: item.id || item.__id,
-                    title: (item.author ? item.author : ''),
-                    subtitle: (item.documentId ? item.documentId : ''),
+                    title: (item.documentId ? item.documentId : ''),
+                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                     docType: item.docType,
-                    group: docMap.title,
-                    updatedAt: item.updatedAt
+                    group: docMap.title
                 };
 
                 if (item.organization && item.organization.name) {
                     map.title = item.organization.name;
+                    map.subtitle = (item.documentId ? item.documentId : '');
                 }
 
                 if (item.data && docMap && docMap.listServiceMap) {

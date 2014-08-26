@@ -10,14 +10,13 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
      */
     function TeamEditor (/**Array=*/availableTeams, /**Array=*/teams) {
         availableTeams = availableTeams || [];
+        teams = teams || [];
 
-        this.teams = underscore.map(teams || [], function (item) {
+        this.teams = underscore.map(teams, function (item) {
             return (item.name ? item.name : item);
         });
 
-        this.teamsDetails = underscore.map(teams || [], function (item) {
-            return item;
-        });
+        this.teamsDetails = angular.copy(teams);
 
         this.selection = {
             list: availableTeams,
@@ -37,9 +36,9 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1 && !underscore.findWhere(this.teamsDetails, team)) {
+        if (this.teams.indexOf(team) == -1) {
             this.teams.push(team);
-            this.teamsDetails.push(team);
+            this.teamsDetails.push(underscore.findWhere(this.selection.list, {name: team}));
             this.selection.text = '';
         }
     };

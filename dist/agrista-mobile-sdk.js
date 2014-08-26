@@ -48,7 +48,7 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
         },
         updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'current-user', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'current-user', _.omit(data, 'profilePhotoSrc'), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -760,9 +760,9 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.library']);
+var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscore', function($filter, landUseHelper, underscore) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -776,7 +776,8 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
                 map.subtitle = (item.data.season ? item.data.season : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'farmland') {
-                map.title = (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm');
+                map.title = (item.data.portionLabel? item.data.portionLabel :
+                    (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm'));
                 map.subtitle = (item.data.area !== undefined ? 'Area: ' + item.data.area.toFixed(2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
@@ -820,14 +821,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
                 map.groupby = item.farmId;
             }
 
-            if (item.data.attachments) {
-                map.image = underscore.chain(item.data.attachments)
-                    .filter(function (attachment) {
-                        return (attachment.mimeType && attachment.mimeType.indexOf('image') !== -1);
-                    }).reverse().map(function (attachment) {
-                        return attachment.src;
-                    }).first().value();
-            }
+            map.image = attachmentHelper.getThumbnail(item.data.attachments);
         }
 
         if (metadata) {
@@ -1009,6 +1003,31 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', 'underscor
             }
 
             return asset;
+        },
+        calculateValuation: function (asset, valuation) {
+            if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
+                valuation.assetValue = asset.data.quantity * (valuation.unitValue || 0);
+            } else if (asset.type == 'livestock' && isNaN(valuation.totalStock) == false) {
+                valuation.assetValue = valuation.totalStock * (valuation.unitValue || 0);
+            } else if (asset.type == 'crop' && isNaN(valuation.expectedYield) == false) {
+                valuation.assetValue = valuation.expectedYield * (valuation.unitValue || 0);
+            } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
+                valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
+            }
+
+            return valuation;
+        },
+        generateFarmlandAssetLabels: function(asset) {
+            if (asset.type == 'farmland') {
+                asset.data.portionLabel = (asset.data.portionNumber ?
+                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Portion ' + asset.data.portionNumber) :
+                    'Rem. extent');
+                asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
+                    _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
+                asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
+                    " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
+                    "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
+            }
         }
     }
 }]);
@@ -1093,6 +1112,36 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
             return chain.value();
         }
     }
+}]);
+
+var sdkHelperAttachmentApp = angular.module('ag.sdk.helper.attachment', ['ag.sdk.library']);
+
+sdkHelperAttachmentApp.factory('attachmentHelper', ['underscore', function (underscore) {
+    var _getResizedAttachment = function (attachments, size) {
+        if (attachments !== undefined) {
+            if ((attachments instanceof Array) == false) {
+                attachments = [attachments];
+            }
+
+            return underscore.chain(attachments)
+                .filter(function (attachment) {
+                    return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
+                }).map(function (attachment) {
+                    return attachment.sizes[size].src;
+                }).last().value();
+        }
+
+        return attachments;
+    };
+
+    return {
+        getSize: function (attachments, size) {
+            return _getResizedAttachment(attachments, size);
+        },
+        getThumbnail: function (attachments) {
+            return _getResizedAttachment(attachments, 'thumb');
+        }
+    };
 }]);
 
 var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
@@ -1261,21 +1310,21 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', 'taskHelper', 'underscore', function ($injector, taskHelper, underscore) {
+    this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
                 var map = {
                     id: item.id || item.__id,
-                    title: (item.author ? item.author : ''),
-                    subtitle: (item.documentId ? item.documentId : ''),
+                    title: (item.documentId ? item.documentId : ''),
+                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                     docType: item.docType,
-                    group: docMap.title,
-                    updatedAt: item.updatedAt
+                    group: docMap.title
                 };
 
                 if (item.organization && item.organization.name) {
                     map.title = item.organization.name;
+                    map.subtitle = (item.documentId ? item.documentId : '');
                 }
 
                 if (item.data && docMap && docMap.listServiceMap) {
@@ -1349,7 +1398,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.region && item.region.properties ? ' in ' + item.region.properties.name : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
         }
     };
 
@@ -2368,6 +2417,11 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     };
 
     var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
+    var _businessEntityDescriptions = {
+        Commercial: 'Large scale agricultural production',
+        Recreational: 'Leisure or hobby farming',
+        Smallholder: 'Small farm, limited production'
+    };
 
     return {
         listServiceMap: function() {
@@ -2375,6 +2429,10 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
         },
         businessEntityTypes: function() {
             return _businessEntityTypes;
+        },
+
+        getBusinessEntityDescription: function (businessEntity) {
+            return _businessEntityDescriptions[businessEntity] || '';
         },
         getFarmerLocation: function(farmer) {
             if (farmer) {
@@ -2400,13 +2458,19 @@ sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHel
     }
 }]);
 
-sdkHelperFarmerApp.factory('legalEntityHelper', ['underscore', function (underscore) {
+sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
     var _listServiceMap = function(item) {
-        return {
+        var map = {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.type
         };
+
+        if (item.data) {
+            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+        }
+
+        return map;
     };
 
     var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];
@@ -3029,14 +3093,13 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
      */
     function TeamEditor (/**Array=*/availableTeams, /**Array=*/teams) {
         availableTeams = availableTeams || [];
+        teams = teams || [];
 
-        this.teams = underscore.map(teams || [], function (item) {
+        this.teams = underscore.map(teams, function (item) {
             return (item.name ? item.name : item);
         });
 
-        this.teamsDetails = underscore.map(teams || [], function (item) {
-            return item;
-        });
+        this.teamsDetails = angular.copy(teams);
 
         this.selection = {
             list: availableTeams,
@@ -3056,9 +3119,9 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1 && !underscore.findWhere(this.teamsDetails, team)) {
+        if (this.teams.indexOf(team) == -1) {
             this.teams.push(team);
-            this.teamsDetails.push(team);
+            this.teamsDetails.push(underscore.findWhere(this.selection.list, {name: team}));
             this.selection.text = '';
         }
     };
@@ -3515,6 +3578,64 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             }
 
             return this;
+        },
+        formatGeoJson: function (geoJson, toType) {
+            //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
+            if(toType.toLowerCase() == 'point') {
+                switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
+                    // type of Feature
+                    case 'feature':
+                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                            console.log(geoJson.geometry);
+                            return geoJson.geometry;
+                        }
+                        break;
+                    // type of FeatureCollection
+                    case 'featurecollection':
+                        break;
+                    // type of GeometryCollection
+                    case 'geometrycollection':
+                        break;
+                    // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                    default:
+                        break;
+                }
+            }
+
+            return geoJson;
+        },
+        validGeoJson: function (geoJson, typeRestriction) {
+            var validate = true;
+            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+                return false;
+            }
+
+            // valid type, and type matches the restriction, then validate the geometry / features / geometries / coordinates fields
+            switch (geoJson.type.toLowerCase()) {
+                // type of Feature
+                case 'feature':
+                    break;
+                // type of FeatureCollection
+                case 'featurecollection':
+                    break;
+                // type of GeometryCollection
+                case 'geometrycollection':
+                    break;
+                // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                default:
+                    if(!geoJson.coordinates || !geoJson.coordinates instanceof Array) {
+                        return false;
+                    }
+                    var flattenedCoordinates = _.flatten(geoJson.coordinates);
+                    flattenedCoordinates.forEach(function(element, i) {
+                        if(typeof element != 'number') {
+                            validate = false;
+                        }
+                    });
+                    break;
+            }
+
+            return validate;
         }
     };
 
@@ -3833,15 +3954,91 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             zoomControl: true
         },
         layerControl: {
-            baseTile: 'agrista.map-65ftbmpi',
+            baseTile: {
+                'autoscale': true,
+                'bounds': [-180, -85, 180, 85],
+                'cache': {
+                    'maxzoom': 16,
+                    'minzoom': 5
+                },
+                'center': [24.631347656249993, -28.97931203672245, 6],
+                'data': ['http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/markers.geojsonp'],
+                'geocoder': 'http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/geocode/{query}.jsonp',
+                'id': 'agrista.map-65ftbmpi',
+                'maxzoom': 19,
+                'minzoom': 0,
+                'name': 'SA Agri Backdrop',
+                'private': true,
+                'scheme': 'xyz',
+                'tilejson': '2.0.0',
+                'tiles': ['http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png', 'http://b.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png'],
+                'vector_layers': [
+                    {
+                        'fields': {},
+                        'id': 'mapbox_streets'
+                    },
+                    {
+                        'description': '',
+                        'fields': {},
+                        'id': 'agrista_agri_backdrop'
+                    }
+                ]
+            },
             baseLayers: {
-                'Agrista': {
+                'Agriculture': {
                     base: true,
                     type: 'mapbox'
                 },
-                'Google': {
-                    type: 'google',
-                    tiles: 'SATELLITE'
+                'Satellite': {
+                    type: 'mapbox',
+                    tiles: {
+                        'autoscale': true,
+                        'bounds': [-180, -85, 180, 85],
+                        'cache': {
+                            'maxzoom': 16,
+                            'minzoom': 15
+                        },
+                        'center': [23.843663473727442, -29.652475838000733, 7],
+                        'data': ['http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/markers.geojsonp'],
+                        'geocoder': 'http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/geocode/{query}.jsonp',
+                        'id': 'agrista.map-tlsadyhb',
+                        'maxzoom': 22,
+                        'minzoom': 0,
+                        'name': 'Satellite backdrop',
+                        'private': true,
+                        'scheme': 'xyz',
+                        'tilejson': '2.0.0',
+                        'tiles': [
+                            'http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png',
+                            'http://b.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png'
+                        ],
+                        'vector_layers': [
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_full'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_plus'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_open'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_watermask'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_streets'
+                            }
+                        ]
+                    }
+                },
+                'Hybrid': {
+                    tiles: 'agrista.h13nehk2',
+                    type: 'mapbox'
                 }
             },
             overlays: {}
@@ -4222,7 +4419,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     onAddCallback = properties;
                     properties = {};
                 }
-                
+
                 properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
@@ -4726,7 +4923,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         this._map.remove();
         this._map = null;
     };
-    
+
     Mapbox.prototype.broadcast = function (event, data) {
         $log.debug(event);
         $rootScope.$broadcast(event, data);
@@ -5575,6 +5772,43 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
             };
 
+            if (_this._draw.controls.polygon.options.draw.polygon.showArea) {
+                geojson.properties.area = {
+                    m_sq: 0,
+                    ha: 0,
+                    mi_sq: 0,
+                    acres: 0,
+                    yd_sq: 0
+                };
+            }
+
+            var _getCoordinates = function (layer, geojson) {
+                var polygonCoordinates = [];
+
+                angular.forEach(layer._latlngs, function(latlng) {
+                    polygonCoordinates.push([latlng.lng, latlng.lat]);
+                });
+
+                // Add a closing coordinate if there is not a matching starting one
+                if (polygonCoordinates.length > 0 && polygonCoordinates[0] != polygonCoordinates[polygonCoordinates.length - 1]) {
+                    polygonCoordinates.push(polygonCoordinates[0]);
+                }
+
+                // Add area
+                if (geojson.properties.area !== undefined) {
+                    var geodesicArea = L.GeometryUtil.geodesicArea(layer._latlngs);
+                    var yards = (geodesicArea * 1.19599);
+
+                    geojson.properties.area.m_sq += geodesicArea;
+                    geojson.properties.area.ha += (geodesicArea * 0.0001);
+                    geojson.properties.area.mi_sq += (yards / 3097600);
+                    geojson.properties.area.acres += (yards / 4840);
+                    geojson.properties.area.yd_sq += yards;
+                }
+
+                return polygonCoordinates;
+            };
+
             switch(layer.feature.geometry.type) {
                 case 'Point':
                     geojson.geometry.coordinates = [layer._latlng.lng, layer._latlng.lat];
@@ -5582,29 +5816,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'Polygon':
+                    geojson.geometry.coordinates = [_getCoordinates(layer, geojson)];
+
+                    $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
+                    break;
+                case 'MultiPolygon':
                     geojson.geometry.coordinates = [[]];
 
-                    angular.forEach(layer._latlngs, function(latlng) {
-                        geojson.geometry.coordinates[0].push([latlng.lng, latlng.lat]);
+                    layer.eachLayer(function (childLayer) {
+                        geojson.geometry.coordinates[0].push(_getCoordinates(childLayer, geojson));
                     });
-
-                    // Add a closing coordinate if there is not a matching starting one
-                    if (geojson.geometry.coordinates[0].length > 0 && geojson.geometry.coordinates[0][0] != geojson.geometry.coordinates[0][geojson.geometry.coordinates[0].length - 1]) {
-                        geojson.geometry.coordinates[0].push(geojson.geometry.coordinates[0][0]);
-                    }
-
-                    if (_this._draw.controls.polygon.options.draw.polygon.showArea) {
-                        var geodesicArea = L.GeometryUtil.geodesicArea(layer._latlngs);
-                        var yards = (geodesicArea * 1.19599);
-
-                        geojson.properties.area = {
-                            m_sq: geodesicArea,
-                            ha: (geodesicArea * 0.0001),
-                            mi_sq: (yards / 3097600),
-                            acres: (yards / 4840),
-                            yd_sq: yards
-                        };
-                    }
 
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
@@ -5625,12 +5846,24 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.onDeleted = function (e) {
         var _this = this;
 
+        var _removeLayer = function (layer) {
+            _this._editableFeature.removeLayer(layer);
+
+            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
+        };
+
         if(e.layers.getLayers().length > 0) {
             // Layer is within the editableFeature
-            e.layers.eachLayer(function(layer) {
-                _this._editableFeature.removeLayer(layer);
-
-                _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-deleted', layer.feature.properties.featureId);
+            e.layers.eachLayer(function(deletedLayer) {
+                if (deletedLayer.feature !== undefined) {
+                    _removeLayer(deletedLayer);
+                } else {
+                    _this._editableFeature.eachLayer(function (editableLayer) {
+                        if (editableLayer.hasLayer(deletedLayer)) {
+                            _removeLayer(editableLayer);
+                        }
+                    });
+                }
             });
         } else {
             // Layer is the editableFeature
@@ -8554,6 +8787,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
 
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
+    'ag.sdk.helper.attachment',
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
