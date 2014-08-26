@@ -2792,14 +2792,13 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
      */
     function TeamEditor (/**Array=*/availableTeams, /**Array=*/teams) {
         availableTeams = availableTeams || [];
+        teams = teams || [];
 
-        this.teams = _.map(teams || [], function (item) {
+        this.teams = _.map(teams, function (item) {
             return (item.name ? item.name : item);
         });
 
-        this.teamsDetails = _.map(teams || [], function (item) {
-            return item;
-        });
+        this.teamsDetails = angular.copy(teams);
 
         this.selection = {
             list: availableTeams,
@@ -2819,9 +2818,9 @@ sdkHelperTeamApp.factory('teamHelper', [function() {
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1 && !_.findWhere(this.teamsDetails, team)) {
+        if (this.teams.indexOf(team) == -1) {
             this.teams.push(team);
-            this.teamsDetails.push(team);
+            this.teamsDetails.push(_.findWhere(this.selection.list, {name: team}));
             this.selection.text = '';
         }
     };
