@@ -5027,15 +5027,91 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             zoomControl: true
         },
         layerControl: {
-            baseTile: 'agrista.map-65ftbmpi',
+            baseTile: {
+                'autoscale': true,
+                'bounds': [-180, -85, 180, 85],
+                'cache': {
+                    'maxzoom': 16,
+                    'minzoom': 5
+                },
+                'center': [24.631347656249993, -28.97931203672245, 6],
+                'data': ['http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/markers.geojsonp'],
+                'geocoder': 'http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/geocode/{query}.jsonp',
+                'id': 'agrista.map-65ftbmpi',
+                'maxzoom': 19,
+                'minzoom': 0,
+                'name': 'SA Agri Backdrop',
+                'private': true,
+                'scheme': 'xyz',
+                'tilejson': '2.0.0',
+                'tiles': ['http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png', 'http://b.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png'],
+                'vector_layers': [
+                    {
+                        'fields': {},
+                        'id': 'mapbox_streets'
+                    },
+                    {
+                        'description': '',
+                        'fields': {},
+                        'id': 'agrista_agri_backdrop'
+                    }
+                ]
+            },
             baseLayers: {
-                'Agrista': {
+                'Agriculture': {
                     base: true,
                     type: 'mapbox'
                 },
-                'Google': {
-                    type: 'google',
-                    tiles: 'SATELLITE'
+                'Satellite': {
+                    type: 'mapbox',
+                    tiles: {
+                        'autoscale': true,
+                        'bounds': [-180, -85, 180, 85],
+                        'cache': {
+                            'maxzoom': 16,
+                            'minzoom': 15
+                        },
+                        'center': [23.843663473727442, -29.652475838000733, 7],
+                        'data': ['http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/markers.geojsonp'],
+                        'geocoder': 'http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/geocode/{query}.jsonp',
+                        'id': 'agrista.map-tlsadyhb',
+                        'maxzoom': 22,
+                        'minzoom': 0,
+                        'name': 'Satellite backdrop',
+                        'private': true,
+                        'scheme': 'xyz',
+                        'tilejson': '2.0.0',
+                        'tiles': [
+                            'http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png',
+                            'http://b.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png'
+                        ],
+                        'vector_layers': [
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_full'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_plus'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_open'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_satellite_watermask'
+                            },
+                            {
+                                'fields': {},
+                                'id': 'mapbox_streets'
+                            }
+                        ]
+                    }
+                },
+                'Hybrid': {
+                    tiles: 'agrista.h13nehk2',
+                    type: 'mapbox'
                 }
             },
             overlays: {}
