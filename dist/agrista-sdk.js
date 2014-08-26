@@ -1634,6 +1634,18 @@ skdUtilitiesApp.factory('dataMapService', [function() {
 skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', function($rootScope, $http, promiseService, dataMapService) {
     return {
         initialize: function(requestor, dataMap, itemStore, options) {
+            if (typeof itemStore == 'object') {
+                options = itemStore;
+                itemStore = dataMap;
+                dataMap = undefined;
+            }
+
+            if (typeof dataMap == 'object') {
+                options = dataMap;
+                itemStore = undefined;
+                dataMap = undefined;
+            }
+
             itemStore = itemStore || function (data) {
                 $rootScope.$broadcast('paging::items', data);
             };
@@ -1690,7 +1702,7 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                             itemStore(res);
 
                             promise.resolve(res);
-                        }, promise.reject);
+                        }, promiseService.throwError);
                     });
                 }
             };
@@ -1705,12 +1717,12 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                 if (params !== undefined) {
                     if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(params, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     }
                 } else {
-                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
+                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                 }
             });
         }

@@ -561,6 +561,18 @@ skdUtilitiesApp.factory('dataMapService', [function() {
 skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', function($rootScope, $http, promiseService, dataMapService) {
     return {
         initialize: function(requestor, dataMap, itemStore, options) {
+            if (typeof itemStore == 'object') {
+                options = itemStore;
+                itemStore = dataMap;
+                dataMap = undefined;
+            }
+
+            if (typeof dataMap == 'object') {
+                options = dataMap;
+                itemStore = undefined;
+                dataMap = undefined;
+            }
+
             itemStore = itemStore || function (data) {
                 $rootScope.$broadcast('paging::items', data);
             };
@@ -617,7 +629,7 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                             itemStore(res);
 
                             promise.resolve(res);
-                        }, promise.reject);
+                        }, promiseService.throwError);
                     });
                 }
             };
@@ -632,12 +644,12 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                 if (params !== undefined) {
                     if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(params, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     }
                 } else {
-                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
+                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                 }
             });
         }
@@ -6845,44 +6857,101 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'promiseService', 'assetApi', 'configuration', 'documentUtility', 'enterpriseBudgetApi', 'farmApi', 'farmerUtility', 'fileStorageService', 'legalEntityApi', 'taskUtility', 'underscore',
-    function ($http, $log, promiseService, assetApi, configuration, documentUtility, enterpriseBudgetApi, farmApi, farmerUtility, fileStorageService, legalEntityApi, taskUtility, underscore) {
+mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi', 'configuration', 'documentUtility', 'enterpriseBudgetApi', 'farmApi', 'farmerUtility', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskUtility', 'underscore',
+    function ($http, $log, assetApi, configuration, documentUtility, enterpriseBudgetApi, farmApi, farmerUtility, fileStorageService, legalEntityApi, pagingService, promiseService, taskUtility, underscore) {
         var _readOptions = {readLocal: false, readRemote: true};
 
-        function _getFarmers () {
-            return farmerUtility.api.getFarmers({options: _readOptions}).then(function (farmers) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(farmers, function (farmer) {
-                        chain.push(function () {
-                            return farmerUtility.hydration.dehydrate(farmer);
-                        });
-                    });
+        function _getFarmers (pageOptions) {
+            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+
+            return farmerUtility.api.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
+                return promiseService.wrap(function (promise) {
+                    var paging = pagingService.initialize(function (page) {
+                        return farmerUtility.api.getFarmers({paging: page, options: _readOptions});
+                    }, function (farmers) {
+                        promiseService
+                            .chain(function (chain) {
+                                if (paging.complete === false) {
+                                    paging.request().then(angular.noop, promiseService.throwError);
+                                }
+
+                                angular.forEach(farmers, function (farmer) {
+                                    chain.push(function () {
+                                        return farmerUtility.hydration.dehydrate(farmer);
+                                    });
+                                });
+                            }).then(function () {
+                                if (paging.complete) {
+                                    promise.resolve();
+                                }
+                            }, promiseService.throwError);
+                    }, pageOptions);
+
+                    paging.request().then(angular.noop, promiseService.throwError);
                 });
-            }, promiseService.throwError);
+            });
         }
 
-        function _getDocuments () {
-            return documentUtility.api.getDocuments({options: _readOptions}).then(function (documents) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(documents, function (document) {
-                        chain.push(function () {
-                            return documentUtility.hydration.dehydrate(document);
-                        });
-                    });
+        function _getDocuments (pageOptions) {
+            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+
+            return documentUtility.api.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
+                return promiseService.wrap(function (promise) {
+                    var paging = pagingService.initialize(function (page) {
+                        return documentUtility.api.getDocuments({paging: page, options: _readOptions});
+                    }, function (documents) {
+                        promiseService
+                            .chain(function (chain) {
+                                if (paging.complete === false) {
+                                    paging.request().then(angular.noop, promiseService.throwError);
+                                }
+
+                                angular.forEach(documents, function (document) {
+                                    chain.push(function () {
+                                        return documentUtility.hydration.dehydrate(document);
+                                    });
+                                });
+                            }).then(function () {
+                                if (paging.complete) {
+                                    promise.resolve();
+                                }
+                            }, promiseService.throwError);
+                    }, pageOptions);
+
+                    paging.request().then(angular.noop, promiseService.throwError);
                 });
-            }, promiseService.throwError);
+            });
         }
 
-        function _getTasks () {
-            return taskUtility.api.getTasks({options: _readOptions}).then(function (tasks) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(tasks, function (task) {
-                        chain.push(function () {
-                            return taskUtility.hydration.dehydrate(task);
-                        });
-                    });
+        function _getTasks (pageOptions) {
+            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+
+            return taskUtility.api.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
+                return promiseService.wrap(function (promise) {
+                    var paging = pagingService.initialize(function (page) {
+                        return taskUtility.api.getTasks({paging: page, options: _readOptions});
+                    }, function (tasks) {
+                        promiseService
+                            .chain(function (chain) {
+                                if (paging.complete === false) {
+                                    paging.request().then(angular.noop, promiseService.throwError);
+                                }
+
+                                angular.forEach(tasks, function (task) {
+                                    chain.push(function () {
+                                        return taskUtility.hydration.dehydrate(task);
+                                    });
+                                });
+                            }).then(function () {
+                                if (paging.complete) {
+                                    promise.resolve();
+                                }
+                            }, promiseService.throwError);
+                    }, pageOptions);
+
+                    paging.request().then(angular.noop, promiseService.throwError);
                 });
-            }, promiseService.throwError);
+            });
         }
 
         function _getEnterpriseBudgets() {
@@ -7127,6 +7196,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @param req.search {String} Optional
              * @param req.id {Number} Optional
              * @param req.options {Object} Optional
+             * @param req.paging {Object} Optional
              * @returns {Promise}
              */
             getItems: function (req) {
@@ -7135,16 +7205,16 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
                 return promiseService.wrap(function (promise) {
                     _itemStore.transaction(function (tx) {
                         if (req.template) {
-                            tx.getItems({template: req.template, schema: req.schema, options: req.options, callback: promise});
+                            tx.getItems({template: req.template, schema: req.schema, options: req.options, paging: req.paging, callback: promise});
                         } else if (req.search) {
                             req.options.readLocal = false;
                             req.options.readRemote = true;
 
-                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, paging: req.paging, callback: promise});
                         } else if (req.id) {
-                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, paging: req.paging, callback: promise});
                         } else {
-                            tx.getItems({template: options.plural, options: req.options, callback: promise});
+                            tx.getItems({template: options.plural, options: req.options, paging: req.paging, callback: promise});
                         }
                     });
                 });
@@ -7278,21 +7348,18 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             /**
              * @name purgeItem
              * @param req {Object}
-             * @param req.template {String} Required template
+             * @param req.template {String} Optional template
              * @param req.schema {Object} Optional schema
+             * @param req.options {Object} Optional
              * @returns {Promise}
              */
             purgeItem: function (req) {
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    if (req.template) {
-                        _itemStore.transaction(function (tx) {
-                            tx.purgeItems({template: req.template, schema: req.schema, callback: promise});
-                        });
-                    } else {
-                        promise.resolve();
-                    }
+                    _itemStore.transaction(function (tx) {
+                        tx.purgeItems({template: req.template, schema: req.schema, options: req.options, callback: promise});
+                    });
                 });
             }
         };
@@ -8275,13 +8342,18 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
              * Remote data storage
              */
 
-            var _getRemote = function (uri, grCallback) {
+            var _getRemote = function (uri, paging, grCallback) {
                 $log.debug('_getRemote');
-                if (typeof grCallback !== 'function') grCallback = angular.noop;
+                if (typeof paging == 'function') {
+                    grCallback = paging;
+                    paging = undefined;
+                }
+
+                if (typeof grCallback != 'function') grCallback = angular.noop;
 
                 if (_config.apiTemplate !== undefined) {
                     safeApply(function () {
-                        $http.get(_hostApi + uri, {withCredentials: true}).then(function (res) {
+                        $http.get(_hostApi + uri, {params: paging, withCredentials: true}).then(function (res) {
                             if (res.data != null && res.data !== 'null') {
                                 var data = res.data;
 
@@ -8576,8 +8648,6 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                             template: _config.apiTemplate,
                             schema: {},
                             options: {
-                                page: 1,
-                                limit: _defaultOptions.pageLimit,
                                 readLocal: _config.readLocal,
                                 readRemote: _config.readRemote,
                                 fallbackRemote: false
@@ -8586,11 +8656,17 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         });
 
                         var handleRemote = function (_uri) {
-                            _getRemote(_uri, function (res, err) {
+                            _getRemote(_uri, request.paging, function (res, err) {
                                 if (res) {
-                                    _syncLocal(res, _uri, function (res, err) {
-                                        _responseHandler(request.callback, res, err);
-                                    });
+                                    if (request.paging === undefined && request.options.readLocal === true) {
+                                        _syncLocal(res, _uri, function (res, err) {
+                                            _responseHandler(request.callback, res, err);
+                                        });
+                                    } else {
+                                        _updateLocal(res, function (res, err) {
+                                            _responseHandler(request.callback, res, err);
+                                        });
+                                    }
                                 } else if (request.options.readLocal === true) {
                                     _getLocal(_uri, request.options, function (res, err) {
                                         _responseHandler(request.callback, res, err);

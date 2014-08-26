@@ -16,87 +16,93 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         function _getFarmers (pageOptions) {
             pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
 
-            return promiseService.wrap(function (promise) {
-                var paging = pagingService.initialize(function (page) {
-                    return farmerUtility.api.getFarmers({paging: page, options: _readOptions});
-                }, function (farmers) {
-                    promiseService
-                        .chain(function (chain) {
-                            if (paging.complete === false) {
-                                paging.request().then(angular.noop, promiseService.throwError);
-                            }
+            return farmerUtility.api.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
+                return promiseService.wrap(function (promise) {
+                    var paging = pagingService.initialize(function (page) {
+                        return farmerUtility.api.getFarmers({paging: page, options: _readOptions});
+                    }, function (farmers) {
+                        promiseService
+                            .chain(function (chain) {
+                                if (paging.complete === false) {
+                                    paging.request().then(angular.noop, promiseService.throwError);
+                                }
 
-                            angular.forEach(farmers, function (farmer) {
-                                chain.push(function () {
-                                    return farmerUtility.hydration.dehydrate(farmer);
+                                angular.forEach(farmers, function (farmer) {
+                                    chain.push(function () {
+                                        return farmerUtility.hydration.dehydrate(farmer);
+                                    });
                                 });
-                            });
-                        }).then(function () {
-                            if (paging.complete) {
-                                promise.resolve();
-                            }
-                        }, promiseService.throwError);
-                }, pageOptions);
+                            }).then(function () {
+                                if (paging.complete) {
+                                    promise.resolve();
+                                }
+                            }, promiseService.throwError);
+                    }, pageOptions);
 
-                paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().then(angular.noop, promiseService.throwError);
+                });
             });
         }
 
         function _getDocuments (pageOptions) {
             pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
 
-            return promiseService.wrap(function (promise) {
-                var paging = pagingService.initialize(function (page) {
-                    return documentUtility.api.getDocuments({paging: page, options: _readOptions});
-                }, function (documents) {
-                    promiseService
-                        .chain(function (chain) {
-                            if (paging.complete === false) {
-                                paging.request().then(angular.noop, promiseService.throwError);
-                            }
+            return documentUtility.api.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
+                return promiseService.wrap(function (promise) {
+                    var paging = pagingService.initialize(function (page) {
+                        return documentUtility.api.getDocuments({paging: page, options: _readOptions});
+                    }, function (documents) {
+                        promiseService
+                            .chain(function (chain) {
+                                if (paging.complete === false) {
+                                    paging.request().then(angular.noop, promiseService.throwError);
+                                }
 
-                            angular.forEach(documents, function (document) {
-                                chain.push(function () {
-                                    return documentUtility.hydration.dehydrate(document);
+                                angular.forEach(documents, function (document) {
+                                    chain.push(function () {
+                                        return documentUtility.hydration.dehydrate(document);
+                                    });
                                 });
-                            });
-                        }).then(function () {
-                            if (paging.complete) {
-                                promise.resolve();
-                            }
-                        }, promiseService.throwError);
-                }, pageOptions);
+                            }).then(function () {
+                                if (paging.complete) {
+                                    promise.resolve();
+                                }
+                            }, promiseService.throwError);
+                    }, pageOptions);
 
-                paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().then(angular.noop, promiseService.throwError);
+                });
             });
         }
 
         function _getTasks (pageOptions) {
             pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
 
-            return promiseService.wrap(function (promise) {
-                var paging = pagingService.initialize(function (page) {
-                    return taskUtility.api.getTasks({paging: page, options: _readOptions});
-                }, function (tasks) {
-                    promiseService
-                        .chain(function (chain) {
-                            if (paging.complete === false) {
-                                paging.request().then(angular.noop, promiseService.throwError);
-                            }
+            return taskUtility.api.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
+                return promiseService.wrap(function (promise) {
+                    var paging = pagingService.initialize(function (page) {
+                        return taskUtility.api.getTasks({paging: page, options: _readOptions});
+                    }, function (tasks) {
+                        promiseService
+                            .chain(function (chain) {
+                                if (paging.complete === false) {
+                                    paging.request().then(angular.noop, promiseService.throwError);
+                                }
 
-                            angular.forEach(tasks, function (task) {
-                                chain.push(function () {
-                                    return taskUtility.hydration.dehydrate(task);
+                                angular.forEach(tasks, function (task) {
+                                    chain.push(function () {
+                                        return taskUtility.hydration.dehydrate(task);
+                                    });
                                 });
-                            });
-                        }).then(function () {
-                            if (paging.complete) {
-                                promise.resolve();
-                            }
-                        }, promiseService.throwError);
-                }, pageOptions);
+                            }).then(function () {
+                                if (paging.complete) {
+                                    promise.resolve();
+                                }
+                            }, promiseService.throwError);
+                    }, pageOptions);
 
-                paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().then(angular.noop, promiseService.throwError);
+                });
             });
         }
 
@@ -494,21 +500,18 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             /**
              * @name purgeItem
              * @param req {Object}
-             * @param req.template {String} Required template
+             * @param req.template {String} Optional template
              * @param req.schema {Object} Optional schema
+             * @param req.options {Object} Optional
              * @returns {Promise}
              */
             purgeItem: function (req) {
                 req = req || {};
 
                 return promiseService.wrap(function (promise) {
-                    if (req.template) {
-                        _itemStore.transaction(function (tx) {
-                            tx.purgeItems({template: req.template, schema: req.schema, callback: promise});
-                        });
-                    } else {
-                        promise.resolve();
-                    }
+                    _itemStore.transaction(function (tx) {
+                        tx.purgeItems({template: req.template, schema: req.schema, options: req.options, callback: promise});
+                    });
                 });
             }
         };
