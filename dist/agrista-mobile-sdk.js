@@ -796,7 +796,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
                 if (result instanceof Array) {
                     results = results.concat(result);
                 } else if (result) {
-                    results = results.push(result);
+                    results.push(result);
                 }
 
                 return (item ? item() : results);
