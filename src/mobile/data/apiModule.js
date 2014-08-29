@@ -670,19 +670,61 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
     }];
 }]);
 
-mobileSdkApiApp.factory('legalEntityApi', ['api', function (api) {
-    var entityApi = api({plural: 'legalentities', singular: 'legalentity', strip: ['assets']});
+mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('legalEntity', ['legalEntityApi', function (legalEntityApi) {
+        return function (obj, type) {
+            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true}});
+        }
+    }]);
 
-    return {
-        getEntities: entityApi.getItems,
-        createEntity: entityApi.createItem,
-        getEntity: entityApi.getItem,
-        findEntity: entityApi.findItem,
-        updateEntity: entityApi.updateItem,
-        postEntity: entityApi.postItem,
-        deleteEntity: entityApi.deleteItem,
-        purgeEntity: entityApi.purgeItem
-    };
+    hydrationProvider.registerHydrate('legalEntities', ['legalEntityApi', function (legalEntityApi) {
+        return function (obj, type) {
+            return legalEntityApi.getEntities({id: obj.__id, options: {hydrate: true}});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('legalEntities', ['legalEntityApi', 'promiseService', function (legalEntityApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return legalEntityApi.purgeEntity({template: 'legalentities/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.legalEntities, function (entity) {
+                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: false, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var defaultRelations = ['assets'];
+        var entityApi = api({
+            plural: 'legalentities',
+            singular: 'legalentity',
+            strip: defaultRelations,
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'legalentity', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'legalentity', relations);
+            }
+        });
+
+        return {
+            getEntities: entityApi.getItems,
+            createEntity: entityApi.createItem,
+            getEntity: entityApi.getItem,
+            findEntity: entityApi.findItem,
+            updateEntity: entityApi.updateItem,
+            postEntity: entityApi.postItem,
+            deleteEntity: entityApi.deleteItem,
+            purgeEntity: entityApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
