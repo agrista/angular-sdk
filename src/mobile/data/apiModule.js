@@ -329,7 +329,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             options.plural = options.singular + 's'
         }
         
-        var _itemStore = dataStore(options.singular, {apiTemplate: options.singular + '/:id'});
+        var _itemStore = dataStore(options.singular, {
+            apiTemplate: options.singular + '/:id',
+            hydrate: options.hydrate,
+            dehydrate: options.dehydrate
+        });
         
         var _stripProperties = function (data) {
             if (options.strip) {
@@ -386,7 +390,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
                 return promiseService.wrap(function (promise) {
                     if (req.data) {
                         _itemStore.transaction(function (tx) {
-                            tx.createItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), options: req.options, callback: promise});
+                            tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options, callback: promise});
                         });
                     } else {
                         promise.resolve();
