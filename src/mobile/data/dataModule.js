@@ -71,6 +71,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
     var _defaultOptions = {
         pageLimit: 10,
         dbName: undefined,
+
         readLocal: true,
         readRemote: true
     };
@@ -103,8 +104,14 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$http', '$log', '$q', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $q, $rootScope, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$rootScope', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
+
+        var _defaultHydration = function (obj) {
+            return promiseService.wrap(function (promise) {
+                promise.resolve(obj);
+            })
+        };
 
         /**
          * @name _initializeDatabase
@@ -135,10 +142,10 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                 } else {
                     idCallback(db);
                 }
-            };
+            }
 
             _processMigration(window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576));
-        };
+        }
 
         /**
          * @name DataStore
@@ -187,7 +194,10 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                 indexerProperty: 'id',
 
                 readLocal: _defaultOptions.readLocal,
-                readRemote: _defaultOptions.readRemote
+                readRemote: _defaultOptions.readRemote,
+
+                hydrate: _defaultHydration,
+                dehydrate: _defaultHydration
             });
 
             if (_config.paging !== undefined) {
@@ -663,7 +673,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         }
                     }
                 }
-            };
+            }
 
             /**
              * Transactions
@@ -922,7 +932,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
 
                 _dataStoreInitialized = true;
                 _processTransactionQueue();
-            })
+            });
 
             /**
              * Public functions
