@@ -54,6 +54,26 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             });
         }
 
+        function _getExpenses (pageOptions) {
+            pageOptions = pageOptions || {limit: 20, resulttype: 'simple'};
+
+            return expenseApi.purgeExpense({template: 'expenses', options: {force: false}}).then(function () {
+                return promiseService.wrap(function (promise) {
+                    var paging = pagingService.initialize(function (page) {
+                        return expenseApi.getExpenses({paging: page, options: _remoteOptions});
+                    }, function (expenses) {
+                        if (paging.complete) {
+                            promise.resolve();
+                        } else {
+                            paging.request().then(angular.noop, promiseService.throwError);
+                        }
+                    }, pageOptions);
+
+                    paging.request().then(angular.noop, promiseService.throwError);
+                });
+            });
+        }
+
         function _getTasks (pageOptions) {
             pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
 
@@ -279,12 +299,12 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             },
             upload: function () {
                 return promiseService.chain(function (chain) {
-                    chain.push(_postFarmers, _postDocuments, _postTasks);
+                    chain.push(_postFarmers, _postDocuments, _postTasks, _postExpenses);
                 });
             },
             download: function () {
                 return promiseService.chain(function (chain) {
-                    chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets);
+                    chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets, _getExpenses);
                 });
             }
         };
@@ -890,16 +910,29 @@ mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
     };
 }]);
 
+mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'underscore', function (api, hydration, underscore) {
+    var defaultRelations = ['document', 'organization'];
+    var expenseApi = api({
+        plural: 'expenses',
+        singular: 'expense',
+        strip: ['document', 'organization', 'user'],
+        hydrate: function (obj, relations) {
+            relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+            return hydration.hydrate(obj, 'expense', relations);
+        },
+        dehydrate: function (obj, relations) {
+            return underscore.omit(obj, relations || defaultRelations);
+        }
+    });
 
     return {
-        getEnterpriseBudgets: farmApi.getItems,
-        createEnterpriseBudget: farmApi.createItem,
-        getEnterpriseBudget: farmApi.getItem,
-        findEnterpriseBudget: farmApi.findItem,
-        updateEnterpriseBudget: farmApi.updateItem,
-        postEnterpriseBudget: farmApi.postItem,
-        deleteEnterpriseBudget: farmApi.deleteItem,
-        purgeEnterpriseBudget: farmApi.purgeItem
+        getExpenses: expenseApi.getItems,
+        createExpense: expenseApi.createItem,
+        getExpense: expenseApi.getItem,
+        findExpense: expenseApi.findItem,
+        updateExpense: expenseApi.updateItem,
+        postExpense: expenseApi.postItem,
+        purgeExpense: expenseApi.purgeItem
     };
 }]);
 
