@@ -620,19 +620,54 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('farmerApi', ['api', function (api) {
-    var farmerApi = api({plural: 'farmers', singular: 'farmer', strip: ['assets', 'farms', 'legalEntities']});
+mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('organization', ['farmerApi', function (farmerApi) {
+        return function (obj, type) {
+            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
+        }
+    }]);
 
-    return {
-        getFarmers: farmerApi.getItems,
-        createFarmer: farmerApi.createItem,
-        getFarmer: farmerApi.getItem,
-        findFarmer: farmerApi.findItem,
-        updateFarmer: farmerApi.updateItem,
-        postFarmer: farmerApi.postItem,
-        deleteFarmer: farmerApi.deleteItem,
-        purgeFarmer: farmerApi.purgeItem
-    };
+    hydrationProvider.registerDehydrate('organization', ['farmerApi', 'promiseService', function (farmerApi, promiseService) {
+        return function (obj, type) {
+            return promiseService.wrap(function (promise) {
+                if (obj.organization) {
+                    obj.organization.id = obj.organization.id || obj.organizationId;
+
+                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: false, dirty: false}}).then(promise.resolve, promise.reject);
+                } else {
+                    promise.resolve(obj);
+                }
+            });
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var defaultRelations = ['farms', 'legalEntities'];
+        var farmerApi = api({
+            plural: 'farmers',
+            singular: 'farmer',
+            strip: defaultRelations,
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'farmer', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'farmer', relations);
+            }
+        });
+
+        return {
+            getFarmers: farmerApi.getItems,
+            createFarmer: farmerApi.createItem,
+            getFarmer: farmerApi.getItem,
+            findFarmer: farmerApi.findItem,
+            updateFarmer: farmerApi.updateItem,
+            postFarmer: farmerApi.postItem,
+            deleteFarmer: farmerApi.deleteItem,
+            purgeFarmer: farmerApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.factory('legalEntityApi', ['api', function (api) {
@@ -759,42 +794,6 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
 /*
  * Handlers
  */
-mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
-    var _relations = ['farms', 'legalEntities'];
-
-    return {
-        hydration: {
-            hydrate: function (farmerOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof farmerOrId !== 'object') {
-                        farmerApi.findFarmer({key: farmerOrId, options: {one: true}}).then(function (farmer) {
-                            hydration.hydrate(farmer, 'farmer', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(farmerOrId, 'farmer', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (farmer, relations) {
-                relations = relations || _relations;
-
-                angular.forEach(farmer.teams, function (team, i) {
-                    if (typeof team === 'object') {
-                        farmer.teams[i] = team.name;
-                    }
-                });
-
-                return hydration.dehydrate(farmer, 'farmer', relations).then(function (farmer) {
-                    farmerApi.updateFarmer({data: farmer, options: {dirty: false}});
-                })
-            }
-        },
-        api: farmerApi
-    };
-}]);
-
 mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
     var _relations = ['farm', 'legalEntity'];
 
