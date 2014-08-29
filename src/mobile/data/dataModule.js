@@ -457,10 +457,6 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
 
             var _getRemote = function (uri, paging, grCallback) {
                 $log.debug('_getRemote');
-                if (typeof paging == 'function') {
-                    grCallback = paging;
-                    paging = undefined;
-                }
 
                 if (typeof grCallback != 'function') grCallback = angular.noop;
 
@@ -471,30 +467,21 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                                 var data = res.data;
 
                                 if ((data instanceof Array) === false) {
-                                    grCallback([dataStoreUtilities.injectMetadata({
-                                        id: _getItemIndex(data),
-                                        uri: uri,
-                                        data: data,
-                                        dirty: false,
-                                        local: false
-                                    })]);
-                                } else {
-                                    var dataItems = [];
-
-                                    for (var i = 0; i < data.length; i++) {
-                                        var item = data[i];
-
-                                        dataItems.push(dataStoreUtilities.injectMetadata({
-                                            id: _getItemIndex(item),
-                                            uri: uri,
-                                            data: item,
-                                            dirty: false,
-                                            local: false
-                                        }));
-                                    }
-
-                                    grCallback(dataItems);
+                                    data = [data];
                                 }
+
+                                promiseService
+                                    .wrapAll(function (promises) {
+                                        angular.forEach(data, function (item) {
+                                            promises.push(_config.dehydrate(dataStoreUtilities.injectMetadata({
+                                                id: _getItemIndex(item),
+                                                uri: uri,
+                                                data: item,
+                                                dirty: false,
+                                                local: false
+                                            }), true));
+                                        });
+                                    }).then(grCallback);
                             } else {
                                 grCallback(null, _errors.RemoteNoDataError);
                             }
@@ -736,29 +723,45 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                             callback: angular.noop
                         });
 
-                        if ((request.data instanceof Array) === false) {
-                            request.data = [request.data];
-                        }
 
-                        var asyncMon = new AsyncMonitor(request.data.length, function (res, err) {
-                            _responseHandler(request.callback, res, err);
                         request.options = underscore.defaults(request.options, {
                             replace: true,
                             force: false,
                             dirty: true
                         });
 
-                        angular.forEach(request.data, function (data) {
-                            var id = _getItemIndex(data, dataStoreUtilities.generateItemIndex());
+                        if ((request.data instanceof Array) === false) {
+                            request.data = [request.data];
+                        }
 
-                            _updateLocal(dataStoreUtilities.injectMetadata({
-                                id: id,
-                                uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
-                                data: data,
-                                dirty: request.options.dirty,
-                                local: request.options.dirty
-                            }), request.options, asyncMon.done);
-                        });
+                        promiseService
+                            .wrapAll(function (promises) {
+                                angular.forEach(request.data, function (data) {
+                                    promises.push(promiseService.wrap(function (promise) {
+                                        var id = _getItemIndex(data, dataStoreUtilities.generateItemIndex());
+
+                                        _config.dehydrate(dataStoreUtilities.injectMetadata({
+                                                id: id,
+                                                uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
+                                                data: data,
+                                                dirty: request.options.dirty,
+                                                local: request.options.dirty
+                                            }), request.options.dehydrate).then(function (result) {
+                                                _updateLocal(result, request.options, function (res) {
+                                                    if (res && res.length == 1) {
+                                                        _config.hydrate(res[0], request.options.hydrate).then(promise.resolve, promise.reject);
+                                                    } else {
+                                                        promise.reject();
+                                                    }
+                                                });
+                                            }, promise.reject);
+                                    }));
+                                });
+                            }).then(function (res) {
+                                _responseHandler(request.callback, false, res);
+                            }, function (err) {
+                                _responseHandler(request.callback, false, null, err);
+                            });
                     },
                     getItems: function (req) {
                         var request = underscore.defaults(req || {}, {
