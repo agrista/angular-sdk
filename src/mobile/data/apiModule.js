@@ -685,19 +685,51 @@ mobileSdkApiApp.factory('legalEntityApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('farmApi', ['api', function (api) {
-    var farmApi = api({plural: 'farms', singular: 'farm'});
+mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
+        return function (obj, type) {
+            return farmApi.findFarm({key: obj.farmId, options: {one: true}});
+        }
+    }]);
 
-    return {
-        getFarms: farmApi.getItems,
-        createFarm: farmApi.createItem,
-        getFarm: farmApi.getItem,
-        findFarm: farmApi.findItem,
-        updateFarm: farmApi.updateItem,
-        postFarm: farmApi.postItem,
-        deleteFarm: farmApi.deleteItem,
-        purgeFarm: farmApi.purgeItem
-    };
+    hydrationProvider.registerHydrate('farms', ['farmApi', function (farmApi) {
+        return function (obj, type) {
+            return farmApi.getFarms({id: obj.__id});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('farms', ['farmApi', 'promiseService', function (farmApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return farmApi.purgeFarm({template: 'farms/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.farms, function (farm) {
+                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: false, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var farmApi = api({
+            plural: 'farms',
+            singular: 'farm'
+        });
+
+        return {
+            getFarms: farmApi.getItems,
+            createFarm: farmApi.createItem,
+            getFarm: farmApi.getItem,
+            findFarm: farmApi.findItem,
+            updateFarm: farmApi.updateItem,
+            postFarm: farmApi.postItem,
+            deleteFarm: farmApi.deleteItem,
+            purgeFarm: farmApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationProvider) {
