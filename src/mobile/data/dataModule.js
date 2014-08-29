@@ -732,11 +732,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                             template: _config.apiTemplate,
                             schema: {},
                             data: [],
-                            options: {
-                                replace: true,
-                                force: false,
-                                dirty: true
-                            },
+                            options: {},
                             callback: angular.noop
                         });
 
@@ -746,6 +742,10 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
 
                         var asyncMon = new AsyncMonitor(request.data.length, function (res, err) {
                             _responseHandler(request.callback, res, err);
+                        request.options = underscore.defaults(request.options, {
+                            replace: true,
+                            force: false,
+                            dirty: true
                         });
 
                         angular.forEach(request.data, function (data) {
@@ -764,12 +764,14 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
-                            options: {
-                                readLocal: _config.readLocal,
-                                readRemote: _config.readRemote,
-                                fallbackRemote: false
-                            },
+                            options: {},
                             callback: angular.noop
+                        });
+
+                        request.options = underscore.defaults(request.options, {
+                            readLocal: _config.readLocal,
+                            readRemote: _config.readRemote,
+                            fallbackRemote: false
                         });
 
                         var handleRemote = function (_uri) {
@@ -818,11 +820,13 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         var request = underscore.defaults(req || {}, {
                             key: '',
                             column: 'id',
-                            options: {
-                                like: false,
-                                one: false
-                            },
+                            options: {},
                             callback: angular.noop
+                        });
+
+                        request.options = underscore.defaults(request.options, {
+                            like: false,
+                            one: false
                         });
 
                         _findLocal(request.key, request.column, request.options, function (res, err) {
@@ -832,10 +836,12 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                     updateItems: function (req) {
                         var request = underscore.defaults(req || {}, {
                             data: [],
-                            options: {
-                                dirty: true
-                            },
+                            options: {},
                             callback: angular.noop
+                        });
+
+                        request.options = underscore.defaults(request.options, {
+                            dirty: true
                         });
 
                         if ((request.data instanceof Array) === false) {
@@ -896,10 +902,12 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         var request = underscore.defaults(req || {}, {
                             template: undefined,
                             schema: {},
-                            options: {
-                                force: true
-                            },
+                            options: {},
                             callback: angular.noop
+                        });
+
+                        request.options = underscore.defaults(request.options, {
+                            force: true
                         });
 
                         if (request.template !== undefined) {
