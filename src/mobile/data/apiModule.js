@@ -519,7 +519,10 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
 }]);
 
 mobileSdkApiApp.factory('userApi', ['api', function (api) {
-    var userApi = api({plural: 'users', singular: 'user'});
+    var userApi = api({
+        plural: 'users',
+        singular: 'user'
+    });
 
     return {
         getUsers: userApi.getItems,
@@ -533,7 +536,10 @@ mobileSdkApiApp.factory('userApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('teamApi', ['api', function (api) {
-    var teamApi = api({plural: 'teams', singular: 'team'});
+    var teamApi = api({
+        plural: 'teams',
+        singular: 'team'
+    });
 
     return {
         getTeams: teamApi.getItems,
@@ -547,7 +553,10 @@ mobileSdkApiApp.factory('teamApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
-    var notificationApi = api({plural: 'notifications', singular: 'notification'});
+    var notificationApi = api({
+        plural: 'notifications',
+        singular: 'notification'
+    });
 
     return {
         getNotifications: notificationApi.getItems,
@@ -608,7 +617,10 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
 }]);
 
 mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
-    var merchantApi = api({plural: 'merchants', singular: 'merchant'});
+    var merchantApi = api({
+        plural: 'merchants',
+        singular: 'merchant'
+    });
 
     return {
         getMerchants: merchantApi.getItems,
@@ -866,7 +878,10 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
 }]);
 
 mobileSdkApiApp.factory('activityApi', ['api', function (api) {
-    var activityApi = api({plural: 'activities', singular: 'activity'});
+    var activityApi = api({
+        plural: 'activities',
+        singular: 'activity'
+    });
 
     return {
         getActivities: activityApi.getItems,
@@ -877,7 +892,23 @@ mobileSdkApiApp.factory('activityApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
-    var farmApi = api({plural: 'budgets', singular: 'budget'});
+    var budgetApi = api({
+        plural: 'budgets',
+        singular: 'budget'
+    });
+
+    return {
+        getEnterpriseBudgets: budgetApi.getItems,
+        createEnterpriseBudget: budgetApi.createItem,
+        getEnterpriseBudget: budgetApi.getItem,
+        findEnterpriseBudget: budgetApi.findItem,
+        updateEnterpriseBudget: budgetApi.updateItem,
+        postEnterpriseBudget: budgetApi.postItem,
+        deleteEnterpriseBudget: budgetApi.deleteItem,
+        purgeEnterpriseBudget: budgetApi.purgeItem
+    };
+}]);
+
 
     return {
         getEnterpriseBudgets: farmApi.getItems,
