@@ -1,4 +1,4 @@
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.hydration', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -9,34 +9,24 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi', 'configuration', 'documentUtility', 'enterpriseBudgetApi', 'farmApi', 'farmerUtility', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskUtility', 'underscore',
-    function ($http, $log, assetApi, configuration, documentUtility, enterpriseBudgetApi, farmApi, farmerUtility, fileStorageService, legalEntityApi, pagingService, promiseService, taskUtility, underscore) {
-        var _readOptions = {readLocal: false, readRemote: true};
+mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi', 'configuration', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskApi', 'underscore',
+    function ($http, $log, assetApi, configuration, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, pagingService, promiseService, taskApi, underscore) {
+        var _localOptions = {readLocal: true, hydrate: false};
+        var _remoteOptions = {readLocal: false, readRemote: true, hydrate: false};
 
         function _getFarmers (pageOptions) {
             pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
 
-            return farmerUtility.api.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
+            return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
                 return promiseService.wrap(function (promise) {
                     var paging = pagingService.initialize(function (page) {
-                        return farmerUtility.api.getFarmers({paging: page, options: _readOptions});
+                        return farmerApi.getFarmers({paging: page, options: _remoteOptions});
                     }, function (farmers) {
-                        promiseService
-                            .chain(function (chain) {
-                                if (paging.complete === false) {
-                                    paging.request().then(angular.noop, promiseService.throwError);
-                                }
-
-                                angular.forEach(farmers, function (farmer) {
-                                    chain.push(function () {
-                                        return farmerUtility.hydration.dehydrate(farmer);
-                                    });
-                                });
-                            }).then(function () {
-                                if (paging.complete) {
-                                    promise.resolve();
-                                }
-                            }, promiseService.throwError);
+                        if (paging.complete) {
+                            promise.resolve();
+                        } else {
+                            paging.request().then(angular.noop, promiseService.throwError);
+                        }
                     }, pageOptions);
 
                     paging.request().then(angular.noop, promiseService.throwError);
@@ -47,27 +37,16 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         function _getDocuments (pageOptions) {
             pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
 
-            return documentUtility.api.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
+            return documentApi.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
                 return promiseService.wrap(function (promise) {
                     var paging = pagingService.initialize(function (page) {
-                        return documentUtility.api.getDocuments({paging: page, options: _readOptions});
+                        return documentApi.getDocuments({paging: page, options: _remoteOptions});
                     }, function (documents) {
-                        promiseService
-                            .chain(function (chain) {
-                                if (paging.complete === false) {
-                                    paging.request().then(angular.noop, promiseService.throwError);
-                                }
-
-                                angular.forEach(documents, function (document) {
-                                    chain.push(function () {
-                                        return documentUtility.hydration.dehydrate(document);
-                                    });
-                                });
-                            }).then(function () {
-                                if (paging.complete) {
-                                    promise.resolve();
-                                }
-                            }, promiseService.throwError);
+                        if (paging.complete) {
+                            promise.resolve();
+                        } else {
+                            paging.request().then(angular.noop, promiseService.throwError);
+                        }
                     }, pageOptions);
 
                     paging.request().then(angular.noop, promiseService.throwError);
@@ -78,27 +57,16 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         function _getTasks (pageOptions) {
             pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
 
-            return taskUtility.api.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
+            return taskApi.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
                 return promiseService.wrap(function (promise) {
                     var paging = pagingService.initialize(function (page) {
-                        return taskUtility.api.getTasks({paging: page, options: _readOptions});
+                        return taskApi.getTasks({paging: page, options: _remoteOptions});
                     }, function (tasks) {
-                        promiseService
-                            .chain(function (chain) {
-                                if (paging.complete === false) {
-                                    paging.request().then(angular.noop, promiseService.throwError);
-                                }
-
-                                angular.forEach(tasks, function (task) {
-                                    chain.push(function () {
-                                        return taskUtility.hydration.dehydrate(task);
-                                    });
-                                });
-                            }).then(function () {
-                                if (paging.complete) {
-                                    promise.resolve();
-                                }
-                            }, promiseService.throwError);
+                        if (paging.complete) {
+                            promise.resolve();
+                        } else {
+                            paging.request().then(angular.noop, promiseService.throwError);
+                        }
                     }, pageOptions);
 
                     paging.request().then(angular.noop, promiseService.throwError);
@@ -107,12 +75,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         }
 
         function _getEnterpriseBudgets() {
-            return enterpriseBudgetApi.getEnterpriseBudgets({options: _readOptions});
+            return enterpriseBudgetApi.getEnterpriseBudgets({options: _remoteOptions});
         }
 
-
         function _postFarmers () {
-            return farmerUtility.api.getFarmers().then(function (farmers) {
+            return farmerApi.getFarmers({options: _localOptions}).then(function (farmers) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(farmers, function (farmer) {
                         chain.push(function () {
@@ -127,7 +94,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             return promiseService.chain(function (chain) {
                 if (farmer.__dirty === true) {
                     chain.push(function () {
-                        return farmerUtility.api.postFarmer({data: farmer});
+                        return farmerApi.postFarmer({data: farmer});
                     });
                 }
 
@@ -140,7 +107,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         }
 
         function _postFarms (farmerId) {
-            return farmApi.getFarms({id: farmerId}).then(function (farms) {
+            return farmApi.getFarms({id: farmerId, options: _localOptions}).then(function (farms) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(farms, function (farm) {
                         if (farm.__dirty === true) {
@@ -154,7 +121,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         }
 
         function _postLegalEntities (farmerId) {
-            return legalEntityApi.getEntities({id: farmerId}).then(function (entities) {
+            return legalEntityApi.getEntities({id: farmerId, options: _localOptions}).then(function (entities) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(entities, function (entity) {
                         if (entity.__dirty === true) {
@@ -172,7 +139,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         }
 
         function _postAssets (entityId) {
-            return assetApi.getAssets({id: entityId}).then(function (assets) {
+            return assetApi.getAssets({id: entityId, options: _localOptions}).then(function (assets) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(assets, function (asset) {
                         if (asset.__dirty === true) {
@@ -206,7 +173,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
         }
 
         function _postDocuments () {
-            return documentUtility.api.getDocuments().then(function (documents) {
+            return documentApi.getDocuments({options: _localOptions}).then(function (documents) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(documents, function (document) {
                         if (document.__dirty === true) {
@@ -226,9 +193,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             var toBeAttached = underscore.where(cachedAttachments, {local: true});
             document.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
 
-            return documentUtility.api.postDocument({data: document}).then(function (result) {
-                result = (result && result.length ? result[0] : result);
-
+            return documentApi.postDocument({data: document}).then(function (result) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(toBeAttached, function (attachment) {
                         chain.push(function () {
@@ -239,10 +204,24 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             }, promiseService.throwError);
         }
 
-        function _postTasks (task) {
-            var query = (task !== undefined ? {template: 'tasks/:id', schema: {id: task.id}} : task);
+        function _postExpenses () {
+            return expenseApi.getExpenses({options: _localOptions}).then(function (expenses) {
+                return promiseService.chain(function (chain) {
+                    angular.forEach(expenses, function (expense) {
+                        if (expense.__dirty === true) {
+                            chain.push(function () {
+                                return expenseApi.postExpense({data: expense});
+                            });
+                        }
+                    });
+                });
+            }, promiseService.throwError);
+        }
 
-            return taskUtility.api.getTasks(query).then(function (subtasks) {
+        function _postTasks (task) {
+            var query = (task !== undefined ? {template: 'tasks/:id', schema: {id: task.id}, options: _localOptions} : {options: _localOptions});
+
+            return taskApi.getTasks(query).then(function (subtasks) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(subtasks, function (subtask) {
                         if (query === undefined) {
@@ -272,9 +251,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             var toBeAttached = underscore.where(cachedAttachments, {local: true});
             task.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
 
-            return taskUtility.api.postTask({data: task}).then(function (result) {
-                result = (result && result.length ? result[0] : result);
-
+            return taskApi.postTask({data: task}).then(function (result) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(toBeAttached, function (attachment) {
                         chain.push(function () {
