@@ -693,7 +693,11 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                 }
             };
 
-            var _responseHandler = function (handle, res, err) {
+            var _responseHandler = function (handle, list, res, err) {
+                if (list == false && res instanceof Array && res.length > 0) {
+                    res = res[0];
+                }
+
                 if (handle !== undefined) {
                     if (typeof handle === 'function') {
                         handle(res, err);
@@ -773,19 +777,19 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                                 if (res) {
                                     if (request.paging === undefined && request.options.readLocal === true) {
                                         _syncLocal(res, _uri, function (res, err) {
-                                            _responseHandler(request.callback, res, err);
+                                            _responseHandler(request.callback, true, res, err);
                                         });
                                     } else {
                                         _updateLocal(res, function (res, err) {
-                                            _responseHandler(request.callback, res, err);
+                                            _responseHandler(request.callback, true, res, err);
                                         });
                                     }
                                 } else if (request.options.readLocal === true) {
                                     _getLocal(_uri, request.options, function (res, err) {
-                                        _responseHandler(request.callback, res, err);
+                                        _responseHandler(request.callback, true, res, err);
                                     });
                                 } else {
-                                    _responseHandler(request.callback, res, err);
+                                    _responseHandler(request.callback, true, res, err);
                                 }
                             });
                         };
@@ -796,18 +800,18 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                             // Process request
                             if (request.options.readRemote === true) {
                                 handleRemote(_uri);
-                            } else if (request.options.readLocal === true) {
+                            } else {
                                 _getLocal(_uri, request.options, function (res, err) {
                                     if (res.length == 0 && request.options.fallbackRemote === true) {
                                         handleRemote(_uri);
                                     } else {
-                                        _responseHandler(request.callback, res, err);
+                                        _responseHandler(request.callback, true, res, err);
                                     }
 
                                 });
                             }
                         } else {
-                            _responseHandler(request.callback, null, _errors.NoReadParams);
+                            _responseHandler(request.callback, true, null, _errors.NoReadParams);
                         }
                     },
                     findItems: function (req) {
@@ -822,7 +826,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         });
 
                         _findLocal(request.key, request.column, request.options, function (res, err) {
-                            _responseHandler(request.callback, res, err);
+                            _responseHandler(request.callback, false, res, err);
                         });
                     },
                     updateItems: function (req) {
@@ -845,7 +849,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         }
 
                         _updateLocal(request.data, request.options, function (res, err) {
-                            _responseHandler(request.callback, res, err);
+                            _responseHandler(request.callback, false, res, err);
                         });
                     },
                     postItems: function (req) {
@@ -861,7 +865,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         }
 
                         _updateRemote(request.data, request.template, request.schema, function (res, err) {
-                            _responseHandler(request.callback, res, err);
+                            _responseHandler(request.callback, false, res, err);
                         });
                     },
                     removeItems: function (req) {
@@ -877,7 +881,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                         }
 
                         var asyncMon = new AsyncMonitor(request.data.length, function (res, err) {
-                            _responseHandler(request.callback, res, err);
+                            _responseHandler(request.callback, false, res, err);
                         });
 
                         angular.forEach(request.data, function (item) {
@@ -911,12 +915,12 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                                 });
 
                                 _deleteLocal(deleteItems, function (res, err) {
-                                    _responseHandler(request.callback, res, err);
+                                    _responseHandler(request.callback, false, res, err);
                                 });
                             });
                         } else {
                             _clearTable(function (res, err) {
-                                _responseHandler(request.callback, res, err);
+                                _responseHandler(request.callback, false, res, err);
                             });
                         }
                     }
