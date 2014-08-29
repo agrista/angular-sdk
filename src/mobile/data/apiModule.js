@@ -749,19 +749,46 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
     }];
 }]);
 
-mobileSdkApiApp.factory('documentApi', ['api', function (api) {
-    var documentStore = api({plural: 'documents', singular: 'document', strip: ['organization', 'tasks']});
+mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
+        return function (obj, type) {
+            return documentApi.findDocument({key: obj.documentId, options: {one: true}});
+        }
+    }]);
 
-    return {
-        getDocuments: documentStore.getItems,
-        createDocument: documentStore.createItem,
-        getDocument: documentStore.getItem,
-        findDocument: documentStore.findItem,
-        updateDocument: documentStore.updateItem,
-        postDocument: documentStore.postItem,
-        deleteDocument: documentStore.deleteItem,
-        purgeDocument: documentStore.purgeItem
-    };
+    hydrationProvider.registerDehydrate('document', ['documentApi', function (documentApi) {
+        return function (obj, type) {
+            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: false, dirty: false}});
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var defaultRelations = ['organization'];
+        var documentApi = api({
+            plural: 'documents',
+            singular: 'document',
+            strip: ['organization', 'tasks'],
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'document', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'document', relations);
+            }
+        });
+
+        return {
+            getDocuments: documentApi.getItems,
+            createDocument: documentApi.createItem,
+            getDocument: documentApi.getItem,
+            findDocument: documentApi.findItem,
+            updateDocument: documentApi.updateItem,
+            postDocument: documentApi.postItem,
+            deleteDocument: documentApi.deleteItem,
+            purgeDocument: documentApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.factory('activityApi', ['api', function (api) {
@@ -823,37 +850,4 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
             });
         }
     }
-}]);
-
-/*
- * Handlers
- */
-mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
-    var _relations = ['organization'];
-
-    return {
-        hydration: {
-            hydrate: function (documentOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof documentOrId !== 'object') {
-                        documentApi.findDocument({key: documentOrId, options: {one: true}}).then(function (document) {
-                            hydration.hydrate(document, 'document', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(documentOrId, 'document', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (document, relations) {
-                relations = relations || _relations;
-
-                return hydration.dehydrate(document, 'document', relations).then(function (document) {
-                    documentApi.updateDocument({data: document, options: {dirty: false}});
-                })
-            }
-        },
-        api: documentApi
-    };
 }]);
