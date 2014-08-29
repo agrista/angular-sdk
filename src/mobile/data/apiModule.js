@@ -556,19 +556,55 @@ mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('taskApi', ['api', function (api) {
-    var taskApi = api({plural: 'tasks', singular: 'task', strip: ['document', 'organization', 'subtasks']});
+mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('subtasks', ['taskApi', function (taskApi) {
+        return function (obj, type) {
+            return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.__id}});
+        }
+    }]);
 
-    return {
-        getTasks: taskApi.getItems,
-        createTask: taskApi.createItem,
-        getTask: taskApi.getItem,
-        findTask: taskApi.findItem,
-        updateTask: taskApi.updateItem,
-        postTask: taskApi.postItem,
-        deleteTask: taskApi.deleteItem,
-        purgeTask: taskApi.purgeItem
-    };
+    hydrationProvider.registerDehydrate('subtasks', ['taskApi', 'promiseService', function (taskApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return taskApi.purgeTask({template: 'tasks/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.subtasks, function (subtask) {
+                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: false, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var defaultRelations = ['document', 'organization', 'subtasks'];
+        var taskApi = api({
+            plural: 'tasks',
+            singular: 'task',
+            strip: defaultRelations,
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'task', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'task', relations);
+            }
+        });
+
+        return {
+            getTasks: taskApi.getItems,
+            createTask: taskApi.createItem,
+            getTask: taskApi.getItem,
+            findTask: taskApi.findItem,
+            updateTask: taskApi.updateItem,
+            postTask: taskApi.postItem,
+            deleteTask: taskApi.deleteItem,
+            purgeTask: taskApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
@@ -723,36 +759,6 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
 /*
  * Handlers
  */
-mobileSdkApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', function (promiseService, hydration, taskApi) {
-    var _relations = ['organization', 'document', 'subtasks'];
-
-    return {
-        hydration: {
-            hydrate: function (taskOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof taskOrId !== 'object') {
-                        taskApi.findTask({key: taskOrId, options: {one: true}}).then(function (task) {
-                            hydration.hydrate(task, 'task', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(taskOrId, 'task', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (task, relations) {
-                relations = relations || _relations;
-
-                return hydration.dehydrate(task, 'task', relations).then(function (task) {
-                    taskApi.updateTask({data: task, options: {dirty: false}});
-                })
-            }
-        },
-        api: taskApi
-    };
-}]);
-
 mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
     var _relations = ['farms', 'legalEntities'];
 
