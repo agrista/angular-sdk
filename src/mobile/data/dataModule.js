@@ -287,15 +287,14 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                     tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
                         if (res.rows.length > 0) {
                             if (options.one) {
-                                glCallback(dataStoreUtilities.injectMetadata(res.rows.item(0)));
+                                _config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(0)), options.hydrate).then(glCallback);
                             } else {
-                                var dataItems = [];
-
-                                for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(dataStoreUtilities.injectMetadata(res.rows.item(i)));
-                                }
-
-                                glCallback(dataItems);
+                                promiseService
+                                    .wrapAll(function (promises) {
+                                        for (var i = 0; i < res.rows.length; i++) {
+                                            promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options.hydrate));
+                                        }
+                                    }).then(glCallback);
                             }
                         } else {
                             glCallback(options.one ? undefined : []);
@@ -316,15 +315,14 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                     tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + column + ' ' + (options.like ? 'LIKE' : '=') + ' ?', [(options.like ? "%" + key + "%" : key)], function (tx, res) {
                         if (res.rows.length > 0) {
                             if (options.one) {
-                                flCallback(dataStoreUtilities.injectMetadata(res.rows.item(0)));
+                                _config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(0)), options.hydrate).then(flCallback);
                             } else {
-                                var dataItems = [];
-
-                                for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(dataStoreUtilities.injectMetadata(res.rows.item(i)));
-                                }
-
-                                flCallback(dataItems);
+                                promiseService
+                                    .wrapAll(function (promises) {
+                                        for (var i = 0; i < res.rows.length; i++) {
+                                            promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options.hydrate));
+                                        }
+                                    }).then(flCallback);
                             }
                         } else {
                             flCallback(options.one ? undefined : []);
@@ -335,13 +333,13 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                 });
             };
 
-            var _syncLocal = function (dataItems, uri, slCallback) {
+            var _syncLocal = function (dataItems, uri, options, slCallback) {
                 $log.debug('_syncLocal');
                 if (typeof slCallback !== 'function') slCallback = angular.noop;
 
                 _deleteAllLocal(uri, function () {
                     _updateLocal(dataItems, function () {
-                        _getLocal(uri, {}, slCallback);
+                        _getLocal(uri, options, slCallback);
                     });
                 });
             };
@@ -367,8 +365,8 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                     });
 
                     _localDatabase.transaction(function (tx) {
-                        for (var i = 0; i < dataItems.length; i++) {
-                            var item = dataStoreUtilities.extractMetadata(dataItems[i]);
+                        angular.forEach(dataItems, function (item) {
+                            item = dataStoreUtilities.extractMetadata(item);
                             var dataString = JSON.stringify(item.data);
 
                             tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
@@ -383,7 +381,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                                     asyncMon.done();
                                 }
                             });
-                        }
+                        });
                     });
                 } else {
                     ulCallback(dataItems);
@@ -781,7 +779,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                             _getRemote(_uri, request.paging, function (res, err) {
                                 if (res) {
                                     if (request.paging === undefined && request.options.readLocal === true) {
-                                        _syncLocal(res, _uri, function (res, err) {
+                                        _syncLocal(res, _uri, request.options, function (res, err) {
                                             _responseHandler(request.callback, true, res, err);
                                         });
                                     } else {
