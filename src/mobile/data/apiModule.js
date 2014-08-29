@@ -700,19 +700,53 @@ mobileSdkApiApp.factory('farmApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('assetApi', ['api', function (api) {
-    var assetApi = api({plural: 'assets', singular: 'asset', strip: ['farm', 'legalEntity']});
+mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('assets', ['assetApi', function (assetApi) {
+        return function (obj, type) {
+            return assetApi.getAssets({id: obj.__id});
+        }
+    }]);
 
-    return {
-        getAssets: assetApi.getItems,
-        createAsset: assetApi.createItem,
-        getAsset: assetApi.getItem,
-        findAsset: assetApi.findItem,
-        updateAsset: assetApi.updateItem,
-        postAsset: assetApi.postItem,
-        deleteAsset: assetApi.deleteItem,
-        purgeAsset: assetApi.purgeItem
-    };
+    hydrationProvider.registerDehydrate('assets', ['assetApi', 'promiseService', function (assetApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return assetApi.purgeAsset({template: 'assets/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.assets, function (asset) {
+                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: false, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var assetApi = api({
+            plural: 'assets',
+            singular: 'asset',
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : []);
+                return hydration.hydrate(obj, 'asset', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : []);
+                return hydration.dehydrate(obj, 'asset', relations);
+            }
+        });
+
+        return {
+            getAssets: assetApi.getItems,
+            createAsset: assetApi.createItem,
+            getAsset: assetApi.getItem,
+            findAsset: assetApi.findItem,
+            updateAsset: assetApi.updateItem,
+            postAsset: assetApi.postItem,
+            deleteAsset: assetApi.deleteItem,
+            purgeAsset: assetApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.factory('documentApi', ['api', function (api) {
@@ -794,36 +828,6 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
 /*
  * Handlers
  */
-mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
-    var _relations = ['farm', 'legalEntity'];
-
-    return {
-        hydration: {
-            hydrate: function (assetOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof assetOrId !== 'object') {
-                        assetApi.findAsset({key: assetOrId, options: {one: true}}).then(function (asset) {
-                            hydration.hydrate(asset, 'asset', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(assetOrId, 'asset', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (asset, relations) {
-                relations = relations || _relations;
-
-                return hydration.dehydrate(asset, 'asset', relations).then(function (asset) {
-                    assetApi.updateAsset({data: asset, options: {dirty: false}});
-                })
-            }
-        },
-        api: assetApi
-    };
-}]);
-
 mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
     var _relations = ['organization'];
 
