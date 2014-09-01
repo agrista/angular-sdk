@@ -313,7 +313,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
 /*
  * API
  */
-mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', function (promiseService, dataStore, underscore) {
+mobileSdkApiApp.constant('apiConstants', {
+    MissingParams: {code: 'MissingParams', message: 'Missing parameters for api call'}
+});
+
+mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', 'underscore', function (apiConstants, dataStore, promiseService, underscore) {
     return function (options) {
         if (typeof options === 'String') {
             options = {
@@ -333,11 +337,7 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
         });
         
         var _stripProperties = function (data) {
-            if (options.strip) {
-                return underscore.omit(data, options.strip);
-            }
-
-            return data;
+            return (options.strip ? underscore.omit(data, options.strip) : data);
         };
 
         return {
@@ -355,21 +355,19 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             getItems: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        if (req.template) {
-                            tx.getItems({template: req.template, schema: req.schema, options: req.options, paging: req.paging, callback: promise});
-                        } else if (req.search) {
-                            req.options.readLocal = false;
-                            req.options.readRemote = true;
+                return _itemStore.transaction().then(function (tx) {
+                    if (req.template) {
+                        return tx.getItems({template: req.template, schema: req.schema, options: req.options, paging: req.paging});
+                    } else if (req.search) {
+                        req.options.readLocal = false;
+                        req.options.readRemote = true;
 
-                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, paging: req.paging, callback: promise});
-                        } else if (req.id) {
-                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, paging: req.paging, callback: promise});
-                        } else {
-                            tx.getItems({template: options.plural, options: req.options, paging: req.paging, callback: promise});
-                        }
-                    });
+                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, paging: req.paging});
+                    } else if (req.id) {
+                        return tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, paging: req.paging});
+                    } else {
+                        return tx.getItems({template: options.plural, options: req.options, paging: req.paging});
+                    }
                 });
             },
             /**
@@ -384,13 +382,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             createItem: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options, callback: promise});
-                        });
+                        return tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -405,13 +401,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             getItem: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.id) {
-                        _itemStore.transaction(function (tx) {
-                            tx.getItems({template: req.template, schema: {id: req.id}, options: req.options, callback: promise});
-                        });
+                        return tx.getItems({template: req.template, schema: {id: req.id}, options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -428,13 +422,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             findItem: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.key) {
-                        _itemStore.transaction(function (tx) {
-                            tx.findItems({key: req.key, column: req.column, options: req.options, callback: promise});
-                        });
+                        return tx.findItems({key: req.key, column: req.column, options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -448,13 +440,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             updateItem: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.updateItems({data: _stripProperties(req.data), options: req.options, callback: promise});
-                        });
+                        return tx.updateItems({data: _stripProperties(req.data), options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -469,13 +459,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             postItem: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), callback: promise});
-                        });
+                        return tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data)});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -488,13 +476,11 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             deleteItem: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.removeItems({template: options.singular + '/:id/delete', data: req.data, callback: promise});
-                        });
+                        return tx.removeItems({template: options.singular + '/:id/delete', data: req.data});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -509,10 +495,8 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             purgeItem: function (req) {
                 req = req || {};
 
-                return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.purgeItems({template: req.template, schema: req.schema, options: req.options, callback: promise});
-                    });
+                return _itemStore.transaction().then(function (tx) {
+                    return tx.purgeItems({template: req.template, schema: req.schema, options: req.options});
                 });
             }
         };
