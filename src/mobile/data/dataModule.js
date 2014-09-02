@@ -8,11 +8,10 @@ mobileSdkDataApp.provider('dataPurge', function () {
         return function purge(dataStoreList) {
             return promiseService.wrapAll(function(promises) {
                 angular.forEach(dataStoreList, function (item) {
-                    promises.push(promiseService.wrap(function (promise) {
-                        dataStore(item).transaction(function (tx) {
-                            tx.purgeItems().then(promise.resolve, promise.reject);
-                        })
-                    }));
+                    promises.push(dataStore(item).transaction()
+                        .then(function (tx) {
+                            return tx.purgeItems();
+                        }));
                 });
             });
         }
