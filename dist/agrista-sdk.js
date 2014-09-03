@@ -1679,31 +1679,28 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
 
                     _scroll.busy = true;
+                    delete params.complete;
 
-                    return promiseService.wrap(function(promise) {
-                        delete params.complete;
+                    return requestor(params).then(function(res) {
+                        if (params.search === undefined) {
+                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                            _scroll.complete = (res.length !== _scroll.page.limit);
+                        } else {
+                            _scroll.searching = params;
+                            _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                            _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                        }
 
-                        requestor(params).then(function(res) {
-                            if (params.search === undefined) {
-                                _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                                _scroll.complete = (res.length !== _scroll.page.limit);
-                            } else {
-                                _scroll.searching = params;
-                                _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
-                                _scroll.searching.complete = (res.length !== _scroll.searching.limit);
-                            }
+                        _scroll.busy = false;
 
-                            _scroll.busy = false;
+                        if (dataMap) {
+                            res = dataMapService(res, dataMap);
+                        }
 
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
+                        itemStore(res);
 
-                            itemStore(res);
-
-                            promise.resolve(res);
-                        }, promiseService.throwError);
-                    });
+                        return res;
+                    }, promiseService.throwError);
                 }
             };
 
@@ -2229,9 +2226,9 @@ sdkHelperAttachmentApp.factory('attachmentHelper', ['underscore', function (unde
     };
 }]);
 
-var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
+var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document', 'ag.sdk.library']);
 
-sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
+sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'underscore', function(documentHelper, underscore) {
     var _approvalTypes = ['Approved', 'Not Approved', 'Not Planted'];
 
     var _commentTypes = ['Crop amendment', 'Crop re-plant', 'Insurance coverage discontinued', 'Multi-insured', 'Other', 'Without prejudice', 'Wrongfully reported'];
@@ -2269,11 +2266,11 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
     };
 
     var _inspectionTypes = {
-        emergence: 'Emergence Inspection',
-        hail: 'Hail Inspection',
-        harvest: 'Harvest Inspection',
-        preharvest: 'Pre Harvest Inspection',
-        progress: 'Progress Inspection'
+        'emergence inspection': 'Emergence Inspection',
+        'hail inspection': 'Hail Inspection',
+        'harvest inspection': 'Harvest Inspection',
+        'preharvest inspection': 'Pre Harvest Inspection',
+        'progress inspection': 'Progress Inspection'
     };
 
     var _seedTypeTable = [
@@ -2292,10 +2289,8 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
     };
 
     var _policyInspections = {
-        'hail': {
-            hail: _inspectionTypes.hail
-        },
-        'multi peril': _inspectionTypes
+        'hail': ['hail inspection'],
+        'multi peril': underscore.keys(_inspectionTypes)
     };
 
     var _problemTypes = {
@@ -2308,37 +2303,24 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         weed: 'Weed'
     };
 
-    var _listServiceMap = function (item) {
-        var map = documentHelper.listServiceWithTaskMap()(item);
-
-        if (map && item.data.request) {
-            map.subtitle = map.title + ' - ' + item.data.enterprise;
-            map.title = item.documentId;
-            map.group = _inspectionTypes[item.data.inspectionType] || '';
-        }
-
-        return map;
-    };
-
     return {
-        listServiceMap: function () {
-            return _listServiceMap;
-        },
-
         approvalTypes: function () {
             return _approvalTypes;
         },
         commentTypes: function () {
             return _commentTypes;
         },
-        inspectionTypes: function () {
+        inspectionTitles: function () {
             return _inspectionTypes;
+        },
+        inspectionTypes: function () {
+            return underscore.keys(_inspectionTypes);
         },
         policyTypes: function () {
             return _policyTypes;
         },
         policyInspectionTypes: function (policyType) {
-            return _policyInspections[policyType] || {};
+            return _policyInspections[policyType] || [];
         },
         problemTypes: function () {
             return _problemTypes;
@@ -4582,15 +4564,24 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return bounds;
         },
         getCenter: function (bounds) {
-            var center = [0, 0];
             bounds = bounds || this.getBounds();
 
-            angular.forEach(bounds, function(coordinate) {
-                center[0] += coordinate[0];
-                center[1] += coordinate[1];
+            var lat1 = 0, lat2 = 0,
+                lng1 = 0, lng2 = 0;
+
+            angular.forEach(bounds, function(coordinate, index) {
+                if (index == 0) {
+                    lat1 = lat2 = coordinate[0];
+                    lng1 = lng2 = coordinate[1];
+                } else {
+                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
+                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
+                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
+                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
+                }
             });
 
-            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : center);
+            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
@@ -4665,6 +4656,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return this;
         },
         formatGeoJson: function (geoJson, toType) {
+            // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
             if(toType.toLowerCase() == 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
@@ -4690,6 +4682,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return geoJson;
         },
         validGeoJson: function (geoJson, typeRestriction) {
+            // TODO: REFACTOR
             var validate = true;
             if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
                 return false;

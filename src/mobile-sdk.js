@@ -34,5 +34,6 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.test',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',
-    'ag.mobile-sdk.data'
+    'ag.mobile-sdk.data',
+    'ag.mobile-sdk.hydration'
 ]);

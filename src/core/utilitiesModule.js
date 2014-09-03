@@ -99,31 +99,28 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
 
                     _scroll.busy = true;
+                    delete params.complete;
 
-                    return promiseService.wrap(function(promise) {
-                        delete params.complete;
+                    return requestor(params).then(function(res) {
+                        if (params.search === undefined) {
+                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                            _scroll.complete = (res.length !== _scroll.page.limit);
+                        } else {
+                            _scroll.searching = params;
+                            _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                            _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                        }
 
-                        requestor(params).then(function(res) {
-                            if (params.search === undefined) {
-                                _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                                _scroll.complete = (res.length !== _scroll.page.limit);
-                            } else {
-                                _scroll.searching = params;
-                                _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
-                                _scroll.searching.complete = (res.length !== _scroll.searching.limit);
-                            }
+                        _scroll.busy = false;
 
-                            _scroll.busy = false;
+                        if (dataMap) {
+                            res = dataMapService(res, dataMap);
+                        }
 
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
+                        itemStore(res);
 
-                            itemStore(res);
-
-                            promise.resolve(res);
-                        }, promiseService.throwError);
-                    });
+                        return res;
+                    }, promiseService.throwError);
                 }
             };
 
