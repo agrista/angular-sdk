@@ -612,7 +612,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                             }, promiseService.throwError)
                             .then(function (results) {
                                 return _responseFormatter(results, false);
-                            });
+                            }, promiseService.throwError);
                     },
                     getItems: function (req) {
                         var request = underscore.defaults(req || {}, {
@@ -640,13 +640,13 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 promise.resolve(_responseFormatter(res, true));
                                             }, promise.reject);
                                         }
-                                    }, function () {
+                                    }, function (err) {
                                         if (request.options.readLocal === true) {
                                             _updateLocal(res, request.options).then(function (res) {
                                                 promise.resolve(_responseFormatter(res, true));
                                             }, promise.reject);
                                         } else {
-                                            promise.resolve(_responseFormatter(res, true));
+                                            promise.reject(err);
                                         }
                                     });
                             };

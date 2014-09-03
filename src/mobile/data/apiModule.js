@@ -25,11 +25,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -45,11 +45,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -65,11 +65,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -85,11 +85,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -298,14 +298,18 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                 return this.upload().then(this.download);
             },
             upload: function () {
-                return promiseService.chain(function (chain) {
-                    chain.push(_postFarmers, _postDocuments, _postTasks, _postExpenses);
-                });
+                return promiseService
+                    .chain(function (chain) {
+                        chain.push(_postFarmers, _postDocuments, _postTasks, _postExpenses);
+                    })
+                    .catch(promiseService.throwError);
             },
             download: function () {
-                return promiseService.chain(function (chain) {
-                    chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets, _getExpenses);
-                });
+                return promiseService
+                    .chain(function (chain) {
+                        chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets, _getExpenses);
+                    })
+                    .catch(promiseService.throwError);
             }
         };
     }]);
