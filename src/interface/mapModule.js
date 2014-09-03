@@ -50,15 +50,24 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return bounds;
         },
         getCenter: function (bounds) {
-            var center = [0, 0];
             bounds = bounds || this.getBounds();
 
-            angular.forEach(bounds, function(coordinate) {
-                center[0] += coordinate[0];
-                center[1] += coordinate[1];
+            var lat1 = 0, lat2 = 0,
+                lng1 = 0, lng2 = 0;
+
+            angular.forEach(bounds, function(coordinate, index) {
+                if (index == 0) {
+                    lat1 = lat2 = coordinate[0];
+                    lng1 = lng2 = coordinate[1];
+                } else {
+                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
+                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
+                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
+                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
+                }
             });
 
-            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : center);
+            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
@@ -133,6 +142,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return this;
         },
         formatGeoJson: function (geoJson, toType) {
+            // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
             if(toType.toLowerCase() == 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
@@ -158,6 +168,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return geoJson;
         },
         validGeoJson: function (geoJson, typeRestriction) {
+            // TODO: REFACTOR
             var validate = true;
             if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
                 return false;
