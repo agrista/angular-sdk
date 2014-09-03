@@ -951,12 +951,12 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
         },
         searchEnterpriseBudgets: function (query) {
-            query = underscore.chain(query).map(function (value, key) {
+            query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
-            }).join('&').value();
+            }).join('&');
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/search?resulttype=simple&' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budgets/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1024,14 +1024,14 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 /**
  * Market Assumptions API
  */
-sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
         getProductDemandAssumptions: function(query) {
-            query = _.chain(query).map(function (value, key) {
+            query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
-            }).join('&').value();
+            }).join('&');
 
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
