@@ -832,6 +832,37 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             checkBudgetTemplate(budget);
             return this.calculateTotals(budget);
         },
+        initNewSections: function (budget, stage) {
+            var needNewSections = true;
+            budget.data.sections.forEach(function(section, i) {
+                if(section.horticultureStage == stage) {
+                    needNewSections = false;
+                }
+            });
+            if(needNewSections) {
+                var incomeSection = {
+                    code: 'INC',
+                    horticultureStage: stage,
+                    name: "Income",
+                    productCategoryGroups: [],
+                    total: {
+                        value: 0
+                    }
+                };
+                var expensesSection = {
+                    code: 'EXP',
+                    horticultureStage: stage,
+                    name: "Expenses",
+                    productCategoryGroups: [],
+                    total: {
+                        value: 0
+                    }
+                };
+                budget.data.sections.push(incomeSection);
+                budget.data.sections.push(expensesSection);
+            }
+            return budget;
+        },
         addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             var category = angular.copy(_categories[categoryCode]);
             category.quantity = 0;
