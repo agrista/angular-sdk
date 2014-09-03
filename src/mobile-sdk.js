@@ -1,5 +1,6 @@
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
+    'ag.sdk.helper.attachment',
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
@@ -33,5 +34,6 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.test',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',
-    'ag.mobile-sdk.data'
+    'ag.mobile-sdk.data',
+    'ag.mobile-sdk.hydration'
 ]);
