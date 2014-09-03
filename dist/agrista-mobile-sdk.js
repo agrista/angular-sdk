@@ -606,31 +606,28 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
 
                     _scroll.busy = true;
+                    delete params.complete;
 
-                    return promiseService.wrap(function(promise) {
-                        delete params.complete;
+                    return requestor(params).then(function(res) {
+                        if (params.search === undefined) {
+                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                            _scroll.complete = (res.length !== _scroll.page.limit);
+                        } else {
+                            _scroll.searching = params;
+                            _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                            _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                        }
 
-                        requestor(params).then(function(res) {
-                            if (params.search === undefined) {
-                                _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                                _scroll.complete = (res.length !== _scroll.page.limit);
-                            } else {
-                                _scroll.searching = params;
-                                _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
-                                _scroll.searching.complete = (res.length !== _scroll.searching.limit);
-                            }
+                        _scroll.busy = false;
 
-                            _scroll.busy = false;
+                        if (dataMap) {
+                            res = dataMapService(res, dataMap);
+                        }
 
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
+                        itemStore(res);
 
-                            itemStore(res);
-
-                            promise.resolve(res);
-                        }, promiseService.throwError);
-                    });
+                        return res;
+                    }, promiseService.throwError);
                 }
             };
 
@@ -6873,11 +6870,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -6893,11 +6890,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -6913,11 +6910,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -6933,11 +6930,11 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                         if (paging.complete) {
                             promise.resolve();
                         } else {
-                            paging.request().then(angular.noop, promiseService.throwError);
+                            paging.request().catch(promise.reject);
                         }
                     }, pageOptions);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
+                    paging.request().catch(promise.reject);
                 });
             });
         }
@@ -7146,14 +7143,18 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
                 return this.upload().then(this.download);
             },
             upload: function () {
-                return promiseService.chain(function (chain) {
-                    chain.push(_postFarmers, _postDocuments, _postTasks, _postExpenses);
-                });
+                return promiseService
+                    .chain(function (chain) {
+                        chain.push(_postFarmers, _postDocuments, _postTasks, _postExpenses);
+                    })
+                    .catch(promiseService.throwError);
             },
             download: function () {
-                return promiseService.chain(function (chain) {
-                    chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets, _getExpenses);
-                });
+                return promiseService
+                    .chain(function (chain) {
+                        chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets, _getExpenses);
+                    })
+                    .catch(promiseService.throwError);
             }
         };
     }]);
@@ -8417,7 +8418,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                             }, promiseService.throwError)
                             .then(function (results) {
                                 return _responseFormatter(results, false);
-                            });
+                            }, promiseService.throwError);
                     },
                     getItems: function (req) {
                         var request = underscore.defaults(req || {}, {
@@ -8445,13 +8446,13 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 promise.resolve(_responseFormatter(res, true));
                                             }, promise.reject);
                                         }
-                                    }, function () {
+                                    }, function (err) {
                                         if (request.options.readLocal === true) {
                                             _updateLocal(res, request.options).then(function (res) {
                                                 promise.resolve(_responseFormatter(res, true));
                                             }, promise.reject);
                                         } else {
-                                            promise.resolve(_responseFormatter(res, true));
+                                            promise.reject(err);
                                         }
                                     });
                             };
