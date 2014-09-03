@@ -244,7 +244,7 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             return taskApi.getTasks(query).then(function (subtasks) {
                 return promiseService.chain(function (chain) {
                     angular.forEach(subtasks, function (subtask) {
-                        if (query === undefined) {
+                        if (task === undefined) {
                             chain.push(function () {
                                 return _postTasks(subtask);
                             });
