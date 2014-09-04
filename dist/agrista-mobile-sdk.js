@@ -7172,14 +7172,14 @@ mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi
             upload: function () {
                 return promiseService
                     .chain(function (chain) {
-                        chain.push(_postFarmers, _postDocuments, _postTasks);
+                        chain.push(_postFarmers, _postDocuments, _postTasks, _postExpenses);
                     })
                     .catch(promiseService.throwError);
             },
             download: function () {
                 return promiseService
                     .chain(function (chain) {
-                        chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets);
+                        chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets, _getExpenses);
                     })
                     .catch(promiseService.throwError);
             }
