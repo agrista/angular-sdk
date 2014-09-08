@@ -1,7 +1,15 @@
 var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
- * User API
+ * @ngdoc service
+ * @name ag.sdk.api.userApi
+ * @description
+ * API interface for the user model
+ *
+ * @requires $http
+ * @requires pagingService
+ * @requires promiseService
+ * @requires configuration
  */
 sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
