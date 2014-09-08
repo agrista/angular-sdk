@@ -11,9 +11,14 @@ module.exports = function(grunt) {
             }
         },
         karma: {
-            unit: {
+            single: {
                 configFile: 'test/karma.conf.js',
-                background: true
+                singleRun: true
+            },
+            continuous: {
+                configFile: 'test/karma.conf.js',
+                autoWatch: true,
+                browsers: ['PhantomJS']
             }
         },
         uglify: {
@@ -57,5 +62,5 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-sloc');
 
     grunt.registerTask('default', ['concat', 'uglify']);
-    grunt.registerTask('unit-test', ['karma:unit', 'watch']);
+    grunt.registerTask('unit-test', ['karma:single']);
 };
