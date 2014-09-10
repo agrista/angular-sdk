@@ -31,7 +31,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         'Maize': _growthStageTable[0],
         'Maize (White)': _growthStageTable[0],
         'Maize (Yellow)': _growthStageTable[0],
-        'Soybean': _growthStageTable[2],
+        'Soya Bean': _growthStageTable[2],
         'Sunflower': _growthStageTable[4],
         'Wheat': _growthStageTable[1],
         'Wheat (Durum)': _growthStageTable[1]
