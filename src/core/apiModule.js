@@ -944,6 +944,27 @@ sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseSer
 }]);
 
 /**
+ * Expense API
+ */
+sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getExpenses: function (params) {
+            var url = 'api/expenses';
+            if(params) {
+                if(params.key && params.id) {
+                    url += '/' + params.id + '/' + params.key;
+                    delete params.key;
+                    delete params.id;
+                }
+            }
+            return pagingService.page(_host + url, params);
+        }
+    };
+}]);
+
+/**
  * Enterprise Budget API
  */
 sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {

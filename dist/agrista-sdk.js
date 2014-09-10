@@ -1,7 +1,15 @@
 var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
- * User API
+ * @ngdoc service
+ * @name ag.sdk.api.userApi
+ * @description
+ * API interface for the user model
+ *
+ * @requires $http
+ * @requires pagingService
+ * @requires promiseService
+ * @requires configuration
  */
 sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -931,6 +939,27 @@ sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseSer
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        }
+    };
+}]);
+
+/**
+ * Expense API
+ */
+sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getExpenses: function (params) {
+            var url = 'api/expenses';
+            if(params) {
+                if(params.key && params.id) {
+                    url += '/' + params.id + '/' + params.key;
+                    delete params.key;
+                    delete params.id;
+                }
+            }
+            return pagingService.page(_host + url, params);
         }
     };
 }]);
