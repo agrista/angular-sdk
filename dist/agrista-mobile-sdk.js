@@ -3194,6 +3194,84 @@ sdkHelperUserApp.factory('userHelper', [function() {
     }
 }]);
 
+var sdkInterfaceInputApp = angular.module('ag.sdk.interface.input', []);
+
+sdkInterfaceInputApp.filter('location', ['$filter', function ($filter) {
+    return function (value) {
+        return ((value && value.geometry ? $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) : '') + (value && value.properties ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
+    };
+}]);
+
+sdkInterfaceInputApp.directive('locationFormatter', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$formatters.push(function (value) {
+                var viewValue = '';
+                if (value !== undefined) {
+                    viewValue = $filter('location')(value);
+
+                    if (attrs.ngChange) {
+                        scope.$eval(attrs.ngChange);
+                    }
+                }
+
+                return viewValue;
+            });
+        }
+    };
+}]);
+
+sdkInterfaceInputApp.directive('dateFormatter', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$formatters.push(function (value) {
+                return (value !== undefined ? $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd') : '');
+            });
+        }
+    };
+}]);
+
+sdkInterfaceInputApp.directive('dateParser', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$parsers.push(function (value) {
+                return (value !== undefined ? $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd') : '');
+            });
+        }
+    };
+}]);
+
+sdkInterfaceInputApp.directive('inputNumber', [function () {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            var _max = (attrs.max ? parseFloat(attrs.max) : false);
+            var _min = (attrs.min ? parseFloat(attrs.min) : false);
+
+            ngModel.$parsers.push(function (value) {
+                var isNan = isNaN(value);
+
+                ngModel.$setValidity('number', isNan === false);
+
+                if (isNan === false) {
+                    var float = parseFloat(value);
+
+                    ngModel.$setValidity('range', (_min === false || float >= _min) && (_max === false || float <= _max));
+                    return float;
+                } else {
+                    return value;
+                }
+            });
+        }
+    };
+}]);
 var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.id']);
 
 sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function ($rootScope, objectId) {
@@ -8247,13 +8325,15 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              * Remote data storage
              */
 
-            var _getRemote = function (uri, paging) {
+            var _getRemote = function (uri, options) {
                 $log.debug('_getRemote');
+
+                options = options || {};
 
                 return promiseService
                     .wrap(function (promise) {
                         if (_config.apiTemplate !== undefined) {
-                            $http.get(_hostApi + uri, {params: paging, withCredentials: true})
+                            $http.get(_hostApi + uri, {params: options.paging, withCredentials: true})
                                 .then(function (res) {
                                     return (res && res.data ? (res.data instanceof Array ? res.data : [res.data]) : []);
                                 }, promiseService.throwError)
@@ -8262,7 +8342,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         angular.forEach(res, function (item) {
                                             promises.push(_config.dehydrate(dataStoreUtilities.injectMetadata({
                                                 id: _getItemIndex(item),
-                                                uri: uri,
+                                                uri: options.forceUri || uri,
                                                 data: item,
                                                 dirty: false,
                                                 local: false
@@ -8455,28 +8535,41 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
 
                         request.options = underscore.defaults(request.options, {
+                            fallbackRemote: false,
+                            one: (request.schema.id === undefined),
+                            passThrough: false,
                             readLocal: _config.readLocal,
-                            readRemote: _config.readRemote,
-                            fallbackRemote: false
+                            readRemote: _config.readRemote
                         });
 
                         return promiseService.wrap(function (promise) {
                             var handleRemote = function (_uri) {
-                                _getRemote(_uri, request.paging)
+                                _getRemote(_uri, request)
                                     .then(function (res) {
-                                        if (request.paging === undefined && request.options.readLocal === true) {
+                                        if (request.options.passThrough === true) {
+                                            promise.resolve(_responseFormatter(underscore.map(res, function (item) {
+                                                var id = _getItemIndex(item, dataStoreUtilities.generateItemIndex());
+                                                return dataStoreUtilities.injectMetadata({
+                                                    id: id,
+                                                    uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
+                                                    data: item,
+                                                    dirty: false,
+                                                    local: false
+                                                });
+                                            }), request.options.one));
+                                        } else if (request.paging === undefined && request.options.readLocal === true) {
                                             _syncLocal(res, _uri, request.options).then(function (res) {
-                                                promise.resolve(_responseFormatter(res, true));
+                                                promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
                                             _updateLocal(res, request.options).then(function (res) {
-                                                promise.resolve(_responseFormatter(res, true));
+                                                promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         }
                                     }, function (err) {
                                         if (request.options.readLocal === true) {
                                             _updateLocal(res, request.options).then(function (res) {
-                                                promise.resolve(_responseFormatter(res, true));
+                                                promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
                                             promise.reject(err);
@@ -8744,6 +8837,7 @@ angular.module('ag.sdk.helper', [
 ]);
 
 angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.input',
     'ag.sdk.interface.list',
     'ag.sdk.interface.map',
     'ag.sdk.interface.navigation'

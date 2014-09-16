@@ -14,6 +14,7 @@ angular.module('ag.sdk.helper', [
 ]);
 
 angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.input',
     'ag.sdk.interface.list',
     'ag.sdk.interface.map',
     'ag.sdk.interface.navigation'
