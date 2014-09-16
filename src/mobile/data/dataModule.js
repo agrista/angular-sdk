@@ -414,13 +414,15 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              * Remote data storage
              */
 
-            var _getRemote = function (uri, paging) {
+            var _getRemote = function (uri, options) {
                 $log.debug('_getRemote');
+
+                options = options || {};
 
                 return promiseService
                     .wrap(function (promise) {
                         if (_config.apiTemplate !== undefined) {
-                            $http.get(_hostApi + uri, {params: paging, withCredentials: true})
+                            $http.get(_hostApi + uri, {params: options.paging, withCredentials: true})
                                 .then(function (res) {
                                     return (res && res.data ? (res.data instanceof Array ? res.data : [res.data]) : []);
                                 }, promiseService.throwError)
@@ -429,7 +431,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         angular.forEach(res, function (item) {
                                             promises.push(_config.dehydrate(dataStoreUtilities.injectMetadata({
                                                 id: _getItemIndex(item),
-                                                uri: uri,
+                                                uri: options.forceUri || uri,
                                                 data: item,
                                                 dirty: false,
                                                 local: false
@@ -622,28 +624,41 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
 
                         request.options = underscore.defaults(request.options, {
+                            fallbackRemote: false,
+                            one: (request.schema.id === undefined),
+                            passThrough: false,
                             readLocal: _config.readLocal,
-                            readRemote: _config.readRemote,
-                            fallbackRemote: false
+                            readRemote: _config.readRemote
                         });
 
                         return promiseService.wrap(function (promise) {
                             var handleRemote = function (_uri) {
-                                _getRemote(_uri, request.paging)
+                                _getRemote(_uri, request)
                                     .then(function (res) {
-                                        if (request.paging === undefined && request.options.readLocal === true) {
+                                        if (request.options.passThrough === true) {
+                                            promise.resolve(_responseFormatter(underscore.map(res, function (item) {
+                                                var id = _getItemIndex(item, dataStoreUtilities.generateItemIndex());
+                                                return dataStoreUtilities.injectMetadata({
+                                                    id: id,
+                                                    uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
+                                                    data: item,
+                                                    dirty: false,
+                                                    local: false
+                                                });
+                                            }), request.options.one));
+                                        } else if (request.paging === undefined && request.options.readLocal === true) {
                                             _syncLocal(res, _uri, request.options).then(function (res) {
-                                                promise.resolve(_responseFormatter(res, true));
+                                                promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
                                             _updateLocal(res, request.options).then(function (res) {
-                                                promise.resolve(_responseFormatter(res, true));
+                                                promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         }
                                     }, function (err) {
                                         if (request.options.readLocal === true) {
                                             _updateLocal(res, request.options).then(function (res) {
-                                                promise.resolve(_responseFormatter(res, true));
+                                                promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
                                             promise.reject(err);
