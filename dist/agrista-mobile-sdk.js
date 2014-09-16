@@ -8251,31 +8251,31 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         return promiseService
                             .wrapAll(function (promises) {
                                 angular.forEach(dataItems, function (dataItem) {
-                                    var item = dataStoreUtilities.extractMetadata(dataItem);
-                                    var dataString = JSON.stringify(item.data);
-                                    var resolveItem = function () {
-                                        return _config.hydrate(dataItem, options.hydrate);
-                                    };
-
-                                    item.dirty = (options.dirty === true ? true : item.dirty);
-
-                                    promises.push(dataStoreUtilities
-                                        .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
-                                        .then(resolveItem, function () {
-                                            if (options.replace === true) {
-                                                if (item.dirty === true || item.local === true || options.force) {
-                                                    return dataStoreUtilities
-                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
-                                                        .then(resolveItem);
-                                                } else {
-                                                    return dataStoreUtilities
-                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
-                                                        .then(resolveItem);
+                                    promises.push(_config.dehydrate(dataItem, options.dehydrate).then(function(dehydratedItem) {
+                                        var item = dataStoreUtilities.extractMetadata(dehydratedItem);
+                                        var dataString = JSON.stringify(item.data);
+                                        var resolveItem = function () {
+                                            return _config.hydrate(dehydratedItem, options.hydrate);
+                                        };
+                                        item.dirty = (options.dirty === true ? true : item.dirty);
+                                        return dataStoreUtilities
+                                            .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
+                                            .then(resolveItem, function () {
+                                                if (options.replace === true) {
+                                                    if (item.dirty === true || item.local === true || options.force) {
+                                                        return dataStoreUtilities
+                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                            .then(resolveItem);
+                                                    } else {
+                                                        return dataStoreUtilities
+                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                            .then(resolveItem);
+                                                    }
                                                 }
-                                            }
 
-                                            return null;
-                                        }));
+                                                return null;
+                                            });
+                                    }))
                                 });
                             });
                     }, promiseService.throwError);
