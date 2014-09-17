@@ -368,22 +368,22 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }, {
             code: 'EXP-MRK-LSSF',
             name: 'Livestock sales marketing fees',
-            calculationFactor: 'Livestock Sales',
+            incomeGroup: 'Livestock Sales',
             unit: '%'
         }, {
             code: 'EXP-MRK-LSPF',
             name: 'Livestock products marketing fees',
-            calculationFactor: 'Product Sales',
+            incomeGroup: 'Product Sales',
             unit: '%'
         }, {
             code: 'EXP-MRK-HOTF',
             name: 'Horticulture marketing fees',
-            calculationFactor: 'Fruit Sales',
+            incomeGroup: 'Fruit Sales',
             unit: '%'
         }, {
             code: 'EXP-MRK-CRPF',
             name: 'Crop marketing fees',
-            calculationFactor: 'Crop Sales',
+            incomeGroup: 'Crop Sales',
             unit: '%'
         }, {
             code: 'EXP-MRK-LSTP',
@@ -797,7 +797,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             category.quantity = 0;
             category.pricePerUnit = 0;
             category.value = 0;
-            
+
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
                 if(_conversionRate[budget.commodityType][category.name]) {
@@ -862,20 +862,20 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 section.total = {
                     value: 0
                 };
-                
+
                 if(budget.assetType == 'livestock') {
                     section.total.valuePerLSU = 0;
                 }
-                
+
                 section.productCategoryGroups.forEach(function(group, j) {
                     group.total = {
                         value: 0
                     };
-                    
+
                     if(budget.assetType == 'livestock') {
                         group.total.valuePerLSU = 0;
                     }
-                    
+
                     group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
                             var groupSum = underscore
@@ -883,7 +883,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                                 .pluck('productCategoryGroups')
                                 .flatten()
                                 .reduce(function(total, group) {
-                                    return (group.name == category.calculationFactor ? total + group.total.value : total);
+                                    return (group.name == category.incomeGroup ? total + group.total.value : total);
                                 }, 0)
                                 .value();
 

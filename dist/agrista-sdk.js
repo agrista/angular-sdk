@@ -2515,450 +2515,379 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
-    var _groups = {
-        'Crop Sales': {
+    var _groups = underscore.indexBy([
+        {
             code: 'INC-CPS',
             name: 'Crop Sales'
-        },
-        'Fruit Sales': {
+        }, {
             code: 'INC-FRS',
             name: 'Fruit Sales'
-        },
-        'Harvest': {
+        }, {
             code: 'HVT',
             name: 'Harvest'
-        },
-        'Preharvest': {
+        }, {
             code: 'HVP',
             name: 'Preharvest'
-        },
-
-
-        'Livestock Sales': {
+        }, {
             code: 'INC-LSS',
             name: 'Livestock Sales'
-        },
-        'Product Sales': {
+        }, {
             code: 'INC-LSP',
             name: 'Product Sales'
-        },
-        'Animal Feed': {
+        }, {
             code: 'EXP-AMF',
             name: 'Animal Feed'
-        },
-        'Husbandry': {
+        }, {
             code: 'HBD',
             name: 'Husbandry'
-        },
-        'Indirect Costs': {
+        }, {
             code: 'IDR',
             name: 'Indirect Costs'
-        },
-        'Marketing': {
+        }, {
             code: 'MRK',
             name: 'Marketing'
-        },
-        'Replacements': {
+        }, {
             code: 'RPM',
             name: 'Replacements'
         }
-    };
+    ], 'name');
 
-    var _categories = {
+    var _categories = underscore.indexBy([
         //*********** Income *********
         // livestock sales
         // Sheep
-        'INC-LSS-SLAMB': {
+        {
             code: 'INC-LSS-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'INC-LSS-SWEAN': {
+        }, {
             code: 'INC-LSS-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'INC-LSS-SEWE': {
+        }, {
             code: 'INC-LSS-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'INC-LSS-SWTH': {
+        }, {
             code: 'INC-LSS-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-SRAM': {
+        }, {
             code: 'INC-LSS-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'INC-LSS-CCALV':{
+        {
             code: 'INC-LSS-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'INC-LSS-CWEN':{
+        }, {
             code: 'INC-LSS-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'INC-LSS-CCOW':{
+        }, {
             code: 'INC-LSS-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'INC-LSS-CST18':{
+        }, {
             code: 'INC-LSS-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'INC-LSS-CST36':{
+        }, {
             code: 'INC-LSS-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'INC-LSS-CBULL':{
+        }, {
             code: 'INC-LSS-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'INC-LSS-GKID':{
+        {
             code: 'INC-LSS-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'INC-LSS-GWEAN':{
+        }, {
             code: 'INC-LSS-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'INC-LSS-GEWE':{
+        }, {
             code: 'INC-LSS-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GCAST':{
+        }, {
             code: 'INC-LSS-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GRAM':{
+        }, {
             code: 'INC-LSS-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
 
         // livestock product sales
-        'INC-LSP-MILK': {
+        {
             code: 'INC-LSP-MILK',
             name: 'Milk',
             unit: 'l'
-        },
-        'INC-LSP-WOOL': {
+        }, {
             code: 'INC-LSP-WOOL',
             name: 'Wool',
             unit: 'kg'
         },
 
         //Crops
-        'INC-HVT-CROP': {
+        {
             code: 'INC-HVT-CROP',
             name: 'Crop',
             unit: 't'
         },
         //Horticulture (non-perennial)
-        'INC-HVT-FRUT': {
+        {
             code: 'INC-HVT-FRUT',
             name: 'Fruit',
             unit: 't'
         },
         //*********** Expenses *********
         // Preharvest
-        'EXP-HVP-SEED': {
+        {
             code: 'EXP-HVP-SEED',
             name: 'Seed',
             unit: 'kg'
-        },
-        'EXP-HVP-PLTM': {
+        }, {
             code: 'EXP-HVP-PLTM',
             name: 'Plant Material',
             unit: 'each'
-        },
-        'EXP-HVP-FERT': {
+        }, {
             code: 'EXP-HVP-FERT',
             name: 'Fertiliser',
             unit: 't'
-        },
-        'EXP-HVP-LIME': {
+        }, {
             code: 'EXP-HVP-LIME',
             name: 'Lime',
             unit: 't'
-        },
-        'EXP-HVP-HERB': {
+        }, {
             code: 'EXP-HVP-HERB',
             name: 'Herbicides',
             unit: 'l'
-        },
-        'EXP-HVP-PEST': {
+        }, {
             code: 'EXP-HVP-PEST',
             name: 'Pesticides',
             unit: 'l'
-        },
-        'EXP-HVP-SPYA': {
+        }, {
             code: 'EXP-HVP-SPYA',
             name: 'Aerial spraying',
             unit: 'ha'
-        },
-        'EXP-HVP-INSH': {
+        }, {
             code: 'EXP-HVP-INSH',
             name: 'Crop Insurance (Hail)',
             unit: 't'
-        },
-        'EXP-HVP-INSM': {
+        }, {
             code: 'EXP-HVP-INSM',
             name: 'Crop Insurance (Multiperil)',
             unit: 't'
-        },
-        'EXP-HVP-HEDG': {
+        }, {
             code: 'EXP-HVP-HEDG',
             name: 'Hedging cost',
             unit: 't'
         },
         //Harvest
-        'EXP-HVT-LABC': {
+        {
             code: 'EXP-HVT-LABC',
             name: 'Contract work (Harvest)',
             unit: 'ha'
-        },
-        'EXP-HVT-STOR': {
+        }, {
             code: 'EXP-HVT-STOR',
             name: 'Storage',
             unit: 'days'
-        },
-        'EXP-HVT-PAKM': {
+        }, {
             code: 'EXP-HVT-PAKM',
             name: 'Packaging material',
             unit: 'each'
-        },
-        'EXP-HVT-DYCL': {
+        }, {
             code: 'EXP-HVT-DYCL',
             name: 'Drying and cleaning',
             unit: 't'
-        },
-        'EXP-HVT-PAKC': {
+        }, {
             code: 'EXP-HVT-PAKC',
             name: 'Packing cost',
             unit: 'each'
         },
         //Indirect
-        'EXP-IDR-FUEL': {
+        {
             code: 'EXP-IDR-FUEL',
             name: 'Fuel',
             unit: 'l'
-        },
-        'EXP-IDR-REPP': {
+        }, {
             code: 'EXP-IDR-REPP',
             name: 'Repairs & parts',
             unit: 'Total'
-        },
-        'EXP-IDR-ELEC': {
+        }, {
             code: 'EXP-IDR-ELEC',
             name: 'Electricity',
             unit: 'Total'
-        },
-        'EXP-IDR-WATR': {
+        }, {
             code: 'EXP-IDR-WATR',
             name: 'Water',
             unit: 'Total'
-        },
-        'EXP-IDR-LABP': {
+        }, {
             code: 'EXP-IDR-LABP',
             name: 'Permanent labour',
             unit: 'Total'
-        },
-        'EXP-IDR-SCHED': {
+        }, {
             code: 'EXP-IDR-SCHED',
             name: 'Scheduling',
             unit: 'Total'
-        },
-        'EXP-IDR-LICS': {
+        }, {
             code: 'EXP-IDR-LICS',
             name: 'License',
             unit: 'Total'
-        },
-        'EXP-IDR-INSA': {
+        }, {
             code: 'EXP-IDR-INSA',
             name: 'Insurance assets',
             unit: 'Total'
-        },
-        'EXP-IDR-OTHER': {
+        }, {
             code: 'EXP-IDR-OTHER',
             name: 'Other costs',
             unit: 'Total'
         },
         //Replacements
         // Sheep
-        'EXP-RPM-SLAMB': {
+        {
             code: 'EXP-RPM-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'EXP-RPM-SWEAN': {
+        }, {
             code: 'EXP-RPM-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'EXP-RPM-SEWE': {
+        }, {
             code: 'EXP-RPM-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'EXP-RPM-SWTH': {
+        }, {
             code: 'EXP-RPM-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-SRAM': {
+        }, {
             code: 'EXP-RPM-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'EXP-RPM-CCALV':{
+        {
             code: 'EXP-RPM-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'EXP-RPM-CWEN':{
+        }, {
             code: 'EXP-RPM-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'EXP-RPM-CCOW':{
+        }, {
             code: 'EXP-RPM-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'EXP-RPM-CST18':{
+        }, {
             code: 'EXP-RPM-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CST36':{
+        }, {
             code: 'EXP-RPM-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CBULL':{
+        }, {
             code: 'EXP-RPM-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'EXP-RPM-GKID':{
+        {
             code: 'EXP-RPM-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'EXP-RPM-GWEAN':{
+        }, {
             code: 'EXP-RPM-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'EXP-RPM-GEWE':{
+        }, {
             code: 'EXP-RPM-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GCAST':{
+        }, {
             code: 'EXP-RPM-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GRAM':{
+        }, {
             code: 'EXP-RPM-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
         //Animal feed
-        'EXP-AMF-LICK': {
+        {
             code: 'EXP-AMF-LICK',
             name: 'Lick',
             unit: 'kg'
         },
         //Husbandry
-        'EXP-HBD-VACC': {
+        {
             code: 'EXP-HBD-VACC',
             name: 'Drenching & vaccination',
             unit: 'head'
-        },
-        'EXP-HBD-DIPP': {
+        }, {
             code: 'EXP-HBD-DIPP',
             name: 'Dipping & jetting',
             unit: 'head'
-        },
-        'EXP-HBD-VETY': {
+        }, {
             code: 'EXP-HBD-VETY',
             name: 'Veterinary',
             unit: 'head'
-        },
-        'EXP-HBD-SHER': {
+        }, {
             code: 'EXP-HBD-SHER',
             name: 'Shearing',
             unit: 'head'
-        },
-        'EXP-HBD-CRCH': {
+        }, {
             code: 'EXP-HBD-CRCH',
             name: 'Crutching',
             unit: 'head'
-        },
-        'EXP-MRK-LSSF': {
+        }, {
             code: 'EXP-MRK-LSSF',
             name: 'Livestock sales marketing fees',
-            calculationFactor: 'Livestock Sales',
+            incomeGroup: 'Livestock Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSPF': {
+        }, {
             code: 'EXP-MRK-LSPF',
             name: 'Livestock products marketing fees',
-            calculationFactor: 'Product Sales',
+            incomeGroup: 'Product Sales',
             unit: '%'
-        },
-        'EXP-MRK-HOTF': {
+        }, {
             code: 'EXP-MRK-HOTF',
             name: 'Horticulture marketing fees',
-            calculationFactor: 'Fruit Sales',
+            incomeGroup: 'Fruit Sales',
             unit: '%'
-        },
-        'EXP-MRK-CRPF': {
+        }, {
             code: 'EXP-MRK-CRPF',
             name: 'Crop marketing fees',
-            calculationFactor: 'Crop Sales',
+            incomeGroup: 'Crop Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSTP': {
+        }, {
             code: 'EXP-MRK-LSTP',
             name: 'Livestock transport',
             unit: 'head'
-        },
-        'EXP-MRK-HOTT': {
+        }, {
             code: 'EXP-MRK-HOTT',
             name: 'Horticulture transport',
             unit: 't'
-        },
-        'EXP-MRK-CRPT': {
+        }, {
             code: 'EXP-MRK-CRPT',
             name: 'Crop transport',
             unit: 't'
         }
-    };
+    ], 'code');
 
     // todo: extend the categories with products for future features.
 //    var _productsMap = {
@@ -3357,7 +3286,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             category.quantity = 0;
             category.pricePerUnit = 0;
             category.value = 0;
-            
+
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
                 if(_conversionRate[budget.commodityType][category.name]) {
@@ -3422,31 +3351,30 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 section.total = {
                     value: 0
                 };
-                
+
                 if(budget.assetType == 'livestock') {
                     section.total.valuePerLSU = 0;
                 }
-                
+
                 section.productCategoryGroups.forEach(function(group, j) {
                     group.total = {
                         value: 0
                     };
-                    
+
                     if(budget.assetType == 'livestock') {
                         group.total.valuePerLSU = 0;
                     }
-                    
+
                     group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
-                            var groupSum = 0;
-
-                            angular.forEach(budget.data.sections, function(cSection, x) {
-                                angular.forEach(cSection.productCategoryGroups, function(cGroup, y) {
-                                    if(cGroup.name == category.calculationFactor) {
-                                        groupSum = cGroup.total.value;
-                                    }
-                                });
-                            });
+                            var groupSum = underscore
+                                .chain(budget.data.sections)
+                                .pluck('productCategoryGroups')
+                                .flatten()
+                                .reduce(function(total, group) {
+                                    return (group.name == category.incomeGroup ? total + group.total.value : total);
+                                }, 0)
+                                .value();
 
                             category.value = category.pricePerUnit * groupSum / 100;
 
@@ -3491,20 +3419,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             if(budget.assetType == 'horticulture') {
                 budget.data.details.grossProfitByStage = {};
 
-                angular.forEach(_horticultureStages[budget.commodityType], function(stage, i) {
-                    var stageIncome = 0;
-                    var stageCosts = 0;
-
-                    angular.forEach(budget.data.sections, function(section, j) {
-                        if(section.horticultureStage == stage && section.name == 'Income') {
-                            stageIncome = section.total.value;
-                        }
-                        if(section.horticultureStage == stage && section.name == 'Expenses') {
-                            stageCosts = section.total.value;
-                        }
-                    });
-
-                    budget.data.details.grossProfitByStage[stage] = stageIncome - stageCosts;
+                angular.forEach(_horticultureStages[budget.commodityType], function(stage) {
+                    budget.data.details.grossProfitByStage[stage] = underscore
+                        .chain(budget.data.sections)
+                        .where({horticultureStage: stage})
+                        .reduce(function (total, section) {
+                            return (section.name === 'Income' ? total + section.total.value :
+                                (section.name === 'Expenses' ? total - section.total.value : total));
+                        }, 0)
+                        .value();
                 });
             }
 
