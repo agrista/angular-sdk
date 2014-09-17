@@ -878,15 +878,14 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                     
                     group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
-                            var groupSum = 0;
-
-                            angular.forEach(budget.data.sections, function(cSection, x) {
-                                angular.forEach(cSection.productCategoryGroups, function(cGroup, y) {
-                                    if(cGroup.name == category.calculationFactor) {
-                                        groupSum = cGroup.total.value;
-                                    }
-                                });
-                            });
+                            var groupSum = underscore
+                                .chain(budget.data.sections)
+                                .pluck('productCategoryGroups')
+                                .flatten()
+                                .reduce(function(total, group) {
+                                    return (group.name == category.calculationFactor ? total + group.total.value : total);
+                                }, 0)
+                                .value();
 
                             category.value = category.pricePerUnit * groupSum / 100;
 
@@ -931,20 +930,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             if(budget.assetType == 'horticulture') {
                 budget.data.details.grossProfitByStage = {};
 
-                angular.forEach(_horticultureStages[budget.commodityType], function(stage, i) {
-                    var stageIncome = 0;
-                    var stageCosts = 0;
-
-                    angular.forEach(budget.data.sections, function(section, j) {
-                        if(section.horticultureStage == stage && section.name == 'Income') {
-                            stageIncome = section.total.value;
-                        }
-                        if(section.horticultureStage == stage && section.name == 'Expenses') {
-                            stageCosts = section.total.value;
-                        }
-                    });
-
-                    budget.data.details.grossProfitByStage[stage] = stageIncome - stageCosts;
+                angular.forEach(_horticultureStages[budget.commodityType], function(stage) {
+                    budget.data.details.grossProfitByStage[stage] = underscore
+                        .chain(budget.data.sections)
+                        .where({horticultureStage: stage})
+                        .reduce(function (total, section) {
+                            return (section.name === 'Income' ? total + section.total.value :
+                                (section.name === 'Expenses' ? total - section.total.value : total));
+                        }, 0)
+                        .value();
                 });
             }
 
