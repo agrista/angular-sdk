@@ -51,13 +51,18 @@ sdkInterfaceInputApp.directive('dateParser', ['$filter', function ($filter) {
     };
 }]);
 
-sdkInterfaceInputApp.directive('inputNumber', [function () {
+sdkInterfaceInputApp.directive('inputNumber', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
         link: function (scope, element, attrs, ngModel) {
             var _max = (attrs.max ? parseFloat(attrs.max) : false);
             var _min = (attrs.min ? parseFloat(attrs.min) : false);
+            var _round = (attrs.round ? parseInt(attrs.round) : false);
+
+            ngModel.$formatters.push(function (value) {
+                return (_round === false ? value : $filter('number')(value, _round));
+            });
 
             ngModel.$parsers.push(function (value) {
                 var isNan = isNaN(value);
