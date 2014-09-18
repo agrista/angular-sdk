@@ -200,6 +200,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getCommodities: function (type) {
             return _commodities[type] || '';
         },
+        getZoneTitle: function (zone) {
+            return zone.size + 'Ha at stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
+        },
 
         commodityTypes: function() {
             return _commodityTypes;
