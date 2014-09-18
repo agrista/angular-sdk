@@ -898,7 +898,7 @@ mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'underscore', function (api, hydration, underscore) {
+mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'underscore', function (api, hydration, promiseService, underscore) {
     var defaultRelations = ['document', 'organization'];
     var expenseApi = api({
         plural: 'expenses',
@@ -909,7 +909,9 @@ mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'underscore', functio
             return hydration.hydrate(obj, 'expense', relations);
         },
         dehydrate: function (obj, relations) {
-            return underscore.omit(obj, relations || defaultRelations);
+            return promiseService.wrap(function (promise) {
+                promise.resolve(underscore.omit(obj, relations || defaultRelations));
+            });
         }
     });
 
