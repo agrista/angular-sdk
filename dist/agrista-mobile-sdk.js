@@ -971,6 +971,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getCommodities: function (type) {
             return _commodities[type] || '';
         },
+        getZoneTitle: function (zone) {
+            return zone.size + 'Ha at stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
+        },
 
         commodityTypes: function() {
             return _commodityTypes;
@@ -1230,6 +1233,16 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         weed: 'Weed'
     };
 
+    var _flowerTypes = {
+        'Dry Bean': 'pod',
+        'Grain Sorghum': 'panicle',
+        'Maize (White)': 'ear',
+        'Maize (Yellow)': 'ear',
+        'Sunflower': 'flower',
+        'Wheat': 'spikelet',
+        'Soya Bean': 'pod'
+    };
+
     return {
         approvalTypes: function () {
             return _approvalTypes;
@@ -1253,6 +1266,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
             return _problemTypes;
         },
 
+        getFlowerType: function (crop) {
+            return _flowerTypes[crop] || '';
+        },
         getGrowthStages: function (crop) {
             return _growthStageCrops[crop] || _growthStageTable[0];
         },
@@ -1268,9 +1284,55 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         getProblemTitle: function (type) {
             return _problemTypes[type] || '';
         },
+        getSampleArea: function (asset, zone) {
+            return (_flowerTypes[asset.data.crop] === 'spikelet' ?
+                (zone && zone.plantedInRows === true ? '3m' : 'm²') :
+                (_flowerTypes[asset.data.crop] === 'pod' ? '3m' : '10m'));
+        },
 
         hasSeedTypes: function (crop) {
             return _seedTypes[crop] !== undefined;
+        },
+
+        calculateProgressYield: function (asset, samples, pitWeight, realization) {
+            pitWeight = pitWeight || 0;
+            realization = (realization === undefined ? 100 : realization);
+
+            var reduceSamples = function (samples, prop) {
+                return (underscore.reduce(samples, function (total, sample) {
+                    return (sample[prop] ? total + sample[prop] : total);
+                }, 0) / samples.length) || 0
+            };
+
+            var zoneYields = underscore.map(asset.data.zones, function (zone, index) {
+                var zoneSamples = underscore.where(samples, {zone: index});
+                var total = {
+                    coverage: (zone.size / asset.data.plantedArea),
+                    heads: reduceSamples(zoneSamples, 'heads'),
+                    weight: reduceSamples(zoneSamples, 'weight')
+                };
+
+                if (_flowerTypes[asset.data.crop] === 'ear') {
+                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.plantedInRows ? zone.rowWidth * 3 : 1));
+                } else if (_flowerTypes[asset.data.crop] === 'pod') {
+                    total.pods = reduceSamples(zoneSamples, 'pods');
+                    total.seeds = reduceSamples(zoneSamples, 'seeds');
+                    total.yield = (pitWeight * total.seeds * total.pods * total.heads) / (zone.rowWidth * 300);
+                } else {
+                    total.yield = (total.weight * total.heads) / (zone.rowWidth * 1000);
+                }
+
+                total.yield *= (realization / 100);
+
+                return total;
+            });
+
+            return {
+                zones: zoneYields,
+                yield: underscore.reduce(zoneYields, function (total, item) {
+                    return total + (item.coverage * item.yield);
+                }, 0)
+            };
         }
     }
 }]);
@@ -3170,13 +3232,18 @@ sdkInterfaceInputApp.directive('dateParser', ['$filter', function ($filter) {
     };
 }]);
 
-sdkInterfaceInputApp.directive('inputNumber', [function () {
+sdkInterfaceInputApp.directive('inputNumber', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
         link: function (scope, element, attrs, ngModel) {
             var _max = (attrs.max ? parseFloat(attrs.max) : false);
             var _min = (attrs.min ? parseFloat(attrs.min) : false);
+            var _round = (attrs.round ? parseInt(attrs.round) : false);
+
+            ngModel.$formatters.push(function (value) {
+                return (_round === false ? value : $filter('number')(value, _round));
+            });
 
             ngModel.$parsers.push(function (value) {
                 var isNan = isNaN(value);
@@ -3927,7 +3994,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: _markerIcons.asset.default,
+                icon: _markerIcons.zone.default,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -5172,9 +5239,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.setBounds = function (bounds) {
         if (this._map && bounds.coordinates) {
             if (bounds.coordinates instanceof Array) {
-                if (bounds.coordinates.length > 1) {
-                    this._map.fitBounds(bounds.coordinates, bounds.options);
-                }
+                this._map.fitBounds((bounds.coordinates.length > 1 ? bounds.coordinates : bounds.coordinates.concat(bounds.coordinates)), bounds.options);
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
             }
@@ -7771,7 +7836,7 @@ mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'underscore', function (api, hydration, underscore) {
+mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'underscore', function (api, hydration, promiseService, underscore) {
     var defaultRelations = ['document', 'organization'];
     var expenseApi = api({
         plural: 'expenses',
@@ -7782,7 +7847,9 @@ mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'underscore', functio
             return hydration.hydrate(obj, 'expense', relations);
         },
         dehydrate: function (obj, relations) {
-            return underscore.omit(obj, relations || defaultRelations);
+            return promiseService.wrap(function (promise) {
+                promise.resolve(underscore.omit(obj, relations || defaultRelations));
+            });
         }
     });
 
