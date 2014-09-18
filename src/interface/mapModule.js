@@ -454,7 +454,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: _markerIcons.asset.default,
+                icon: _markerIcons.zone.default,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -1699,9 +1699,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.setBounds = function (bounds) {
         if (this._map && bounds.coordinates) {
             if (bounds.coordinates instanceof Array) {
-                if (bounds.coordinates.length > 1) {
-                    this._map.fitBounds(bounds.coordinates, bounds.options);
-                }
+                this._map.fitBounds((bounds.coordinates.length > 1 ? bounds.coordinates : bounds.coordinates.concat(bounds.coordinates)), bounds.options);
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
             }
