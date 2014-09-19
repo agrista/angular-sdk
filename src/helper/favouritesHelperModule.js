@@ -3,6 +3,7 @@ var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk
 sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(documentHelper) {
     var _listServiceMap = function(item) {
         var map = {
+            id: item.id || item.__id,
             date: item.date
         };
 
@@ -113,6 +114,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHelper', function (taskHelper, documentHelper) {
     var _listServiceMap = function(item) {
         return {
+            id: item.id || item.__id,
             title: item.sender,
             subtitle: item.message,
             state: _notificationState(item.notificationType, item.dataType)
@@ -126,6 +128,10 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
     };
 
     var _notificationMap = {
+        'reassign': {
+            title: 'Reassign',
+            state: 'manage'
+        },
         'import': {
             title: 'Import',
             state: 'import'
@@ -135,8 +141,8 @@ sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHel
             state: 'view'
         },
         'reject': {
-            title: 'Reassign',
-            state: 'manage'
+            title: 'Rejected',
+            state: 'view'
         },
         'review': {
             title: 'Review',

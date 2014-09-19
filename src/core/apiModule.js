@@ -1,4 +1,4 @@
-var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities']);
+var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
  * User API
@@ -869,4 +869,204 @@ sdkApiApp.factory('applicationApi', ['$http', 'promiseService', 'configuration',
             });
         }
     }
+}]);
+
+/**
+* PIP geo API
+*/
+sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getFieldPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/field-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getPortionPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistrictPolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/district-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProvincePolygon: function (lng, lat) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/province-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
+/**
+ * SubRegion API
+ */
+sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getSubRegions: function (withGeometries, paging) {
+            if (withGeometries && typeof withGeometries != 'boolean') {
+                $log.debug(withGeometries);
+                paging = withGeometries;
+                withGeometries = undefined;
+            }
+
+            return pagingService.page(_host + 'api/guidelines/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
+        },
+        getSubRegion: function(subregionId, versionId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/guidelines/' + subregionId + (versionId ? '?versionId=' + versionId : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Enterprise Budget API
+ */
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        getEnterpriseBudgets: function (id, page) {
+            if (typeof id === 'object') {
+                page = id;
+                id = undefined;
+            }
+
+            return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
+        },
+        searchEnterpriseBudgets: function (query) {
+            query = underscore.chain(query).map(function (value, key) {
+                return key + '=' + value;
+            }).join('&').value();
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budgets/search?resulttype=simple&' + query, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        createEnterpriseBudget: function (budgetData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget', budgetData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getEnterpriseBudget: function (id, requesttype) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getEnterpriseBudgetPublishers: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/publishers', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getEnterpriseBudgetRegions: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/regions', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateEnterpriseBudget: function (budgetData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget/' + budgetData.id, budgetData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        publishEnterpriseBudget: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget/' + id + '/publish', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteEnterpriseBudget: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        uploadEnterpriseBudgetAttachments: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
+        }
+
+    };
+}]);
+
+/**
+ * Market Assumptions API
+ */
+sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductDemandAssumptions: function(query) {
+            query = _.chain(query).map(function (value, key) {
+                return key + '=' + value;
+            }).join('&').value();
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getMapData: function(options) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumptions/map-data', options, {withCredentials: true}).then(function(res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        addAssumptionGroup: function(data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductDemandAssumption: function(id, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProductDemandAssumption: function(data) {
+            // data takes the form { id: 5, year: "2014"}, where either an id OR a year is given to specify which records to delete
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/demand-assumption/delete', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
 }]);

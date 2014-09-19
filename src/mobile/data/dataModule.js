@@ -1,4 +1,4 @@
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library']);
 
 /**
  * @name dataPurgeService
@@ -25,19 +25,15 @@ mobileSdkDataApp.provider('dataPurge', function () {
     }];
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'underscore', function ($log, underscore) {
     return {
         parseRequest: function (templateUrl, schemaData) {
             $log.debug('Unresolved: ' + templateUrl);
 
             if (templateUrl !== undefined) {
-                for (var key in schemaData) {
-                    if (schemaData.hasOwnProperty(key)) {
-                        var schemaKey = (schemaData[key] !== undefined ? schemaData[key] : '');
-
-                        templateUrl = templateUrl.replace(':' + key, schemaKey);
-                    }
-                }
+                angular.forEach(schemaData, function (data, key) {
+                    templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
+                });
             }
 
             $log.debug('Resolved: ' + templateUrl);
@@ -48,11 +44,12 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
             return 2000000000 + Math.round(Math.random() * 147483647);
         },
         injectMetadata: function (item) {
-            return _.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
+            return underscore.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
                 __id: item.id,
                 __uri: item.uri,
                 __dirty: (item.dirty == 1),
-                __local: (item.local == 1)
+                __local: (item.local == 1),
+                __saved: true
             });
         },
         extractMetadata: function (item) {
@@ -61,7 +58,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
                 uri: item.__uri,
                 dirty: item.__dirty,
                 local: item.__local,
-                data: _.omit(item, ['__id', '__uri', '__dirty', '__local'])
+                data: underscore.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
             };
         }
     }
@@ -70,7 +67,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', function ($log) {
 /**
  * @name dataStore
  */
-mobileSdkDataApp.provider('dataStore', [function () {
+mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
     var _defaultOptions = {
         pageLimit: 10,
         dbName: undefined,
@@ -99,7 +96,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
      * @param options
      */
     this.config = function (options) {
-        _defaultOptions = _.defaults((options || {}), _defaultOptions);
+        _defaultOptions = underscore.defaults((options || {}), _defaultOptions);
     };
 
     /**
@@ -184,7 +181,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                     readRemote: true
                 }
              */
-            var _config = _.defaults((config || {}), {
+            var _config = underscore.defaults((config || {}), {
                 apiTemplate: undefined,
                 paging: undefined,
                 indexerProperty: 'id',
@@ -194,7 +191,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
             });
 
             if (_config.paging !== undefined) {
-                _config.paging = _.defaults(_config.paging, {
+                _config.paging = underscore.defaults(_config.paging, {
                     template: '',
                     schema: {},
                     data: {
@@ -350,7 +347,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 if (dataItems.length > 0) {
-                    options = _.defaults(options || {}, {
+                    options = underscore.defaults(options || {}, {
                         replace: true,
                         force: false
                     });
@@ -412,7 +409,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                     options = {};
                 }
 
-                options = _.defaults((options || {}), {force: false});
+                options = underscore.defaults((options || {}), {force: false});
 
                 var asyncMon = new AsyncMonitor(1, dalCallback);
 
@@ -448,13 +445,18 @@ mobileSdkDataApp.provider('dataStore', [function () {
              * Remote data storage
              */
 
-            var _getRemote = function (uri, grCallback) {
+            var _getRemote = function (uri, paging, grCallback) {
                 $log.debug('_getRemote');
-                if (typeof grCallback !== 'function') grCallback = angular.noop;
+                if (typeof paging == 'function') {
+                    grCallback = paging;
+                    paging = undefined;
+                }
+
+                if (typeof grCallback != 'function') grCallback = angular.noop;
 
                 if (_config.apiTemplate !== undefined) {
                     safeApply(function () {
-                        $http.get(_hostApi + uri, {withCredentials: true}).then(function (res) {
+                        $http.get(_hostApi + uri, {params: paging, withCredentials: true}).then(function (res) {
                             if (res.data != null && res.data !== 'null') {
                                 var data = res.data;
 
@@ -518,31 +520,43 @@ mobileSdkDataApp.provider('dataStore', [function () {
                 if (dataItems !== undefined && _config.apiTemplate !== undefined) {
                     if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                    var postedDataItems = [];
+                    var postedDataItems = undefined;
                     var asyncMon = new AsyncMonitor(dataItems.length, function () {
                         urCallback(postedDataItems);
                     });
 
+                    var pushDataItem = function (item) {
+                        if (postedDataItems) {
+                            postedDataItems.push(item);
+                        } else {
+                            postedDataItems = [item];
+                        }
+                    };
+
                     var _makePost = function (item, uri) {
                         safeApply(function () {
                             $http.post(_hostApi + uri, item.data, {withCredentials: true}).then(function (res) {
-                                var remoteItem = dataStoreUtilities.injectMetadata({
-                                    id: _getItemIndex(res.data, item.id),
-                                    uri: item.uri,
-                                    data: item.data,
-                                    dirty: false,
-                                    local: false
-                                });
+                                if (res.status === 200) {
+                                    var remoteItem = dataStoreUtilities.injectMetadata({
+                                        id: _getItemIndex(res.data, item.id),
+                                        uri: item.uri,
+                                        data: item.data,
+                                        dirty: false,
+                                        local: false
+                                    });
 
-                                if (item.local == true) {
-                                    remoteItem.id = remoteItem.__id;
+                                    if (item.local == true) {
+                                        remoteItem.id = remoteItem.__id;
 
-                                    _deleteLocal(item);
+                                        _deleteLocal(item);
+                                    }
+
+                                    pushDataItem(remoteItem);
+                                    _updateLocal(remoteItem, {force: true}, asyncMon.done);
+                                } else {
+                                    _errorCallback(err);
+                                    asyncMon.done();
                                 }
-
-                                postedDataItems.push(remoteItem);
-
-                                _updateLocal(remoteItem, {force: true}, asyncMon.done);
                             }, function (err) {
                                 _errorCallback(err);
                                 asyncMon.done();
@@ -559,7 +573,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                                     delete item.data[_config.indexerProperty];
                                 }
 
-                                _makePost(item, dataStoreUtilities.parseRequest(writeUri || _config.apiTemplate, _.extend(writeSchema, {id: item.local ? undefined : item.id})));
+                                _makePost(item, dataStoreUtilities.parseRequest(writeUri || _config.apiTemplate, underscore.extend(writeSchema, {id: item.local ? undefined : item.id})));
                             } else {
                                 _makePost(item, item.uri);
                             }
@@ -600,7 +614,12 @@ mobileSdkDataApp.provider('dataStore', [function () {
                     var _makeDelete = function (item, uri) {
                         safeApply(function () {
                             $http.post(_hostApi + uri, {withCredentials: true}).then(function (res) {
-                                _deleteLocal(item, asyncMon.done);
+                                if (res.status === 200) {
+                                    _deleteLocal(item, asyncMon.done);
+                                } else {
+                                    _errorCallback(err);
+                                    asyncMon.done();
+                                }
                             }, function (err) {
                                 _errorCallback(err);
                                 asyncMon.done();
@@ -612,7 +631,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         var item = dataStoreUtilities.extractMetadata(dataItems[i]);
 
                         if (item.local === false) {
-                            _makeDelete(item, dataStoreUtilities.parseRequest(writeUri, _.defaults(writeSchema, {id: item.id})));
+                            _makeDelete(item, dataStoreUtilities.parseRequest(writeUri, underscore.defaults(writeSchema, {id: item.id})));
                         } else {
                             asyncMon.done();
                         }
@@ -695,7 +714,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
 
                 return {
                     createItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
                             data: [],
@@ -720,7 +739,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
 
                             _updateLocal(dataStoreUtilities.injectMetadata({
                                 id: id,
-                                uri: dataStoreUtilities.parseRequest(request.template, _.defaults(request.schema, {id: id})),
+                                uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                 data: data,
                                 dirty: request.options.dirty,
                                 local: request.options.dirty
@@ -728,12 +747,10 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     getItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
                             options: {
-                                page: 1,
-                                limit: _defaultOptions.pageLimit,
                                 readLocal: _config.readLocal,
                                 readRemote: _config.readRemote,
                                 fallbackRemote: false
@@ -742,15 +759,23 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
 
                         var handleRemote = function (_uri) {
-                            _getRemote(_uri, function (res, err) {
+                            _getRemote(_uri, request.paging, function (res, err) {
                                 if (res) {
-                                    _syncLocal(res, _uri, function (res, err) {
-                                        _responseHandler(request.callback, res, err);
-                                    });
-                                } else {
+                                    if (request.paging === undefined && request.options.readLocal === true) {
+                                        _syncLocal(res, _uri, function (res, err) {
+                                            _responseHandler(request.callback, res, err);
+                                        });
+                                    } else {
+                                        _updateLocal(res, function (res, err) {
+                                            _responseHandler(request.callback, res, err);
+                                        });
+                                    }
+                                } else if (request.options.readLocal === true) {
                                     _getLocal(_uri, request.options, function (res, err) {
                                         _responseHandler(request.callback, res, err);
                                     });
+                                } else {
+                                    _responseHandler(request.callback, res, err);
                                 }
                             });
                         };
@@ -776,7 +801,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         }
                     },
                     findItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             key: '',
                             column: 'id',
                             options: {
@@ -791,7 +816,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     updateItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             data: [],
                             options: {
                                 dirty: true
@@ -814,7 +839,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     postItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
                             data: [],
@@ -830,7 +855,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     removeItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: undefined,
                             schema: {},
                             data: [],
@@ -854,7 +879,7 @@ mobileSdkDataApp.provider('dataStore', [function () {
                         });
                     },
                     purgeItems: function (req) {
-                        var request = _.defaults(req || {}, {
+                        var request = underscore.defaults(req || {}, {
                             template: undefined,
                             schema: {},
                             options: {

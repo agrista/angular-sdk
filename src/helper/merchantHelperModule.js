@@ -1,8 +1,9 @@
-var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', []);
+var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.library']);
 
-sdkHelperMerchantApp.factory('merchantHelper', [function() {
+sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (underscore) {
     var _listServiceMap = function (item) {
         return {
+            id: item.id || item.__id,
             title: item.name,
             subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
@@ -38,7 +39,7 @@ sdkHelperMerchantApp.factory('merchantHelper', [function() {
     function ServiceEditor (/**Array=*/availableServices, /**Array=*/services) {
         availableServices = availableServices || [];
 
-        this.services = _.map(services || [], function (item) {
+        this.services = underscore.map(services || [], function (item) {
             return (item.name ? item.name : item);
         });
 

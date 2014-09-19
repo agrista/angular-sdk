@@ -1,4 +1,4 @@
-var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities']);
+var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
  * @name cordovaCameraApp.cameraService
@@ -13,7 +13,7 @@ var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.u
         });
 
  */
-cordovaCameraApp.factory('cameraService', ['promiseService', function (promiseService) {
+cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', function (promiseService, underscore) {
     if (typeof window.Camera === 'undefined') {
         window.Camera = {};
     }
@@ -58,7 +58,7 @@ cordovaCameraApp.factory('cameraService', ['promiseService', function (promiseSe
         capture: function (options) {
             if (typeof options !== 'object') options = {};
 
-            return _makeRequest(_.defaults(options, {
+            return _makeRequest(underscore.defaults(options, {
                 quality: 50,
                 destinationType: _destinationTypes.DATA_URL,
                 source: _pictureSourceTypes.CAMERA
@@ -79,7 +79,7 @@ cordovaCameraApp.factory('cameraService', ['promiseService', function (promiseSe
         captureAndEdit: function (options) {
             if (typeof options !== 'object') options = {};
 
-            return _makeRequest(_.defaults(options, {
+            return _makeRequest(underscore.defaults(options, {
                 quality: 50,
                 allowEdit: true,
                 destinationType: _destinationTypes.DATA_URL,
@@ -101,7 +101,7 @@ cordovaCameraApp.factory('cameraService', ['promiseService', function (promiseSe
         retrieve: function (options) {
             if (typeof options !== 'object') options = {};
 
-            return _makeRequest(_.defaults(options, {
+            return _makeRequest(underscore.defaults(options, {
                 quality: 50,
                 destinationType: _destinationTypes.FILE_URI,
                 source: _pictureSourceTypes.PHOTOLIBRARY

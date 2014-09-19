@@ -1,13 +1,13 @@
-var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id']);
+var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
-sdkTestDataApp.provider('mockDataService', [function () {
+sdkTestDataApp.provider('mockDataService', ['underscore', function (underscore) {
     var _mockData = {};
     var _config = {
         localStore: true
     };
 
     this.config = function (options) {
-        _config = _.defaults(options, _config);
+        _config = underscore.defaults(options, _config);
     };
 
     this.$get = ['localStore', 'objectId', 'promiseService', function (localStore, objectId, promiseService) {
@@ -26,7 +26,7 @@ sdkTestDataApp.provider('mockDataService', [function () {
                         _mockData[type][item.id] = item;
                     });
                 } else {
-                    data.id = data.id || ObjectId().toString();
+                    data.id = data.id || objectId().toString();
 
                     _mockData[type] = _mockData[type] || {};
                     _mockData[type][data.id] = data;
@@ -41,7 +41,7 @@ sdkTestDataApp.provider('mockDataService', [function () {
                     _mockData[type] = _mockData[type] || {};
 
                     if (id === undefined) {
-                        promise.resolve(_.toArray(_mockData[type] || {}));
+                        promise.resolve(underscore.toArray(_mockData[type] || {}));
                     } else {
                         if (_mockData[type][id]) {
                             promise.resolve(_mockData[type][id]);

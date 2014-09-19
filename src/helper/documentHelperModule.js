@@ -1,4 +1,4 @@
-var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', []);
+var sdkHelperDocumentApp = angular.module('ag.sdk.helper.document', ['ag.sdk.helper.task', 'ag.sdk.library']);
 
 sdkHelperDocumentApp.provider('documentHelper', function () {
     var _docTypes = [];
@@ -27,20 +27,21 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         return _documentMap[docType];
     };
 
-    this.$get = ['$injector', function ($injector) {
+    this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             if (_documentMap[item.docType]) {
                 var docMap = _documentMap[item.docType];
                 var map = {
-                    title: (item.author ? item.author : ''),
-                    subtitle: (item.documentId ? item.documentId : ''),
+                    id: item.id || item.__id,
+                    title: (item.documentId ? item.documentId : ''),
+                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                     docType: item.docType,
-                    group: docMap.title,
-                    updatedAt: item.updatedAt
+                    group: docMap.title
                 };
 
                 if (item.organization && item.organization.name) {
                     map.title = item.organization.name;
+                    map.subtitle = (item.documentId ? item.documentId : '');
                 }
 
                 if (item.data && docMap && docMap.listServiceMap) {
@@ -55,9 +56,33 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             }
         };
 
+        var _listServiceWithTaskMap = function (item) {
+            if (_documentMap[item.docType]) {
+                var map = _listServiceMap(item);
+                var parentTask = underscore.findWhere(item.tasks, {type: 'parent'});
+
+                if (map && parentTask) {
+                    map.status = {
+                        text: parentTask.status,
+                        label: taskHelper.getTaskLabel(parentTask.status)
+                    }
+                }
+
+                return map;
+            }
+        };
+
         return {
             listServiceMap: function () {
                 return _listServiceMap;
+            },
+            listServiceWithTaskMap: function () {
+                return _listServiceWithTaskMap;
+            },
+            filterDocuments: function (documents) {
+                return underscore.filter(documents, function (document) {
+                    return (_documentMap[document.docType] !== undefined);
+                });
             },
             pluralMap: function (item, count) {
                 return _pluralMap(item, count);
@@ -67,7 +92,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 return _docTypes;
             },
             documentTitles: function () {
-                return _.pluck(_documentMap, 'title');
+                return underscore.pluck(_documentMap, 'title');
             },
 
             getDocumentTitle: function (docType) {

@@ -1,48 +1,5 @@
 var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
 
-skdUtilitiesApp.run(['stateResolver', function (stateResolver) {
-    // Initialize stateResolver
-}]);
-
-skdUtilitiesApp.provider('stateResolver', function () {
-    var _stateTable = {};
-
-    this.when = function (states, resolverInjection) {
-        if (states instanceof Array) {
-            angular.forEach(states, function (state) {
-                _stateTable[state] = resolverInjection;
-            })
-        } else {
-            _stateTable[states] = resolverInjection;
-        }
-
-        return this;
-    };
-
-    this.resolver = function () {
-        return {
-            data: ['stateResolver', function (stateResolver) {
-                return stateResolver.getData();
-            }]
-        }
-    };
-
-    this.$get = ['$rootScope', '$state', '$injector', function ($rootScope, $state, $injector) {
-        var nextState = undefined;
-
-        $rootScope.$on('$stateChangeStart', function (event, toState) {
-            nextState = toState;
-        });
-
-        return {
-            getData: function () {
-                return (nextState && _stateTable[nextState.name] ? $injector.invoke(_stateTable[nextState.name]) : undefined);
-            }
-        }
-    }];
-});
-
-
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
         if ($rootScope.$$phase) {
@@ -97,6 +54,18 @@ skdUtilitiesApp.factory('dataMapService', [function() {
 skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', function($rootScope, $http, promiseService, dataMapService) {
     return {
         initialize: function(requestor, dataMap, itemStore, options) {
+            if (typeof itemStore == 'object') {
+                options = itemStore;
+                itemStore = dataMap;
+                dataMap = undefined;
+            }
+
+            if (typeof dataMap == 'object') {
+                options = dataMap;
+                itemStore = undefined;
+                dataMap = undefined;
+            }
+
             itemStore = itemStore || function (data) {
                 $rootScope.$broadcast('paging::items', data);
             };
@@ -153,7 +122,7 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                             itemStore(res);
 
                             promise.resolve(res);
-                        }, promise.reject);
+                        }, promiseService.throwError);
                     });
                 }
             };
@@ -168,12 +137,12 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                 if (params !== undefined) {
                     if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(params, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
+                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promiseService.throwError);
                     }
                 } else {
-                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
+                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
                 }
             });
         }
@@ -294,37 +263,4 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
             }
         }
     }
-}]);
-
-skdUtilitiesApp.directive('signature', ['$compile', function ($compile) {
-    return {
-        restrict: 'E',
-        replace: true,
-        template: '<div class="panel panel-default signature"><div class="panel-heading">{{ title }}<div class="btn btn-default btn-sm pull-right" ng-click="reset()">Clear</div></div></div>',
-        scope: {
-            onsigned: '=',
-            name: '@',
-            title: '@'
-        },
-        link: function (scope, element, attrs) {
-            var sigElement = $compile('<div class="panel-body signature-body"></div>')(scope);
-
-            element.append(sigElement);
-
-            scope.reset = function() {
-                sigElement.jSignature('reset');
-
-                scope.onsigned(attrs.name, null);
-            };
-
-            sigElement.jSignature({
-                'width': attrs.width,
-                'height': attrs.height,
-                'showUndoButton': false});
-
-            sigElement.bind('change', function() {
-                scope.onsigned(attrs.name, sigElement.jSignature('getData', 'svgbase64'));
-            });
-        }
-    };
 }]);

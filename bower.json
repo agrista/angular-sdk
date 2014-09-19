@@ -1,14 +1,16 @@
 {
     "name": "agrista-sdk",
-    "version": "0.5.4",
+    "version": "0.6.5",
     "dependencies": {
         "angular": "https://github.com/angular/bower-angular.git",
         "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
+        "geojson-js-utils": "https://github.com/maxogden/geojson-js-utils.git",
         "underscore": "https://github.com/documentcloud/underscore.git"
     },
     "devDependencies": {
         "angular": "https://github.com/angular/bower-angular.git",
         "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
+        "geojson-js-utils": "https://github.com/maxogden/geojson-js-utils.git",
         "underscore": "https://github.com/documentcloud/underscore.git"
     }
 }

@@ -1,4 +1,4 @@
-var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', ['ag.sdk.utilities']);
+var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', ['ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
  * @name cordovaGeolocationApp.geolocationService
@@ -23,7 +23,7 @@ var cordovaGeolocationApp = angular.module('ag.mobile-sdk.cordova.geolocation', 
  watch.cancel();
 
  */
-cordovaGeolocationApp.factory('geolocationService', ['promiseService', function (promiseService) {
+cordovaGeolocationApp.factory('geolocationService', ['promiseService', 'underscore', function (promiseService, underscore) {
     var _geolocation = navigator.geolocation;
     var _defaultOptions = {enableHighAccuracy: true};
     var _errors = {
@@ -61,7 +61,7 @@ cordovaGeolocationApp.factory('geolocationService', ['promiseService', function 
         getPosition: function (options) {
             if (typeof options !== 'object') options = {};
 
-            options = _.defaults(options, _defaultOptions);
+            options = underscore.defaults(options, _defaultOptions);
 
             var defer = promiseService.defer();
 
@@ -90,7 +90,7 @@ cordovaGeolocationApp.factory('geolocationService', ['promiseService', function 
             }
             if (typeof options !== 'object') options = {};
 
-            options = _.defaults(options, _defaultOptions);
+            options = underscore.defaults(options, _defaultOptions);
 
             function Watcher() {
                 var id = undefined;

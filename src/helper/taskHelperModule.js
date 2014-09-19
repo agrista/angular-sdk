@@ -1,15 +1,15 @@
-var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.authorization', 'ag.sdk.utilities', 'ag.sdk.interface.list']);
+var sdkHelperTaskApp = angular.module('ag.sdk.helper.task', ['ag.sdk.authorization', 'ag.sdk.utilities', 'ag.sdk.interface.list', 'ag.sdk.library']);
 
-sdkHelperTaskApp.provider('taskHelper', function() {
+sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
     var _validTaskStatuses = ['assigned', 'in progress', 'in review'];
 
     var _listServiceMap = function (item) {
         var title = item.documentKey;
-        var mappedItems = _.filter(item.subtasks, function (task) {
+        var mappedItems = underscore.filter(item.subtasks, function (task) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
                 return {
-                    id: task.id,
+                    id: task.id || item.__id,
                     title: item.organization.name,
                     subtitle: _getTaskTitle(task.todo),
                     todo: task.todo,
@@ -90,7 +90,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
      * Provider functions
      */
     this.addTasks = function (tasks) {
-        _taskTodoMap =  _.extend(_taskTodoMap, tasks);
+        _taskTodoMap = underscore.extend(_taskTodoMap, tasks);
     };
 
     this.$get = ['authorization', 'listService', 'dataMapService', function (authorization, listService, dataMapService) {
@@ -109,13 +109,13 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             getTaskLabel: _getStatusLabelClass,
 
             filterTasks: function (tasks) {
-                return _.filter(tasks, function (task) {
+                return underscore.filter(tasks, function (task) {
                     return (_getTaskState(task.todo) !== undefined);
                 });
             },
             updateListService: function (id, todo, tasks, organization) {
                 var currentUser = authorization.currentUser();
-                var task = _.findWhere(tasks, {id: id});
+                var task = underscore.findWhere(tasks, {id: id});
 
                 listService.addItems(dataMapService({
                     id: task.parentTaskId,
@@ -123,7 +123,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
                     type: 'parent',
                     todo: todo,
                     organization: organization,
-                    subtasks : _.filter(tasks, function (task) {
+                    subtasks : underscore.filter(tasks, function (task) {
                         return (task && task.assignedTo == currentUser.username);
                     })
                 }, _listServiceMap));
@@ -134,7 +134,7 @@ sdkHelperTaskApp.provider('taskHelper', function() {
             }
         }
     }];
-});
+}]);
 
 sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
     var _taskActions = {

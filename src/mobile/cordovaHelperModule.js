@@ -109,6 +109,7 @@ cordovaHelperApp.factory('cameraHelper', ['promiseService', 'geolocationService'
                                     type: 'Point'
                                 },
                                 properties: {
+                                    source: 'gps',
                                     accuracy: result.geolocation.coords.accuracy,
                                     altitude: result.geolocation.coords.altitude
                                 }

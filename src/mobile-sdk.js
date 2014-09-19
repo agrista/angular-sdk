@@ -1,9 +1,13 @@
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
+    'ag.sdk.helper.attachment',
+    'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
+    'ag.sdk.helper.enterprise-budget',
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
+    'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',
     'ag.sdk.helper.user'
@@ -26,6 +30,7 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.monitor',
     'ag.sdk.interface.map',
     'ag.sdk.helper',
+    'ag.sdk.library',
     'ag.sdk.test',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',

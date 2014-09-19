@@ -1,8 +1,9 @@
-var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer']);
+var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($filter, landUseHelper) {
+sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
     var _listServiceMap = function(item, metadata) {
         var map = {
+            id: item.id || item.__id,
             type: item.type,
             updatedAt: item.updatedAt
         };
@@ -58,18 +59,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 map.groupby = item.farmId;
             }
 
-            if (item.data.attachments) {
-                map.image = _.chain(item.data.attachments)
-                    .filter(function (attachment) {
-                        return (attachment.mimeType && attachment.mimeType.indexOf('image') !== -1);
-                    }).reverse().map(function (attachment) {
-                        return attachment.src;
-                    }).first().value();
-            }
+            map.image = attachmentHelper.getThumbnail(item.data.attachments);
         }
 
         if (metadata) {
-            map = _.extend(map, metadata);
+            map = underscore.extend(map, metadata);
         }
 
         return map;
@@ -154,7 +148,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
 
     var _assetLandUse = {
         'crop': ['Cropland'],
-        'farmland': landUseHelper.landUseTypes(),
+        'farmland': [],
         'improvement': [],
         'cropland': ['Cropland', 'Irrigated Cropland'],
         'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
@@ -162,8 +156,20 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         'permanent crop': ['Horticulture (Perennial)'],
         'plantation': ['Plantation'],
         'vme': [],
-        'wasteland': ['Structures (Handling)', 'Structures (Processing)', 'Structures (Storage)', 'Utilities', 'Wasteland'],
-        'water right': landUseHelper.landUseTypes()
+        'wasteland': ['Grazing', 'Structures (Handling)', 'Structures (Processing)', 'Structures (Storage)', 'Utilities', 'Wasteland'],
+        'water right': ['Water Right']
+    };
+
+    var _commodityTypes = {
+        crop: 'Field Crops',
+        horticulture: 'Horticulture',
+        livestock: 'Livestock'
+    };
+
+    var _commodities = {
+        crop: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
+        horticulture: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
 
     return {
@@ -176,8 +182,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         listServiceMap: function () {
             return _listServiceMap;
         },
-        getAssetTitle: function (assetType) {
-            return _assetTypes[assetType];
+        getAssetTitle: function (type) {
+            return _assetTypes[type];
+        },
+        getAssetLandUse: function (type) {
+            return _assetLandUse[type];
         },
         getAssetSubtypes: function(type) {
             return _assetSubtypes[type] || [];
@@ -188,12 +197,22 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
         },
+        getCommodities: function (type) {
+            return _commodities[type] || '';
+        },
+
+        commodityTypes: function() {
+            return _commodityTypes;
+        },
+        commodities: function() {
+            return _commodities;
+        },
         conditionTypes: function () {
             return _conditionTypes;
         },
 
         isFieldApplicable: function (type, field) {
-            return (_assetLandUse[type].indexOf(field.landUse) !== -1);
+            return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
 
         generateAssetKey: function (asset, legalEntity, farm) {
@@ -206,11 +225,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
                 (asset.type === 'farmland' && asset.data.sgKey ? '-' + asset.data.sgKey : '') +
                 (asset.type === 'improvement' || asset.type === 'livestock' || asset.type === 'vme' ?
                     (asset.data.type ? '-t.' + asset.data.type : '') +
-                        (asset.data.category ? '-c.' + asset.data.category : '') +
-                        (asset.data.name ? '-n.' + asset.data.name : '') +
-                        (asset.data.purpose ? '-p.' + asset.data.purpose : '') +
-                        (asset.data.model ? '-m.' + asset.data.model : '') +
-                        (asset.data.identificationNo ? '-in.' + asset.data.identificationNo : '') : '') +
+                    (asset.data.category ? '-c.' + asset.data.category : '') +
+                    (asset.data.name ? '-n.' + asset.data.name : '') +
+                    (asset.data.purpose ? '-p.' + asset.data.purpose : '') +
+                    (asset.data.model ? '-m.' + asset.data.model : '') +
+                    (asset.data.identificationNo ? '-in.' + asset.data.identificationNo : '') : '') +
                 (asset.data.waterSource ? '-ws.' + asset.data.waterSource : '');
         },
         cleanAssetData: function (asset) {
@@ -251,40 +270,84 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'landUseHelper', function($
     }
 }]);
 
-sdkHelperAssetApp.factory('assetValuationHelper', function () {
-    var _listServiceMap = function(item) {
-        if (item.data && item.data.valuations) {
-            var mappedItems = [];
-
-            angular.forEach(item.data.valuations, function (valuation) {
-                var map = {
-                    title: valuation.organization.name,
-                    date: valuation.date
-                };
-
-                mappedItems.push(map);
-            });
-
-            return mappedItems;
-        }
+sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', function (assetHelper, underscore) {
+    var _listServiceMap = function (item) {
+        return {
+            title: item.organization.name,
+            subtitle: 'Valued at ' + item.currency + ' ' + item.assetValue,
+            date: item.date
+        };
     };
+
+    function monthDiff (d1, d2) {
+        var months = (d2.getFullYear() - d1.getFullYear()) * 12;
+        months -= d1.getMonth() + 1;
+        months += d2.getMonth();
+        return months <= 0 ? 0 : months;
+    }
 
     return {
         listServiceMap: function () {
             return _listServiceMap;
         },
-        calculateValuation: function (asset, valuation) {
+        calculateAssetValue: function (asset) {
             if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
-                valuation.assetValue = asset.data.quantity * (valuation.unitValue || 0);
-            } else if (asset.type == 'livestock' && isNaN(valuation.totalStock) == false) {
-                valuation.assetValue = valuation.totalStock * (valuation.unitValue || 0);
-            } else if (asset.type == 'crop' && isNaN(valuation.expectedYield) == false) {
-                valuation.assetValue = valuation.expectedYield * (valuation.unitValue || 0);
+                asset.data.assetValue = asset.data.quantity * (asset.data.unitValue || 0);
+            } else if (asset.type == 'livestock' && isNaN(asset.data.totalStock) == false) {
+                asset.data.assetValue = asset.data.totalStock * (asset.data.unitValue || 0);
+            } else if (asset.type == 'crop' && isNaN(asset.data.expectedYield) == false) {
+                asset.data.assetValue = asset.data.expectedYield * (asset.data.unitValue || 0);
+            } else if (asset.type == 'improvement') {
+                asset.data.valuation = asset.data.valuation || {};
+                asset.data.valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation', 'purchaserResistance'], function (total, type) {
+                    return isNaN(asset.data.valuation[type]) ? total : total + (asset.data.valuation[type] / 100);
+                }, 0);
+
+                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * (1 - Math.min(asset.data.valuation.totalDepreciation, 1)));
             } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
-                valuation.assetValue = asset.data.size * (valuation.unitValue || 0);
+                asset.data.assetValue = asset.data.size * (asset.data.unitValue || 0);
             }
 
-            return valuation;
+            asset.data.assetValue = Math.round(asset.data.assetValue * 100) / 100;
+        },
+        getApplicableGuidelines: function (guidelines, asset, field) {
+            var assetLandUse = assetHelper.getAssetLandUse(asset.type);
+            var chain = underscore.chain(guidelines).filter(function(item) {
+                return (assetLandUse.indexOf(item.assetClass) !== -1);
+            });
+
+            if (asset.type === 'cropland') {
+                chain = chain.filter(function (item) {
+                    return (field.irrigated === true && item.assetClass === 'Irrigated Cropland') ||
+                        (field.irrigated !== true && item.assetClass === 'Cropland' &&
+                            (item.soilPotential === undefined || item.soilPotential === field.croppingPotential));
+                });
+            } else if (asset.type === 'pasture' || asset.type === 'wasteland') {
+                chain = chain.where({assetClass: field.landUse}).filter(function (item) {
+                    return ((asset.data.crop === undefined && item.crop === undefined) || (item.crop !== undefined && item.crop.indexOf(asset.data.crop) !== -1)) &&
+                        ((field.terrain === undefined && item.terrain === undefined) || item.terrain === field.terrain);
+                });
+            } else if (asset.type === 'permanent crop') {
+                var establishedDate = new Date(Date.parse(asset.data.establishedDate));
+                var monthsFromEstablised = monthDiff(establishedDate, new Date());
+
+                chain = chain.filter(function (item) {
+                    return (item.crop === undefined || item.crop.indexOf(asset.data.crop) !== -1) &&
+                        (item.irrigationType === undefined || item.irrigationType.indexOf(field.irrigation) !== -1) &&
+                        (item.minAge === undefined || monthsFromEstablised >= item.minAge) &&
+                        (item.maxAge === undefined || monthsFromEstablised < item.maxAge);
+                });
+            } else if (asset.type === 'plantation') {
+                chain = chain.filter(function (item) {
+                    return (item.crop === undefined || item.crop.indexOf(asset.data.crop) !== -1);
+                });
+            } else if (asset.type === 'water right') {
+                chain = chain.filter(function (item) {
+                    return (item.waterSource === undefined || item.waterSource.indexOf(asset.data.waterSource) !== -1);
+                });
+            }
+
+            return chain.value();
         }
     }
-});
+}]);
