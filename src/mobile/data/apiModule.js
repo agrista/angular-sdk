@@ -801,6 +801,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
         var assetApi = api({
             plural: 'assets',
             singular: 'asset',
+            strip: ['farm', 'legalEntity'],
             hydrate: function (obj, relations) {
                 relations = (relations instanceof Array ? relations : []);
                 return hydration.hydrate(obj, 'asset', relations);

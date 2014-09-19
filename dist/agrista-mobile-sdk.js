@@ -2399,6 +2399,43 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     }
 }]);
+var sdkHelperExpenseApp = angular.module('ag.sdk.helper.expense', ['ag.sdk.library']);
+
+sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore) {
+    var _expenseTypes = {
+        area: 'Area',
+        distance: 'Distance',
+        hours: 'Hours'
+    };
+
+    var _expenseUnits = {
+        area: 'Ha',
+        distance: 'km',
+        hours: 'h'
+    };
+
+    var _expenseAction = {
+        area: 'inspected',
+        distance: 'travelled',
+        hours: 'worked'
+    };
+
+    return {
+        expenseTypes: function () {
+            return _expenseTypes;
+        },
+
+        getExpenseTitle: function (type) {
+            return _expenseTypes[type] || '';
+        },
+        getExpenseUnit: function (type) {
+            return _expenseUnits[type] || '';
+        },
+        getExpenseAction: function (type) {
+            return _expenseAction[type] || '';
+        }
+    };
+}]);
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
@@ -7739,6 +7776,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
         var assetApi = api({
             plural: 'assets',
             singular: 'asset',
+            strip: ['farm', 'legalEntity'],
             hydrate: function (obj, relations) {
                 relations = (relations instanceof Array ? relations : []);
                 return hydration.hydrate(obj, 'asset', relations);
@@ -8817,6 +8855,7 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
+    'ag.sdk.helper.expense',
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
