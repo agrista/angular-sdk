@@ -2102,7 +2102,16 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         Goats: 'Ewe (2-tooth plus)'
     };
 
-    var _baseConversionRates = {
+    var _baseAnimal = {
+        'Cattle (Extensive)': 'Cattle',
+        'Cattle (Feedlot)': 'Cattle',
+        'Cattle (Stud)': 'Cattle',
+        'Sheep (Extensive)': 'Sheep',
+        'Sheep (Feedlot)': 'Sheep',
+        'Sheep (Stud)': 'Sheep'
+    };
+
+    var _conversionRate = {
         Cattle: {
             'Calf': 0.32,
             'Weaner calves': 0.44,
@@ -2125,16 +2134,6 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             'Castrate (2-tooth plus)': 0.17,
             'Ram (2-tooth plus)': 0.12
         }
-    };
-
-    var _conversionRate = {
-        'Cattle (Extensive)': _baseConversionRates.Cattle,
-        'Cattle (Feedlot)': _baseConversionRates.Cattle,
-        'Cattle (Stud)': _baseConversionRates.Cattle,
-        'Goats': _baseConversionRates.Goats,
-        'Sheep (Extensive)': _baseConversionRates.Sheep,
-        'Sheep (Feedlot)': _baseConversionRates.Sheep,
-        'Sheep (Stud)': _baseConversionRates.Sheep
     };
 
     var _horticultureStages = {
@@ -2163,18 +2162,22 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         budget.data.sections = budget.data.sections || [];
     }
 
+    function getBaseAnimal (commodityType) {
+        return _baseAnimal[commodityType] || commodityType;
+    }
+
     return {
         listServiceMap: function () {
             return _listServiceMap;
         },
         getRepresentativeAnimal: function(commodityType) {
-            return _representativeAnimal[commodityType];
+            return _representativeAnimal[getBaseAnimal(commodityType)];
         },
         getConversionRate: function(commodityType) {
-            return _conversionRate[commodityType][_representativeAnimal[commodityType]];
+            return _conversionRate[getBaseAnimal(commodityType)][_representativeAnimal[getBaseAnimal(commodityType)]];
         },
         getConversionRates: function(commodityType) {
-            return _conversionRate[commodityType];
+            return _conversionRate[getBaseAnimal(commodityType)];
         },
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];
@@ -2183,7 +2186,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             var categories = {};
 
             if(assetType == 'livestock' && _categoryOptions[assetType][commodityType]) {
-                categories = angular.copy(_categoryOptions[assetType][commodityType][sectionType]) || {};
+                categories = angular.copy(_categoryOptions[assetType][getBaseAnimal(commodityType)][sectionType]) || {};
             }
 
             if(assetType == 'crop' && _categoryOptions[assetType][sectionType]) {
@@ -2322,7 +2325,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             checkBudgetTemplate(budget);
 
             if(budget.assetType == 'livestock') {
-                budget.data.details.calculatedLSU = budget.data.details.herdSize * _conversionRate[budget.commodityType][_representativeAnimal[budget.commodityType]];
+                budget.data.details.calculatedLSU = budget.data.details.herdSize *
+                    _conversionRate[getBaseAnimal(budget.commodityType)][_representativeAnimal[getBaseAnimal(budget.commodityType)]];
             }
 
             var income = 0;
@@ -2359,7 +2363,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                             category.value = category.pricePerUnit * groupSum / 100;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         } else {
                             if(category.unit == 'Total') {
@@ -2369,7 +2373,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                             category.value = category.pricePerUnit * category.quantity;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         }
 
