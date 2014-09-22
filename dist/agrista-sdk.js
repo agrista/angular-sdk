@@ -3374,8 +3374,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
 
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
-                if(_conversionRate[budget.commodityType][category.name]) {
-                    category.conversionRate = _conversionRate[budget.commodityType][category.name];
+                if(_conversionRate[getBaseAnimal(budget.commodityType)][category.name]) {
+                    category.conversionRate = _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                 }
             }
 
