@@ -643,7 +643,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         Goats: 'Ewe (2-tooth plus)'
     };
 
-    var _conversionRate = {
+    var _baseConversionRates = {
         Cattle: {
             'Calf': 0.32,
             'Weaner calves': 0.44,
@@ -668,6 +668,16 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
+    var _conversionRate = {
+        'Cattle (Extensive)': _baseConversionRates.Cattle,
+        'Cattle (Feedlot)': _baseConversionRates.Cattle,
+        'Cattle (Stud)': _baseConversionRates.Cattle,
+        'Goats': _baseConversionRates.Goats,
+        'Sheep (Extensive)': _baseConversionRates.Sheep,
+        'Sheep (Feedlot)': _baseConversionRates.Sheep,
+        'Sheep (Stud)': _baseConversionRates.Sheep
+    };
+
     var _horticultureStages = {
         'Pears': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
         'Apples': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
@@ -676,7 +686,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         'Peaches': ['1-2 years', '3-5 years', '5-8 years', '8+ years'],
         'Stone Fruit': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
         'Grapes': ['0-1 years', '1-2 years', '2-3 years', '3+ years'],
-        'Citrus': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
+        'Oranges': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
         'Macadamia': ['0-1 years', '2-3 years', '4-6 years', '7-9 years','10+ years']
     }
 

@@ -1128,31 +1128,41 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
 
 var sdkHelperAttachmentApp = angular.module('ag.sdk.helper.attachment', ['ag.sdk.library']);
 
-sdkHelperAttachmentApp.factory('attachmentHelper', ['underscore', function (underscore) {
-    var _getResizedAttachment = function (attachments, size) {
-        if (attachments !== undefined) {
-            if ((attachments instanceof Array) == false) {
-                attachments = [attachments];
-            }
-
-            return underscore.chain(attachments)
-                .filter(function (attachment) {
-                    return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
-                }).map(function (attachment) {
-                    return attachment.sizes[size].src;
-                }).last().value();
-        }
-
-        return attachments;
+sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (underscore) {
+    var _options = {
+        defaultImage: 'img/camera.png'
     };
 
-    return {
-        getSize: function (attachments, size) {
-            return _getResizedAttachment(attachments, size);
-        },
-        getThumbnail: function (attachments) {
-            return _getResizedAttachment(attachments, 'thumb');
-        }
+    this.config = function (options) {
+        _options = underscore.defaults(options || {}, _options);
+    };
+
+    this.$get = function () {
+        var _getResizedAttachment = function (attachments, size) {
+            if (attachments !== undefined) {
+                if ((attachments instanceof Array) == false) {
+                    attachments = [attachments];
+                }
+
+                return underscore.chain(attachments)
+                    .filter(function (attachment) {
+                        return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
+                    }).map(function (attachment) {
+                        return attachment.sizes[size].src;
+                    }).last().value();
+            }
+
+            return attachments;
+        };
+
+        return {
+            getSize: function (attachments, size) {
+                return _getResizedAttachment(attachments, size) || _options.defaultImage;
+            },
+            getThumbnail: function (attachments) {
+                return _getResizedAttachment(attachments, 'thumb') || _options.defaultImage;
+            }
+        };
     };
 }]);
 
@@ -2092,7 +2102,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         Goats: 'Ewe (2-tooth plus)'
     };
 
-    var _conversionRate = {
+    var _baseConversionRates = {
         Cattle: {
             'Calf': 0.32,
             'Weaner calves': 0.44,
@@ -2117,6 +2127,16 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
+    var _conversionRate = {
+        'Cattle (Extensive)': _baseConversionRates.Cattle,
+        'Cattle (Feedlot)': _baseConversionRates.Cattle,
+        'Cattle (Stud)': _baseConversionRates.Cattle,
+        'Goats': _baseConversionRates.Goats,
+        'Sheep (Extensive)': _baseConversionRates.Sheep,
+        'Sheep (Feedlot)': _baseConversionRates.Sheep,
+        'Sheep (Stud)': _baseConversionRates.Sheep
+    };
+
     var _horticultureStages = {
         'Pears': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
         'Apples': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
@@ -2125,7 +2145,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         'Peaches': ['1-2 years', '3-5 years', '5-8 years', '8+ years'],
         'Stone Fruit': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
         'Grapes': ['0-1 years', '1-2 years', '2-3 years', '3+ years'],
-        'Citrus': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
+        'Oranges': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
         'Macadamia': ['0-1 years', '2-3 years', '4-6 years', '7-9 years','10+ years']
     }
 
@@ -2523,8 +2543,8 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
     var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];
 
     var _enterpriseTypes = {
-        'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        'Horticulture': ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
+        'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
+        'Horticulture': ['Almonds', 'Apples', 'Apricots', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
         'Livestock': ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
 
