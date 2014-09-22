@@ -2011,7 +2011,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 },
                 expenses: {
                     'Replacements': [
-                        _categories['EXP-RPM-GID'],
+                        _categories['EXP-RPM-GKID'],
                         _categories['EXP-RPM-GWEAN'],
                         _categories['EXP-RPM-GEWE'],
                         _categories['EXP-RPM-GCAST'],
