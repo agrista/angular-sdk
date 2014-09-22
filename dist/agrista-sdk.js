@@ -3269,14 +3269,13 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
     }
 
     function checkBudgetSection (budget, stage) {
-        angular.forEach(_sections, function (section) {
-            var foundSection = underscore.findWhere(budget.data.sections, {code: section.code, horticultureStage: stage});
+        angular.forEach(['income', 'expenses'], function (section) {
+            var foundSection = underscore.findWhere(budget.data.sections, {code: _sections[section].code, horticultureStage: stage});
 
             if (foundSection === undefined) {
                 foundSection = {
-                    code: section.code,
-                    horticultureStage: stage,
-                    name: section.name,
+                    code: _sections[section].code,
+                    name: _sections[section].name,
                     productCategoryGroups: [],
                     total: {
                         value: 0
