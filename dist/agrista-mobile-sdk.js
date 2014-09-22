@@ -2185,7 +2185,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         getCategories: function (budget, assetType, commodityType, sectionType, horticultureStage) {
             var categories = {};
 
-            if(assetType == 'livestock' && _categoryOptions[assetType][commodityType]) {
+            if(assetType == 'livestock' && _categoryOptions[assetType][getBaseAnimal(commodityType)]) {
                 categories = angular.copy(_categoryOptions[assetType][getBaseAnimal(commodityType)][sectionType]) || {};
             }
 
