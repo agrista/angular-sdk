@@ -610,6 +610,13 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
+        relateDocuments: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/document/' + id + '/relate', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/document/' + data.id, _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
