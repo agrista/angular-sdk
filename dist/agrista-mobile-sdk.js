@@ -3750,7 +3750,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                 return {
                     id: task.id || item.__id,
                     title: item.organization.name,
-                    subtitle: _getTaskTitle(task.todo),
+                    subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,
                     groupby: title,
                     status: {
@@ -3781,8 +3781,10 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
         return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
-    var _getTaskTitle = function (taskType) {
-        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
+    var _getTaskTitle = function (taskType, task) {
+        var taskMap = _taskTodoMap[taskType];
+
+        return (taskMap !== undefined ? (typeof taskMap.title == 'string' ? taskMap.title : taskMap.title(task)) : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {

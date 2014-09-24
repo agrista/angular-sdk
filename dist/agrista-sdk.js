@@ -610,6 +610,13 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
+        relateDocuments: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/document/' + id + '/relate', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/document/' + data.id, _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
@@ -4852,7 +4859,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                 return {
                     id: task.id || item.__id,
                     title: item.organization.name,
-                    subtitle: _getTaskTitle(task.todo),
+                    subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,
                     groupby: title,
                     status: {
@@ -4883,8 +4890,10 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
         return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
-    var _getTaskTitle = function (taskType) {
-        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
+    var _getTaskTitle = function (taskType, task) {
+        var taskMap = _taskTodoMap[taskType];
+
+        return (taskMap !== undefined ? (typeof taskMap.title == 'string' ? taskMap.title : taskMap.title(task)) : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
