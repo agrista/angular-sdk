@@ -6076,7 +6076,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     Mapbox.prototype.setBounds = function (bounds) {
         if (this._map && bounds.coordinates) {
             if (bounds.coordinates instanceof Array) {
-                this._map.fitBounds((bounds.coordinates.length > 1 ? bounds.coordinates : bounds.coordinates.concat(bounds.coordinates)), bounds.options);
+                if (bounds.coordinates.length > 1) {
+                    this._map.fitBounds(bounds.coordinates, bounds.options);
+                } else if (bounds.coordinates.length == 1) {
+                    this._map.fitBounds(bounds.coordinates.concat(bounds.coordinates), bounds.options);
+                }
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
             }
