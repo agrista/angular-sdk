@@ -731,20 +731,24 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
 /**
  * Agrista API
  */
-sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
         getMerchants: function () {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/merchants', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/providers', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchMerchants: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/merchants?search=' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
