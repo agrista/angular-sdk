@@ -1107,6 +1107,22 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
     };
 }]);
 
+/**
+ * Import API
+ */
+sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        importData: function(data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/data-import', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
