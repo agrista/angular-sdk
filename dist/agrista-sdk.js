@@ -1901,6 +1901,41 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
+    var _assetTitle = function (asset) {
+        if (asset.data) {
+            switch (asset.type) {
+                case 'crop':
+                case 'permanent crop':
+                case 'plantation':
+                    return (asset.data.plantedArea ? $filter('number')(asset.data.plantedArea, 2) + 'Ha' : '') +
+                       (asset.data.plantedArea && asset.data.crop ? ' of ' : '') +
+                       (asset.data.crop ? asset.data.crop : '') +
+                       (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'farmland':
+                    return (asset.data.portionLabel ? asset.data.portionLabel :
+                        (asset.data.portionNumber ? 'Portion ' + asset.data.portionNumber : 'Remainder of farm'));
+                case 'improvement':
+                    return asset.data.name;
+                case 'cropland':
+                    return (asset.data.irrigated ? asset.data.irrigation + ' from ' + asset.data.waterSource : 'Non irrigable ' + asset.type) +
+                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'livestock':
+                    return asset.data.type + (asset.data.category ? ' - ' + asset.data.category : '');
+                case 'pasture':
+                    return (asset.data.crop ? asset.data.crop : 'Natural') +
+                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'vme':
+                    return asset.data.category + (asset.data.model ? ' model ' + asset.data.model : '');
+                case 'wasteland':
+                    return 'Wasteland';
+                case 'water source':
+                    return asset.data.waterSource + (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+            }
+        }
+
+        return _assetTypes[type];
+    };
+
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -1910,52 +1945,51 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
         if (item.data) {
             if (item.type == 'crop') {
-                map.title = (item.data.plantedArea ? item.data.plantedArea.toFixed(2) + 'Ha of ' : '') + (item.data.crop ? item.data.crop : '') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.season ? item.data.season : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'farmland') {
-                map.title = (item.data.portionLabel? item.data.portionLabel :
-                    (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm'));
-                map.subtitle = (item.data.area !== undefined ? 'Area: ' + item.data.area.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.area !== undefined ? 'Area: ' + $filter('number')(item.data.area, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
-                map.title = item.data.name;
+                map.title = _assetTitle(item);
                 map.subtitle = item.data.type + ' - ' + item.data.category;
                 map.summary = (item.data.description || '');
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
-                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : 'Non irrigable ' + item.type) + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
-                map.title = item.data.type + ' - ' + item.data.category;
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.breed ? item.data.breed + ' for ' : 'For ') + item.data.purpose;
                 map.summary = (item.data.description || '');
                 map.groupby = item.data.type;
             } else if (item.type == 'pasture') {
-                map.title = (item.data.crop ? item.data.crop : 'Natural') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.plantedDate ? 'Planted: ' + $filter('date')(item.data.plantedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'permanent crop') {
-                map.title = item.data.crop + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.establishedDate ? 'Established: ' + $filter('date')(item.data.establishedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'plantation') {
-                map.title = item.data.crop + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.establishedDate ? 'Established: ' + $filter('date')(item.data.establishedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'vme') {
-                map.title = item.data.category + (item.data.model ? ' model ' + item.data.model : '');
+                map.title = _assetTitle(item);
                 map.subtitle = 'Quantity: ' + item.data.quantity;
                 map.summary = (item.data.description || '');
                 map.groupby = item.data.type;
             } else if (item.type == 'wasteland') {
-                map.title = 'Wasteland';
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'water right') {
-                map.title = item.data.waterSource + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             }
 
@@ -2082,8 +2116,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         listServiceMap: function () {
             return _listServiceMap;
         },
-        getAssetTitle: function (type) {
+        getAssetClass: function (type) {
             return _assetTypes[type];
+        },
+        getAssetTitle: function (asset) {
+            return _assetTitle(asset);
         },
         getAssetLandUse: function (type) {
             return _assetLandUse[type];
