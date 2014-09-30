@@ -971,6 +971,13 @@ sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseServi
                 }
             }
             return pagingService.page(_host + url, params);
+        },
+        updateExpense: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/expense/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
