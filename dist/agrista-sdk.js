@@ -964,7 +964,7 @@ sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseServi
         getExpenses: function (params) {
             var url = 'api/expenses';
             if(params) {
-                if(params.key && params.id) {
+                if(params.key && (params.id != undefined && params.id > -1)) {
                     url += '/' + params.id + '/' + params.key;
                     delete params.key;
                     delete params.id;
