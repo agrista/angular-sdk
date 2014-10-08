@@ -55,14 +55,11 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         'Maize (Yellow)': _seedTypeTable[0]
     };
 
-    var _policyTypes = {
-        'hail': 'Hail',
-        'multi peril': 'Multi Peril'
-    };
+    var _policyTypes = ['Hail', 'Multi Peril'];
 
     var _policyInspections = {
-        'hail': ['hail inspection'],
-        'multi peril': underscore.keys(_inspectionTypes)
+        'Hail': ['hail inspection'],
+        'Multi Peril': underscore.keys(_inspectionTypes)
     };
 
     var _problemTypes = {
@@ -119,9 +116,6 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         },
         getInspectionTitle: function (type) {
             return _inspectionTypes[type] || '';
-        },
-        getPolicyTitle: function (type) {
-            return _policyTypes[type] || '';
         },
         getProblemTitle: function (type) {
             return _problemTypes[type] || '';
