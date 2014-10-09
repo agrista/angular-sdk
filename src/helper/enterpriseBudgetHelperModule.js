@@ -5,7 +5,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
+            status: (item.published ? {text: 'published', label: 'label-success'} : false)
         }
     };
 

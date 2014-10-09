@@ -2238,7 +2238,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
+            status: (item.published ? {text: 'published', label: 'label-success'} : false)
         }
     };
 
@@ -4293,7 +4294,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         length: function () {
             return _items.length;
         },
-        addItems: function(items) {
+        addItems: function(items, top) {
             if (items !== undefined) {
                 if ((items instanceof Array) === false) {
                     items = [items];
@@ -4317,7 +4318,11 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                         }
 
                         if (found == false) {
-                            _items.push(item);
+                            if (top === true) {
+                                _items.unshift(item);
+                            } else {
+                                _items.push(item);
+                            }
                         }
                     } else {
                         _items[item.id] = item;
