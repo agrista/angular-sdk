@@ -5909,7 +5909,6 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             },
             zone: {
                 icon: _markerIcons.zone.success,
-                draggable: true,
                 style: {
                     weight: 4,
                     color: 'white',
