@@ -1888,11 +1888,11 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
                 $cookieStore.put(key, value);
             }
         },
-        getItem: function (key) {
+        getItem: function (key, defaultValue) {
             if ($window.localStorage) {
-                return JSON.parse($window.localStorage.getItem(key));
+                return JSON.parse($window.localStorage.getItem(key)) || defaultValue;
             } else {
-                return $cookieStore.get(key);
+                return $cookieStore.get(key) || defaultValue;
             }
         },
         removeItem: function (key) {
@@ -2101,18 +2101,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'water right': ['Water Right']
     };
 
-    var _commodityTypes = {
-        crop: 'Field Crops',
-        horticulture: 'Horticulture',
-        livestock: 'Livestock'
-    };
-
-    var _commodities = {
-        crop: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        horticulture: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
-        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
-    };
-
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -2141,27 +2129,15 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
         },
-        getCommodities: function (type) {
-            return _commodities[type] || '';
-        },
         getZoneTitle: function (zone) {
             return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
-        },
-
-        commodityTypes: function() {
-            return _commodityTypes;
-        },
-        commodities: function() {
-            return _commodities;
         },
         conditionTypes: function () {
             return _conditionTypes;
         },
-
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
-
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
                 (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
@@ -4091,17 +4067,41 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
+    var _commodityTypes = {
+        crop: 'Field Crops',
+        horticulture: 'Horticulture',
+        livestock: 'Livestock'
+    };
+
+    var _commodities = {
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+};
+
     var _horticultureStages = {
-        'Pears': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Apples': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Olives': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Pecan nuts': ['1-2 years', '4-5 years', '6-8 years', '8+ years'],
-        'Peaches': ['1-2 years', '3-5 years', '5-8 years', '8+ years'],
-        'Stone Fruit': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Grapes': ['0-1 years', '1-2 years', '2-3 years', '3+ years'],
-        'Oranges': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Macadamia': ['0-1 years', '2-3 years', '4-6 years', '7-9 years','10+ years']
-    }
+        'Apple': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Apricot': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Avocado': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Blueberry': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Citrus (Hardpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Citrus (Softpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Fig': ['0-1 years', '1-3 years', '3-6 years', '6-18 years', '18-30 years', '30+ years'],
+        'Grape (Table)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Grape (Wine)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Macadamia Nut': ['0-1 years', '1-3 years', '3-6 years', '6-9 years','10+ years'],
+        'Mango': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Nectarine': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Olive': ['0-1 years', '1-3 years', '3-5 years', '5-10 years', '10+ years'],
+        'Orange': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Pecan Nut': ['0-1 years', '1-3 years', '3-7 years', '7-10 years', '10+ years'],
+        'Peach': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pear': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Persimmon': ['0-1 years', '1-4 years', '4-12 years', '12-20 years', '20+ years'],
+        'Plum': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pomegranate': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Rooibos': ['0-1 years', '1-2 years', '2-4 years', '4-5 years', '5+ years']
+    };
 
     var _productsMap = {
         'INC-PDS-MILK': {
@@ -4151,6 +4151,12 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         listServiceMap: function () {
             return _listServiceMap;
         },
+        commodityTypes: function() {
+            return _commodityTypes;
+        },
+        commodities: function() {
+            return _commodities;
+        },
         getRepresentativeAnimal: function(commodityType) {
             return _representativeAnimal[getBaseAnimal(commodityType)];
         },
@@ -4159,6 +4165,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         getConversionRates: function(commodityType) {
             return _conversionRate[getBaseAnimal(commodityType)];
+        },
+        getCommodities: function (type) {
+            return _commodities[type] || '';
         },
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];

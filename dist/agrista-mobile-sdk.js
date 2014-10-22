@@ -752,11 +752,11 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
                 $cookieStore.put(key, value);
             }
         },
-        getItem: function (key) {
+        getItem: function (key, defaultValue) {
             if ($window.localStorage) {
-                return JSON.parse($window.localStorage.getItem(key));
+                return JSON.parse($window.localStorage.getItem(key)) || defaultValue;
             } else {
-                return $cookieStore.get(key);
+                return $cookieStore.get(key) || defaultValue;
             }
         },
         removeItem: function (key) {
@@ -965,18 +965,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'water right': ['Water Right']
     };
 
-    var _commodityTypes = {
-        crop: 'Field Crops',
-        horticulture: 'Horticulture',
-        livestock: 'Livestock'
-    };
-
-    var _commodities = {
-        crop: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        horticulture: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
-        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
-    };
-
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -1005,27 +993,15 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
         },
-        getCommodities: function (type) {
-            return _commodities[type] || '';
-        },
         getZoneTitle: function (zone) {
             return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
-        },
-
-        commodityTypes: function() {
-            return _commodityTypes;
-        },
-        commodities: function() {
-            return _commodities;
         },
         conditionTypes: function () {
             return _conditionTypes;
         },
-
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
-
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
                 (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
@@ -2955,17 +2931,41 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
+    var _commodityTypes = {
+        crop: 'Field Crops',
+        horticulture: 'Horticulture',
+        livestock: 'Livestock'
+    };
+
+    var _commodities = {
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+};
+
     var _horticultureStages = {
-        'Pears': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Apples': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Olives': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Pecan nuts': ['1-2 years', '4-5 years', '6-8 years', '8+ years'],
-        'Peaches': ['1-2 years', '3-5 years', '5-8 years', '8+ years'],
-        'Stone Fruit': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Grapes': ['0-1 years', '1-2 years', '2-3 years', '3+ years'],
-        'Oranges': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Macadamia': ['0-1 years', '2-3 years', '4-6 years', '7-9 years','10+ years']
-    }
+        'Apple': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Apricot': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Avocado': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Blueberry': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Citrus (Hardpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Citrus (Softpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Fig': ['0-1 years', '1-3 years', '3-6 years', '6-18 years', '18-30 years', '30+ years'],
+        'Grape (Table)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Grape (Wine)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Macadamia Nut': ['0-1 years', '1-3 years', '3-6 years', '6-9 years','10+ years'],
+        'Mango': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Nectarine': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Olive': ['0-1 years', '1-3 years', '3-5 years', '5-10 years', '10+ years'],
+        'Orange': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Pecan Nut': ['0-1 years', '1-3 years', '3-7 years', '7-10 years', '10+ years'],
+        'Peach': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pear': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Persimmon': ['0-1 years', '1-4 years', '4-12 years', '12-20 years', '20+ years'],
+        'Plum': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pomegranate': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Rooibos': ['0-1 years', '1-2 years', '2-4 years', '4-5 years', '5+ years']
+    };
 
     var _productsMap = {
         'INC-PDS-MILK': {
@@ -3015,6 +3015,12 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         listServiceMap: function () {
             return _listServiceMap;
         },
+        commodityTypes: function() {
+            return _commodityTypes;
+        },
+        commodities: function() {
+            return _commodities;
+        },
         getRepresentativeAnimal: function(commodityType) {
             return _representativeAnimal[getBaseAnimal(commodityType)];
         },
@@ -3023,6 +3029,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         getConversionRates: function(commodityType) {
             return _conversionRate[getBaseAnimal(commodityType)];
+        },
+        getCommodities: function (type) {
+            return _commodities[type] || '';
         },
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];
@@ -7943,80 +7952,81 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
     this.$get = ['$http', '$log', 'assetApi', 'configuration', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskApi',
         function ($http, $log, assetApi, configuration, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, pagingService, promiseService, taskApi) {
-            function _getFarmers (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+            function _getFarmers (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
 
                 return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return farmerApi.getFarmers({paging: page, options: _options.remote});
+                            return farmerApi.getFarmers({params: page, options: _options.remote});
                         }, function (farmers) {
                             if (paging.complete) {
                                 promise.resolve();
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getDocuments (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+            function _getDocuments (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
 
                 return documentApi.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return documentApi.getDocuments({paging: page, options: _options.remote});
+                            return documentApi.getDocuments({params: page, options: _options.remote});
                         }, function (documents) {
                             if (paging.complete) {
                                 promise.resolve();
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getExpenses (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'simple'};
+            function _getExpenses (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'full'};
 
                 return expenseApi.purgeExpense({template: 'expenses', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return expenseApi.getExpenses({paging: page, options: _options.remote});
+                            return expenseApi.getExpenses({params: page, options: _options.remote});
                         }, function (expenses) {
                             if (paging.complete) {
                                 promise.resolve();
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getTasks (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+            function _getTasks (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
 
                 return taskApi.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return taskApi.getTasks({paging: page, options: _options.remote});
+                            return taskApi.getTasks({params: page, options: _options.remote});
                         }, function (tasks) {
                             if (paging.complete) {
-                                promise.resolve();
+                                taskApi.getTasks({options: {fallbackRemote: true, hydrate: ['organization', 'subtasks']}})
+                                    .then(promise.resolve, promise.reject);
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
@@ -8325,24 +8335,25 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @param req.search {String} Optional
              * @param req.id {Number} Optional
              * @param req.options {Object} Optional
-             * @param req.paging {Object} Optional
+             * @param req.params {Object} Optional
              * @returns {Promise}
              */
             getItems: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
+                req.options = underscore.defaults(req.options || {}, {one: false});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.template) {
-                        return tx.getItems({template: req.template, schema: req.schema, options: req.options, paging: req.paging});
+                        return tx.getItems({template: req.template, schema: req.schema, options: req.options, params: req.params});
                     } else if (req.search) {
                         req.options.readLocal = false;
                         req.options.readRemote = true;
 
-                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, paging: req.paging});
+                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, params: req.params});
                     } else if (req.id) {
-                        return tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, paging: req.paging});
+                        return tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, params: req.params});
                     } else {
-                        return tx.getItems({template: options.plural, options: req.options, paging: req.paging});
+                        return tx.getItems({template: options.plural, options: req.options, params: req.params});
                     }
                 });
             },
@@ -8356,7 +8367,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             createItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -8375,7 +8386,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             getItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.id) {
@@ -8396,7 +8407,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             findItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.key) {
@@ -8414,7 +8425,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             updateItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -8433,7 +8444,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             postItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -8450,7 +8461,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             deleteItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -8469,7 +8480,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             purgeItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     return tx.purgeItems({template: req.template, schema: req.schema, options: req.options});
@@ -8541,7 +8552,7 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.subtasks, function (subtask) {
-                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: false, dirty: false}}));
+                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -8606,7 +8617,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
                 if (obj.organization) {
                     obj.organization.id = obj.organization.id || obj.organizationId;
 
-                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: false, dirty: false}}).then(promise.resolve, promise.reject);
+                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}).then(promise.resolve, promise.reject);
                 } else {
                     promise.resolve(obj);
                 }
@@ -8664,7 +8675,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.legalEntities, function (entity) {
-                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: false, dirty: false}}));
+                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -8721,7 +8732,7 @@ mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationPro
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.farms, function (farm) {
-                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: false, dirty: false}}));
+                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -8762,7 +8773,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.assets, function (asset) {
-                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: false, dirty: false}}));
+                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -8806,7 +8817,7 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
 
     hydrationProvider.registerDehydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type) {
-            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: false, dirty: false}});
+            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}});
         }
     }]);
 
@@ -8994,6 +9005,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'p
             return underscore.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
                 __id: item.id,
                 __uri: item.uri,
+                __complete: (item.complete == 1),
                 __dirty: (item.dirty == 1),
                 __local: (item.local == 1),
                 __saved: true
@@ -9003,9 +9015,10 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'p
             return {
                 id: item.__id,
                 uri: item.__uri,
+                complete: item.__complete,
                 dirty: item.__dirty,
                 local: item.__local,
-                data: underscore.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
+                data: underscore.omit(item, ['__id', '__uri', '__complete', '__dirty', '__local', '__saved'])
             };
         },
         transactionPromise: function(db) {
@@ -9084,8 +9097,22 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
          * @returns {Database}
          * @private
          */
-        function _initializeDatabase(idCallback) {
-            var migrationSteps = [];
+        function _initializeDatabase() {
+            var migrationSteps = [{
+                current: '',
+                next: '1',
+                process: function (tx) {
+                    dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
+                        for (var i = 0; i < res.rows.length; i++) {
+                            var table = res.rows.item(i);
+
+                            if (table.name.indexOf('__') === -1) {
+                                dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN complete INT DEFAULT 1');
+                            }
+                        }
+                    });
+                }
+            }];
 
             function _processMigration(db) {
                 $log.debug('_processMigration');
@@ -9097,21 +9124,20 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     if (migration.current === db.version) {
                         $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
 
-                        db.changeVersion(migration.current, migration.next, migration.process, function () {
-                            idCallback();
-                        }, function () {
+                        db.changeVersion(migration.current, migration.next, migration.process, null, function () {
                             $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
+
                             _processMigration(db);
                         });
                     } else {
                         _processMigration(db);
                     }
-                } else {
-                    idCallback(db);
                 }
             }
 
-            _processMigration(window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576));
+            _localDatabase = window.openDatabase(_defaultOptions.dbName, '1', _defaultOptions.dbName, 4 * 1048576, function (db) {
+                _processMigration(db);
+            });
         }
 
         /**
@@ -9181,7 +9207,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             function _initializeTable() {
                 return dataStoreUtilities.transactionPromise(_localDatabase).then(function (tx) {
                     return promiseService.all([
-                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', []),
+                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, complete INT DEFAULT 0, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', []),
                         dataStoreUtilities.executeSqlPromise(tx, 'CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [])
                     ])
                 }, promiseService.throwError);
@@ -9214,8 +9240,10 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              * Local data storage
              */
 
-            var _getLocal = function (uri, options) {
+            var _getLocal = function (uri, request) {
                 $log.debug('_getLocal');
+
+                request.options = request.options || {};
 
                 return dataStoreUtilities
                     .transactionPromise(_localDatabase)
@@ -9225,7 +9253,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {
                             for (var i = 0; i < res.rows.length; i++) {
-                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options.hydrate));
+                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), request.options.hydrate));
                             }
                         });
                     }, promiseService.throwError);
@@ -9248,24 +9276,24 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     }, promiseService.throwError);
             };
 
-            var _syncLocal = function (dataItems, uri, options) {
+            var _syncLocal = function (dataItems, uri, request) {
                 $log.debug('_syncLocal');
 
                 return _deleteAllLocal(uri)
                     .then(function () {
-                        return _updateLocal(dataItems);
+                        return _updateLocal(dataItems, {});
                     }, promiseService.throwError)
                     .then(function () {
-                        return _getLocal(uri, options);
+                        return _getLocal(uri, request);
                     }, promiseService.throwError);
             };
 
-            var _updateLocal = function (dataItems, options) {
+            var _updateLocal = function (dataItems, request) {
                 $log.debug('_updateLocal');
 
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                options = underscore.defaults(options || {}, {
+                request.options = underscore.defaults(request.options || {}, {
                     replace: true,
                     force: false
                 });
@@ -9276,24 +9304,26 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         return promiseService
                             .wrapAll(function (promises) {
                                 angular.forEach(dataItems, function (dataItem) {
-                                    promises.push(_config.dehydrate(dataItem, options.dehydrate).then(function(dehydratedItem) {
+                                    promises.push(_config.dehydrate(dataItem, request.options.dehydrate).then(function(dehydratedItem) {
                                         var item = dataStoreUtilities.extractMetadata(dehydratedItem);
                                         var dataString = JSON.stringify(item.data);
                                         var resolveItem = function () {
-                                            return _config.hydrate(dehydratedItem, options.hydrate);
+                                            return _config.hydrate(dehydratedItem, request.options.hydrate);
                                         };
-                                        item.dirty = (options.dirty === true ? true : item.dirty);
+
+                                        item.dirty = (request.options.dirty === true ? true : item.dirty);
+
                                         return dataStoreUtilities
-                                            .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
+                                            .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, complete, dirty, local) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
                                             .then(resolveItem, function () {
-                                                if (options.replace === true) {
-                                                    if (item.dirty === true || item.local === true || options.force) {
+                                                if (request.options.replace === true) {
+                                                    if (item.dirty === true || item.local === true || request.options.force) {
                                                         return dataStoreUtilities
-                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
                                                             .then(resolveItem);
                                                     } else {
                                                         return dataStoreUtilities
-                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
                                                             .then(resolveItem);
                                                     }
                                                 }
@@ -9350,15 +9380,15 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              * Remote data storage
              */
 
-            var _getRemote = function (uri, options) {
+            var _getRemote = function (uri, request) {
                 $log.debug('_getRemote');
 
-                options = options || {};
+                request.options = request.options || {};
 
                 return promiseService
                     .wrap(function (promise) {
                         if (_config.apiTemplate !== undefined) {
-                            $http.get(_hostApi + uri, {params: options.paging, withCredentials: true})
+                            $http.get(_hostApi + uri, {params: request.params, withCredentials: true})
                                 .then(function (res) {
                                     return (res && res.data ? (res.data instanceof Array ? res.data : [res.data]) : []);
                                 }, promiseService.throwError)
@@ -9367,8 +9397,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         angular.forEach(res, function (item) {
                                             promises.push(_config.dehydrate(dataStoreUtilities.injectMetadata({
                                                 id: _getItemIndex(item),
-                                                uri: options.forceUri || uri,
+                                                uri: request.options.forceUri || uri,
                                                 data: item,
+                                                complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
                                                 dirty: false,
                                                 local: false
                                             }), true));
@@ -9417,6 +9448,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     id: _getItemIndex(res.data, item.id),
                                                     uri: item.uri,
                                                     data: item.data,
+                                                    complete: true,
                                                     dirty: false,
                                                     local: false
                                                 });
@@ -9435,7 +9467,11 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                 });
                             }, promiseService.throwError)
                             .then(function(results) {
-                                return _updateLocal(underscore.compact(results), {force: true});
+                                return _updateLocal(underscore.compact(results), {
+                                    options: {
+                                        force: true
+                                    }
+                                });
                             }, promiseService.throwError)
                             .then(promise.resolve, promise.reject);
                     } else {
@@ -9495,8 +9531,35 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 }
             };
 
-            var _responseFormatter = function (data, asArray) {
-                return (asArray == false && data instanceof Array && data.length > 0 ? data[0] : data);
+            var _responseFormatter = function (data, singular) {
+                return (singular === true && data instanceof Array && data.length > 0 ? data[0] : data);
+            };
+
+            var _handleIncompleteResponse = function (data, request, singular) {
+                request.options.one = true;
+                request.schema = request.schema || {};
+
+                return promiseService
+                    .chain(function (chain) {
+                        angular.forEach(data, function (dataItem) {
+                            chain.push(function () {
+                                if (dataItem.__complete === false && request.options.fallbackRemote) {
+                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
+
+                                    request.options.forceUri = dataItem.__uri;
+
+                                    return _getRemote(uri, request).then(function (res) {
+                                        return _updateLocal(res, request);
+                                    });
+                                } else {
+                                    return dataItem;
+                                }
+                            });
+                        });
+                    })
+                    .then(function (res) {
+                        return _responseFormatter(res, singular);
+                    });
             };
 
             /**
@@ -9526,6 +9589,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         request.options = underscore.defaults(request.options, {
                             replace: true,
                             force: false,
+                            complete: true,
                             dirty: true
                         });
 
@@ -9540,16 +9604,17 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         id: id,
                                         uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                         data: data,
+                                        complete: request.options.complete,
                                         dirty: request.options.dirty,
                                         local: request.options.dirty
                                     }), request.options.dehydrate));
                                 });
                             }, promiseService.throwError)
                             .then(function (results) {
-                                return _updateLocal(underscore.compact(results), request.options);
+                                return _updateLocal(underscore.compact(results), request);
                             }, promiseService.throwError)
                             .then(function (results) {
-                                return _responseFormatter(results, false);
+                                return _responseFormatter(results, true);
                             }, promiseService.throwError);
                     },
                     getItems: function (req) {
@@ -9561,7 +9626,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
 
                         request.options = underscore.defaults(request.options, {
                             fallbackRemote: false,
-                            one: (request.schema.id === undefined),
+                            one: (request.options.one !== undefined ? request.options.one : (request.schema.id !== undefined)),
                             passThrough: false,
                             readLocal: _config.readLocal,
                             readRemote: _config.readRemote
@@ -9578,22 +9643,23 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     id: id,
                                                     uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                                     data: item,
+                                                    complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
                                                     dirty: false,
                                                     local: false
                                                 });
                                             }), request.options.one));
-                                        } else if (request.paging === undefined && request.options.readLocal === true) {
-                                            _syncLocal(res, _uri, request.options).then(function (res) {
+                                        } else if (request.params === undefined && request.options.readLocal === true) {
+                                            _syncLocal(res, _uri, request).then(function (res) {
                                                 promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
-                                            _updateLocal(res, request.options).then(function (res) {
+                                            _updateLocal(res, request).then(function (res) {
                                                 promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         }
                                     }, function (err) {
                                         if (request.options.readLocal === true) {
-                                            _updateLocal(res, request.options).then(function (res) {
+                                            _getLocal(_uri, request).then(function (res) {
                                                 promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
@@ -9609,11 +9675,11 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                 if (request.options.readRemote === true) {
                                     handleRemote(_uri);
                                 } else {
-                                    _getLocal(_uri, request.options).then(function (res) {
+                                    _getLocal(_uri, request).then(function (res) {
                                         if (res.length == 0 && request.options.fallbackRemote === true) {
                                             handleRemote(_uri);
                                         } else {
-                                            promise.resolve(res);
+                                            _handleIncompleteResponse(res, request, request.options.one).then(promise.resolve, promise.reject);
                                         }
                                     }, promise.reject);
                                 }
@@ -9630,12 +9696,13 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
 
                         request.options = underscore.defaults(request.options, {
+                            fallbackRemote: true,
                             like: false,
                             one: false
                         });
 
                         return _findLocal(request.key, request.column, request.options).then(function (res) {
-                            return _responseFormatter(res, false);
+                            return _handleIncompleteResponse(res, request, true);
                         }, promiseService.throwError);
                     },
                     updateItems: function (req) {
@@ -9650,8 +9717,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
 
                         if ((request.data instanceof Array) === false) request.data = [request.data];
 
-                        return _updateLocal(request.data, request.options).then(function (res) {
-                            return _responseFormatter(res, false);
+                        return _updateLocal(request.data, request).then(function (res) {
+                            return _responseFormatter(res, true);
                         }, promiseService.throwError);
                     },
                     postItems: function (req) {
@@ -9664,7 +9731,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         if ((request.data instanceof Array) === false) request.data = [request.data];
 
                         return _updateRemote(request.data, request.template, request.schema).then(function (res) {
-                            return _responseFormatter(res, false);
+                            return _responseFormatter(res, true);
                         }, promiseService.throwError);
                     },
                     removeItems: function (req) {
@@ -9686,7 +9753,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     }
                                 });
                             }).then(function (res) {
-                                return _responseFormatter(res, false);
+                                return _responseFormatter(res, true);
                             }, promiseService.throwError);
                     },
                     purgeItems: function (req) {
@@ -9705,7 +9772,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                             if (request.template !== undefined) {
                                 var _uri = dataStoreUtilities.parseRequest(request.template, request.schema);
 
-                                _getLocal(_uri, request.options)
+                                _getLocal(_uri, request)
                                     .then(function (res) {
                                         var items = underscore.filter(res, function (item) {
                                             return (item.__dirty == false || request.options.force == true);
@@ -9754,13 +9821,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
          * Initialize database
          */
 
-        _initializeDatabase(function (db) {
-            if (db) {
-                _localDatabase = db;
-
-                $log.debug('database initialized');
-            }
-        });
+        _initializeDatabase();
 
         /**
          * @name dataStore
