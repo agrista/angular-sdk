@@ -98,7 +98,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             return taskApi.getTasks({paging: page, options: _options.remote});
                         }, function (tasks) {
                             if (paging.complete) {
-                                promise.resolve();
+                                taskApi.getTasks({options: {fallbackRemote: true, hydrate: ['organization', 'subtasks']}})
+                                    .then(promise.resolve, promise.reject);
                             } else {
                                 paging.request().catch(promise.reject);
                             }
@@ -627,7 +628,7 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.subtasks, function (subtask) {
-                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: false, dirty: false}}));
+                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -692,7 +693,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
                 if (obj.organization) {
                     obj.organization.id = obj.organization.id || obj.organizationId;
 
-                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: false, dirty: false}}).then(promise.resolve, promise.reject);
+                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}).then(promise.resolve, promise.reject);
                 } else {
                     promise.resolve(obj);
                 }
@@ -750,7 +751,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.legalEntities, function (entity) {
-                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: false, dirty: false}}));
+                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -807,7 +808,7 @@ mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationPro
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.farms, function (farm) {
-                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: false, dirty: false}}));
+                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -848,7 +849,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.assets, function (asset) {
-                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: false, dirty: false}}));
+                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -892,7 +893,7 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
 
     hydrationProvider.registerDehydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type) {
-            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: false, dirty: false}});
+            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}});
         }
     }]);
 

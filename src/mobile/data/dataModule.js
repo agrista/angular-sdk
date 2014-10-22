@@ -58,6 +58,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'p
             return underscore.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
                 __id: item.id,
                 __uri: item.uri,
+                __complete: (item.complete == 1),
                 __dirty: (item.dirty == 1),
                 __local: (item.local == 1),
                 __saved: true
@@ -67,9 +68,10 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'p
             return {
                 id: item.__id,
                 uri: item.__uri,
+                complete: item.__complete,
                 dirty: item.__dirty,
                 local: item.__local,
-                data: underscore.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
+                data: underscore.omit(item, ['__id', '__uri', '__complete', '__dirty', '__local', '__saved'])
             };
         },
         transactionPromise: function(db) {
@@ -148,8 +150,22 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
          * @returns {Database}
          * @private
          */
-        function _initializeDatabase(idCallback) {
-            var migrationSteps = [];
+        function _initializeDatabase() {
+            var migrationSteps = [{
+                current: '',
+                next: '1',
+                process: function (tx) {
+                    dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
+                        for (var i = 0; i < res.rows.length; i++) {
+                            var table = res.rows.item(i);
+
+                            if (table.name.indexOf('__') === -1) {
+                                dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN complete INT DEFAULT 1');
+                            }
+                        }
+                    });
+                }
+            }];
 
             function _processMigration(db) {
                 $log.debug('_processMigration');
@@ -161,21 +177,20 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     if (migration.current === db.version) {
                         $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
 
-                        db.changeVersion(migration.current, migration.next, migration.process, function () {
-                            idCallback();
-                        }, function () {
+                        db.changeVersion(migration.current, migration.next, migration.process, null, function () {
                             $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
+
                             _processMigration(db);
                         });
                     } else {
                         _processMigration(db);
                     }
-                } else {
-                    idCallback(db);
                 }
             }
 
-            _processMigration(window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576));
+            _localDatabase = window.openDatabase(_defaultOptions.dbName, '1', _defaultOptions.dbName, 4 * 1048576, function (db) {
+                _processMigration(db);
+            });
         }
 
         /**
@@ -245,7 +260,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             function _initializeTable() {
                 return dataStoreUtilities.transactionPromise(_localDatabase).then(function (tx) {
                     return promiseService.all([
-                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', []),
+                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, complete INT DEFAULT 0, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', []),
                         dataStoreUtilities.executeSqlPromise(tx, 'CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [])
                     ])
                 }, promiseService.throwError);
@@ -348,16 +363,16 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         };
                                         item.dirty = (options.dirty === true ? true : item.dirty);
                                         return dataStoreUtilities
-                                            .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
+                                            .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, complete, dirty, local) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
                                             .then(resolveItem, function () {
                                                 if (options.replace === true) {
                                                     if (item.dirty === true || item.local === true || options.force) {
                                                         return dataStoreUtilities
-                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
                                                             .then(resolveItem);
                                                     } else {
                                                         return dataStoreUtilities
-                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
                                                             .then(resolveItem);
                                                     }
                                                 }
@@ -433,6 +448,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 id: _getItemIndex(item),
                                                 uri: options.forceUri || uri,
                                                 data: item,
+                                                complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
                                                 dirty: false,
                                                 local: false
                                             }), true));
@@ -481,6 +497,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     id: _getItemIndex(res.data, item.id),
                                                     uri: item.uri,
                                                     data: item.data,
+                                                    complete: true,
                                                     dirty: false,
                                                     local: false
                                                 });
@@ -559,8 +576,35 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 }
             };
 
-            var _responseFormatter = function (data, asArray) {
-                return (asArray == false && data instanceof Array && data.length > 0 ? data[0] : data);
+            var _responseFormatter = function (data, singular) {
+                return (singular === true && data instanceof Array && data.length > 0 ? data[0] : data);
+            };
+
+            var _handleIncompleteResponse = function (data, request, singular) {
+                request.options.one = true;
+                request.schema = request.schema || {};
+
+                return promiseService
+                    .chain(function (chain) {
+                        angular.forEach(data, function (dataItem) {
+                            chain.push(function () {
+                                if (dataItem.__complete === false && request.options.fallbackRemote) {
+                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
+
+                                    request.options.forceUri = dataItem.__uri;
+
+                                    return _getRemote(uri, request).then(function (res) {
+                                        return _updateLocal(res, request);
+                                    });
+                                } else {
+                                    return dataItem;
+                                }
+                            });
+                        });
+                    })
+                    .then(function (res) {
+                        return _responseFormatter(res, singular);
+                    });
             };
 
             /**
@@ -590,6 +634,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         request.options = underscore.defaults(request.options, {
                             replace: true,
                             force: false,
+                            complete: true,
                             dirty: true
                         });
 
@@ -604,6 +649,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         id: id,
                                         uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                         data: data,
+                                        complete: request.options.complete,
                                         dirty: request.options.dirty,
                                         local: request.options.dirty
                                     }), request.options.dehydrate));
@@ -642,6 +688,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     id: id,
                                                     uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                                     data: item,
+                                                    complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
                                                     dirty: false,
                                                     local: false
                                                 });
@@ -677,7 +724,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         if (res.length == 0 && request.options.fallbackRemote === true) {
                                             handleRemote(_uri);
                                         } else {
-                                            promise.resolve(res);
+                                            _handleIncompleteResponse(res, request, request.options.one).then(promise.resolve, promise.reject);
                                         }
                                     }, promise.reject);
                                 }
@@ -694,12 +741,13 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
 
                         request.options = underscore.defaults(request.options, {
+                            fallbackRemote: true,
                             like: false,
                             one: false
                         });
 
                         return _findLocal(request.key, request.column, request.options).then(function (res) {
-                            return _responseFormatter(res, false);
+                            return _handleIncompleteResponse(res, request, true);
                         }, promiseService.throwError);
                     },
                     updateItems: function (req) {
@@ -818,13 +866,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
          * Initialize database
          */
 
-        _initializeDatabase(function (db) {
-            if (db) {
-                _localDatabase = db;
-
-                $log.debug('database initialized');
-            }
-        });
+        _initializeDatabase();
 
         /**
          * @name dataStore
