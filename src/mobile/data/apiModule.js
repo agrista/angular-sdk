@@ -29,73 +29,73 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
     this.$get = ['$http', '$log', 'assetApi', 'configuration', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskApi',
         function ($http, $log, assetApi, configuration, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, pagingService, promiseService, taskApi) {
-            function _getFarmers (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+            function _getFarmers (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
 
                 return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return farmerApi.getFarmers({paging: page, options: _options.remote});
+                            return farmerApi.getFarmers({params: page, options: _options.remote});
                         }, function (farmers) {
                             if (paging.complete) {
                                 promise.resolve();
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getDocuments (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+            function _getDocuments (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
 
                 return documentApi.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return documentApi.getDocuments({paging: page, options: _options.remote});
+                            return documentApi.getDocuments({params: page, options: _options.remote});
                         }, function (documents) {
                             if (paging.complete) {
                                 promise.resolve();
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getExpenses (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'simple'};
+            function _getExpenses (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'full'};
 
                 return expenseApi.purgeExpense({template: 'expenses', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return expenseApi.getExpenses({paging: page, options: _options.remote});
+                            return expenseApi.getExpenses({params: page, options: _options.remote});
                         }, function (expenses) {
                             if (paging.complete) {
                                 promise.resolve();
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getTasks (pageOptions) {
-                pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+            function _getTasks (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
 
                 return taskApi.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
-                            return taskApi.getTasks({paging: page, options: _options.remote});
+                            return taskApi.getTasks({params: page, options: _options.remote});
                         }, function (tasks) {
                             if (paging.complete) {
                                 taskApi.getTasks({options: {fallbackRemote: true, hydrate: ['organization', 'subtasks']}})
@@ -103,7 +103,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, pageOptions);
+                        }, getParams);
 
                         paging.request().catch(promise.reject);
                     });
@@ -412,24 +412,25 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @param req.search {String} Optional
              * @param req.id {Number} Optional
              * @param req.options {Object} Optional
-             * @param req.paging {Object} Optional
+             * @param req.params {Object} Optional
              * @returns {Promise}
              */
             getItems: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
+                req.options = underscore.defaults(req.options || {}, {one: false});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.template) {
-                        return tx.getItems({template: req.template, schema: req.schema, options: req.options, paging: req.paging});
+                        return tx.getItems({template: req.template, schema: req.schema, options: req.options, params: req.params});
                     } else if (req.search) {
                         req.options.readLocal = false;
                         req.options.readRemote = true;
 
-                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, paging: req.paging});
+                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, params: req.params});
                     } else if (req.id) {
-                        return tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, paging: req.paging});
+                        return tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, params: req.params});
                     } else {
-                        return tx.getItems({template: options.plural, options: req.options, paging: req.paging});
+                        return tx.getItems({template: options.plural, options: req.options, params: req.params});
                     }
                 });
             },
@@ -443,7 +444,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             createItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -462,7 +463,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             getItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.id) {
@@ -483,7 +484,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             findItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.key) {
@@ -501,7 +502,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             updateItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -520,7 +521,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             postItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -537,7 +538,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             deleteItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
@@ -556,7 +557,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             purgeItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
                 return _itemStore.transaction().then(function (tx) {
                     return tx.purgeItems({template: req.template, schema: req.schema, options: req.options});
