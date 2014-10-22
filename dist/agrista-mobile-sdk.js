@@ -8038,7 +8038,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
             }
 
             function _postFarmers () {
-                return farmerApi.getFarmers({options: _options.local}).then(function (farmers) {
+                return farmerApi.getFarmers({options: {readLocal: true, hydrate: ['primaryContact']}}).then(function (farmers) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(farmers, function (farmer) {
                             chain.push(function () {
@@ -8626,11 +8626,11 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['farms', 'legalEntities'];
+        var defaultRelations = ['farms', 'legalEntities', 'primaryContact'];
         var farmerApi = api({
             plural: 'farmers',
             singular: 'farmer',
-            strip: defaultRelations,
+            strip: ['farms', 'legalEntities'],
             hydrate: function (obj, relations) {
                 relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
                 return hydration.hydrate(obj, 'farmer', relations);
@@ -8664,6 +8664,15 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
     hydrationProvider.registerHydrate('legalEntities', ['legalEntityApi', function (legalEntityApi) {
         return function (obj, type) {
             return legalEntityApi.getEntities({id: obj.__id, options: {hydrate: true}});
+        }
+    }]);
+
+    hydrationProvider.registerHydrate('primaryContact', ['legalEntityApi', 'underscore', function (legalEntityApi, underscore) {
+        return function (obj, type) {
+            return legalEntityApi.getEntities({id: obj.__id})
+                .then(function (entities) {
+                    return underscore.findWhere(entities, {isPrimary: true});
+                });
         }
     }]);
 
