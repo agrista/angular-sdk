@@ -194,18 +194,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'water right': ['Water Right']
     };
 
-    var _commodityTypes = {
-        crop: 'Field Crops',
-        horticulture: 'Horticulture',
-        livestock: 'Livestock'
-    };
-
-    var _commodities = {
-        crop: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        horticulture: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
-        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
-    };
-
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -234,27 +222,15 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
         },
-        getCommodities: function (type) {
-            return _commodities[type] || '';
-        },
         getZoneTitle: function (zone) {
             return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
-        },
-
-        commodityTypes: function() {
-            return _commodityTypes;
-        },
-        commodities: function() {
-            return _commodities;
         },
         conditionTypes: function () {
             return _conditionTypes;
         },
-
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
-
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
                 (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
