@@ -245,11 +245,11 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
                 $cookieStore.put(key, value);
             }
         },
-        getItem: function (key) {
+        getItem: function (key, defaultValue) {
             if ($window.localStorage) {
-                return JSON.parse($window.localStorage.getItem(key));
+                return JSON.parse($window.localStorage.getItem(key)) || defaultValue;
             } else {
-                return $cookieStore.get(key);
+                return $cookieStore.get(key) || defaultValue;
             }
         },
         removeItem: function (key) {
