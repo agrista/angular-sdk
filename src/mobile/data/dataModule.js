@@ -30,7 +30,7 @@ mobileSdkDataApp.constant('dataStoreConstants', {
     RemoteNoDataError: {code: 'RemoteNoDataError', message: 'No data response from remote store'}
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'promiseService', 'underscore', function ($log, dataStoreConstants, promiseService, underscore) {
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreConstants', 'promiseService', 'underscore', function ($log, $timeout, dataStoreConstants, promiseService, underscore) {
     function _errorLog (err) {
         if (typeof err === 'string') {
             $log.warn('Error: ' + err);
@@ -75,13 +75,29 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'p
             };
         },
         transactionPromise: function(db) {
+            var _transactionAttempts = 0;
+            var _getTransaction = function (promise) {
+                _transactionAttempts++;
+
+                db.transaction(function (res) {
+                    promise.resolve(res);
+                }, function (err) {
+                    if (_transactionAttempts <= 10) {
+                        $log.warn('Waiting for transaction');
+                        $log.warn(JSON.stringify(err));
+
+                        $timeout(function () {
+                            _getTransaction(promise);
+                        }, 250);
+                    } else {
+                        promise.reject(err);
+                    }
+                });
+            };
+
             return promiseService.wrap(function (promise) {
                 if (db) {
-                    db.transaction(function (res) {
-                        promise.resolve(res);
-                    }, function (err) {
-                        promise.reject(err);
-                    });
+                    _getTransaction(promise);
                 } else {
                     promise.reject(dataStoreConstants.LocalDataStoreError);
                 }
