@@ -154,11 +154,20 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
     this.$get = ['$http', '$log', '$rootScope', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
 
+        var _databaseInitialized = true;
+        var _databaseVersion = '1';
+
         var _defaultHydration = function (obj) {
             return promiseService.wrap(function (promise) {
                 promise.resolve(obj);
             })
         };
+
+        function _errorCallback(err) {
+            $log.error('_errorCallback');
+            $log.error(err);
+            $log.error(JSON.stringify(err));
+        }
 
         /**
          * @name _initializeDatabase
@@ -171,14 +180,16 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 current: '',
                 next: '1',
                 process: function (tx) {
-                    dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
-                        for (var i = 0; i < res.rows.length; i++) {
-                            var table = res.rows.item(i);
+                    return dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
+                        return promiseService.wrapAll(function (promises) {
+                            for (var i = 0; i < res.rows.length; i++) {
+                                var table = res.rows.item(i);
 
-                            if (table.name.indexOf('__') === -1) {
-                                dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN complete INT DEFAULT 1');
+                                if (table.name.indexOf('__') === -1) {
+                                    promises.push(dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN complete INT DEFAULT 1'));
+                                }
                             }
-                        }
+                        });
                     });
                 }
             }];
@@ -193,18 +204,20 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     if (migration.current === db.version) {
                         $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
 
-                        db.changeVersion(migration.current, migration.next, migration.process, null, function () {
-                            $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
+                        dataStoreUtilities.transactionPromise(db)
+                            .then(migration.process)
+                            .then(function () {
+                                $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
 
-                            _processMigration(db);
-                        });
+                                _processMigration(db);
+                            });
                     } else {
                         _processMigration(db);
                     }
                 }
             }
 
-            _localDatabase = window.openDatabase(_defaultOptions.dbName, '1', _defaultOptions.dbName, 4 * 1048576, function (db) {
+            _localDatabase = window.openDatabase(_defaultOptions.dbName, _databaseVersion, _defaultOptions.dbName, 4 * 1048576, function (db) {
                 _processMigration(db);
             });
         }
@@ -581,17 +594,16 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         promise.reject(dataStoreConstants.RemoteDataStoreError);
                     }
                 });
-
             };
 
             /**
              * Transactions
              */
-            var _dataStoreInitialized = false;
+            var _tableInitialized = false;
             var _transactionQueue = [];
 
             var _processTransactionQueue = function () {
-                if (_dataStoreInitialized && _localDatabase !== undefined) {
+                if (_tableInitialized && _localDatabase !== undefined) {
                     while (_transactionQueue.length > 0) {
                         var deferredTransaction = _transactionQueue.shift();
 
@@ -732,6 +744,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
+                                            _errorCallback(err);
                                             promise.reject(err);
                                         }
                                     });
@@ -750,7 +763,10 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         } else {
                                             _handleIncompleteResponse(res, request, request.options.one).then(promise.resolve, promise.reject);
                                         }
-                                    }, promise.reject);
+                                    }, function (err) {
+                                        _errorCallback(err);
+                                        promise.reject(err);
+                                    });
                                 }
                             } else {
                                 promise.reject(dataStoreConstants.NoReadParams);
@@ -865,7 +881,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             _initializeTable().then(function () {
                 $log.debug('table initialized');
 
-                _dataStoreInitialized = true;
+                _tableInitialized = true;
                 _processTransactionQueue();
             });
 
