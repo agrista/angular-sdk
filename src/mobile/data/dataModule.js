@@ -380,41 +380,51 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     force: false
                 });
 
-                return dataStoreUtilities
-                    .transactionPromise(_localDatabase)
-                    .then(function (tx) {
-                        return promiseService
-                            .wrapAll(function (promises) {
-                                angular.forEach(dataItems, function (dataItem) {
-                                    promises.push(_config.dehydrate(dataItem, request.options.dehydrate).then(function(dehydratedItem) {
-                                        var item = dataStoreUtilities.extractMetadata(dehydratedItem);
-                                        var dataString = JSON.stringify(item.data);
-                                        var resolveItem = function () {
-                                            return _config.hydrate(dehydratedItem, request.options.hydrate);
-                                        };
+                return promiseService
+                    .wrapAll(function (promises) {
+                        angular.forEach(dataItems, function (dataItem) {
+                            promises.push(_config.dehydrate(dataItem, request.options.dehydrate));
+                        });
+                    })
+                    .then(function (dehydratedItems) {
+                        return dataStoreUtilities.transactionPromise(_localDatabase).then(function (tx) {
+                            return promiseService.wrapAll(function (promises) {
+                                angular.forEach(dehydratedItems, function (dehydratedItem) {
+                                    var item = dataStoreUtilities.extractMetadata(dehydratedItem);
+                                    var dataString = JSON.stringify(item.data);
+                                    var resolveItem = function () {
+                                        return dehydratedItem;
+                                    };
 
-                                        item.dirty = (request.options.dirty === true ? true : item.dirty);
+                                    item.dirty = (request.options.dirty === true ? true : item.dirty);
 
-                                        return dataStoreUtilities
-                                            .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, complete, dirty, local) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
-                                            .then(resolveItem, function () {
-                                                if (request.options.replace === true) {
-                                                    if (item.dirty === true || item.local === true || request.options.force) {
-                                                        return dataStoreUtilities
-                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
-                                                            .then(resolveItem);
-                                                    } else {
-                                                        return dataStoreUtilities
-                                                            .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
-                                                            .then(resolveItem);
-                                                    }
+                                    promises.push(dataStoreUtilities
+                                        .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, complete, dirty, local) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
+                                        .then(resolveItem, function () {
+                                            if (request.options.replace === true) {
+                                                if (item.dirty === true || item.local === true || request.options.force) {
+                                                    return dataStoreUtilities
+                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                        .then(resolveItem);
+                                                } else {
+                                                    return dataStoreUtilities
+                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                        .then(resolveItem);
                                                 }
+                                            }
 
-                                                return null;
-                                            });
-                                    }))
+                                            return null;
+                                        }));
                                 });
                             });
+                        });
+                    }, promiseService.throwError)
+                    .then(function (dehydratedItems) {
+                        return promiseService.wrapAll(function (promises) {
+                            angular.forEach(underscore.compact(dehydratedItems), function (dehydratedItem) {
+                                promises.push(_config.dehydrate(dehydratedItem, request.options.dehydrate));
+                            });
+                        });
                     }, promiseService.throwError);
             };
 
@@ -498,11 +508,10 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             /**
              * @name _updateRemote
              * @param dataItems
-             * @param writeUri
-             * @param writeSchema
+             * @param request
              * @private
              */
-            var _updateRemote = function (dataItems, writeUri, writeSchema) {
+            var _updateRemote = function (dataItems, request) {
                 $log.debug('_updateRemote');
 
                 return promiseService.wrap(function (promise) {
@@ -516,12 +525,12 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     var uri = item.uri;
 
                                     if (item.dirty === true) {
-                                        if (item.local || writeUri !== undefined) {
+                                        if (item.local || request.template !== undefined) {
                                             if (item.local && item.data[_config.indexerProperty] !== undefined) {
                                                 delete item.data[_config.indexerProperty];
                                             }
 
-                                            uri = dataStoreUtilities.parseRequest(writeUri || _config.apiTemplate, underscore.extend(writeSchema, {id: item.local ? undefined : item.id}));
+                                            uri = dataStoreUtilities.parseRequest(request.template || _config.apiTemplate, underscore.extend(request.schema, {id: item.local ? undefined : item.id}));
                                         }
 
                                         promises.push($http.post(_hostApi + uri, item.data, {withCredentials: true})
@@ -529,7 +538,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 var postedItem = dataStoreUtilities.injectMetadata({
                                                     id: _getItemIndex(res.data, item.id),
                                                     uri: item.uri,
-                                                    data: item.data,
+                                                    data: res.data,
                                                     complete: true,
                                                     dirty: false,
                                                     local: false
@@ -549,11 +558,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                 });
                             }, promiseService.throwError)
                             .then(function(results) {
-                                return _updateLocal(underscore.compact(results), {
-                                    options: {
-                                        force: true
-                                    }
-                                });
+                                request.options = underscore.defaults({force: true}, request.options);
+
+                                return _updateLocal(underscore.compact(results), request);
                             }, promiseService.throwError)
                             .then(promise.resolve, promise.reject);
                     } else {
@@ -815,7 +822,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
 
                         if ((request.data instanceof Array) === false) request.data = [request.data];
 
-                        return _updateRemote(request.data, request.template, request.schema).then(function (res) {
+                        return _updateRemote(request.data, request).then(function (res) {
                             return _responseFormatter(res, true);
                         }, promiseService.throwError);
                     },

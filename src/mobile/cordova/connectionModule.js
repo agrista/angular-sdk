@@ -5,7 +5,7 @@ cordovaConnectionApp.factory('connectionService', ['$timeout', function ($timeou
     var _lastConnectionType = undefined;
 
     var _updateConnection = function () {
-        if (_lastConnectionType !== navigator.connection.type) {
+        if (navigator.connection && _lastConnectionType !== navigator.connection.type) {
             _lastConnectionType = navigator.connection.type;
 
             angular.forEach(_watchConnectionList, function (watcher) {
