@@ -965,6 +965,15 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'water right': ['Water Right']
     };
 
+    var _landUseCropTypes = {
+        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
+        'Grazing': ['Bahia-Notatum', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Phalaris', 'Rescue', 'Rhodes', 'Smuts Finger', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'],
+        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
+        'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chili', 'Cucumber', 'Cucurbit', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lentil', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pea (Dry)', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
+        'Plantation': ['Bluegum', 'Pine', 'Wattle'],
+        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
+    };
+
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -992,6 +1001,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         },
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
+        },
+        getCropsForLandUse: function (landUse) {
+            return _landUseCropTypes[landUse] || [];
         },
         getZoneTitle: function (zone) {
             return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
@@ -2937,6 +2949,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         livestock: 'Livestock'
     };
 
+    // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
         crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
         horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
@@ -3373,9 +3386,10 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
 
     var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];
 
+    // When updating, also update the _commodities list in the enterpriseBudgetHelper
     var _enterpriseTypes = {
-        'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        'Horticulture': ['Almonds', 'Apples', 'Apricots', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
+        'Field Crops': ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        'Horticulture': ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         'Livestock': ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
 
@@ -3440,15 +3454,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     var _terrainTypes = ['Plains', 'Mountains'];
     var _waterSourceTypes = ['Irrigation Scheme', 'River', 'Dam', 'Borehole'];
 
-    var _landUseCropTypes = {
-        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
-        'Grazing': ['Bahia-Notatum', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Phalaris', 'Rescue', 'Rhodes', 'Smuts Finger', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'],
-        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
-        'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chilly', 'Cucumber', 'Cucurbit', 'Dry Pea', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
-        'Plantation': ['Bluegum', 'Pine', 'Wattle'],
-        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
-    };
-
     return {
         croppingPotentialTypes: function () {
             return _croppingPotentialTypes;
@@ -3471,11 +3476,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
         waterSourceTypes: function () {
             return _waterSourceTypes;
         },
-
-        getCropsForLandUse: function (landUse) {
-            return _landUseCropTypes[landUse] || [];
-        },
-
         isCroppingPotentialRequired: function (landUse) {
             return (landUse == 'Cropland');
         },
@@ -7519,20 +7519,16 @@ cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', funct
 var cordovaConnectionApp = angular.module('ag.mobile-sdk.cordova.connection', []);
 
 cordovaConnectionApp.factory('connectionService', ['$timeout', function ($timeout) {
-    var _onConnectionChangeList = [];
+    var _watchConnectionList = [];
     var _lastConnectionType = undefined;
 
     var _updateConnection = function () {
         if (_lastConnectionType !== navigator.connection.type) {
             _lastConnectionType = navigator.connection.type;
 
-            for (var i = _onConnectionChangeList.length - 1; i >= 0; i--) {
-                if (_onConnectionChangeList[i] !== undefined) {
-                    _onConnectionChangeList[i](_lastConnectionType);
-                } else {
-                    _onConnectionChangeList.splice(i, 1);
-                }
-            }
+            angular.forEach(_watchConnectionList, function (watcher) {
+                watcher(_lastConnectionType);
+            });
         }
 
         $timeout(_updateConnection, 10000);
@@ -7541,13 +7537,13 @@ cordovaConnectionApp.factory('connectionService', ['$timeout', function ($timeou
     _updateConnection();
 
     return {
-        onConnectionChange: function (onChangeCb) {
-            if (typeof onChangeCb === 'function') {
-                _onConnectionChangeList.push(onChangeCb);
+        watchConnection: function (callback) {
+            if (typeof callback === 'function') {
+                _watchConnectionList.push(callback);
             }
         },
         isOnline: function () {
-            return (navigator.connection.type !== Connection.NONE);
+            return (navigator.connection.type !== Connection.NONE && navigator.connection.type !== Connection.UNKNOWN);
         },
         isMobile: function () {
             return (navigator.connection.type === Connection.CELL ||
@@ -7917,6 +7913,27 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
             });
 
             return defer.promise;
+        }
+    };
+}]);
+
+var cordovaToasterApp = angular.module('ag.mobile-sdk.cordova.toaster', []);
+
+cordovaToasterApp.factory('toasterService', [function () {
+    var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
+
+    var _show = function (message, duration, position) {
+        if (_toaster !== undefined) {
+            _toaster.show(message, duration, position);
+        }
+    };
+
+    return {
+        show: function (message, duration, position) {
+            _show(message, duration, position);
+        },
+        showLongBottom: function (message) {
+            _show(message, 'long', 'bottom');
         }
     };
 }]);
@@ -8986,7 +9003,7 @@ mobileSdkDataApp.constant('dataStoreConstants', {
     RemoteNoDataError: {code: 'RemoteNoDataError', message: 'No data response from remote store'}
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'promiseService', 'underscore', function ($log, dataStoreConstants, promiseService, underscore) {
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreConstants', 'promiseService', 'underscore', function ($log, $timeout, dataStoreConstants, promiseService, underscore) {
     function _errorLog (err) {
         if (typeof err === 'string') {
             $log.warn('Error: ' + err);
@@ -9031,13 +9048,29 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'dataStoreConstants', 'p
             };
         },
         transactionPromise: function(db) {
+            var _transactionAttempts = 0;
+            var _getTransaction = function (promise) {
+                _transactionAttempts++;
+
+                db.transaction(function (res) {
+                    promise.resolve(res);
+                }, function (err) {
+                    if (_transactionAttempts <= 10) {
+                        $log.warn('Waiting for transaction');
+                        $log.warn(JSON.stringify(err));
+
+                        $timeout(function () {
+                            _getTransaction(promise);
+                        }, 250);
+                    } else {
+                        promise.reject(err);
+                    }
+                });
+            };
+
             return promiseService.wrap(function (promise) {
                 if (db) {
-                    db.transaction(function (res) {
-                        promise.resolve(res);
-                    }, function (err) {
-                        promise.reject(err);
-                    });
+                    _getTransaction(promise);
                 } else {
                     promise.reject(dataStoreConstants.LocalDataStoreError);
                 }
@@ -9094,11 +9127,20 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
     this.$get = ['$http', '$log', '$rootScope', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
 
+        var _databaseInitialized = true;
+        var _databaseVersion = '1';
+
         var _defaultHydration = function (obj) {
             return promiseService.wrap(function (promise) {
                 promise.resolve(obj);
             })
         };
+
+        function _errorCallback(err) {
+            $log.error('_errorCallback');
+            $log.error(err);
+            $log.error(JSON.stringify(err));
+        }
 
         /**
          * @name _initializeDatabase
@@ -9111,14 +9153,16 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 current: '',
                 next: '1',
                 process: function (tx) {
-                    dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
-                        for (var i = 0; i < res.rows.length; i++) {
-                            var table = res.rows.item(i);
+                    return dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
+                        return promiseService.wrapAll(function (promises) {
+                            for (var i = 0; i < res.rows.length; i++) {
+                                var table = res.rows.item(i);
 
-                            if (table.name.indexOf('__') === -1) {
-                                dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN complete INT DEFAULT 1');
+                                if (table.name.indexOf('__') === -1) {
+                                    promises.push(dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN complete INT DEFAULT 1'));
+                                }
                             }
-                        }
+                        });
                     });
                 }
             }];
@@ -9133,18 +9177,20 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     if (migration.current === db.version) {
                         $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
 
-                        db.changeVersion(migration.current, migration.next, migration.process, null, function () {
-                            $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
+                        dataStoreUtilities.transactionPromise(db)
+                            .then(migration.process)
+                            .then(function () {
+                                $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
 
-                            _processMigration(db);
-                        });
+                                _processMigration(db);
+                            });
                     } else {
                         _processMigration(db);
                     }
                 }
             }
 
-            _localDatabase = window.openDatabase(_defaultOptions.dbName, '1', _defaultOptions.dbName, 4 * 1048576, function (db) {
+            _localDatabase = window.openDatabase(_defaultOptions.dbName, _databaseVersion, _defaultOptions.dbName, 4 * 1048576, function (db) {
                 _processMigration(db);
             });
         }
@@ -9521,17 +9567,16 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         promise.reject(dataStoreConstants.RemoteDataStoreError);
                     }
                 });
-
             };
 
             /**
              * Transactions
              */
-            var _dataStoreInitialized = false;
+            var _tableInitialized = false;
             var _transactionQueue = [];
 
             var _processTransactionQueue = function () {
-                if (_dataStoreInitialized && _localDatabase !== undefined) {
+                if (_tableInitialized && _localDatabase !== undefined) {
                     while (_transactionQueue.length > 0) {
                         var deferredTransaction = _transactionQueue.shift();
 
@@ -9672,6 +9717,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 promise.resolve(_responseFormatter(res, request.options.one));
                                             }, promise.reject);
                                         } else {
+                                            _errorCallback(err);
                                             promise.reject(err);
                                         }
                                     });
@@ -9690,7 +9736,10 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         } else {
                                             _handleIncompleteResponse(res, request, request.options.one).then(promise.resolve, promise.reject);
                                         }
-                                    }, promise.reject);
+                                    }, function (err) {
+                                        _errorCallback(err);
+                                        promise.reject(err);
+                                    });
                                 }
                             } else {
                                 promise.reject(dataStoreConstants.NoReadParams);
@@ -9805,7 +9854,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             _initializeTable().then(function () {
                 $log.debug('table initialized');
 
-                _dataStoreInitialized = true;
+                _tableInitialized = true;
                 _processTransactionQueue();
             });
 
