@@ -11,7 +11,7 @@ var _errors = {
  */
 mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (underscore) {
     var _options = {
-        models: ['budgets', 'documents', 'expenses', 'farmers', 'tasks'],
+        models: ['budgets', 'documents', 'expenses', 'farmers', 'tasks', 'organizational-units'],
         local: {
             readLocal: true,
             hydrate: false
@@ -27,8 +27,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
         _options = underscore.extend(_options, options);
     }
 
-    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskApi',
-        function ($http, $log, assetApi, configuration, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, pagingService, promiseService, taskApi) {
+    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'organizationalUnitApi', 'pagingService', 'promiseService', 'taskApi',
+        function ($http, $log, assetApi, configuration, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, organizationalUnitApi, pagingService, promiseService, taskApi) {
             function _getFarmers (getParams) {
                 getParams = getParams || {limit: 20, resulttype: 'simple'};
 
@@ -112,6 +112,26 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
             function _getEnterpriseBudgets() {
                 return enterpriseBudgetApi.getEnterpriseBudgets({options: _options.remote});
+            }
+
+            function _getOrganizationalUnits (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
+
+                return organizationalUnitApi.purgeOrganizationalUnit({template: 'organizational-units', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return organizationalUnitApi.getOrganizationalUnits({params: page, options: _options.remote});
+                        }, function (expenses) {
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, getParams);
+
+                        paging.request().catch(promise.reject);
+                    });
+                });
             }
 
             function _postFarmers () {
@@ -384,6 +404,10 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             if (models.indexOf('expenses') !== -1) {
                                 chain.push(_getExpenses);
                             }
+
+                            if (models.indexOf('organizational-units') !== -1) {
+                                chain.push(_getOrganizationalUnits);
+                            }
                         })
                         .catch(promiseService.throwError);
                 }
@@ -602,20 +626,21 @@ mobileSdkApiApp.factory('userApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('teamApi', ['api', function (api) {
-    var teamApi = api({
-        plural: 'teams',
-        singular: 'team'
+mobileSdkApiApp.factory('organizationalUnitApi', ['api', function (api) {
+    var organizationalUnitApi = api({
+        plural: 'organizational-units',
+        singular: 'organizational-unit'
     });
 
     return {
-        getTeams: teamApi.getItems,
-        createTeam: teamApi.createItem,
-        getTeam: teamApi.getItem,
-        findTeam: teamApi.findItem,
-        updateTeam: teamApi.updateItem,
-        postTeam: teamApi.postItem,
-        deleteTeam: teamApi.deleteItem
+        getOrganizationalUnits: organizationalUnitApi.getItems,
+        createOrganizationalUnit: organizationalUnitApi.createItem,
+        getOrganizationalUnit: organizationalUnitApi.getItem,
+        findOrganizationalUnit: organizationalUnitApi.findItem,
+        updateOrganizationalUnit: organizationalUnitApi.updateItem,
+        postOrganizationalUnit: organizationalUnitApi.postItem,
+        deleteOrganizationalUnit: organizationalUnitApi.deleteItem,
+        purgeOrganizationalUnit: organizationalUnitApi.purgeItem
     };
 }]);
 
