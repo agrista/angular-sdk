@@ -8117,7 +8117,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
             function _postLegalEntity (entity) {
                 entity.data = entity.data || {};
 
-                var cachedAttachments = (task.data.attachments ? angular.copy(entity.data.attachments) : []);
+                var cachedAttachments = (entity.data.attachments ? angular.copy(entity.data.attachments) : []);
                 var toBeAttached = underscore.where(cachedAttachments, {local: true});
                 entity.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
 
