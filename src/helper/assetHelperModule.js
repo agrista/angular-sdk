@@ -29,6 +29,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 case 'wasteland':
                     return 'Wasteland';
                 case 'water source':
+                case 'water right':
                     return asset.data.waterSource + (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
             }
         }
