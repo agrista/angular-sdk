@@ -162,12 +162,30 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(entities, function (entity) {
                             if (entity.__dirty === true) {
                                 chain.push(function () {
-                                    return legalEntityApi.postEntity({data: entity});
+                                    return _postLegalEntity(entity);
                                 });
                             }
 
                             chain.push(function () {
                                 return _postAssets(entity.id);
+                            });
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postLegalEntity (entity) {
+                entity.data = entity.data || {};
+
+                var cachedAttachments = (task.data.attachments ? angular.copy(entity.data.attachments) : []);
+                var toBeAttached = underscore.where(cachedAttachments, {local: true});
+                entity.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
+
+                return legalEntityApi.postEntity({data: entity}).then(function (result) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(toBeAttached, function (attachment) {
+                            chain.push(function () {
+                                return _postAttachment('legalentity', result.id, attachment);
                             });
                         });
                     });
