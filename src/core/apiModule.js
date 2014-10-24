@@ -275,9 +275,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        searchByService: function (query, point) {
+        searchByService: function (query, point, farmerId) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/merchants/services?search=' + query + (point ? '&x=' + point[0] + '&y=' + point[1] : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/merchants/services?search=' + query + (point ? '&x=' + point[0] + '&y=' + point[1] : '') + (farmerId ? '&farmerId=' + farmerId : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
