@@ -2317,11 +2317,11 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
         };
 
         return {
-            getSize: function (attachments, size) {
-                return _getResizedAttachment(attachments, size) || _options.defaultImage;
+            getSize: function (attachments, size, defaultImage) {
+                return _getResizedAttachment(attachments, size) || defaultImage || _options.defaultImage;
             },
-            getThumbnail: function (attachments) {
-                return _getResizedAttachment(attachments, 'thumb') || _options.defaultImage;
+            getThumbnail: function (attachments, defaultImage) {
+                return _getResizedAttachment(attachments, 'thumb') || defaultImage || _options.defaultImage;
             }
         };
     };

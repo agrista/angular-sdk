@@ -1181,11 +1181,11 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
         };
 
         return {
-            getSize: function (attachments, size) {
-                return _getResizedAttachment(attachments, size) || _options.defaultImage;
+            getSize: function (attachments, size, defaultImage) {
+                return _getResizedAttachment(attachments, size) || defaultImage || _options.defaultImage;
             },
-            getThumbnail: function (attachments) {
-                return _getResizedAttachment(attachments, 'thumb') || _options.defaultImage;
+            getThumbnail: function (attachments, defaultImage) {
+                return _getResizedAttachment(attachments, 'thumb') || defaultImage || _options.defaultImage;
             }
         };
     };
@@ -8102,12 +8102,30 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(entities, function (entity) {
                             if (entity.__dirty === true) {
                                 chain.push(function () {
-                                    return legalEntityApi.postEntity({data: entity});
+                                    return _postLegalEntity(entity);
                                 });
                             }
 
                             chain.push(function () {
                                 return _postAssets(entity.id);
+                            });
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postLegalEntity (entity) {
+                entity.data = entity.data || {};
+
+                var cachedAttachments = (task.data.attachments ? angular.copy(entity.data.attachments) : []);
+                var toBeAttached = underscore.where(cachedAttachments, {local: true});
+                entity.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
+
+                return legalEntityApi.postEntity({data: entity}).then(function (result) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(toBeAttached, function (attachment) {
+                            chain.push(function () {
+                                return _postAttachment('legalentity', result.id, attachment);
                             });
                         });
                     });
@@ -9124,11 +9142,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$http', '$log', '$rootScope', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, promiseService, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$rootScope', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
-
-        var _databaseInitialized = true;
-        var _databaseVersion = '1';
 
         var _defaultHydration = function (obj) {
             return promiseService.wrap(function (promise) {
@@ -9170,17 +9185,22 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             function _processMigration(db) {
                 $log.debug('_processMigration');
 
+                var currentDbVersion = localStore.getItem('dataStore-dbVersion', '');
+                $log.debug('Current version: ' + currentDbVersion);
+
                 if (migrationSteps.length > 0) {
                     var migration = migrationSteps[0];
                     migrationSteps.splice(0, 1);
 
-                    if (migration.current === db.version) {
-                        $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
+                    if (migration.current === currentDbVersion) {
+                        $log.debug('Database (' + currentDbVersion + ') has a newer version ' + migration.next);
 
                         dataStoreUtilities.transactionPromise(db)
                             .then(migration.process)
                             .then(function () {
                                 $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
+
+                                localStore.setItem('dataStore-dbVersion', migration.next);
 
                                 _processMigration(db);
                             });
@@ -9190,9 +9210,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 }
             }
 
-            _localDatabase = window.openDatabase(_defaultOptions.dbName, _databaseVersion, _defaultOptions.dbName, 4 * 1048576, function (db) {
-                _processMigration(db);
-            });
+            _localDatabase = window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576);
+
+            _processMigration(_localDatabase);
         }
 
         /**
