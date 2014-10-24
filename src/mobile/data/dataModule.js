@@ -247,6 +247,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 throw new Error(dataStoreConstants.NoConfigDBNameParams.msg);
             }
 
+            name = name.replace('-', '');
+
             /**
              * Private variables
              * @private
