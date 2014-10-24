@@ -151,11 +151,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$http', '$log', '$rootScope', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, promiseService, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$rootScope', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
-
-        var _databaseInitialized = true;
-        var _databaseVersion = '1';
 
         var _defaultHydration = function (obj) {
             return promiseService.wrap(function (promise) {
@@ -197,17 +194,22 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             function _processMigration(db) {
                 $log.debug('_processMigration');
 
+                var currentDbVersion = localStore.getItem('dataStore-dbVersion', '');
+                $log.debug('Current version: ' + currentDbVersion);
+
                 if (migrationSteps.length > 0) {
                     var migration = migrationSteps[0];
                     migrationSteps.splice(0, 1);
 
-                    if (migration.current === db.version) {
-                        $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
+                    if (migration.current === currentDbVersion) {
+                        $log.debug('Database (' + currentDbVersion + ') has a newer version ' + migration.next);
 
                         dataStoreUtilities.transactionPromise(db)
                             .then(migration.process)
                             .then(function () {
                                 $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
+
+                                localStore.setItem('dataStore-dbVersion', migration.next);
 
                                 _processMigration(db);
                             });
@@ -217,9 +219,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 }
             }
 
-            _localDatabase = window.openDatabase(_defaultOptions.dbName, _databaseVersion, _defaultOptions.dbName, 4 * 1048576, function (db) {
-                _processMigration(db);
-            });
+            _localDatabase = window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576);
+
+            _processMigration(_localDatabase);
         }
 
         /**
