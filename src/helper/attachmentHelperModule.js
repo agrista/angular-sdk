@@ -41,7 +41,7 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
     };
 }]);
 
-app.factory('resizeImageService', ['promiseService', 'underscore', function (promiseService, underscore) {
+sdkHelperAttachmentApp.factory('resizeImageService', ['promiseService', 'underscore', function (promiseService, underscore) {
     return function (imageOrUri, options) {
         var _processImage = function (image) {
             var canvas = document.createElement('canvas');
