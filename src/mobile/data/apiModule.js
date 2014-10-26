@@ -339,7 +339,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
             function _postAttachment (type, id, attachment) {
                 return fileStorageService.read(attachment.src, true).then(function (fileData) {
                     return $http.post(configuration.getServer() + 'api/' + type + '/' + id + '/attach', {
-                        archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key']), {
+                        archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key', 'sizes']), {
                             filename: fileData.file,
                             content: fileData.content.substring(fileData.content.indexOf(',') + 1)
                         })
