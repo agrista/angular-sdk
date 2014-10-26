@@ -526,6 +526,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                             .wrapAll(function (promises) {
                                 angular.forEach(dataItems, function (dataItem) {
                                     var item = dataStoreUtilities.extractMetadata(dataItem);
+                                    var obj = item.data;
                                     var uri = item.uri;
 
                                     if (item.dirty === true) {
@@ -537,7 +538,14 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                             uri = dataStoreUtilities.parseRequest(request.template || _config.apiTemplate, underscore.extend(request.schema, {id: item.local ? undefined : item.id}));
                                         }
 
-                                        promises.push($http.post(_hostApi + uri, item.data, {withCredentials: true})
+                                        var cachedAttachments = (obj.data && obj.data.attachments ? angular.copy(obj.data.attachments) : undefined);
+                                        var toBeAttached = (cachedAttachments ? underscore.where(cachedAttachments, {local: true}) : []);
+
+                                        if (cachedAttachments && toBeAttached.length > 0) {
+                                            obj.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
+                                        }
+
+                                        promises.push($http.post(_hostApi + uri, obj, {withCredentials: true})
                                             .then(function (res) {
                                                 var postedItem = dataStoreUtilities.injectMetadata({
                                                     id: _getItemIndex(res.data, item.id),
@@ -556,7 +564,43 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     });
                                                 }
 
-                                                return postedItem;
+                                                    return postedItem;
+                                                }, promiseService.throwError)
+                                            .then(function (postedItem) {
+                                                if (toBeAttached.length > 0) {
+                                                    uri = dataStoreUtilities.parseRequest((request.template || _config.apiTemplate) + '/attach', underscore.extend(request.schema, {id: postedItem.id}));
+
+                                                    return promiseService
+                                                        .chain(function (chain) {
+                                                            angular.forEach(toBeAttached, function (attachment) {
+                                                                chain.push(function () {
+                                                                    return fileStorageService.read(attachment.src, true).then(function (fileData) {
+                                                                        return $http
+                                                                            .post(_hostApi + uri, {
+                                                                                archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key', 'sizes']), {
+                                                                                    filename: fileData.file,
+                                                                                    content: fileData.content.substring(fileData.content.indexOf(',') + 1)
+                                                                                })
+                                                                            }, {withCredentials: true})
+                                                                            .then(function (res) {
+                                                                                return (res && res.data ? underscore.last(res.data) : undefined);
+                                                                            });
+                                                                    }, promiseService.throwError);
+                                                                });
+                                                            });
+                                                        })
+                                                        .then(function (attachments) {
+                                                            postedItem.data.attachments = underscore
+                                                                .chain(postedItem.data.attachments)
+                                                                .union(attachments)
+                                                                .compact()
+                                                                .value();
+
+                                                            return postedItem;
+                                                        });
+                                                } else {
+                                                    return postedItem;
+                                                }
                                             }, promiseService.throwError));
                                     }
                                 });

@@ -182,30 +182,12 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(entities, function (entity) {
                             if (entity.__dirty === true) {
                                 chain.push(function () {
-                                    return _postLegalEntity(entity);
+                                    return legalEntityApi.postEntity({data: entity});
                                 });
                             }
 
                             chain.push(function () {
                                 return _postAssets(entity.id);
-                            });
-                        });
-                    });
-                }, promiseService.throwError);
-            }
-
-            function _postLegalEntity (entity) {
-                entity.data = entity.data || {};
-
-                var cachedAttachments = (entity.data.attachments ? angular.copy(entity.data.attachments) : []);
-                var toBeAttached = underscore.where(cachedAttachments, {local: true});
-                entity.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
-
-                return legalEntityApi.postEntity({data: entity}).then(function (result) {
-                    return promiseService.chain(function (chain) {
-                        angular.forEach(toBeAttached, function (attachment) {
-                            chain.push(function () {
-                                return _postAttachment('legalentity', result.id, attachment);
                             });
                         });
                     });
@@ -218,29 +200,9 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(assets, function (asset) {
                             if (asset.__dirty === true) {
                                 chain.push(function () {
-                                    return _postAsset(asset);
+                                    return assetApi.postAsset({data: asset});
                                 });
                             }
-                        });
-                    });
-                }, promiseService.throwError);
-            }
-
-            function _postAsset (asset) {
-                asset.data = asset.data || {};
-
-                var cachedAttachments = (asset.data.attachments ? angular.copy(asset.data.attachments) : []);
-                var toBeAttached = underscore.where(cachedAttachments, {local: true});
-                asset.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
-
-                return assetApi.postAsset({data: asset}).then(function (result) {
-                    result = (result && result.length ? result[0] : result);
-
-                    return promiseService.chain(function (chain) {
-                        angular.forEach(toBeAttached, function (attachment) {
-                            chain.push(function () {
-                                return _postAttachment('asset', result.id, attachment);
-                            });
                         });
                     });
                 }, promiseService.throwError);
@@ -252,27 +214,9 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(documents, function (document) {
                             if (document.__dirty === true) {
                                 chain.push(function () {
-                                    return _postDocument(document);
+                                    return documentApi.postDocument({data: document});
                                 });
                             }
-                        });
-                    });
-                }, promiseService.throwError);
-            }
-
-            function _postDocument (document) {
-                document.data = document.data || {};
-
-                var cachedAttachments = (document.data.attachments ? angular.copy(document.data.attachments) : []);
-                var toBeAttached = underscore.where(cachedAttachments, {local: true});
-                document.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
-
-                return documentApi.postDocument({data: document}).then(function (result) {
-                    return promiseService.chain(function (chain) {
-                        angular.forEach(toBeAttached, function (attachment) {
-                            chain.push(function () {
-                                return _postAttachment('document', result.id, attachment);
-                            });
                         });
                     });
                 }, promiseService.throwError);
@@ -304,46 +248,17 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                                 });
                             } else if (subtask.__dirty === true) {
                                 chain.push(function () {
-                                    return _postTask(subtask);
+                                    return taskApi.postTask({data: subtask})
                                 });
                             }
                         });
 
                         if (task && task.__dirty === true) {
                             chain.push(function () {
-                                return _postTask(task);
+                                return taskApi.postTask({data: task})
                             });
                         }
                     });
-                }, promiseService.throwError);
-            }
-
-            function _postTask (task) {
-                task.data = task.data || {};
-
-                var cachedAttachments = (task.data.attachments ? angular.copy(task.data.attachments) : []);
-                var toBeAttached = underscore.where(cachedAttachments, {local: true});
-                task.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
-
-                return taskApi.postTask({data: task}).then(function (result) {
-                    return promiseService.chain(function (chain) {
-                        angular.forEach(toBeAttached, function (attachment) {
-                            chain.push(function () {
-                                return _postAttachment('task', result.id, attachment);
-                            });
-                        });
-                    });
-                }, promiseService.throwError);
-            }
-
-            function _postAttachment (type, id, attachment) {
-                return fileStorageService.read(attachment.src, true).then(function (fileData) {
-                    return $http.post(configuration.getServer() + 'api/' + type + '/' + id + '/attach', {
-                        archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key', 'sizes']), {
-                            filename: fileData.file,
-                            content: fileData.content.substring(fileData.content.indexOf(',') + 1)
-                        })
-                    }, {withCredentials: true})
                 }, promiseService.throwError);
             }
 
