@@ -2300,29 +2300,32 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
     };
 
     this.$get = function () {
-        var _getResizedAttachment = function (attachments, size) {
-            if (attachments !== undefined) {
-                if ((attachments instanceof Array) == false) {
-                    attachments = [attachments];
-                }
-
-                return underscore.chain(attachments)
-                    .filter(function (attachment) {
-                        return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
-                    }).map(function (attachment) {
-                        return attachment.sizes[size].src;
-                    }).last().value();
+        var _getResizedAttachment = function (attachments, size, defaultImage) {
+            if ((attachments instanceof Array) == false) {
+                attachments = [attachments];
             }
 
-            return attachments;
+            defaultImage = defaultImage || _options.defaultImage;
+
+            var src = underscore.chain(attachments)
+                .filter(function (attachment) {
+                    return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
+                }).map(function (attachment) {
+                    return attachment.sizes[size].src;
+                }).last().value();
+
+            return src || defaultImage;
         };
 
         return {
+            findSize: function (obj, size, defaultImage) {
+                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage);
+            },
             getSize: function (attachments, size, defaultImage) {
-                return _getResizedAttachment(attachments, size) || defaultImage || _options.defaultImage;
+                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage);
             },
             getThumbnail: function (attachments, defaultImage) {
-                return _getResizedAttachment(attachments, 'thumb') || defaultImage || _options.defaultImage;
+                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage);
             }
         };
     };
