@@ -82,11 +82,11 @@ sdkHelperAttachmentApp.factory('resizeImageService', ['promiseService', 'undersc
             if (typeof imageOrUri == 'string') {
                 var image = new Image();
 
-                loader.onload = function () {
+                image.onload = function () {
                     promise.resolve(_processImage(image));
                 };
 
-                loader.src = image;
+                image.src = imageOrUri;
             } else {
                 promise.resolve(_processImage(imageOrUri));
             }
