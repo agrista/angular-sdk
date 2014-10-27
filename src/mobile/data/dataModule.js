@@ -1,4 +1,4 @@
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library', 'ag.mobile-sdk.cordova.storage']);
 
 /**
  * @name dataPurgeService
@@ -151,7 +151,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$http', '$log', '$rootScope', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$rootScope', 'fileStorageService', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, fileStorageService, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
 
         var _defaultHydration = function (obj) {
@@ -584,7 +584,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                                             }, {withCredentials: true})
                                                                             .then(function (res) {
                                                                                 return (res && res.data ? underscore.last(res.data) : undefined);
-                                                                            });
+                                                                            }, promiseService.throwError);
                                                                     }, promiseService.throwError);
                                                                 });
                                                             });
@@ -597,7 +597,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                                 .value();
 
                                                             return postedItem;
-                                                        });
+                                                        }, promiseService.throwError);
                                                 } else {
                                                     return postedItem;
                                                 }

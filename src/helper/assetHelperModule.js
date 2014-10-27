@@ -94,7 +94,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.farmId;
             }
 
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+            map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/camera.png');
         }
 
         if (metadata) {

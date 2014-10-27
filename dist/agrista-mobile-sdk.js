@@ -865,7 +865,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.farmId;
             }
 
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+            map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/camera.png');
         }
 
         if (metadata) {
@@ -3358,13 +3358,13 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
 }]);
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
+sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
-            profileImage : item.profilePhotoSrc,
+            thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item)
         };
         
@@ -3433,9 +3433,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             subtitle: item.type
         };
 
-        if (item.data) {
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
-        }
+        map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/profile-user.png');
 
         return map;
     };
@@ -8985,7 +8983,7 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
     }
 }]);
 
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library', 'ag.mobile-sdk.cordova.storage']);
 
 /**
  * @name dataPurgeService
@@ -9138,7 +9136,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$http', '$log', '$rootScope', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$rootScope', 'fileStorageService', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, fileStorageService, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
 
         var _defaultHydration = function (obj) {
@@ -9571,7 +9569,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                                             }, {withCredentials: true})
                                                                             .then(function (res) {
                                                                                 return (res && res.data ? underscore.last(res.data) : undefined);
-                                                                            });
+                                                                            }, promiseService.throwError);
                                                                     }, promiseService.throwError);
                                                                 });
                                                             });
@@ -9584,7 +9582,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                                 .value();
 
                                                             return postedItem;
-                                                        });
+                                                        }, promiseService.throwError);
                                                 } else {
                                                     return postedItem;
                                                 }

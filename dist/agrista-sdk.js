@@ -2001,7 +2001,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.farmId;
             }
 
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+            map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/camera.png');
         }
 
         if (metadata) {
@@ -4494,13 +4494,13 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
 }]);
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
+sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
-            profileImage : item.profilePhotoSrc,
+            thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item)
         };
         
@@ -4569,9 +4569,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             subtitle: item.type
         };
 
-        if (item.data) {
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
-        }
+        map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/profile-user.png');
 
         return map;
     };
