@@ -1,12 +1,39 @@
-var sdkInterfaceInputApp = angular.module('ag.sdk.interface.input', []);
+var sdkInterfaceUiApp = angular.module('ag.sdk.interface.ui', []);
 
-sdkInterfaceInputApp.filter('location', ['$filter', function ($filter) {
+sdkInterfaceUiApp.directive('dynamicName', function() {
+    return {
+        restrict: 'A',
+        require: '?form',
+        link: function(scope, element, attrs, controller) {
+            var formCtrl = (controller != null) ? controller :  element.parent().controller('form');
+            var currentElementCtrl = formCtrl[element.attr('name')];
+
+            element.attr('name', attrs.name);
+            formCtrl.$removeControl(currentElementCtrl);
+            currentElementCtrl.$name = attrs.name;
+            formCtrl.$addControl(currentElementCtrl);
+        }
+    }
+});
+
+sdkInterfaceUiApp.directive('defaultSrc', [function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attrs) {
+            element.bind('error', function() {
+                element.attr("src", attrs.defaultSrc);
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     return function (value) {
         return ((value && value.geometry ? $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) : '') + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);
 
-sdkInterfaceInputApp.directive('locationFormatter', ['$filter', function ($filter) {
+sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
@@ -27,7 +54,7 @@ sdkInterfaceInputApp.directive('locationFormatter', ['$filter', function ($filte
     };
 }]);
 
-sdkInterfaceInputApp.directive('dateFormatter', ['$filter', function ($filter) {
+sdkInterfaceUiApp.directive('dateFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
@@ -39,7 +66,7 @@ sdkInterfaceInputApp.directive('dateFormatter', ['$filter', function ($filter) {
     };
 }]);
 
-sdkInterfaceInputApp.directive('dateParser', ['$filter', function ($filter) {
+sdkInterfaceUiApp.directive('dateParser', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
@@ -51,7 +78,7 @@ sdkInterfaceInputApp.directive('dateParser', ['$filter', function ($filter) {
     };
 }]);
 
-sdkInterfaceInputApp.directive('inputNumber', ['$filter', function ($filter) {
+sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
     return {
         restrict: 'A',
         require: 'ngModel',
