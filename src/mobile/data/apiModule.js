@@ -595,17 +595,18 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['document', 'organization', 'subtasks'];
+        var hydrateRelations = ['document', 'organization', 'subtasks'];
+        var dehydrateRelations = ['document', 'subtasks'];
         var taskApi = api({
             plural: 'tasks',
             singular: 'task',
-            strip: defaultRelations,
+            strip: hydrateRelations,
             hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
                 return hydration.hydrate(obj, 'task', relations);
             },
             dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
                 return hydration.dehydrate(obj, 'task', relations);
             }
         });
@@ -866,17 +867,18 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['organization'];
+        var hydrateRelations = ['organization'];
+        var dehydrateRelations = [];
         var documentApi = api({
             plural: 'documents',
             singular: 'document',
             strip: ['organization', 'tasks'],
             hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
                 return hydration.hydrate(obj, 'document', relations);
             },
             dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
                 return hydration.dehydrate(obj, 'document', relations);
             }
         });

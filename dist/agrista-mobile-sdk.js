@@ -8616,17 +8616,18 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['document', 'organization', 'subtasks'];
+        var hydrateRelations = ['document', 'organization', 'subtasks'];
+        var dehydrateRelations = ['document', 'subtasks'];
         var taskApi = api({
             plural: 'tasks',
             singular: 'task',
-            strip: defaultRelations,
+            strip: hydrateRelations,
             hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
                 return hydration.hydrate(obj, 'task', relations);
             },
             dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
                 return hydration.dehydrate(obj, 'task', relations);
             }
         });
@@ -8887,17 +8888,18 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['organization'];
+        var hydrateRelations = ['organization'];
+        var dehydrateRelations = [];
         var documentApi = api({
             plural: 'documents',
             singular: 'document',
             strip: ['organization', 'tasks'],
             hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
                 return hydration.hydrate(obj, 'document', relations);
             },
             dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
                 return hydration.dehydrate(obj, 'document', relations);
             }
         });
@@ -9438,7 +9440,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (dehydratedItems) {
                         return promiseService.wrapAll(function (promises) {
                             angular.forEach(underscore.compact(dehydratedItems), function (dehydratedItem) {
-                                promises.push(_config.dehydrate(dehydratedItem, request.options.dehydrate));
+                                promises.push(_config.hydrate(dehydratedItem, request.options.hydrate));
                             });
                         });
                     }, promiseService.throwError);
@@ -9694,6 +9696,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                 if (dataItem.__complete === false && request.options.fallbackRemote) {
                                     var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
 
+                                    request.options.force = true;
                                     request.options.forceUri = dataItem.__uri;
 
                                     return _getRemote(uri, request).then(function (res) {

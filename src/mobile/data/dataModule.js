@@ -426,7 +426,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (dehydratedItems) {
                         return promiseService.wrapAll(function (promises) {
                             angular.forEach(underscore.compact(dehydratedItems), function (dehydratedItem) {
-                                promises.push(_config.dehydrate(dehydratedItem, request.options.dehydrate));
+                                promises.push(_config.hydrate(dehydratedItem, request.options.hydrate));
                             });
                         });
                     }, promiseService.throwError);
@@ -682,6 +682,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                 if (dataItem.__complete === false && request.options.fallbackRemote) {
                                     var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
 
+                                    request.options.force = true;
                                     request.options.forceUri = dataItem.__uri;
 
                                     return _getRemote(uri, request).then(function (res) {
