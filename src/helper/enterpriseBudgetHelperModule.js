@@ -5,7 +5,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
+            status: (item.published ? {text: 'published', label: 'label-success'} : false)
         }
     };
 
@@ -26,450 +27,379 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
-    var _groups = {
-        'Crop Sales': {
+    var _groups = underscore.indexBy([
+        {
             code: 'INC-CPS',
             name: 'Crop Sales'
-        },
-        'Fruit Sales': {
+        }, {
             code: 'INC-FRS',
             name: 'Fruit Sales'
-        },
-        'Harvest': {
+        }, {
             code: 'HVT',
             name: 'Harvest'
-        },
-        'Preharvest': {
+        }, {
             code: 'HVP',
             name: 'Preharvest'
-        },
-
-
-        'Livestock Sales': {
+        }, {
             code: 'INC-LSS',
             name: 'Livestock Sales'
-        },
-        'Product Sales': {
+        }, {
             code: 'INC-LSP',
             name: 'Product Sales'
-        },
-        'Animal Feed': {
+        }, {
             code: 'EXP-AMF',
             name: 'Animal Feed'
-        },
-        'Husbandry': {
+        }, {
             code: 'HBD',
             name: 'Husbandry'
-        },
-        'Indirect Costs': {
+        }, {
             code: 'IDR',
             name: 'Indirect Costs'
-        },
-        'Marketing': {
+        }, {
             code: 'MRK',
             name: 'Marketing'
-        },
-        'Replacements': {
+        }, {
             code: 'RPM',
             name: 'Replacements'
         }
-    };
+    ], 'name');
 
-    var _categories = {
+    var _categories = underscore.indexBy([
         //*********** Income *********
         // livestock sales
         // Sheep
-        'INC-LSS-SLAMB': {
+        {
             code: 'INC-LSS-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'INC-LSS-SWEAN': {
+        }, {
             code: 'INC-LSS-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'INC-LSS-SEWE': {
+        }, {
             code: 'INC-LSS-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'INC-LSS-SWTH': {
+        }, {
             code: 'INC-LSS-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-SRAM': {
+        }, {
             code: 'INC-LSS-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'INC-LSS-CCALV':{
+        {
             code: 'INC-LSS-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'INC-LSS-CWEN':{
+        }, {
             code: 'INC-LSS-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'INC-LSS-CCOW':{
+        }, {
             code: 'INC-LSS-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'INC-LSS-CST18':{
+        }, {
             code: 'INC-LSS-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'INC-LSS-CST36':{
+        }, {
             code: 'INC-LSS-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'INC-LSS-CBULL':{
+        }, {
             code: 'INC-LSS-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'INC-LSS-GKID':{
+        {
             code: 'INC-LSS-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'INC-LSS-GWEAN':{
+        }, {
             code: 'INC-LSS-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'INC-LSS-GEWE':{
+        }, {
             code: 'INC-LSS-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GCAST':{
+        }, {
             code: 'INC-LSS-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GRAM':{
+        }, {
             code: 'INC-LSS-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
 
         // livestock product sales
-        'INC-LSP-MILK': {
+        {
             code: 'INC-LSP-MILK',
             name: 'Milk',
             unit: 'l'
-        },
-        'INC-LSP-WOOL': {
+        }, {
             code: 'INC-LSP-WOOL',
             name: 'Wool',
             unit: 'kg'
         },
 
         //Crops
-        'INC-HVT-CROP': {
+        {
             code: 'INC-HVT-CROP',
             name: 'Crop',
             unit: 't'
         },
         //Horticulture (non-perennial)
-        'INC-HVT-FRUT': {
+        {
             code: 'INC-HVT-FRUT',
             name: 'Fruit',
             unit: 't'
         },
         //*********** Expenses *********
         // Preharvest
-        'EXP-HVP-SEED': {
+        {
             code: 'EXP-HVP-SEED',
             name: 'Seed',
             unit: 'kg'
-        },
-        'EXP-HVP-PLTM': {
+        }, {
             code: 'EXP-HVP-PLTM',
             name: 'Plant Material',
             unit: 'each'
-        },
-        'EXP-HVP-FERT': {
+        }, {
             code: 'EXP-HVP-FERT',
             name: 'Fertiliser',
             unit: 't'
-        },
-        'EXP-HVP-LIME': {
+        }, {
             code: 'EXP-HVP-LIME',
             name: 'Lime',
             unit: 't'
-        },
-        'EXP-HVP-HERB': {
+        }, {
             code: 'EXP-HVP-HERB',
             name: 'Herbicides',
             unit: 'l'
-        },
-        'EXP-HVP-PEST': {
+        }, {
             code: 'EXP-HVP-PEST',
             name: 'Pesticides',
             unit: 'l'
-        },
-        'EXP-HVP-SPYA': {
+        }, {
             code: 'EXP-HVP-SPYA',
             name: 'Aerial spraying',
             unit: 'ha'
-        },
-        'EXP-HVP-INSH': {
+        }, {
             code: 'EXP-HVP-INSH',
             name: 'Crop Insurance (Hail)',
             unit: 't'
-        },
-        'EXP-HVP-INSM': {
+        }, {
             code: 'EXP-HVP-INSM',
             name: 'Crop Insurance (Multiperil)',
             unit: 't'
-        },
-        'EXP-HVP-HEDG': {
+        }, {
             code: 'EXP-HVP-HEDG',
             name: 'Hedging cost',
             unit: 't'
         },
         //Harvest
-        'EXP-HVT-LABC': {
+        {
             code: 'EXP-HVT-LABC',
             name: 'Contract work (Harvest)',
             unit: 'ha'
-        },
-        'EXP-HVT-STOR': {
+        }, {
             code: 'EXP-HVT-STOR',
             name: 'Storage',
             unit: 'days'
-        },
-        'EXP-HVT-PAKM': {
+        }, {
             code: 'EXP-HVT-PAKM',
             name: 'Packaging material',
             unit: 'each'
-        },
-        'EXP-HVT-DYCL': {
+        }, {
             code: 'EXP-HVT-DYCL',
             name: 'Drying and cleaning',
             unit: 't'
-        },
-        'EXP-HVT-PAKC': {
+        }, {
             code: 'EXP-HVT-PAKC',
             name: 'Packing cost',
             unit: 'each'
         },
         //Indirect
-        'EXP-IDR-FUEL': {
+        {
             code: 'EXP-IDR-FUEL',
             name: 'Fuel',
             unit: 'l'
-        },
-        'EXP-IDR-REPP': {
+        }, {
             code: 'EXP-IDR-REPP',
             name: 'Repairs & parts',
             unit: 'Total'
-        },
-        'EXP-IDR-ELEC': {
+        }, {
             code: 'EXP-IDR-ELEC',
             name: 'Electricity',
             unit: 'Total'
-        },
-        'EXP-IDR-WATR': {
+        }, {
             code: 'EXP-IDR-WATR',
             name: 'Water',
             unit: 'Total'
-        },
-        'EXP-IDR-LABP': {
+        }, {
             code: 'EXP-IDR-LABP',
             name: 'Permanent labour',
             unit: 'Total'
-        },
-        'EXP-IDR-SCHED': {
+        }, {
             code: 'EXP-IDR-SCHED',
             name: 'Scheduling',
             unit: 'Total'
-        },
-        'EXP-IDR-LICS': {
+        }, {
             code: 'EXP-IDR-LICS',
             name: 'License',
             unit: 'Total'
-        },
-        'EXP-IDR-INSA': {
+        }, {
             code: 'EXP-IDR-INSA',
             name: 'Insurance assets',
             unit: 'Total'
-        },
-        'EXP-IDR-OTHER': {
+        }, {
             code: 'EXP-IDR-OTHER',
             name: 'Other costs',
             unit: 'Total'
         },
         //Replacements
         // Sheep
-        'EXP-RPM-SLAMB': {
+        {
             code: 'EXP-RPM-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'EXP-RPM-SWEAN': {
+        }, {
             code: 'EXP-RPM-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'EXP-RPM-SEWE': {
+        }, {
             code: 'EXP-RPM-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'EXP-RPM-SWTH': {
+        }, {
             code: 'EXP-RPM-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-SRAM': {
+        }, {
             code: 'EXP-RPM-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'EXP-RPM-CCALV':{
+        {
             code: 'EXP-RPM-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'EXP-RPM-CWEN':{
+        }, {
             code: 'EXP-RPM-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'EXP-RPM-CCOW':{
+        }, {
             code: 'EXP-RPM-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'EXP-RPM-CST18':{
+        }, {
             code: 'EXP-RPM-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CST36':{
+        }, {
             code: 'EXP-RPM-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CBULL':{
+        }, {
             code: 'EXP-RPM-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'EXP-RPM-GKID':{
+        {
             code: 'EXP-RPM-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'EXP-RPM-GWEAN':{
+        }, {
             code: 'EXP-RPM-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'EXP-RPM-GEWE':{
+        }, {
             code: 'EXP-RPM-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GCAST':{
+        }, {
             code: 'EXP-RPM-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GRAM':{
+        }, {
             code: 'EXP-RPM-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
         //Animal feed
-        'EXP-AMF-LICK': {
+        {
             code: 'EXP-AMF-LICK',
             name: 'Lick',
             unit: 'kg'
         },
         //Husbandry
-        'EXP-HBD-VACC': {
+        {
             code: 'EXP-HBD-VACC',
             name: 'Drenching & vaccination',
             unit: 'head'
-        },
-        'EXP-HBD-DIPP': {
+        }, {
             code: 'EXP-HBD-DIPP',
             name: 'Dipping & jetting',
             unit: 'head'
-        },
-        'EXP-HBD-VETY': {
+        }, {
             code: 'EXP-HBD-VETY',
             name: 'Veterinary',
             unit: 'head'
-        },
-        'EXP-HBD-SHER': {
+        }, {
             code: 'EXP-HBD-SHER',
             name: 'Shearing',
             unit: 'head'
-        },
-        'EXP-HBD-CRCH': {
+        }, {
             code: 'EXP-HBD-CRCH',
             name: 'Crutching',
             unit: 'head'
-        },
-        'EXP-MRK-LSSF': {
+        }, {
             code: 'EXP-MRK-LSSF',
             name: 'Livestock sales marketing fees',
-            calculationFactor: 'Livestock Sales',
+            incomeGroup: 'Livestock Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSPF': {
+        }, {
             code: 'EXP-MRK-LSPF',
             name: 'Livestock products marketing fees',
-            calculationFactor: 'Product Sales',
+            incomeGroup: 'Product Sales',
             unit: '%'
-        },
-        'EXP-MRK-HOTF': {
+        }, {
             code: 'EXP-MRK-HOTF',
             name: 'Horticulture marketing fees',
-            calculationFactor: 'Fruit Sales',
+            incomeGroup: 'Fruit Sales',
             unit: '%'
-        },
-        'EXP-MRK-CRPF': {
+        }, {
             code: 'EXP-MRK-CRPF',
             name: 'Crop marketing fees',
-            calculationFactor: 'Crop Sales',
+            incomeGroup: 'Crop Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSTP': {
+        }, {
             code: 'EXP-MRK-LSTP',
             name: 'Livestock transport',
             unit: 'head'
-        },
-        'EXP-MRK-HOTT': {
+        }, {
             code: 'EXP-MRK-HOTT',
             name: 'Horticulture transport',
             unit: 't'
-        },
-        'EXP-MRK-CRPT': {
+        }, {
             code: 'EXP-MRK-CRPT',
             name: 'Crop transport',
             unit: 't'
         }
-    };
+    ], 'code');
 
     // todo: extend the categories with products for future features.
 //    var _productsMap = {
@@ -623,7 +553,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 },
                 expenses: {
                     'Replacements': [
-                        _categories['EXP-RPM-GID'],
+                        _categories['EXP-RPM-GKID'],
                         _categories['EXP-RPM-GWEAN'],
                         _categories['EXP-RPM-GEWE'],
                         _categories['EXP-RPM-GCAST'],
@@ -714,6 +644,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         Goats: 'Ewe (2-tooth plus)'
     };
 
+    var _baseAnimal = {
+        'Cattle (Extensive)': 'Cattle',
+        'Cattle (Feedlot)': 'Cattle',
+        'Cattle (Stud)': 'Cattle',
+        'Sheep (Extensive)': 'Sheep',
+        'Sheep (Feedlot)': 'Sheep',
+        'Sheep (Stud)': 'Sheep'
+    };
+
     var _conversionRate = {
         Cattle: {
             'Calf': 0.32,
@@ -739,17 +678,42 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
+    var _commodityTypes = {
+        crop: 'Field Crops',
+        horticulture: 'Horticulture',
+        livestock: 'Livestock'
+    };
+
+    // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
+    var _commodities = {
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+};
+
     var _horticultureStages = {
-        'Pears': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Apples': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Olives': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Pecan nuts': ['1-2 years', '4-5 years', '6-8 years', '8+ years'],
-        'Peaches': ['1-2 years', '3-5 years', '5-8 years', '8+ years'],
-        'Stone Fruit': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Grapes': ['0-1 years', '1-2 years', '2-3 years', '3+ years'],
-        'Citrus': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Macadamia': ['0-1 years', '2-3 years', '4-6 years', '7-9 years','10+ years']
-    }
+        'Apple': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Apricot': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Avocado': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Blueberry': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Citrus (Hardpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Citrus (Softpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Fig': ['0-1 years', '1-3 years', '3-6 years', '6-18 years', '18-30 years', '30+ years'],
+        'Grape (Table)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Grape (Wine)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Macadamia Nut': ['0-1 years', '1-3 years', '3-6 years', '6-9 years','10+ years'],
+        'Mango': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Nectarine': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Olive': ['0-1 years', '1-3 years', '3-5 years', '5-10 years', '10+ years'],
+        'Orange': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Pecan Nut': ['0-1 years', '1-3 years', '3-7 years', '7-10 years', '10+ years'],
+        'Peach': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pear': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Persimmon': ['0-1 years', '1-4 years', '4-12 years', '12-20 years', '20+ years'],
+        'Plum': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pomegranate': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Rooibos': ['0-1 years', '1-2 years', '2-4 years', '4-5 years', '5+ years']
+    };
 
     var _productsMap = {
         'INC-PDS-MILK': {
@@ -765,18 +729,57 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         budget.data.sections = budget.data.sections || [];
     }
 
+    function getBaseAnimal (commodityType) {
+        return _baseAnimal[commodityType] || commodityType;
+    }
+
+    function checkBudgetSection (budget, stage) {
+        angular.forEach(['income', 'expenses'], function (section) {
+            var foundSection = underscore.findWhere(budget.data.sections,
+                (stage === undefined ? {code: _sections[section].code} : {code: _sections[section].code, horticultureStage: stage}));
+
+            if (foundSection === undefined) {
+                foundSection = {
+                    code: _sections[section].code,
+                    name: _sections[section].name,
+                    productCategoryGroups: [],
+                    total: {
+                        value: 0
+                    }
+                };
+
+                if (stage !== undefined) {
+                    foundSection.horticultureStage = stage;
+                }
+
+                budget.data.sections.push(foundSection);
+            }
+        });
+
+        return budget;
+    }
+
     return {
         listServiceMap: function () {
             return _listServiceMap;
         },
+        commodityTypes: function() {
+            return _commodityTypes;
+        },
+        commodities: function() {
+            return _commodities;
+        },
         getRepresentativeAnimal: function(commodityType) {
-            return _representativeAnimal[commodityType];
+            return _representativeAnimal[getBaseAnimal(commodityType)];
         },
         getConversionRate: function(commodityType) {
-            return _conversionRate[commodityType][_representativeAnimal[commodityType]];
+            return _conversionRate[getBaseAnimal(commodityType)][_representativeAnimal[getBaseAnimal(commodityType)]];
         },
         getConversionRates: function(commodityType) {
-            return _conversionRate[commodityType];
+            return _conversionRate[getBaseAnimal(commodityType)];
+        },
+        getCommodities: function (type) {
+            return _commodities[type] || '';
         },
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];
@@ -784,8 +787,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         getCategories: function (budget, assetType, commodityType, sectionType, horticultureStage) {
             var categories = {};
 
-            if(assetType == 'livestock' && _categoryOptions[assetType][commodityType]) {
-                categories = angular.copy(_categoryOptions[assetType][commodityType][sectionType]) || {};
+            if(assetType == 'livestock' && _categoryOptions[assetType][getBaseAnimal(commodityType)]) {
+                categories = angular.copy(_categoryOptions[assetType][getBaseAnimal(commodityType)][sectionType]) || {};
             }
 
             if(assetType == 'crop' && _categoryOptions[assetType][sectionType]) {
@@ -828,20 +831,24 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             return _modelTypes[type] || '';
         },
 
-        validateBudgetData: function (budget) {
+        validateBudgetData: function (budget, stage) {
             checkBudgetTemplate(budget);
+            checkBudgetSection(budget, stage);
             return this.calculateTotals(budget);
+        },
+        initNewSections: function (budget, stage) {
+            return checkBudgetSection(budget, stage);
         },
         addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             var category = angular.copy(_categories[categoryCode]);
             category.quantity = 0;
             category.pricePerUnit = 0;
             category.value = 0;
-            
+
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
-                if(_conversionRate[budget.commodityType][category.name]) {
-                    category.conversionRate = _conversionRate[budget.commodityType][category.name];
+                if(_conversionRate[getBaseAnimal(budget.commodityType)][category.name]) {
+                    category.conversionRate = _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                 }
             }
 
@@ -893,7 +900,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             checkBudgetTemplate(budget);
 
             if(budget.assetType == 'livestock') {
-                budget.data.details.calculatedLSU = budget.data.details.herdSize * _conversionRate[budget.commodityType][_representativeAnimal[budget.commodityType]];
+                budget.data.details.calculatedLSU = budget.data.details.herdSize *
+                    _conversionRate[getBaseAnimal(budget.commodityType)][_representativeAnimal[getBaseAnimal(budget.commodityType)]];
             }
 
             var income = 0;
@@ -902,36 +910,35 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 section.total = {
                     value: 0
                 };
-                
+
                 if(budget.assetType == 'livestock') {
                     section.total.valuePerLSU = 0;
                 }
-                
+
                 section.productCategoryGroups.forEach(function(group, j) {
                     group.total = {
                         value: 0
                     };
-                    
+
                     if(budget.assetType == 'livestock') {
                         group.total.valuePerLSU = 0;
                     }
-                    
+
                     group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
-                            var groupSum = 0;
-
-                            angular.forEach(budget.data.sections, function(cSection, x) {
-                                angular.forEach(cSection.productCategoryGroups, function(cGroup, y) {
-                                    if(cGroup.name == category.calculationFactor) {
-                                        groupSum = cGroup.total.value;
-                                    }
-                                });
-                            });
+                            var groupSum = underscore
+                                .chain(budget.data.sections)
+                                .pluck('productCategoryGroups')
+                                .flatten()
+                                .reduce(function(total, group) {
+                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
+                                }, 0)
+                                .value();
 
                             category.value = category.pricePerUnit * groupSum / 100;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         } else {
                             if(category.unit == 'Total') {
@@ -941,7 +948,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                             category.value = category.pricePerUnit * category.quantity;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         }
 
@@ -971,20 +978,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             if(budget.assetType == 'horticulture') {
                 budget.data.details.grossProfitByStage = {};
 
-                angular.forEach(_horticultureStages[budget.commodityType], function(stage, i) {
-                    var stageIncome = 0;
-                    var stageCosts = 0;
-
-                    angular.forEach(budget.data.sections, function(section, j) {
-                        if(section.horticultureStage == stage && section.name == 'Income') {
-                            stageIncome = section.total.value;
-                        }
-                        if(section.horticultureStage == stage && section.name == 'Expenses') {
-                            stageCosts = section.total.value;
-                        }
-                    });
-
-                    budget.data.details.grossProfitByStage[stage] = stageIncome - stageCosts;
+                angular.forEach(_horticultureStages[budget.commodityType], function(stage) {
+                    budget.data.details.grossProfitByStage[stage] = underscore
+                        .chain(budget.data.sections)
+                        .where({horticultureStage: stage})
+                        .reduce(function (total, section) {
+                            return (section.name === 'Income' ? total + section.total.value :
+                                (section.name === 'Expenses' ? total - section.total.value : total));
+                        }, 0)
+                        .value();
                 });
             }
 

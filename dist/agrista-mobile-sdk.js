@@ -606,31 +606,28 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
 
                     _scroll.busy = true;
+                    delete params.complete;
 
-                    return promiseService.wrap(function(promise) {
-                        delete params.complete;
+                    return requestor(params).then(function(res) {
+                        if (params.search === undefined) {
+                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                            _scroll.complete = (res.length !== _scroll.page.limit);
+                        } else {
+                            _scroll.searching = params;
+                            _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                            _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                        }
 
-                        requestor(params).then(function(res) {
-                            if (params.search === undefined) {
-                                _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                                _scroll.complete = (res.length !== _scroll.page.limit);
-                            } else {
-                                _scroll.searching = params;
-                                _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
-                                _scroll.searching.complete = (res.length !== _scroll.searching.limit);
-                            }
+                        _scroll.busy = false;
 
-                            _scroll.busy = false;
+                        if (dataMap) {
+                            res = dataMapService(res, dataMap);
+                        }
 
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
+                        itemStore(res);
 
-                            itemStore(res);
-
-                            promise.resolve(res);
-                        }, promiseService.throwError);
-                    });
+                        return res;
+                    }, promiseService.throwError);
                 }
             };
 
@@ -755,11 +752,11 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
                 $cookieStore.put(key, value);
             }
         },
-        getItem: function (key) {
+        getItem: function (key, defaultValue) {
             if ($window.localStorage) {
-                return JSON.parse($window.localStorage.getItem(key));
+                return JSON.parse($window.localStorage.getItem(key)) || defaultValue;
             } else {
-                return $cookieStore.get(key);
+                return $cookieStore.get(key) || defaultValue;
             }
         },
         removeItem: function (key) {
@@ -775,6 +772,42 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
+    var _assetTitle = function (asset) {
+        if (asset.data) {
+            switch (asset.type) {
+                case 'crop':
+                case 'permanent crop':
+                case 'plantation':
+                    return (asset.data.plantedArea ? $filter('number')(asset.data.plantedArea, 2) + 'Ha' : '') +
+                       (asset.data.plantedArea && asset.data.crop ? ' of ' : '') +
+                       (asset.data.crop ? asset.data.crop : '') +
+                       (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'farmland':
+                    return (asset.data.portionLabel ? asset.data.portionLabel :
+                        (asset.data.portionNumber ? 'Portion ' + asset.data.portionNumber : 'Remainder of farm'));
+                case 'improvement':
+                    return asset.data.name;
+                case 'cropland':
+                    return (asset.data.irrigated ? asset.data.irrigation + ' from ' + asset.data.waterSource : 'Non irrigable ' + asset.type) +
+                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'livestock':
+                    return asset.data.type + (asset.data.category ? ' - ' + asset.data.category : '');
+                case 'pasture':
+                    return (asset.data.crop ? asset.data.crop : 'Natural') +
+                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'vme':
+                    return asset.data.category + (asset.data.model ? ' model ' + asset.data.model : '');
+                case 'wasteland':
+                    return 'Wasteland';
+                case 'water source':
+                case 'water right':
+                    return asset.data.waterSource + (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+            }
+        }
+
+        return _assetTypes[type];
+    };
+
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -784,56 +817,55 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
         if (item.data) {
             if (item.type == 'crop') {
-                map.title = (item.data.plantedArea ? item.data.plantedArea.toFixed(2) + 'Ha of ' : '') + (item.data.crop ? item.data.crop : '') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.season ? item.data.season : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'farmland') {
-                map.title = (item.data.portionLabel? item.data.portionLabel :
-                    (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm'));
-                map.subtitle = (item.data.area !== undefined ? 'Area: ' + item.data.area.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.area !== undefined ? 'Area: ' + $filter('number')(item.data.area, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
-                map.title = item.data.name;
+                map.title = _assetTitle(item);
                 map.subtitle = item.data.type + ' - ' + item.data.category;
                 map.summary = (item.data.description || '');
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
-                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : 'Non irrigable ' + item.type) + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
-                map.title = item.data.type + ' - ' + item.data.category;
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.breed ? item.data.breed + ' for ' : 'For ') + item.data.purpose;
                 map.summary = (item.data.description || '');
                 map.groupby = item.data.type;
             } else if (item.type == 'pasture') {
-                map.title = (item.data.crop ? item.data.crop : 'Natural') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.plantedDate ? 'Planted: ' + $filter('date')(item.data.plantedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'permanent crop') {
-                map.title = item.data.crop + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.establishedDate ? 'Established: ' + $filter('date')(item.data.establishedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'plantation') {
-                map.title = item.data.crop + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.establishedDate ? 'Established: ' + $filter('date')(item.data.establishedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'vme') {
-                map.title = item.data.category + (item.data.model ? ' model ' + item.data.model : '');
+                map.title = _assetTitle(item);
                 map.subtitle = 'Quantity: ' + item.data.quantity;
                 map.summary = (item.data.description || '');
                 map.groupby = item.data.type;
             } else if (item.type == 'wasteland') {
-                map.title = 'Wasteland';
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'water right') {
-                map.title = item.data.waterSource + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             }
 
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+            map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/camera.png');
         }
 
         if (metadata) {
@@ -934,16 +966,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'water right': ['Water Right']
     };
 
-    var _commodityTypes = {
-        crop: 'Field Crops',
-        horticulture: 'Horticulture',
-        livestock: 'Livestock'
-    };
-
-    var _commodities = {
-        crop: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        horticulture: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
-        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+    var _landUseCropTypes = {
+        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
+        'Grazing': ['Bahia-Notatum', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Phalaris', 'Rescue', 'Rhodes', 'Smuts Finger', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'],
+        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
+        'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chili', 'Cucumber', 'Cucurbit', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lentil', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pea (Dry)', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
+        'Plantation': ['Bluegum', 'Pine', 'Wattle'],
+        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
     };
 
     return {
@@ -956,8 +985,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         listServiceMap: function () {
             return _listServiceMap;
         },
-        getAssetTitle: function (type) {
+        getAssetClass: function (type) {
             return _assetTypes[type];
+        },
+        getAssetTitle: function (asset) {
+            return _assetTitle(asset);
         },
         getAssetLandUse: function (type) {
             return _assetLandUse[type];
@@ -971,24 +1003,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
         },
-        getCommodities: function (type) {
-            return _commodities[type] || '';
+        getCropsForLandUse: function (landUse) {
+            return _landUseCropTypes[landUse] || [];
         },
-
-        commodityTypes: function() {
-            return _commodityTypes;
-        },
-        commodities: function() {
-            return _commodities;
+        getZoneTitle: function (zone) {
+            return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
         },
         conditionTypes: function () {
             return _conditionTypes;
         },
-
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
-
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
                 (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
@@ -1128,37 +1154,102 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
 
 var sdkHelperAttachmentApp = angular.module('ag.sdk.helper.attachment', ['ag.sdk.library']);
 
-sdkHelperAttachmentApp.factory('attachmentHelper', ['underscore', function (underscore) {
-    var _getResizedAttachment = function (attachments, size) {
-        if (attachments !== undefined) {
+sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (underscore) {
+    var _options = {
+        defaultImage: 'img/camera.png'
+    };
+
+    this.config = function (options) {
+        _options = underscore.defaults(options || {}, _options);
+    };
+
+    this.$get = function () {
+        var _getResizedAttachment = function (attachments, size, defaultImage) {
             if ((attachments instanceof Array) == false) {
                 attachments = [attachments];
             }
 
-            return underscore.chain(attachments)
+            defaultImage = defaultImage || _options.defaultImage;
+
+            var src = underscore.chain(attachments)
                 .filter(function (attachment) {
                     return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
                 }).map(function (attachment) {
                     return attachment.sizes[size].src;
                 }).last().value();
-        }
 
-        return attachments;
-    };
+            return src || defaultImage;
+        };
 
-    return {
-        getSize: function (attachments, size) {
-            return _getResizedAttachment(attachments, size);
-        },
-        getThumbnail: function (attachments) {
-            return _getResizedAttachment(attachments, 'thumb');
-        }
+        return {
+            findSize: function (obj, size, defaultImage) {
+                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage);
+            },
+            getSize: function (attachments, size, defaultImage) {
+                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage);
+            },
+            getThumbnail: function (attachments, defaultImage) {
+                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage);
+            }
+        };
     };
 }]);
 
-var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
+sdkHelperAttachmentApp.factory('resizeImageService', ['promiseService', 'underscore', function (promiseService, underscore) {
+    return function (imageOrUri, options) {
+        var _processImage = function (image) {
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
 
-sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
+            options = underscore.defaults(options || {}, {
+                width: 80,
+                height: 80,
+                center: true,
+                crop: true,
+                output: 'image/png'
+            });
+
+            canvas.width = options.width;
+            canvas.height = options.height;
+
+            if (options.crop) {
+                var sX = 0, sY = 0;
+                var scaleToHeight = (((options.width * image.height) / options.height) > image.width);
+
+                var sW = (scaleToHeight ? Math.floor(image.width) : Math.floor((options.width * image.height) / options.height));
+                var sH = (scaleToHeight ? Math.floor((options.height * image.width) / options.width) : Math.floor(image.height));
+
+                if (options.center) {
+                    sX = (scaleToHeight ? 0 : Math.floor((sW - options.width) / 2));
+                    sY = (scaleToHeight ? Math.floor((sH - options.height) / 2) : 0);
+                }
+
+                ctx.drawImage(image, sX, sY, sW, sH, 0, 0, options.width, options.height);
+            } else {
+                ctx.drawImage(image, 0, 0, options.width, options.height);
+            }
+
+            return canvas.toDataURL(options.output, 1);
+        };
+
+        return promiseService.wrap(function (promise) {
+            if (typeof imageOrUri == 'string') {
+                var image = new Image();
+
+                image.onload = function () {
+                    promise.resolve(_processImage(image));
+                };
+
+                image.src = imageOrUri;
+            } else {
+                promise.resolve(_processImage(imageOrUri));
+            }
+        });
+    };
+}]);
+var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document', 'ag.sdk.library']);
+
+sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'underscore', function(documentHelper, underscore) {
     var _approvalTypes = ['Approved', 'Not Approved', 'Not Planted'];
 
     var _commentTypes = ['Crop amendment', 'Crop re-plant', 'Insurance coverage discontinued', 'Multi-insured', 'Other', 'Without prejudice', 'Wrongfully reported'];
@@ -1189,18 +1280,18 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         'Maize': _growthStageTable[0],
         'Maize (White)': _growthStageTable[0],
         'Maize (Yellow)': _growthStageTable[0],
-        'Soybean': _growthStageTable[2],
+        'Soya Bean': _growthStageTable[2],
         'Sunflower': _growthStageTable[4],
         'Wheat': _growthStageTable[1],
         'Wheat (Durum)': _growthStageTable[1]
     };
 
     var _inspectionTypes = {
-        emergence: 'Emergence Inspection',
-        hail: 'Hail Inspection',
-        harvest: 'Harvest Inspection',
-        preharvest: 'Pre Harvest Inspection',
-        progress: 'Progress Inspection'
+        'emergence inspection': 'Emergence Inspection',
+        'hail inspection': 'Hail Inspection',
+        'harvest inspection': 'Harvest Inspection',
+        'preharvest inspection': 'Pre Harvest Inspection',
+        'progress inspection': 'Progress Inspection'
     };
 
     var _seedTypeTable = [
@@ -1213,16 +1304,11 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         'Maize (Yellow)': _seedTypeTable[0]
     };
 
-    var _policyTypes = {
-        'hail': 'Hail',
-        'multi peril': 'Multi Peril'
-    };
+    var _policyTypes = ['Hail', 'Multi Peril'];
 
     var _policyInspections = {
-        'hail': {
-            hail: _inspectionTypes.hail
-        },
-        'multi peril': _inspectionTypes
+        'Hail': ['hail inspection'],
+        'Multi Peril': underscore.keys(_inspectionTypes)
     };
 
     var _problemTypes = {
@@ -1235,42 +1321,42 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         weed: 'Weed'
     };
 
-    var _listServiceMap = function (item) {
-        var map = documentHelper.listServiceWithTaskMap()(item);
-
-        if (map && item.data.request) {
-            map.subtitle = map.title + ' - ' + item.data.enterprise;
-            map.title = item.documentId;
-            map.group = _inspectionTypes[item.data.inspectionType] || '';
-        }
-
-        return map;
+    var _flowerTypes = {
+        'Dry Bean': 'pod',
+        'Grain Sorghum': 'panicle',
+        'Maize (White)': 'ear',
+        'Maize (Yellow)': 'ear',
+        'Sunflower': 'flower',
+        'Wheat': 'spikelet',
+        'Soya Bean': 'pod'
     };
 
     return {
-        listServiceMap: function () {
-            return _listServiceMap;
-        },
-
         approvalTypes: function () {
             return _approvalTypes;
         },
         commentTypes: function () {
             return _commentTypes;
         },
-        inspectionTypes: function () {
+        inspectionTitles: function () {
             return _inspectionTypes;
+        },
+        inspectionTypes: function () {
+            return underscore.keys(_inspectionTypes);
         },
         policyTypes: function () {
             return _policyTypes;
         },
         policyInspectionTypes: function (policyType) {
-            return _policyInspections[policyType] || {};
+            return _policyInspections[policyType] || [];
         },
         problemTypes: function () {
             return _problemTypes;
         },
 
+        getFlowerType: function (crop) {
+            return _flowerTypes[crop] || '';
+        },
         getGrowthStages: function (crop) {
             return _growthStageCrops[crop] || _growthStageTable[0];
         },
@@ -1280,15 +1366,845 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         getInspectionTitle: function (type) {
             return _inspectionTypes[type] || '';
         },
-        getPolicyTitle: function (type) {
-            return _policyTypes[type] || '';
-        },
         getProblemTitle: function (type) {
             return _problemTypes[type] || '';
+        },
+        getSampleArea: function (asset, zone) {
+            return (_flowerTypes[asset.data.crop] === 'spikelet' ?
+                (zone && zone.plantedInRows === true ? '3m' : 'm²') :
+                (_flowerTypes[asset.data.crop] === 'pod' ? '3m' : '10m'));
         },
 
         hasSeedTypes: function (crop) {
             return _seedTypes[crop] !== undefined;
+        },
+
+        calculateProgressYield: function (asset, samples, pitWeight, realization) {
+            pitWeight = pitWeight || 0;
+            realization = (realization === undefined ? 100 : realization);
+
+            var reduceSamples = function (samples, prop) {
+                return (underscore.reduce(samples, function (total, sample) {
+                    return (sample[prop] ? total + sample[prop] : total);
+                }, 0) / samples.length) || 0
+            };
+
+            var zoneYields = underscore.map(asset.data.zones, function (zone, index) {
+                var zoneSamples = underscore.where(samples, {zone: index});
+                var total = {
+                    coverage: (zone.size / asset.data.plantedArea),
+                    heads: reduceSamples(zoneSamples, 'heads'),
+                    weight: reduceSamples(zoneSamples, 'weight')
+                };
+
+                if (_flowerTypes[asset.data.crop] === 'spikelet') {
+                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.plantedInRows ? zone.rowWidth * 3 : 1));
+                } else if (_flowerTypes[asset.data.crop] === 'pod') {
+                    total.pods = reduceSamples(zoneSamples, 'pods');
+                    total.seeds = reduceSamples(zoneSamples, 'seeds');
+                    total.yield = (pitWeight * total.seeds * total.pods * total.heads) / (zone.rowWidth * 300);
+                } else {
+                    total.yield = (total.weight * total.heads) / (zone.rowWidth * 1000);
+                }
+
+                total.yield *= (realization / 100);
+
+                return total;
+            });
+
+            return {
+                zones: zoneYields,
+                yield: underscore.reduce(zoneYields, function (total, item) {
+                    return total + (item.coverage * item.yield);
+                }, 0)
+            };
+        }
+    }
+}]);
+
+sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (underscore) {
+    var _providerCultivars = {
+        'Maize (Yellow)': {
+            'Afgri': [
+                'AFG 4222 B',
+                'AFG 4244',
+                'AFG 4270 B',
+                'AFG 4410',
+                'AFG 4412 B',
+                'AFG 4414',
+                'AFG 4416 B',
+                'AFG 4434 R',
+                'AFG 4440',
+                'AFG 4448',
+                'AFG 4452 B',
+                'AFG 4474 R',
+                'AFG 4476',
+                'AFG 4478 BR',
+                'AFG 4512',
+                'AFG 4520',
+                'AFG 4522 B',
+                'AFG 4530',
+                'AFG 4540',
+                'AFG 4546',
+                'AFG 4548',
+                'AFG 4566 B',
+                'AFG 4572 R',
+                'AFG 4660',
+                'AFG 4664',
+                'DK 618',
+                'Other'
+            ],
+            'Agricol': [
+                'IMP 50-90 BR',
+                'IMP 51-22 B',
+                'IMP 51-92',
+                'IMP 51-92 R',
+                'Other',
+                'QS 7646',
+                'SC 602',
+                'SC 608'
+            ],
+            'Capstone Seeds': [
+                'CAP 121-30',
+                'CAP 122-60',
+                'CAP 130-120',
+                'CAP 130-140',
+                'CAP 444 NG',
+                'CAP 766 NG',
+                'CAP 9004',
+                'CAP 9444 NG',
+                'Other'
+            ],
+            'Dekalb (Monsanto)': [
+                'DKC 61-90',
+                'DKC 62-80 BR',
+                'DKC 62-80 BR GEN',
+                'DKC 62-84 R',
+                'DKC 64-78 BR',
+                'DKC 64-78 BR GEN',
+                'DKC 66-32 B',
+                'DKC 66-36 R',
+                'DKC 66-60 BR',
+                'DKC 73-70 B GEN',
+                'DKC 73-72',
+                'DKC 73-74 BR GEN',
+                'DKC 73-76 R',
+                'DKC 80-10',
+                'DKC 80-12 B GEN',
+                'DKC 80-30 R',
+                'DKC 80-40 BR GEN',
+                'Other'
+            ],
+            'Delta Seed': [
+                'Amber',
+                'DE 2004',
+                'DE 2006',
+                'DE 2016',
+                'DE 222',
+                'Other'
+            ],
+            'Klein Karoo Saad': [
+                'Helen',
+                'KKS 8202',
+                'KKS 8204 B',
+                'KKS 8400',
+                'KKS 8402',
+                'Other'
+            ],
+            'Linksaad': [
+                'LS 8518',
+                'LS 8524 R',
+                'LS 8526',
+                'LS 8528 R',
+                'LS 8532 B',
+                'LS 8536 B',
+                'Other'
+            ],
+            'Pannar': [
+                'BG 3268',
+                'BG 3292',
+                'BG 3492BR',
+                'BG 3568R',
+                'BG 3592R',
+                'BG 3768BR',
+                'BG 4296',
+                'BG 6308B',
+                'Other',
+                'PAN 14',
+                'PAN 3D-736 BR',
+                'PAN 3P-502 R',
+                'PAN 3P-730 BR',
+                'PAN 3Q-222',
+                'PAN 3Q-240',
+                'PAN 3Q-740 BR',
+                'PAN 3R-644 R',
+                'PAN 4P-228',
+                'PAN 4P-716 BR',
+                'PAN 6126 ',
+                'PAN 66',
+                'PAN 6616',
+                'PAN 6P-110',
+                'PAN 6P110',
+                'PAN 6Q-408B',
+                'PAN 6Q-508 R',
+                'PAN 6Q-708 BR'
+            ],
+            'Pioneer': [
+                'Other',
+                'P 1615 R',
+                'P 2048',
+                'Phb 31D21 B',
+                'Phb 31D24',
+                'Phb 31D46 BR',
+                'Phb 31D48 B',
+                'Phb 31G54 BR',
+                'Phb 31G56 R',
+                'Phb 31K58 B',
+                'Phb 32D95 BR',
+                'Phb 32D96 B',
+                'Phb 32D99',
+                'Phb 32P68 R',
+                'Phb 32T50',
+                'Phb 32W71',
+                'Phb 32W72 B',
+                'Phb 33A14 B',
+                'Phb 33H52 B',
+                'Phb 33H56',
+                'Phb 33Y72 B',
+                'Phb 33Y74',
+                'Phb 3442',
+                'Phb 34N44 B',
+                'Phb 34N45 BR',
+                'Phb 35T05 R'
+            ],
+            'Sensako (Monsanto)': [
+                'Other',
+                'SNK 2472',
+                'SNK 2682',
+                'SNK 2778',
+                'SNK 2900',
+                'SNK 2942',
+                'SNK 2972',
+                'SNK 6326 B',
+                'SNK 7510 Y',
+                'SNK 8520'
+            ],
+            'Other': [
+                'Brasco',
+                'Cobber Flint',
+                'Cumbre',
+                'Energy',
+                'Gold Finger',
+                'High Flyer',
+                'IMP 50-10 R',
+                'IMP 51-22',
+                'IMP 52-12',
+                'MEH 114',
+                'MMH 1765',
+                'MMH 8825',
+                'Maverik',
+                'NK Arma',
+                'NK MAYOR B',
+                'NS 5000',
+                'NS 5004',
+                'NS 5066',
+                'NS 5914',
+                'NS 5916',
+                'NS 5918',
+                'NS 5920',
+                'Other',
+                'Premium Flex',
+                'QS 7608',
+                'RO 430',
+                'SA 24',
+                'SABI 7004',
+                'SABI 7200',
+                'Silmaster',
+                'Syncerus',
+                'US 9570',
+                'US 9580',
+                'US 9600',
+                'US 9610',
+                'US 9620',
+                'US 9770',
+                'US 9772',
+                'Woodriver'
+            ]
+        },
+        'Maize (White)': {
+            'Afgri': [
+                'AFG 4211',
+                'AFG 4321',
+                'AFG 4331',
+                'AFG 4333',
+                'AFG 4361',
+                'AFG 4383',
+                'AFG 4411',
+                'AFG 4445',
+                'AFG 4447',
+                'AFG 4471',
+                'AFG 4475 B',
+                'AFG 4477',
+                'AFG 4479 R',
+                'AFG 4501',
+                'AFG 4517',
+                'AFG 4555',
+                'AFG 4571 B',
+                'AFG 4573 B',
+                'AFG 4575',
+                'AFG 4577 B',
+                'AFG 4579 B',
+                'AFG 4581 BR',
+                'AFG 4611',
+                'AFG 4663',
+                'AFRIC 1',
+                'Other'
+            ],
+            'Agricol': [
+                'IMP 52-11',
+                'Other',
+                'SC 701',
+                'SC 709'
+            ],
+            'Capstone Seeds': [
+                'CAP 341 NG',
+                'CAP 341 T NG',
+                'CAP 441 NG',
+                'CAP 775 NG',
+                'CAP 9001',
+                'CAP 9013',
+                'CAP 9421',
+                'Other'
+            ],
+            'Dekalb (Monsanto)': [
+                'CRN 3505',
+                'CRN 4141',
+                'DKC 77-61 B',
+                'DKC 77-85 B GEN',
+                'DKC 78-15 B',
+                'DKC 78-17 B',
+                'DKC 78-35 R',
+                'DKC 78-45 BR',
+                'DKC 78-45 BR GEN',
+                'DKC 79-05',
+                'Other'
+            ],
+            'Delta Seed': [
+                'DE 111',
+                'DE 303',
+                'Other'
+            ],
+            'Klein Karoo Saad': [
+                'KKS 4383',
+                'KKS 4445',
+                'KKS 4447',
+                'KKS 4471',
+                'KKS 4473',
+                'KKS 4477',
+                'KKS 4479 R',
+                'KKS 4485',
+                'KKS 4501',
+                'KKS 4517',
+                'KKS 4519',
+                'KKS 4555',
+                'KKS 4575',
+                'KKS 4581 BR',
+                'KKS 8401',
+                'Other'
+            ],
+            'Linksaad': [
+                'LS 8519',
+                'LS 8529',
+                'LS 8533 R',
+                'LS 8535 B',
+                'LS 8537',
+                'LS 8539 B',
+                'Other'
+            ],
+            'Pannar': [
+                'BG 5485B',
+                'BG 5685R',
+                'BG4201',
+                'BG4401B',
+                'BG5285',
+                'BG5785BR',
+                'BG6683R',
+                'Other',
+                'PAN 413',
+                'PAN 4P-767BR',
+                'PAN 53',
+                'PAN 5Q-649 R',
+                'PAN 5Q-749 BR',
+                'PAN 5Q-751BR',
+                'PAN 6227',
+                'PAN 6479',
+                'PAN 6611',
+                'PAN 6671',
+                'PAN 67',
+                'PAN 6777',
+                'PAN 69',
+                'PAN 6Q-745BR',
+                'PAN 93',
+                'PAN413',
+                'PAN53',
+                'PAN6Q245',
+                'PAN6Q345CB',
+                'SC 701 (Green mealie)'
+            ],
+            'Pioneer': [
+                'Other',
+                'P 2369 W',
+                'P 2653 WB',
+                'P 2823 WB',
+                'P 2961 W',
+                'Phb 30B95 B',
+                'Phb 30B97 BR',
+                'Phb 30D04 R',
+                'Phb 30D07 B',
+                'Phb 30D09 BR',
+                'Phb 30Y79 B',
+                'Phb 30Y81 R',
+                'Phb 30Y83',
+                'Phb 31M09',
+                'Phb 31M84 BR',
+                'Phb 31T91',
+                'Phb 31V31',
+                'Phb 3210B',
+                'Phb 32A05 B',
+                'Phb 32B07 BR',
+                'Phb 32Y85',
+                'Phb 32Y87 B'
+            ],
+            'Sensako (Monsanto)': [
+                'SNK 2021',
+                'SNK 2147',
+                'SNK 2401',
+                'SNK 2551',
+                'SNK 2721',
+                'SNK 2911',
+                'SNK 2969',
+                'SNK 6025',
+                'SNK 7811 B'
+            ],
+            'Other': [
+                'CG 4141',
+                'GM 2000',
+                'KGALAGADI',
+                'MRI 514',
+                'MRI 624',
+                'NG 761',
+                'NS 5913',
+                'NS 5917',
+                'NS 5919',
+                'Other',
+                'PGS 7053',
+                'PGS 7061',
+                'PGS 7071',
+                'PLATINUM',
+                'Panthera',
+                'QS 7707',
+                'RO 413',
+                'RO 413',
+                'RO 419',
+                'SAFFIER',
+                'SC 401',
+                'SC 403',
+                'SC 405',
+                'SC 407',
+                'SC 513',
+                'SC 627',
+                'SC 631',
+                'SC 633',
+                'SC 713',
+                'SC 715',
+                'Scout'
+            ]
+        },
+        'Soya Bean': {
+            'Agriocare': [
+                'AGC 58007 R',
+                'AGC 60104 R',
+                'AGC 64107 R',
+                'AS 4801 R',
+                'Other'
+            ],
+            'Linksaad': [
+                'LS 6146 R',
+                'LS 6150 R',
+                'LS 6161 R',
+                'LS 6164 R',
+                'LS 6248 R',
+                'LS 6261 R',
+                'LS 6444 R',
+                'LS 6466 R',
+                'Other'
+            ],
+            'Pannar': [
+                'A 5409 RG',
+                'Other',
+                'PAN 1454 R',
+                'PAN 1583 R',
+                'PAN 1664 R',
+                'PAN 1666 R'
+            ],
+            'Pioneer': [
+                'Other',
+                'Phb 94Y80 R',
+                'Phb 95B53 R',
+                'Phb 95Y20 R',
+                'Phb 95Y40 R'
+            ],
+            'Other': [
+                'AG 5601',
+                'AMSTEL NO 1',
+                'DUMELA',
+                'DUNDEE',
+                'EGRET',
+                'HERON',
+                'HIGHVELD TOP',
+                'IBIS 2000',
+                'JF 91',
+                'JIMMY',
+                'KIAAT',
+                'KNAP',
+                'LEX 1233 R',
+                'LEX 1235 R',
+                'LEX 2257 R',
+                'LEX 2685 R',
+                'LIGHTNING',
+                'MARULA',
+                'MARUTI',
+                'MOPANIE',
+                'MPIMBO',
+                'MUKWA',
+                'NQUTU',
+                'OCTA',
+                'Other',
+                'SONOP',
+                'SPITFIRE',
+                'STORK',
+                'TAMBOTIE',
+                'WENNER'
+            ]
+        },
+        'Sunflower': {
+            'Agricol': [
+                'AGSUN 5161 CL',
+                'AGSUN 5182 CL',
+                'Agsun 5264',
+                'Agsun 5671',
+                'Agsun 8251',
+                'Nonjana',
+                'Other',
+                'SUNSTRIPE'
+            ],
+            'Klein Karoo Saad': [
+                'AFG 271',
+                'HYSUN 333',
+                'KKS 318',
+                'NK ADAGIO',
+                'NK Armoni',
+                'NK FERTI',
+                'Other',
+                'Sirena',
+                'Sunbird'
+            ],
+            'Pannar': [
+                'Other',
+                'PAN 7033',
+                'PAN 7049',
+                'PAN 7050',
+                'PAN 7057',
+                'PAN 7063 CL',
+                'PAN 7080',
+                'PAN 7086 HO',
+                'PAN 7095 CL',
+                'PAN 7351'
+            ],
+            'Other': [
+                'Ella',
+                'Grainco Sunstripe',
+                'HV 3037',
+                'HYSUN 334',
+                'HYSUN 338',
+                'HYSUN 346',
+                'HYSUN 350',
+                'Jade Emperor',
+                'Marica-2',
+                'NK Adagio CL',
+                'Nallimi CL',
+                'Other',
+                'SEA 2088 CL AO',
+                'SY 4045',
+                'SY 4200',
+                'Sikllos CL',
+                'WBS 3100'
+            ]
+        }
+    };
+
+    // Create Maize from Maize (Yellow) and Maize (White)
+    _providerCultivars['Maize'] = angular.copy(_providerCultivars['Maize (Yellow)']);
+
+    angular.forEach(_providerCultivars['Maize (White)'], function (cultivars, seedProvider) {
+        _providerCultivars['Maize'][seedProvider] = _.chain(_providerCultivars['Maize'][seedProvider] || [])
+            .union(cultivars)
+            .compact()
+            .uniq()
+            .sortBy(function (cultivar) {
+                return cultivar;
+            })
+            .value();
+    });
+
+    var _cultivarLeafTable = {
+        'Phb 30F40': 23,
+        'Phb 31G54 BR': 19,
+        'Phb 31G58': 21,
+        'Phb 32D95BR': 18,
+        'Phb 32D96 B': 18,
+        'Phb 32P68 R': 20,
+        'Phb 32T50': 18,
+        'Phb 32W71': 21,
+        'Phb 32W72 B': 20,
+        'Phb 33A14 B': 19,
+        'Phb 33H56': 20,
+        'Phb 33R78 B': 21,
+        'Phb 33Y72B': 17,
+        'Phb 3442': 21,
+        'Phb 30B95 B': 23,
+        'Phb 30B97 BR': 23,
+        'Phb 30D09 BR': 20,
+        'Phb 31M09': 18,
+        'Phb 32A05 B': 19,
+        'Phb 32B10': 18,
+        'Phb 32Y85': 21,
+        'Phb 31D48 BR': 21,
+        'Phb 32D91 R': 20,
+        'Phb 32D99': 20,
+        'Phb 32Y68': 20,
+        'Phb 3394': 19,
+        'Phb 33A13': 19,
+        'Phb 33H52 B': 19,
+        'Phb 33H54 BR': 19,
+        'Phb 33P34': 20,
+        'Phb 33P66': 20,
+        'Phb 33P67': 20,
+        'X 70200 T': 23,
+        'X 7268 TR': 21,
+        'Phb 30N35': 23,
+        'Phb 32A03': 19,
+        'Phb 32Y52': 19,
+        'Phb 32Y53': 20,
+        'Phb 33A03': 19,
+        'Phb 30H22': 21,
+        'Phb 32P75': 20,
+        'Phb 3335': 20,
+        'DKC62-74R': 20,
+        'DKC62-80BR': 18,
+        'DKC64-78BR': 17,
+        'DKC66-32B': 21,
+        'DKC66-36R': 19,
+        'DKC73-70BGEN': 20,
+        'DKC73-74BR': 20,
+        'DKC73-74BRGEN': 20,
+        'DKC73-76R': 20,
+        'DKC80-10': 20,
+        'DKC80-12B': 20,
+        'DKC80-30R': 20,
+        'DKC80-40BR': 19,
+        'DKC80-40BRGEN': 21,
+        'CRN3505': 21,
+        'DKC77-61B': 20,
+        'DKC77-71R': 20,
+        'DKC77-85B': 21,
+        'DKC78-15B': 20,
+        'DKC78-35BR': 21,
+        'DKC78-45BRGEN': 21,
+        'DKC 78-79 BR': 21,
+        'CRN 3604': 21,
+        'CRN 37-60': 20,
+        'CRN 4760 B': 23,
+        'DKC 63-20': 20,
+        'DKC 66-21': 21,
+        'DKC 66-38 B': 21,
+        'DKC 63-28 R': 21,
+        'CRN 3549': 21,
+        'DKC 71-21': 20,
+        'SNK 2472': 23,
+        'SNK 2682': 23,
+        'SNK 2778': 23,
+        'SNK 2900': 20,
+        'SNK 2942': 24,
+        'SNK 2972': 21,
+        'SNK 6326 B': 21,
+        'SNK 8520': 24,
+        'SNK 2911': 21,
+        'SNK 6025': 18,
+        'LS 8504': 20,
+        'LS 8512': 20,
+        'LS 8518': 19,
+        'LS 8522 R': 19,
+        'LS 8511': 19,
+        'LS 8513': 19,
+        'LS 8519': 19,
+        'LS 8521 B': 19,
+        'LS 8523 B': 19,
+        'LS 8527 BR': 19,
+        'LS 8506': 21,
+        'LS 8508': 20,
+        'LS 8524 R': 20,
+        'LEX 800': 23,
+        'LS 8509': 21,
+        'LS 8517': 23,
+        'LS 8525': 21,
+        'LS 8529': 21,
+        'LS 8533 R': 21,
+        'LS 8536 B': 19,
+        'PAN 3D-432Bt ': 18,
+        'PAN 3D-736BR': 18,
+        'PAN 3P-502RR': 19,
+        'PAN 3P-730BR': 18,
+        'PAN 3Q-422B': 18,
+        'PAN 3Q-740BR': 19,
+        'PAN 3R-644R': 18,
+        'PAN 4P-116': 19,
+        'PAN 4P-316Bt': 19,
+        'PAN 4P-516RR': 20,
+        'PAN 4P-716BR': 19,
+        'PAN 6114': 19,
+        'PAN 6126': 18,
+        'PAN 6146': 24,
+        'PAN 6236Bt': 18,
+        'PAN 6238RR': 18,
+        'PAN 6480': 23,
+        'PAN 6616': 23,
+        'PAN 6724Bt': 25,
+        'PAN 6734': 23,
+        'PAN 6P-110': 21,
+        'PAN 6Q-308 B': 21,
+        'PAN 6Q-308 Bt': 21,
+        'PAN 6Q-408 CB': 21,
+        'PAN 6Q-508R': 21,
+        'PAN 6Q-508RR': 20,
+        'PAN 4P-767BR': 19,
+        'PAN 5Q-433Bt *': 20,
+        'PAN 5R-541RR': 19,
+        'PAN 6013Bt': 23,
+        'PAN 6017': 21,
+        'PAN 6043': 23,
+        'PAN 6053': 23,
+        'PAN 6223Bt': 21,
+        'PAN 6479': 23,
+        'PAN 6611': 23,
+        'PAN 6723': 23,
+        'PAN 6777': 25,
+        'PAN 6Q-419B': 20,
+        'PAN 6Q-445Bt': 21,
+        'PAN 6000 Bt': 19,
+        'PAN 6012 Bt': 21,
+        'PAN 6118': 19,
+        'PAN 6124 Bt': 19,
+        'PAN 6128 RR': 19,
+        'PAN 6256': 24,
+        'PAN 6310': 24,
+        'PAN 6316': 25,
+        'PAN 6320': 25,
+        'PAN 6432 B': 23,
+        'PAN 6568': 23,
+        'PAN 6622': 25,
+        'PAN 6710': 21,
+        'PAN 6804': 20,
+        'PAN 6844': 25,
+        'PAN 6994 Bt': 24,
+        'PAN 5Q-749 BR': 23,
+        'PAN 6243': 24,
+        'PAN 6335': 23,
+        'PAN 6573': 23,
+        'PAN 6633': 23,
+        'PAN 6757': 25,
+        'PAN 6839': 23,
+        'PAN 6Q-321 B': 23,
+        'PAN 6Q-345 CB': 21,
+        'AFG 4270B': 18,
+        'AFG 4412B': 19,
+        'AFG 4434R': 20,
+        'AFG 4522B': 20,
+        'AFG 4530': 19,
+        'AFG 4222 B': 19,
+        'AFG 4244': 19,
+        'AFG 4410': 19,
+        'AFG 4414': 20,
+        'AFG 4416 B': 20,
+        'AFG 4448': 20,
+        'AFG 4474 R': 19,
+        'AFG 4476': 20,
+        'AFG 4512': 23,
+        'AFG 4520': 20,
+        'AFG 4540': 20,
+        'DK 618': 21,
+        'EXPG 5002': 20,
+        'EXP Stack': 20,
+        'AFG 4321': 19,
+        'AFG 4331': 20,
+        'AFG 4333': 20,
+        'AFG 4411': 21,
+        'AFG 4445': 21,
+        'AFG 4447': 21,
+        'AFG 4471': 23,
+        'AFG 4475 B': 21,
+        'AFG 4477': 20,
+        'AFG 4479 R': 21,
+        'AFG 4573 B': 21,
+        'AFG 4577 B': 21,
+        'AFG 4611': 23,
+        'KKS 8204B': 15,
+        'KKS 4581 BR': 21,
+        'KKS 8301': 19,
+        'IMP 50 - 90BR': 18,
+        'IMP 51 - 22': 19,
+        'IMP 51-92': 19,
+        'IMP 52-12': 20,
+        'NS 5920': 20,
+        'QS 7646': 20,
+        'BG 5485 B': 23,
+        'BG 8285': 23,
+        'Brasco': 19,
+        'Energy': 18,
+        'Gold Finger': 19,
+        'Helen': 17,
+        'High Flyer': 17,
+        'Maverik': 19,
+        'NK Arma': 18,
+        'QS 7608': 23,
+        'SC 506': 19,
+        'SC 602': 21,
+        'Woodriver': 18,
+        'P 1615 R': 19,
+        'P 1973 Y': 19,
+        'P 2653 WB': 20,
+        'P 2048': 20,
+        'IMP 52-11 B': 18,
+        'Panthera': 21,
+        'QS 7707': 23,
+        'SC 401': 18,
+        'SC 403': 20,
+        'SC 405': 20,
+        'SC 407': 20,
+        'SC 533': 21,
+        'SC 719': 24,
+        'Scout': 20
+    };
+
+    return {
+        getCultivars: function (crop, seedProvider) {
+            return (_providerCultivars[crop] && _providerCultivars[crop][seedProvider] ? _providerCultivars[crop][seedProvider] : []);
+        },
+        getCultivarLeafCount: function (cultivar) {
+            return _cultivarLeafTable[cultivar] || 22;
+        },
+        getSeedProviders: function (crop) {
+            return (_providerCultivars[crop] ? underscore.keys(_providerCultivars[crop]) : []);
         }
     }
 }]);
@@ -1410,7 +2326,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
+            status: (item.published ? {text: 'published', label: 'label-success'} : false)
         }
     };
 
@@ -1431,450 +2348,379 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
-    var _groups = {
-        'Crop Sales': {
+    var _groups = underscore.indexBy([
+        {
             code: 'INC-CPS',
             name: 'Crop Sales'
-        },
-        'Fruit Sales': {
+        }, {
             code: 'INC-FRS',
             name: 'Fruit Sales'
-        },
-        'Harvest': {
+        }, {
             code: 'HVT',
             name: 'Harvest'
-        },
-        'Preharvest': {
+        }, {
             code: 'HVP',
             name: 'Preharvest'
-        },
-
-
-        'Livestock Sales': {
+        }, {
             code: 'INC-LSS',
             name: 'Livestock Sales'
-        },
-        'Product Sales': {
+        }, {
             code: 'INC-LSP',
             name: 'Product Sales'
-        },
-        'Animal Feed': {
+        }, {
             code: 'EXP-AMF',
             name: 'Animal Feed'
-        },
-        'Husbandry': {
+        }, {
             code: 'HBD',
             name: 'Husbandry'
-        },
-        'Indirect Costs': {
+        }, {
             code: 'IDR',
             name: 'Indirect Costs'
-        },
-        'Marketing': {
+        }, {
             code: 'MRK',
             name: 'Marketing'
-        },
-        'Replacements': {
+        }, {
             code: 'RPM',
             name: 'Replacements'
         }
-    };
+    ], 'name');
 
-    var _categories = {
+    var _categories = underscore.indexBy([
         //*********** Income *********
         // livestock sales
         // Sheep
-        'INC-LSS-SLAMB': {
+        {
             code: 'INC-LSS-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'INC-LSS-SWEAN': {
+        }, {
             code: 'INC-LSS-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'INC-LSS-SEWE': {
+        }, {
             code: 'INC-LSS-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'INC-LSS-SWTH': {
+        }, {
             code: 'INC-LSS-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-SRAM': {
+        }, {
             code: 'INC-LSS-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'INC-LSS-CCALV':{
+        {
             code: 'INC-LSS-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'INC-LSS-CWEN':{
+        }, {
             code: 'INC-LSS-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'INC-LSS-CCOW':{
+        }, {
             code: 'INC-LSS-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'INC-LSS-CST18':{
+        }, {
             code: 'INC-LSS-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'INC-LSS-CST36':{
+        }, {
             code: 'INC-LSS-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'INC-LSS-CBULL':{
+        }, {
             code: 'INC-LSS-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'INC-LSS-GKID':{
+        {
             code: 'INC-LSS-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'INC-LSS-GWEAN':{
+        }, {
             code: 'INC-LSS-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'INC-LSS-GEWE':{
+        }, {
             code: 'INC-LSS-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GCAST':{
+        }, {
             code: 'INC-LSS-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GRAM':{
+        }, {
             code: 'INC-LSS-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
 
         // livestock product sales
-        'INC-LSP-MILK': {
+        {
             code: 'INC-LSP-MILK',
             name: 'Milk',
             unit: 'l'
-        },
-        'INC-LSP-WOOL': {
+        }, {
             code: 'INC-LSP-WOOL',
             name: 'Wool',
             unit: 'kg'
         },
 
         //Crops
-        'INC-HVT-CROP': {
+        {
             code: 'INC-HVT-CROP',
             name: 'Crop',
             unit: 't'
         },
         //Horticulture (non-perennial)
-        'INC-HVT-FRUT': {
+        {
             code: 'INC-HVT-FRUT',
             name: 'Fruit',
             unit: 't'
         },
         //*********** Expenses *********
         // Preharvest
-        'EXP-HVP-SEED': {
+        {
             code: 'EXP-HVP-SEED',
             name: 'Seed',
             unit: 'kg'
-        },
-        'EXP-HVP-PLTM': {
+        }, {
             code: 'EXP-HVP-PLTM',
             name: 'Plant Material',
             unit: 'each'
-        },
-        'EXP-HVP-FERT': {
+        }, {
             code: 'EXP-HVP-FERT',
             name: 'Fertiliser',
             unit: 't'
-        },
-        'EXP-HVP-LIME': {
+        }, {
             code: 'EXP-HVP-LIME',
             name: 'Lime',
             unit: 't'
-        },
-        'EXP-HVP-HERB': {
+        }, {
             code: 'EXP-HVP-HERB',
             name: 'Herbicides',
             unit: 'l'
-        },
-        'EXP-HVP-PEST': {
+        }, {
             code: 'EXP-HVP-PEST',
             name: 'Pesticides',
             unit: 'l'
-        },
-        'EXP-HVP-SPYA': {
+        }, {
             code: 'EXP-HVP-SPYA',
             name: 'Aerial spraying',
             unit: 'ha'
-        },
-        'EXP-HVP-INSH': {
+        }, {
             code: 'EXP-HVP-INSH',
             name: 'Crop Insurance (Hail)',
             unit: 't'
-        },
-        'EXP-HVP-INSM': {
+        }, {
             code: 'EXP-HVP-INSM',
             name: 'Crop Insurance (Multiperil)',
             unit: 't'
-        },
-        'EXP-HVP-HEDG': {
+        }, {
             code: 'EXP-HVP-HEDG',
             name: 'Hedging cost',
             unit: 't'
         },
         //Harvest
-        'EXP-HVT-LABC': {
+        {
             code: 'EXP-HVT-LABC',
             name: 'Contract work (Harvest)',
             unit: 'ha'
-        },
-        'EXP-HVT-STOR': {
+        }, {
             code: 'EXP-HVT-STOR',
             name: 'Storage',
             unit: 'days'
-        },
-        'EXP-HVT-PAKM': {
+        }, {
             code: 'EXP-HVT-PAKM',
             name: 'Packaging material',
             unit: 'each'
-        },
-        'EXP-HVT-DYCL': {
+        }, {
             code: 'EXP-HVT-DYCL',
             name: 'Drying and cleaning',
             unit: 't'
-        },
-        'EXP-HVT-PAKC': {
+        }, {
             code: 'EXP-HVT-PAKC',
             name: 'Packing cost',
             unit: 'each'
         },
         //Indirect
-        'EXP-IDR-FUEL': {
+        {
             code: 'EXP-IDR-FUEL',
             name: 'Fuel',
             unit: 'l'
-        },
-        'EXP-IDR-REPP': {
+        }, {
             code: 'EXP-IDR-REPP',
             name: 'Repairs & parts',
             unit: 'Total'
-        },
-        'EXP-IDR-ELEC': {
+        }, {
             code: 'EXP-IDR-ELEC',
             name: 'Electricity',
             unit: 'Total'
-        },
-        'EXP-IDR-WATR': {
+        }, {
             code: 'EXP-IDR-WATR',
             name: 'Water',
             unit: 'Total'
-        },
-        'EXP-IDR-LABP': {
+        }, {
             code: 'EXP-IDR-LABP',
             name: 'Permanent labour',
             unit: 'Total'
-        },
-        'EXP-IDR-SCHED': {
+        }, {
             code: 'EXP-IDR-SCHED',
             name: 'Scheduling',
             unit: 'Total'
-        },
-        'EXP-IDR-LICS': {
+        }, {
             code: 'EXP-IDR-LICS',
             name: 'License',
             unit: 'Total'
-        },
-        'EXP-IDR-INSA': {
+        }, {
             code: 'EXP-IDR-INSA',
             name: 'Insurance assets',
             unit: 'Total'
-        },
-        'EXP-IDR-OTHER': {
+        }, {
             code: 'EXP-IDR-OTHER',
             name: 'Other costs',
             unit: 'Total'
         },
         //Replacements
         // Sheep
-        'EXP-RPM-SLAMB': {
+        {
             code: 'EXP-RPM-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'EXP-RPM-SWEAN': {
+        }, {
             code: 'EXP-RPM-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'EXP-RPM-SEWE': {
+        }, {
             code: 'EXP-RPM-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'EXP-RPM-SWTH': {
+        }, {
             code: 'EXP-RPM-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-SRAM': {
+        }, {
             code: 'EXP-RPM-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'EXP-RPM-CCALV':{
+        {
             code: 'EXP-RPM-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'EXP-RPM-CWEN':{
+        }, {
             code: 'EXP-RPM-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'EXP-RPM-CCOW':{
+        }, {
             code: 'EXP-RPM-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'EXP-RPM-CST18':{
+        }, {
             code: 'EXP-RPM-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CST36':{
+        }, {
             code: 'EXP-RPM-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CBULL':{
+        }, {
             code: 'EXP-RPM-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'EXP-RPM-GKID':{
+        {
             code: 'EXP-RPM-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'EXP-RPM-GWEAN':{
+        }, {
             code: 'EXP-RPM-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'EXP-RPM-GEWE':{
+        }, {
             code: 'EXP-RPM-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GCAST':{
+        }, {
             code: 'EXP-RPM-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GRAM':{
+        }, {
             code: 'EXP-RPM-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
         //Animal feed
-        'EXP-AMF-LICK': {
+        {
             code: 'EXP-AMF-LICK',
             name: 'Lick',
             unit: 'kg'
         },
         //Husbandry
-        'EXP-HBD-VACC': {
+        {
             code: 'EXP-HBD-VACC',
             name: 'Drenching & vaccination',
             unit: 'head'
-        },
-        'EXP-HBD-DIPP': {
+        }, {
             code: 'EXP-HBD-DIPP',
             name: 'Dipping & jetting',
             unit: 'head'
-        },
-        'EXP-HBD-VETY': {
+        }, {
             code: 'EXP-HBD-VETY',
             name: 'Veterinary',
             unit: 'head'
-        },
-        'EXP-HBD-SHER': {
+        }, {
             code: 'EXP-HBD-SHER',
             name: 'Shearing',
             unit: 'head'
-        },
-        'EXP-HBD-CRCH': {
+        }, {
             code: 'EXP-HBD-CRCH',
             name: 'Crutching',
             unit: 'head'
-        },
-        'EXP-MRK-LSSF': {
+        }, {
             code: 'EXP-MRK-LSSF',
             name: 'Livestock sales marketing fees',
-            calculationFactor: 'Livestock Sales',
+            incomeGroup: 'Livestock Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSPF': {
+        }, {
             code: 'EXP-MRK-LSPF',
             name: 'Livestock products marketing fees',
-            calculationFactor: 'Product Sales',
+            incomeGroup: 'Product Sales',
             unit: '%'
-        },
-        'EXP-MRK-HOTF': {
+        }, {
             code: 'EXP-MRK-HOTF',
             name: 'Horticulture marketing fees',
-            calculationFactor: 'Fruit Sales',
+            incomeGroup: 'Fruit Sales',
             unit: '%'
-        },
-        'EXP-MRK-CRPF': {
+        }, {
             code: 'EXP-MRK-CRPF',
             name: 'Crop marketing fees',
-            calculationFactor: 'Crop Sales',
+            incomeGroup: 'Crop Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSTP': {
+        }, {
             code: 'EXP-MRK-LSTP',
             name: 'Livestock transport',
             unit: 'head'
-        },
-        'EXP-MRK-HOTT': {
+        }, {
             code: 'EXP-MRK-HOTT',
             name: 'Horticulture transport',
             unit: 't'
-        },
-        'EXP-MRK-CRPT': {
+        }, {
             code: 'EXP-MRK-CRPT',
             name: 'Crop transport',
             unit: 't'
         }
-    };
+    ], 'code');
 
     // todo: extend the categories with products for future features.
 //    var _productsMap = {
@@ -2028,7 +2874,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 },
                 expenses: {
                     'Replacements': [
-                        _categories['EXP-RPM-GID'],
+                        _categories['EXP-RPM-GKID'],
                         _categories['EXP-RPM-GWEAN'],
                         _categories['EXP-RPM-GEWE'],
                         _categories['EXP-RPM-GCAST'],
@@ -2119,6 +2965,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         Goats: 'Ewe (2-tooth plus)'
     };
 
+    var _baseAnimal = {
+        'Cattle (Extensive)': 'Cattle',
+        'Cattle (Feedlot)': 'Cattle',
+        'Cattle (Stud)': 'Cattle',
+        'Sheep (Extensive)': 'Sheep',
+        'Sheep (Feedlot)': 'Sheep',
+        'Sheep (Stud)': 'Sheep'
+    };
+
     var _conversionRate = {
         Cattle: {
             'Calf': 0.32,
@@ -2144,17 +2999,42 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
+    var _commodityTypes = {
+        crop: 'Field Crops',
+        horticulture: 'Horticulture',
+        livestock: 'Livestock'
+    };
+
+    // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
+    var _commodities = {
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+};
+
     var _horticultureStages = {
-        'Pears': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Apples': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Olives': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Pecan nuts': ['1-2 years', '4-5 years', '6-8 years', '8+ years'],
-        'Peaches': ['1-2 years', '3-5 years', '5-8 years', '8+ years'],
-        'Stone Fruit': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Grapes': ['0-1 years', '1-2 years', '2-3 years', '3+ years'],
-        'Citrus': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Macadamia': ['0-1 years', '2-3 years', '4-6 years', '7-9 years','10+ years']
-    }
+        'Apple': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Apricot': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Avocado': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Blueberry': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Citrus (Hardpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Citrus (Softpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Fig': ['0-1 years', '1-3 years', '3-6 years', '6-18 years', '18-30 years', '30+ years'],
+        'Grape (Table)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Grape (Wine)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Macadamia Nut': ['0-1 years', '1-3 years', '3-6 years', '6-9 years','10+ years'],
+        'Mango': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Nectarine': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Olive': ['0-1 years', '1-3 years', '3-5 years', '5-10 years', '10+ years'],
+        'Orange': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Pecan Nut': ['0-1 years', '1-3 years', '3-7 years', '7-10 years', '10+ years'],
+        'Peach': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pear': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Persimmon': ['0-1 years', '1-4 years', '4-12 years', '12-20 years', '20+ years'],
+        'Plum': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pomegranate': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Rooibos': ['0-1 years', '1-2 years', '2-4 years', '4-5 years', '5+ years']
+    };
 
     var _productsMap = {
         'INC-PDS-MILK': {
@@ -2170,18 +3050,57 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         budget.data.sections = budget.data.sections || [];
     }
 
+    function getBaseAnimal (commodityType) {
+        return _baseAnimal[commodityType] || commodityType;
+    }
+
+    function checkBudgetSection (budget, stage) {
+        angular.forEach(['income', 'expenses'], function (section) {
+            var foundSection = underscore.findWhere(budget.data.sections,
+                (stage === undefined ? {code: _sections[section].code} : {code: _sections[section].code, horticultureStage: stage}));
+
+            if (foundSection === undefined) {
+                foundSection = {
+                    code: _sections[section].code,
+                    name: _sections[section].name,
+                    productCategoryGroups: [],
+                    total: {
+                        value: 0
+                    }
+                };
+
+                if (stage !== undefined) {
+                    foundSection.horticultureStage = stage;
+                }
+
+                budget.data.sections.push(foundSection);
+            }
+        });
+
+        return budget;
+    }
+
     return {
         listServiceMap: function () {
             return _listServiceMap;
         },
+        commodityTypes: function() {
+            return _commodityTypes;
+        },
+        commodities: function() {
+            return _commodities;
+        },
         getRepresentativeAnimal: function(commodityType) {
-            return _representativeAnimal[commodityType];
+            return _representativeAnimal[getBaseAnimal(commodityType)];
         },
         getConversionRate: function(commodityType) {
-            return _conversionRate[commodityType][_representativeAnimal[commodityType]];
+            return _conversionRate[getBaseAnimal(commodityType)][_representativeAnimal[getBaseAnimal(commodityType)]];
         },
         getConversionRates: function(commodityType) {
-            return _conversionRate[commodityType];
+            return _conversionRate[getBaseAnimal(commodityType)];
+        },
+        getCommodities: function (type) {
+            return _commodities[type] || '';
         },
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];
@@ -2189,8 +3108,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         getCategories: function (budget, assetType, commodityType, sectionType, horticultureStage) {
             var categories = {};
 
-            if(assetType == 'livestock' && _categoryOptions[assetType][commodityType]) {
-                categories = angular.copy(_categoryOptions[assetType][commodityType][sectionType]) || {};
+            if(assetType == 'livestock' && _categoryOptions[assetType][getBaseAnimal(commodityType)]) {
+                categories = angular.copy(_categoryOptions[assetType][getBaseAnimal(commodityType)][sectionType]) || {};
             }
 
             if(assetType == 'crop' && _categoryOptions[assetType][sectionType]) {
@@ -2233,20 +3152,24 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             return _modelTypes[type] || '';
         },
 
-        validateBudgetData: function (budget) {
+        validateBudgetData: function (budget, stage) {
             checkBudgetTemplate(budget);
+            checkBudgetSection(budget, stage);
             return this.calculateTotals(budget);
+        },
+        initNewSections: function (budget, stage) {
+            return checkBudgetSection(budget, stage);
         },
         addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             var category = angular.copy(_categories[categoryCode]);
             category.quantity = 0;
             category.pricePerUnit = 0;
             category.value = 0;
-            
+
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
-                if(_conversionRate[budget.commodityType][category.name]) {
-                    category.conversionRate = _conversionRate[budget.commodityType][category.name];
+                if(_conversionRate[getBaseAnimal(budget.commodityType)][category.name]) {
+                    category.conversionRate = _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                 }
             }
 
@@ -2298,7 +3221,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             checkBudgetTemplate(budget);
 
             if(budget.assetType == 'livestock') {
-                budget.data.details.calculatedLSU = budget.data.details.herdSize * _conversionRate[budget.commodityType][_representativeAnimal[budget.commodityType]];
+                budget.data.details.calculatedLSU = budget.data.details.herdSize *
+                    _conversionRate[getBaseAnimal(budget.commodityType)][_representativeAnimal[getBaseAnimal(budget.commodityType)]];
             }
 
             var income = 0;
@@ -2307,36 +3231,35 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 section.total = {
                     value: 0
                 };
-                
+
                 if(budget.assetType == 'livestock') {
                     section.total.valuePerLSU = 0;
                 }
-                
+
                 section.productCategoryGroups.forEach(function(group, j) {
                     group.total = {
                         value: 0
                     };
-                    
+
                     if(budget.assetType == 'livestock') {
                         group.total.valuePerLSU = 0;
                     }
-                    
+
                     group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
-                            var groupSum = 0;
-
-                            angular.forEach(budget.data.sections, function(cSection, x) {
-                                angular.forEach(cSection.productCategoryGroups, function(cGroup, y) {
-                                    if(cGroup.name == category.calculationFactor) {
-                                        groupSum = cGroup.total.value;
-                                    }
-                                });
-                            });
+                            var groupSum = underscore
+                                .chain(budget.data.sections)
+                                .pluck('productCategoryGroups')
+                                .flatten()
+                                .reduce(function(total, group) {
+                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
+                                }, 0)
+                                .value();
 
                             category.value = category.pricePerUnit * groupSum / 100;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         } else {
                             if(category.unit == 'Total') {
@@ -2346,7 +3269,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                             category.value = category.pricePerUnit * category.quantity;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         }
 
@@ -2376,20 +3299,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             if(budget.assetType == 'horticulture') {
                 budget.data.details.grossProfitByStage = {};
 
-                angular.forEach(_horticultureStages[budget.commodityType], function(stage, i) {
-                    var stageIncome = 0;
-                    var stageCosts = 0;
-
-                    angular.forEach(budget.data.sections, function(section, j) {
-                        if(section.horticultureStage == stage && section.name == 'Income') {
-                            stageIncome = section.total.value;
-                        }
-                        if(section.horticultureStage == stage && section.name == 'Expenses') {
-                            stageCosts = section.total.value;
-                        }
-                    });
-
-                    budget.data.details.grossProfitByStage[stage] = stageIncome - stageCosts;
+                angular.forEach(_horticultureStages[budget.commodityType], function(stage) {
+                    budget.data.details.grossProfitByStage[stage] = underscore
+                        .chain(budget.data.sections)
+                        .where({horticultureStage: stage})
+                        .reduce(function (total, section) {
+                            return (section.name === 'Income' ? total + section.total.value :
+                                (section.name === 'Expenses' ? total - section.total.value : total));
+                        }, 0)
+                        .value();
                 });
             }
 
@@ -2401,15 +3319,52 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     }
 }]);
+var sdkHelperExpenseApp = angular.module('ag.sdk.helper.expense', ['ag.sdk.library']);
+
+sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore) {
+    var _expenseTypes = {
+        area: 'Area',
+        distance: 'Distance',
+        hours: 'Hours'
+    };
+
+    var _expenseUnits = {
+        area: 'Ha',
+        distance: 'km',
+        hours: 'h'
+    };
+
+    var _expenseAction = {
+        area: 'inspected',
+        distance: 'travelled',
+        hours: 'worked'
+    };
+
+    return {
+        expenseTypes: function () {
+            return _expenseTypes;
+        },
+
+        getExpenseTitle: function (type) {
+            return _expenseTypes[type] || '';
+        },
+        getExpenseUnit: function (type) {
+            return _expenseUnits[type] || '';
+        },
+        getExpenseAction: function (type) {
+            return _expenseAction[type] || '';
+        }
+    };
+}]);
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
+sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
-            profileImage : item.profilePhotoSrc,
+            thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item)
         };
         
@@ -2478,18 +3433,17 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             subtitle: item.type
         };
 
-        if (item.data) {
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
-        }
+        map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/profile-user.png');
 
         return map;
     };
 
     var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];
 
+    // When updating, also update the _commodities list in the enterpriseBudgetHelper
     var _enterpriseTypes = {
-        'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        'Horticulture': ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
+        'Field Crops': ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        'Horticulture': ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         'Livestock': ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
 
@@ -2554,15 +3508,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     var _terrainTypes = ['Plains', 'Mountains'];
     var _waterSourceTypes = ['Irrigation Scheme', 'River', 'Dam', 'Borehole'];
 
-    var _landUseCropTypes = {
-        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soybean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
-        'Grazing': ['Bahia-Notatum', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Phalaris', 'Rescue', 'Rhodes', 'Smuts Finger', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'],
-        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
-        'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chilly', 'Cucumber', 'Cucurbit', 'Dry Pea', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
-        'Plantation': ['Bluegum', 'Pine', 'Wattle'],
-        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
-    };
-
     return {
         croppingPotentialTypes: function () {
             return _croppingPotentialTypes;
@@ -2585,11 +3530,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
         waterSourceTypes: function () {
             return _waterSourceTypes;
         },
-
-        getCropsForLandUse: function (landUse) {
-            return _landUseCropTypes[landUse] || [];
-        },
-
         isCroppingPotentialRequired: function (landUse) {
             return (landUse == 'Cropland');
         },
@@ -2949,7 +3889,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                 return {
                     id: task.id || item.__id,
                     title: item.organization.name,
-                    subtitle: _getTaskTitle(task.todo),
+                    subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,
                     groupby: title,
                     status: {
@@ -2980,8 +3920,10 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
         return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
-    var _getTaskTitle = function (taskType) {
-        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
+    var _getTaskTitle = function (taskType, task) {
+        var taskMap = _taskTodoMap[taskType];
+
+        return (taskMap !== undefined ? (typeof taskMap.title == 'string' ? taskMap.title : taskMap.title(task)) : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
@@ -3376,7 +4318,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         length: function () {
             return _items.length;
         },
-        addItems: function(items) {
+        addItems: function(items, top) {
             if (items !== undefined) {
                 if ((items instanceof Array) === false) {
                     items = [items];
@@ -3400,7 +4342,11 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                         }
 
                         if (found == false) {
-                            _items.push(item);
+                            if (top === true) {
+                                _items.unshift(item);
+                            } else {
+                                _items.push(item);
+                            }
                         }
                     } else {
                         _items[item.id] = item;
@@ -3509,15 +4455,24 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return bounds;
         },
         getCenter: function (bounds) {
-            var center = [0, 0];
             bounds = bounds || this.getBounds();
 
-            angular.forEach(bounds, function(coordinate) {
-                center[0] += coordinate[0];
-                center[1] += coordinate[1];
+            var lat1 = 0, lat2 = 0,
+                lng1 = 0, lng2 = 0;
+
+            angular.forEach(bounds, function(coordinate, index) {
+                if (index == 0) {
+                    lat1 = lat2 = coordinate[0];
+                    lng1 = lng2 = coordinate[1];
+                } else {
+                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
+                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
+                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
+                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
+                }
             });
 
-            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : center);
+            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
@@ -3592,6 +4547,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return this;
         },
         formatGeoJson: function (geoJson, toType) {
+            // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
             if(toType.toLowerCase() == 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
@@ -3617,6 +4573,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return geoJson;
         },
         validGeoJson: function (geoJson, typeRestriction) {
+            // TODO: REFACTOR
             var validate = true;
             if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
                 return false;
@@ -3796,7 +4753,6 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             },
             zone: {
                 icon: _markerIcons.zone.success,
-                draggable: true,
                 style: {
                     weight: 4,
                     color: 'white',
@@ -3902,7 +4858,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: _markerIcons.asset.default,
+                icon: _markerIcons.zone.default,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -4451,6 +5407,33 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 return properties.featureId;
             },
+            addPhotoMarker: function(layerName, geojson, options, properties, onAddCallback) {
+                if (typeof properties == 'function') {
+                    onAddCallback = properties;
+                    properties = {};
+                }
+
+                properties = underscore.defaults(properties || {},  {
+                    featureId: objectId().toString()
+                });
+
+                var data = {
+                    layerName: layerName,
+                    geojson: geojson,
+                    options: options,
+                    properties: properties,
+                    onAddCallback: onAddCallback
+                };
+
+                data.properties.isMedia = true;
+
+                this._config.geojson[layerName] = this._config.geojson[layerName] || {};
+                this._config.geojson[layerName][properties.featureId] = data;
+
+                $rootScope.$broadcast('mapbox-' + this._id + '::add-photo-marker', data);
+
+                return properties.featureId;
+            },
             removeGeoJSONFeature: function(layerName, featureId) {
                 if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
                     $rootScope.$broadcast('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId]);
@@ -4774,6 +5757,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         // GeoJSON
         scope.$on('mapbox-' + id + '::add-geojson', function (event, args) {
             _this.addGeoJSONFeature(args);
+        });
+
+        // photoMarker
+        scope.$on('mapbox-' + id + '::add-photo-marker', function (event, args) {
+            _this.addPhotoMarker(args);
         });
 
         scope.$on('mapbox-' + id + '::remove-geojson-feature', function (event, args) {
@@ -5149,6 +6137,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             if (bounds.coordinates instanceof Array) {
                 if (bounds.coordinates.length > 1) {
                     this._map.fitBounds(bounds.coordinates, bounds.options);
+                } else if (bounds.coordinates.length == 1) {
+                    this._map.fitBounds(bounds.coordinates.concat(bounds.coordinates), bounds.options);
                 }
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
@@ -5321,11 +6311,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         }
     };
 
+    Mapbox.prototype.addPhotoMarker = function (item) {
+        this.addGeoJSONFeature(item);
+    };
+
     Mapbox.prototype.addGeoJSONFeature = function (item) {
         var _this = this;
         var geojson = geoJSONHelper(item.geojson, item.properties);
 
-        _this.createLayer(item.layerName);
+        _this.createLayer(item.layerName, item.type, item.options);
 
         _this._geoJSON[item.layerName] = _this._geoJSON[item.layerName] || {};
         _this._geoJSON[item.layerName][item.properties.featureId] = item;
@@ -5336,43 +6330,95 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             geojsonOptions.icon = _this.makeIcon(geojsonOptions.icon);
         }
 
-        L.geoJson(geojson.getJson(), {
-            style: geojsonOptions.style,
-            pointToLayer: function(feature, latlng) {
-                var marker = L.marker(latlng, geojsonOptions);
 
-                if (geojsonOptions.label) {
-                    marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
-                }
-
-                return marker;
-            },
-            onEachFeature: function(feature, layer) {
-                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-                _this.addLabel(geojsonOptions.label, feature, layer);
-
-                if (typeof item.onAddCallback === 'function') {
-                    item.onAddCallback(feature, layer);
-                }
-
-                if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
-                    // highlight polygon on click
-                    layer.on('click', function(e) {
-                        if(feature && feature.properties) {
-                            if(feature.properties.highlighted) {
-                                feature.properties.highlighted = false;
-                                layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
-                            } else {
-                                feature.properties.highlighted = true;
-                                layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
-                            }
+        if(item.properties.isMedia) {
+            var image = item;
+            var icon = {
+                iconSize: [40, 40],
+                className: 'leaflet-marker-agrista-photo'
+            }
+            var fancyboxOptions = {
+                helpers: {
+                    overlay : {
+                        css : {
+                            'background' : 'rgba(0,0,0,0.7)'
                         }
-
-                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
+                    }
+                },
+                aspectRatio: true,
+                autoSize: false,
+                width: 640,
+                height: 640
+            }
+            L.geoJson(geojson.getJson(), {
+                pointToLayer: function(feature, latlng) {
+                    var marker = L.marker(latlng, {
+                        icon: L.icon(L.extend({
+                            iconUrl: image.geojson.properties.data.src
+                        }, icon)),
+                        title: image.caption || ''
+                    });
+                    return marker;
+                },
+                onEachFeature: function(feature, layer) {
+                    console.log('calling add layer to layer');
+                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                    if (typeof item.onAddCallback === 'function') {
+                        item.onAddCallback(feature, layer);
+                    }
+                    layer.on('click', function(e) {
+                        //todo: video
+                        //image
+                        $.fancybox({
+                            href: feature.properties.data.src,
+                            title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
+                                + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
+                                + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
+                            type: 'image'
+                        }, fancyboxOptions);
                     });
                 }
-            }
-        });
+            });
+        } else {
+            L.geoJson(geojson.getJson(), {
+                style: geojsonOptions.style,
+                pointToLayer: function(feature, latlng) {
+                    var marker = L.marker(latlng, geojsonOptions);
+
+                    if (geojsonOptions.label) {
+                        marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
+                    }
+
+                    return marker;
+                },
+                onEachFeature: function(feature, layer) {
+
+                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                    _this.addLabel(geojsonOptions.label, feature, layer);
+
+                    if (typeof item.onAddCallback === 'function') {
+                        item.onAddCallback(feature, layer);
+                    }
+
+                    if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
+                        // highlight polygon on click
+                        layer.on('click', function(e) {
+                            if(feature && feature.properties) {
+                                if(feature.properties.highlighted) {
+                                    feature.properties.highlighted = false;
+                                    layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
+                                } else {
+                                    feature.properties.highlighted = true;
+                                    layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
+                                }
+                            }
+
+                            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
+                        });
+                    }
+                }
+            });
+        }
     };
 
     Mapbox.prototype.removeGeoJSONFeature = function (data) {
@@ -6146,6 +7192,116 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
     }];
 }]);
 
+var sdkInterfaceUiApp = angular.module('ag.sdk.interface.ui', []);
+
+sdkInterfaceUiApp.directive('dynamicName', function() {
+    return {
+        restrict: 'A',
+        require: '?form',
+        link: function(scope, element, attrs, controller) {
+            var formCtrl = (controller != null) ? controller :  element.parent().controller('form');
+            var currentElementCtrl = formCtrl[element.attr('name')];
+
+            element.attr('name', attrs.name);
+            formCtrl.$removeControl(currentElementCtrl);
+            currentElementCtrl.$name = attrs.name;
+            formCtrl.$addControl(currentElementCtrl);
+        }
+    }
+});
+
+sdkInterfaceUiApp.directive('defaultSrc', [function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attrs) {
+            element.bind('error', function() {
+                element.attr("src", attrs.defaultSrc);
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
+    return function (value) {
+        return ((value && value.geometry ? $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) : '') + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
+    };
+}]);
+
+sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$formatters.push(function (value) {
+                var viewValue = '';
+                if (value !== undefined) {
+                    viewValue = $filter('location')(value);
+
+                    if (attrs.ngChange) {
+                        scope.$eval(attrs.ngChange);
+                    }
+                }
+
+                return viewValue;
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.directive('dateFormatter', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$formatters.push(function (value) {
+                return (value !== undefined ? $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd') : '');
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.directive('dateParser', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$parsers.push(function (value) {
+                return (value !== undefined ? $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd') : '');
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            var _max = (attrs.max ? parseFloat(attrs.max) : false);
+            var _min = (attrs.min ? parseFloat(attrs.min) : false);
+            var _round = (attrs.round ? parseInt(attrs.round) : false);
+
+            ngModel.$formatters.push(function (value) {
+                return (_round === false ? value : $filter('number')(value, _round));
+            });
+
+            ngModel.$parsers.push(function (value) {
+                var isNan = isNaN(value);
+
+                ngModel.$setValidity('number', isNan === false);
+
+                if (isNan === false) {
+                    var float = parseFloat(value);
+
+                    ngModel.$setValidity('range', (_min === false || float >= _min) && (_max === false || float <= _max));
+                    return float;
+                } else {
+                    return value;
+                }
+            });
+        }
+    };
+}]);
 var cordovaHelperApp = angular.module('ag.mobile-sdk.helper', ['ag.sdk.utilities', 'ag.mobile-sdk.cordova.geolocation', 'ag.mobile-sdk.cordova.camera']);
 
 cordovaHelperApp.factory('geolocationHelper', ['promiseService', 'geolocationService', function(promiseService, geolocationService) {
@@ -6444,20 +7600,16 @@ cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', funct
 var cordovaConnectionApp = angular.module('ag.mobile-sdk.cordova.connection', []);
 
 cordovaConnectionApp.factory('connectionService', ['$timeout', function ($timeout) {
-    var _onConnectionChangeList = [];
+    var _watchConnectionList = [];
     var _lastConnectionType = undefined;
 
     var _updateConnection = function () {
-        if (_lastConnectionType !== navigator.connection.type) {
+        if (navigator.connection && _lastConnectionType !== navigator.connection.type) {
             _lastConnectionType = navigator.connection.type;
 
-            for (var i = _onConnectionChangeList.length - 1; i >= 0; i--) {
-                if (_onConnectionChangeList[i] !== undefined) {
-                    _onConnectionChangeList[i](_lastConnectionType);
-                } else {
-                    _onConnectionChangeList.splice(i, 1);
-                }
-            }
+            angular.forEach(_watchConnectionList, function (watcher) {
+                watcher(_lastConnectionType);
+            });
         }
 
         $timeout(_updateConnection, 10000);
@@ -6466,13 +7618,13 @@ cordovaConnectionApp.factory('connectionService', ['$timeout', function ($timeou
     _updateConnection();
 
     return {
-        onConnectionChange: function (onChangeCb) {
-            if (typeof onChangeCb === 'function') {
-                _onConnectionChangeList.push(onChangeCb);
+        watchConnection: function (callback) {
+            if (typeof callback === 'function') {
+                _watchConnectionList.push(callback);
             }
         },
         isOnline: function () {
-            return (navigator.connection.type !== Connection.NONE);
+            return (navigator.connection.type !== Connection.NONE && navigator.connection.type !== Connection.UNKNOWN);
         },
         isMobile: function () {
             return (navigator.connection.type === Connection.CELL ||
@@ -6846,7 +7998,28 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
     };
 }]);
 
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
+var cordovaToasterApp = angular.module('ag.mobile-sdk.cordova.toaster', []);
+
+cordovaToasterApp.factory('toasterService', [function () {
+    var _show = function (message, duration, position) {
+        var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
+
+        if (_toaster !== undefined) {
+            _toaster.show(message, duration, position);
+        }
+    };
+
+    return {
+        show: function (message, duration, position) {
+            _show(message, duration, position);
+        },
+        showLongBottom: function (message) {
+            _show(message, 'long', 'bottom');
+        }
+    };
+}]);
+
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.hydration', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.connection', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -6857,314 +8030,347 @@ var _errors = {
 /*
  * Syncronization
  */
-mobileSdkApiApp.factory('apiSynchronizationService', ['$http', '$log', 'assetApi', 'configuration', 'documentUtility', 'enterpriseBudgetApi', 'farmApi', 'farmerUtility', 'fileStorageService', 'legalEntityApi', 'pagingService', 'promiseService', 'taskUtility', 'underscore',
-    function ($http, $log, assetApi, configuration, documentUtility, enterpriseBudgetApi, farmApi, farmerUtility, fileStorageService, legalEntityApi, pagingService, promiseService, taskUtility, underscore) {
-        var _readOptions = {readLocal: false, readRemote: true};
-
-        function _getFarmers (pageOptions) {
-            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
-
-            return farmerUtility.api.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
-                return promiseService.wrap(function (promise) {
-                    var paging = pagingService.initialize(function (page) {
-                        return farmerUtility.api.getFarmers({paging: page, options: _readOptions});
-                    }, function (farmers) {
-                        promiseService
-                            .chain(function (chain) {
-                                if (paging.complete === false) {
-                                    paging.request().then(angular.noop, promiseService.throwError);
-                                }
-
-                                angular.forEach(farmers, function (farmer) {
-                                    chain.push(function () {
-                                        return farmerUtility.hydration.dehydrate(farmer);
-                                    });
-                                });
-                            }).then(function () {
-                                if (paging.complete) {
-                                    promise.resolve();
-                                }
-                            }, promiseService.throwError);
-                    }, pageOptions);
-
-                    paging.request().then(angular.noop, promiseService.throwError);
-                });
-            });
+mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (underscore) {
+    var _options = {
+        models: ['budgets', 'documents', 'expenses', 'farmers', 'tasks', 'organizational-units'],
+        local: {
+            readLocal: true,
+            hydrate: false
+        },
+        remote: {
+            readLocal: false,
+            readRemote: true,
+            hydrate: false
         }
+    };
 
-        function _getDocuments (pageOptions) {
-            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
+    this.config = function (options) {
+        _options = underscore.extend(_options, options);
+    }
 
-            return documentUtility.api.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
-                return promiseService.wrap(function (promise) {
-                    var paging = pagingService.initialize(function (page) {
-                        return documentUtility.api.getDocuments({paging: page, options: _readOptions});
-                    }, function (documents) {
-                        promiseService
-                            .chain(function (chain) {
-                                if (paging.complete === false) {
-                                    paging.request().then(angular.noop, promiseService.throwError);
-                                }
+    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'organizationalUnitApi', 'pagingService', 'promiseService', 'taskApi',
+        function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, organizationalUnitApi, pagingService, promiseService, taskApi) {
+            function _getFarmers (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
 
-                                angular.forEach(documents, function (document) {
-                                    chain.push(function () {
-                                        return documentUtility.hydration.dehydrate(document);
-                                    });
-                                });
-                            }).then(function () {
-                                if (paging.complete) {
-                                    promise.resolve();
-                                }
-                            }, promiseService.throwError);
-                    }, pageOptions);
+                return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return farmerApi.getFarmers({params: page, options: _options.remote});
+                        }, function (farmers) {
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, getParams);
 
-                    paging.request().then(angular.noop, promiseService.throwError);
-                });
-            });
-        }
-
-        function _getTasks (pageOptions) {
-            pageOptions = pageOptions || {limit: 20, resulttype: 'full'};
-
-            return taskUtility.api.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
-                return promiseService.wrap(function (promise) {
-                    var paging = pagingService.initialize(function (page) {
-                        return taskUtility.api.getTasks({paging: page, options: _readOptions});
-                    }, function (tasks) {
-                        promiseService
-                            .chain(function (chain) {
-                                if (paging.complete === false) {
-                                    paging.request().then(angular.noop, promiseService.throwError);
-                                }
-
-                                angular.forEach(tasks, function (task) {
-                                    chain.push(function () {
-                                        return taskUtility.hydration.dehydrate(task);
-                                    });
-                                });
-                            }).then(function () {
-                                if (paging.complete) {
-                                    promise.resolve();
-                                }
-                            }, promiseService.throwError);
-                    }, pageOptions);
-
-                    paging.request().then(angular.noop, promiseService.throwError);
-                });
-            });
-        }
-
-        function _getEnterpriseBudgets() {
-            return enterpriseBudgetApi.getEnterpriseBudgets({options: _readOptions});
-        }
-
-
-        function _postFarmers () {
-            return farmerUtility.api.getFarmers().then(function (farmers) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(farmers, function (farmer) {
-                        chain.push(function () {
-                            return _postFarmer(farmer);
-                        });
+                        paging.request().catch(promise.reject);
                     });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postFarmer (farmer) {
-            return promiseService.chain(function (chain) {
-                if (farmer.__dirty === true) {
-                    chain.push(function () {
-                        return farmerUtility.api.postFarmer({data: farmer});
-                    });
-                }
-
-                chain.push(function () {
-                    return _postFarms(farmer.id);
-                }, function () {
-                    return _postLegalEntities(farmer.id);
-                });
-            });
-        }
-
-        function _postFarms (farmerId) {
-            return farmApi.getFarms({id: farmerId}).then(function (farms) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(farms, function (farm) {
-                        if (farm.__dirty === true) {
-                            chain.push(function () {
-                                return farmApi.postFarm({data: farm});
-                            });
-                        }
-                    });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postLegalEntities (farmerId) {
-            return legalEntityApi.getEntities({id: farmerId}).then(function (entities) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(entities, function (entity) {
-                        if (entity.__dirty === true) {
-                            chain.push(function () {
-                                return legalEntityApi.postEntity({data: entity});
-                            });
-                        }
-
-                        chain.push(function () {
-                            return _postAssets(entity.id);
-                        });
-                    });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postAssets (entityId) {
-            return assetApi.getAssets({id: entityId}).then(function (assets) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(assets, function (asset) {
-                        if (asset.__dirty === true) {
-                            chain.push(function () {
-                                return _postAsset(asset);
-                            });
-                        }
-                    });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postAsset (asset) {
-            asset.data = asset.data || {};
-
-            var cachedAttachments = (asset.data.attachments ? angular.copy(asset.data.attachments) : []);
-            var toBeAttached = underscore.where(cachedAttachments, {local: true});
-            asset.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
-
-            return assetApi.postAsset({data: asset}).then(function (result) {
-                result = (result && result.length ? result[0] : result);
-
-                return promiseService.chain(function (chain) {
-                    angular.forEach(toBeAttached, function (attachment) {
-                        chain.push(function () {
-                            return _postAttachment('asset', result.id, attachment);
-                        });
-                    });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postDocuments () {
-            return documentUtility.api.getDocuments().then(function (documents) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(documents, function (document) {
-                        if (document.__dirty === true) {
-                            chain.push(function () {
-                                return _postDocument(document);
-                            });
-                        }
-                    });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postDocument (document) {
-            document.data = document.data || {};
-
-            var cachedAttachments = (document.data.attachments ? angular.copy(document.data.attachments) : []);
-            var toBeAttached = underscore.where(cachedAttachments, {local: true});
-            document.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
-
-            return documentUtility.api.postDocument({data: document}).then(function (result) {
-                result = (result && result.length ? result[0] : result);
-
-                return promiseService.chain(function (chain) {
-                    angular.forEach(toBeAttached, function (attachment) {
-                        chain.push(function () {
-                            return _postAttachment('document', result.id, attachment);
-                        });
-                    });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postTasks (task) {
-            var query = (task !== undefined ? {template: 'tasks/:id', schema: {id: task.id}} : task);
-
-            return taskUtility.api.getTasks(query).then(function (subtasks) {
-                return promiseService.chain(function (chain) {
-                    angular.forEach(subtasks, function (subtask) {
-                        if (query === undefined) {
-                            chain.push(function () {
-                                return _postTasks(subtask);
-                            });
-                        } else if (subtask.__dirty === true) {
-                            chain.push(function () {
-                                return _postTask(subtask);
-                            });
-                        }
-                    });
-
-                    if (task && task.__dirty === true) {
-                        chain.push(function () {
-                            return _postTask(task);
-                        });
-                    }
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postTask (task) {
-            task.data = task.data || {};
-
-            var cachedAttachments = (task.data.attachments ? angular.copy(task.data.attachments) : []);
-            var toBeAttached = underscore.where(cachedAttachments, {local: true});
-            task.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
-
-            return taskUtility.api.postTask({data: task}).then(function (result) {
-                result = (result && result.length ? result[0] : result);
-
-                return promiseService.chain(function (chain) {
-                    angular.forEach(toBeAttached, function (attachment) {
-                        chain.push(function () {
-                            return _postAttachment('task', result.id, attachment);
-                        });
-                    });
-                });
-            }, promiseService.throwError);
-        }
-
-        function _postAttachment (type, id, attachment) {
-            return fileStorageService.read(attachment.src, true).then(function (fileData) {
-                return $http.post(configuration.getServer() + 'api/' + type + '/' + id + '/attach', {
-                    archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key']), {
-                        filename: fileData.file,
-                        content: fileData.content.substring(fileData.content.indexOf(',') + 1)
-                    })
-                }, {withCredentials: true})
-            }, promiseService.throwError);
-        }
-
-        return {
-            synchronize: function () {
-                return this.upload().then(this.download);
-            },
-            upload: function () {
-                return promiseService.chain(function (chain) {
-                    chain.push(_postFarmers, _postDocuments, _postTasks);
-                });
-            },
-            download: function () {
-                return promiseService.chain(function (chain) {
-                    chain.push(_getFarmers, _getDocuments, _getTasks, _getEnterpriseBudgets);
                 });
             }
-        };
-    }]);
+
+            function _getDocuments (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
+
+                return documentApi.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return documentApi.getDocuments({params: page, options: _options.remote});
+                        }, function (documents) {
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, getParams);
+
+                        paging.request().catch(promise.reject);
+                    });
+                });
+            }
+
+            function _getExpenses (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'full'};
+
+                return expenseApi.purgeExpense({template: 'expenses', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return expenseApi.getExpenses({params: page, options: _options.remote});
+                        }, function (expenses) {
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, getParams);
+
+                        paging.request().catch(promise.reject);
+                    });
+                });
+            }
+
+            function _getTasks (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
+
+                return taskApi.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return taskApi.getTasks({params: page, options: _options.remote});
+                        }, function (tasks) {
+                            if (paging.complete) {
+                                taskApi.getTasks({options: {fallbackRemote: true, hydrate: ['organization', 'subtasks']}})
+                                    .then(promise.resolve, promise.reject);
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, getParams);
+
+                        paging.request().catch(promise.reject);
+                    });
+                });
+            }
+
+            function _getEnterpriseBudgets() {
+                return enterpriseBudgetApi.getEnterpriseBudgets({options: _options.remote});
+            }
+
+            function _getOrganizationalUnits (getParams) {
+                getParams = getParams || {limit: 20, resulttype: 'simple'};
+
+                return organizationalUnitApi.purgeOrganizationalUnit({template: 'organizational-units', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return organizationalUnitApi.getOrganizationalUnits({params: page, options: _options.remote});
+                        }, function (expenses) {
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, getParams);
+
+                        paging.request().catch(promise.reject);
+                    });
+                });
+            }
+
+            function _postFarmers () {
+                return farmerApi.getFarmers({options: {readLocal: true, hydrate: ['primaryContact']}}).then(function (farmers) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(farmers, function (farmer) {
+                            chain.push(function () {
+                                return _postFarmer(farmer);
+                            });
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postFarmer (farmer) {
+                return promiseService.chain(function (chain) {
+                    if (farmer.__dirty === true) {
+                        chain.push(function () {
+                            return farmerApi.postFarmer({data: farmer});
+                        });
+                    }
+
+                    chain.push(function () {
+                        return _postFarms(farmer.id);
+                    }, function () {
+                        return _postLegalEntities(farmer.id);
+                    });
+                });
+            }
+
+            function _postFarms (farmerId) {
+                return farmApi.getFarms({id: farmerId, options: _options.local}).then(function (farms) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(farms, function (farm) {
+                            if (farm.__dirty === true) {
+                                chain.push(function () {
+                                    return farmApi.postFarm({data: farm});
+                                });
+                            }
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postLegalEntities (farmerId) {
+                return legalEntityApi.getEntities({id: farmerId, options: _options.local}).then(function (entities) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(entities, function (entity) {
+                            if (entity.__dirty === true) {
+                                chain.push(function () {
+                                    return legalEntityApi.postEntity({data: entity});
+                                });
+                            }
+
+                            chain.push(function () {
+                                return _postAssets(entity.id);
+                            });
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postAssets (entityId) {
+                return assetApi.getAssets({id: entityId, options: _options.local}).then(function (assets) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(assets, function (asset) {
+                            if (asset.__dirty === true) {
+                                chain.push(function () {
+                                    return assetApi.postAsset({data: asset});
+                                });
+                            }
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postDocuments () {
+                return documentApi.getDocuments({options: _options.local}).then(function (documents) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(documents, function (document) {
+                            if (document.__dirty === true) {
+                                chain.push(function () {
+                                    return documentApi.postDocument({data: document});
+                                });
+                            }
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postExpenses () {
+                return expenseApi.getExpenses({options: _options.local}).then(function (expenses) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(expenses, function (expense) {
+                            if (expense.__dirty === true) {
+                                chain.push(function () {
+                                    return expenseApi.postExpense({data: expense});
+                                });
+                            }
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postTasks (task) {
+                var query = (task !== undefined ? {template: 'tasks/:id', schema: {id: task.id}, options: _options.local} : {options: _options.local});
+
+                return taskApi.getTasks(query).then(function (subtasks) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(subtasks, function (subtask) {
+                            if (task === undefined) {
+                                chain.push(function () {
+                                    return _postTasks(subtask);
+                                });
+                            } else if (subtask.__dirty === true) {
+                                chain.push(function () {
+                                    return taskApi.postTask({data: subtask})
+                                });
+                            }
+                        });
+
+                        if (task && task.__dirty === true) {
+                            chain.push(function () {
+                                return taskApi.postTask({data: task})
+                            });
+                        }
+                    });
+                }, promiseService.throwError);
+            }
+
+            return {
+                synchronize: function (models) {
+                    var _this = this;
+
+                    return promiseService.wrap(function (promise) {
+                        if (connectionService.isOnline()) {
+                            models = models || _options.models;
+
+                            _this.upload(models)
+                                .then(function () {
+                                    return _this.download(models);
+                                })
+                                .then(promise.resolve, promise.reject);
+                        } else {
+                            promise.reject({
+                                data: {
+                                    message: 'Cannot connect to the server. Please try again later'
+                                }
+                            });
+                        }
+                    });
+                },
+                upload: function (models) {
+                    models = models || _options.models;
+
+                    return promiseService
+                        .chain(function (chain) {
+                            if (models.indexOf('farmers') !== -1) {
+                                chain.push(_postFarmers);
+                            }
+
+                            if (models.indexOf('documents') !== -1) {
+                                chain.push(_postDocuments);
+                            }
+
+                            if (models.indexOf('tasks') !== -1) {
+                                chain.push(_postTasks);
+                            }
+
+                            if (models.indexOf('expenses') !== -1) {
+                                chain.push(_postExpenses);
+                            }
+                        })
+                        .catch(promiseService.throwError);
+                },
+                download: function (models) {
+                    models = models || _options.models;
+
+                    return promiseService
+                        .chain(function (chain) {
+                            if (models.indexOf('farmers') !== -1) {
+                                chain.push(_getFarmers);
+                            }
+
+                            if (models.indexOf('documents') !== -1) {
+                                chain.push(_getDocuments);
+                            }
+
+                            if (models.indexOf('tasks') !== -1) {
+                                chain.push(_getTasks);
+                            }
+
+                            if (models.indexOf('budgets') !== -1) {
+                                chain.push(_getEnterpriseBudgets);
+                            }
+
+                            if (models.indexOf('expenses') !== -1) {
+                                chain.push(_getExpenses);
+                            }
+
+                            if (models.indexOf('organizational-units') !== -1) {
+                                chain.push(_getOrganizationalUnits);
+                            }
+                        })
+                        .catch(promiseService.throwError);
+                }
+            };
+        }];
+}]);
 
 /*
  * API
  */
-mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', function (promiseService, dataStore, underscore) {
+mobileSdkApiApp.constant('apiConstants', {
+    MissingParams: {code: 'MissingParams', message: 'Missing parameters for api call'}
+});
+
+mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', 'underscore', function (apiConstants, dataStore, promiseService, underscore) {
     return function (options) {
         if (typeof options === 'String') {
             options = {
@@ -7177,14 +8383,14 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
             options.plural = options.singular + 's'
         }
         
-        var _itemStore = dataStore(options.singular, {apiTemplate: options.singular + '/:id'});
+        var _itemStore = dataStore(options.singular, {
+            apiTemplate: options.singular + '/:id',
+            hydrate: options.hydrate,
+            dehydrate: options.dehydrate
+        });
         
         var _stripProperties = function (data) {
-            if (options.strip) {
-                return underscore.omit(data, options.strip);
-            }
-
-            return data;
+            return (options.strip ? underscore.omit(data, options.strip) : data);
         };
 
         return {
@@ -7196,27 +8402,26 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @param req.search {String} Optional
              * @param req.id {Number} Optional
              * @param req.options {Object} Optional
-             * @param req.paging {Object} Optional
+             * @param req.params {Object} Optional
              * @returns {Promise}
              */
             getItems: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
+                req.options = underscore.defaults(req.options || {}, {one: false});
 
-                return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        if (req.template) {
-                            tx.getItems({template: req.template, schema: req.schema, options: req.options, paging: req.paging, callback: promise});
-                        } else if (req.search) {
-                            req.options.readLocal = false;
-                            req.options.readRemote = true;
+                return _itemStore.transaction().then(function (tx) {
+                    if (req.template) {
+                        return tx.getItems({template: req.template, schema: req.schema, options: req.options, params: req.params});
+                    } else if (req.search) {
+                        req.options.readLocal = false;
+                        req.options.readRemote = true;
 
-                            tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, paging: req.paging, callback: promise});
-                        } else if (req.id) {
-                            tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, paging: req.paging, callback: promise});
-                        } else {
-                            tx.getItems({template: options.plural, options: req.options, paging: req.paging, callback: promise});
-                        }
-                    });
+                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, params: req.params});
+                    } else if (req.id) {
+                        return tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, params: req.params});
+                    } else {
+                        return tx.getItems({template: options.plural, options: req.options, params: req.params});
+                    }
                 });
             },
             /**
@@ -7229,15 +8434,13 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @returns {Promise}
              */
             createItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.createItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), options: req.options, callback: promise});
-                        });
+                        return tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -7250,15 +8453,13 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @returns {Promise}
              */
             getItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.id) {
-                        _itemStore.transaction(function (tx) {
-                            tx.getItems({template: req.template, schema: {id: req.id}, options: req.options, callback: promise});
-                        });
+                        return tx.getItems({template: req.template, schema: {id: req.id}, options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -7273,15 +8474,13 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @returns {Promise}
              */
             findItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.key) {
-                        _itemStore.transaction(function (tx) {
-                            tx.findItems({key: req.key, column: req.column, options: req.options, callback: promise});
-                        });
+                        return tx.findItems({key: req.key, column: req.column, options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -7293,15 +8492,13 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @returns {Promise}
              */
             updateItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.updateItems({data: _stripProperties(req.data), options: req.options, callback: promise});
-                        });
+                        return tx.updateItems({data: _stripProperties(req.data), options: req.options});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -7314,15 +8511,13 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @returns {Promise}
              */
             postItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), callback: promise});
-                        });
+                        return tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data)});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -7333,15 +8528,13 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @returns {Promise}
              */
             deleteItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
-                return promiseService.wrap(function (promise) {
+                return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        _itemStore.transaction(function (tx) {
-                            tx.removeItems({template: options.singular + '/:id/delete', data: req.data, callback: promise});
-                        });
+                        return tx.removeItems({template: options.singular + '/:id/delete', data: req.data});
                     } else {
-                        promise.resolve();
+                        promiseService.throwError(apiConstants.MissingParams);
                     }
                 });
             },
@@ -7354,12 +8547,10 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
              * @returns {Promise}
              */
             purgeItem: function (req) {
-                req = req || {};
+                req = (req ? angular.copy(req) : {});
 
-                return promiseService.wrap(function (promise) {
-                    _itemStore.transaction(function (tx) {
-                        tx.purgeItems({template: req.template, schema: req.schema, options: req.options, callback: promise});
-                    });
+                return _itemStore.transaction().then(function (tx) {
+                    return tx.purgeItems({template: req.template, schema: req.schema, options: req.options});
                 });
             }
         };
@@ -7367,7 +8558,10 @@ mobileSdkApiApp.factory('api', ['promiseService', 'dataStore', 'underscore', fun
 }]);
 
 mobileSdkApiApp.factory('userApi', ['api', function (api) {
-    var userApi = api({plural: 'users', singular: 'user'});
+    var userApi = api({
+        plural: 'users',
+        singular: 'user'
+    });
 
     return {
         getUsers: userApi.getItems,
@@ -7380,22 +8574,29 @@ mobileSdkApiApp.factory('userApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('teamApi', ['api', function (api) {
-    var teamApi = api({plural: 'teams', singular: 'team'});
+mobileSdkApiApp.factory('organizationalUnitApi', ['api', function (api) {
+    var organizationalUnitApi = api({
+        plural: 'organizational-units',
+        singular: 'organizational-unit'
+    });
 
     return {
-        getTeams: teamApi.getItems,
-        createTeam: teamApi.createItem,
-        getTeam: teamApi.getItem,
-        findTeam: teamApi.findItem,
-        updateTeam: teamApi.updateItem,
-        postTeam: teamApi.postItem,
-        deleteTeam: teamApi.deleteItem
+        getOrganizationalUnits: organizationalUnitApi.getItems,
+        createOrganizationalUnit: organizationalUnitApi.createItem,
+        getOrganizationalUnit: organizationalUnitApi.getItem,
+        findOrganizationalUnit: organizationalUnitApi.findItem,
+        updateOrganizationalUnit: organizationalUnitApi.updateItem,
+        postOrganizationalUnit: organizationalUnitApi.postItem,
+        deleteOrganizationalUnit: organizationalUnitApi.deleteItem,
+        purgeOrganizationalUnit: organizationalUnitApi.purgeItem
     };
 }]);
 
 mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
-    var notificationApi = api({plural: 'notifications', singular: 'notification'});
+    var notificationApi = api({
+        plural: 'notifications',
+        singular: 'notification'
+    });
 
     return {
         getNotifications: notificationApi.getItems,
@@ -7404,23 +8605,63 @@ mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('taskApi', ['api', function (api) {
-    var taskApi = api({plural: 'tasks', singular: 'task', strip: ['document', 'organization', 'subtasks']});
+mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('subtasks', ['taskApi', function (taskApi) {
+        return function (obj, type) {
+            return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.__id}});
+        }
+    }]);
 
-    return {
-        getTasks: taskApi.getItems,
-        createTask: taskApi.createItem,
-        getTask: taskApi.getItem,
-        findTask: taskApi.findItem,
-        updateTask: taskApi.updateItem,
-        postTask: taskApi.postItem,
-        deleteTask: taskApi.deleteItem,
-        purgeTask: taskApi.purgeItem
-    };
+    hydrationProvider.registerDehydrate('subtasks', ['taskApi', 'promiseService', function (taskApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return taskApi.purgeTask({template: 'tasks/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.subtasks, function (subtask) {
+                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var hydrateRelations = ['document', 'organization', 'subtasks'];
+        var dehydrateRelations = ['document', 'subtasks'];
+        var taskApi = api({
+            plural: 'tasks',
+            singular: 'task',
+            strip: hydrateRelations,
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'task', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'task', relations);
+            }
+        });
+
+        return {
+            getTasks: taskApi.getItems,
+            createTask: taskApi.createItem,
+            getTask: taskApi.getItem,
+            findTask: taskApi.findItem,
+            updateTask: taskApi.updateItem,
+            postTask: taskApi.postItem,
+            deleteTask: taskApi.deleteItem,
+            purgeTask: taskApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
-    var merchantApi = api({plural: 'merchants', singular: 'merchant'});
+    var merchantApi = api({
+        plural: 'merchants',
+        singular: 'merchant'
+    });
 
     return {
         getMerchants: merchantApi.getItems,
@@ -7432,83 +8673,267 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('farmerApi', ['api', function (api) {
-    var farmerApi = api({plural: 'farmers', singular: 'farmer', strip: ['assets', 'farms', 'legalEntities']});
+mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('organization', ['farmerApi', function (farmerApi) {
+        return function (obj, type) {
+            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
+        }
+    }]);
 
-    return {
-        getFarmers: farmerApi.getItems,
-        createFarmer: farmerApi.createItem,
-        getFarmer: farmerApi.getItem,
-        findFarmer: farmerApi.findItem,
-        updateFarmer: farmerApi.updateItem,
-        postFarmer: farmerApi.postItem,
-        deleteFarmer: farmerApi.deleteItem,
-        purgeFarmer: farmerApi.purgeItem
-    };
+    hydrationProvider.registerDehydrate('organization', ['farmerApi', 'promiseService', function (farmerApi, promiseService) {
+        return function (obj, type) {
+            return promiseService.wrap(function (promise) {
+                if (obj.organization) {
+                    obj.organization.id = obj.organization.id || obj.organizationId;
+
+                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}).then(promise.resolve, promise.reject);
+                } else {
+                    promise.resolve(obj);
+                }
+            });
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var defaultRelations = ['farms', 'legalEntities', 'primaryContact'];
+        var farmerApi = api({
+            plural: 'farmers',
+            singular: 'farmer',
+            strip: ['farms', 'legalEntities'],
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'farmer', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'farmer', relations);
+            }
+        });
+
+        return {
+            getFarmers: farmerApi.getItems,
+            createFarmer: farmerApi.createItem,
+            getFarmer: farmerApi.getItem,
+            findFarmer: farmerApi.findItem,
+            updateFarmer: farmerApi.updateItem,
+            postFarmer: farmerApi.postItem,
+            deleteFarmer: farmerApi.deleteItem,
+            purgeFarmer: farmerApi.purgeItem
+        };
+    }];
 }]);
 
-mobileSdkApiApp.factory('legalEntityApi', ['api', function (api) {
-    var entityApi = api({plural: 'legalentities', singular: 'legalentity', strip: ['assets']});
+mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('legalEntity', ['legalEntityApi', function (legalEntityApi) {
+        return function (obj, type) {
+            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true}});
+        }
+    }]);
 
-    return {
-        getEntities: entityApi.getItems,
-        createEntity: entityApi.createItem,
-        getEntity: entityApi.getItem,
-        findEntity: entityApi.findItem,
-        updateEntity: entityApi.updateItem,
-        postEntity: entityApi.postItem,
-        deleteEntity: entityApi.deleteItem,
-        purgeEntity: entityApi.purgeItem
-    };
+    hydrationProvider.registerHydrate('legalEntities', ['legalEntityApi', function (legalEntityApi) {
+        return function (obj, type) {
+            return legalEntityApi.getEntities({id: obj.__id, options: {hydrate: true}});
+        }
+    }]);
+
+    hydrationProvider.registerHydrate('primaryContact', ['legalEntityApi', 'underscore', function (legalEntityApi, underscore) {
+        return function (obj, type) {
+            return legalEntityApi.getEntities({id: obj.__id})
+                .then(function (entities) {
+                    return underscore.findWhere(entities, {isPrimary: true});
+                });
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('legalEntities', ['legalEntityApi', 'promiseService', function (legalEntityApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return legalEntityApi.purgeEntity({template: 'legalentities/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.legalEntities, function (entity) {
+                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var defaultRelations = ['assets'];
+        var entityApi = api({
+            plural: 'legalentities',
+            singular: 'legalentity',
+            strip: defaultRelations,
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'legalentity', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'legalentity', relations);
+            }
+        });
+
+        return {
+            getEntities: entityApi.getItems,
+            createEntity: entityApi.createItem,
+            getEntity: entityApi.getItem,
+            findEntity: entityApi.findItem,
+            updateEntity: entityApi.updateItem,
+            postEntity: entityApi.postItem,
+            deleteEntity: entityApi.deleteItem,
+            purgeEntity: entityApi.purgeItem
+        };
+    }];
 }]);
 
-mobileSdkApiApp.factory('farmApi', ['api', function (api) {
-    var farmApi = api({plural: 'farms', singular: 'farm'});
+mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
+        return function (obj, type) {
+            return farmApi.findFarm({key: obj.farmId, options: {one: true}});
+        }
+    }]);
 
-    return {
-        getFarms: farmApi.getItems,
-        createFarm: farmApi.createItem,
-        getFarm: farmApi.getItem,
-        findFarm: farmApi.findItem,
-        updateFarm: farmApi.updateItem,
-        postFarm: farmApi.postItem,
-        deleteFarm: farmApi.deleteItem,
-        purgeFarm: farmApi.purgeItem
-    };
+    hydrationProvider.registerHydrate('farms', ['farmApi', function (farmApi) {
+        return function (obj, type) {
+            return farmApi.getFarms({id: obj.__id});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('farms', ['farmApi', 'promiseService', function (farmApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return farmApi.purgeFarm({template: 'farms/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.farms, function (farm) {
+                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var farmApi = api({
+            plural: 'farms',
+            singular: 'farm'
+        });
+
+        return {
+            getFarms: farmApi.getItems,
+            createFarm: farmApi.createItem,
+            getFarm: farmApi.getItem,
+            findFarm: farmApi.findItem,
+            updateFarm: farmApi.updateItem,
+            postFarm: farmApi.postItem,
+            deleteFarm: farmApi.deleteItem,
+            purgeFarm: farmApi.purgeItem
+        };
+    }];
 }]);
 
-mobileSdkApiApp.factory('assetApi', ['api', function (api) {
-    var assetApi = api({plural: 'assets', singular: 'asset', strip: ['farm', 'legalEntity']});
+mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('assets', ['assetApi', function (assetApi) {
+        return function (obj, type) {
+            return assetApi.getAssets({id: obj.__id});
+        }
+    }]);
 
-    return {
-        getAssets: assetApi.getItems,
-        createAsset: assetApi.createItem,
-        getAsset: assetApi.getItem,
-        findAsset: assetApi.findItem,
-        updateAsset: assetApi.updateItem,
-        postAsset: assetApi.postItem,
-        deleteAsset: assetApi.deleteItem,
-        purgeAsset: assetApi.purgeItem
-    };
+    hydrationProvider.registerDehydrate('assets', ['assetApi', 'promiseService', function (assetApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+
+            return assetApi.purgeAsset({template: 'assets/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.assets, function (asset) {
+                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var assetApi = api({
+            plural: 'assets',
+            singular: 'asset',
+            strip: ['farm', 'legalEntity'],
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : []);
+                return hydration.hydrate(obj, 'asset', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : []);
+                return hydration.dehydrate(obj, 'asset', relations);
+            }
+        });
+
+        return {
+            getAssets: assetApi.getItems,
+            createAsset: assetApi.createItem,
+            getAsset: assetApi.getItem,
+            findAsset: assetApi.findItem,
+            updateAsset: assetApi.updateItem,
+            postAsset: assetApi.postItem,
+            deleteAsset: assetApi.deleteItem,
+            purgeAsset: assetApi.purgeItem
+        };
+    }];
 }]);
 
-mobileSdkApiApp.factory('documentApi', ['api', function (api) {
-    var documentStore = api({plural: 'documents', singular: 'document', strip: ['organization', 'tasks']});
+mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
+        return function (obj, type) {
+            return documentApi.findDocument({key: obj.documentId, options: {one: true}});
+        }
+    }]);
 
-    return {
-        getDocuments: documentStore.getItems,
-        createDocument: documentStore.createItem,
-        getDocument: documentStore.getItem,
-        findDocument: documentStore.findItem,
-        updateDocument: documentStore.updateItem,
-        postDocument: documentStore.postItem,
-        deleteDocument: documentStore.deleteItem,
-        purgeDocument: documentStore.purgeItem
-    };
+    hydrationProvider.registerDehydrate('document', ['documentApi', function (documentApi) {
+        return function (obj, type) {
+            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}});
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var hydrateRelations = ['organization'];
+        var dehydrateRelations = [];
+        var documentApi = api({
+            plural: 'documents',
+            singular: 'document',
+            strip: ['organization', 'tasks'],
+            hydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'document', relations);
+            },
+            dehydrate: function (obj, relations) {
+                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'document', relations);
+            }
+        });
+
+        return {
+            getDocuments: documentApi.getItems,
+            createDocument: documentApi.createItem,
+            getDocument: documentApi.getItem,
+            findDocument: documentApi.findItem,
+            updateDocument: documentApi.updateItem,
+            postDocument: documentApi.postItem,
+            deleteDocument: documentApi.deleteItem,
+            purgeDocument: documentApi.purgeItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.factory('activityApi', ['api', function (api) {
-    var activityApi = api({plural: 'activities', singular: 'activity'});
+    var activityApi = api({
+        plural: 'activities',
+        singular: 'activity'
+    });
 
     return {
         getActivities: activityApi.getItems,
@@ -7519,17 +8944,48 @@ mobileSdkApiApp.factory('activityApi', ['api', function (api) {
 }]);
 
 mobileSdkApiApp.factory('enterpriseBudgetApi', ['api', function (api) {
-    var farmApi = api({plural: 'budgets', singular: 'budget'});
+    var budgetApi = api({
+        plural: 'budgets',
+        singular: 'budget'
+    });
 
     return {
-        getEnterpriseBudgets: farmApi.getItems,
-        createEnterpriseBudget: farmApi.createItem,
-        getEnterpriseBudget: farmApi.getItem,
-        findEnterpriseBudget: farmApi.findItem,
-        updateEnterpriseBudget: farmApi.updateItem,
-        postEnterpriseBudget: farmApi.postItem,
-        deleteEnterpriseBudget: farmApi.deleteItem,
-        purgeEnterpriseBudget: farmApi.purgeItem
+        getEnterpriseBudgets: budgetApi.getItems,
+        createEnterpriseBudget: budgetApi.createItem,
+        getEnterpriseBudget: budgetApi.getItem,
+        findEnterpriseBudget: budgetApi.findItem,
+        updateEnterpriseBudget: budgetApi.updateItem,
+        postEnterpriseBudget: budgetApi.postItem,
+        deleteEnterpriseBudget: budgetApi.deleteItem,
+        purgeEnterpriseBudget: budgetApi.purgeItem
+    };
+}]);
+
+mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'underscore', function (api, hydration, promiseService, underscore) {
+    var defaultRelations = ['document', 'organization'];
+    var expenseApi = api({
+        plural: 'expenses',
+        singular: 'expense',
+        strip: ['document', 'organization', 'user'],
+        hydrate: function (obj, relations) {
+            relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
+            return hydration.hydrate(obj, 'expense', relations);
+        },
+        dehydrate: function (obj, relations) {
+            return promiseService.wrap(function (promise) {
+                promise.resolve(underscore.omit(obj, relations || defaultRelations));
+            });
+        }
+    });
+
+    return {
+        getExpenses: expenseApi.getItems,
+        createExpense: expenseApi.createItem,
+        getExpense: expenseApi.getItem,
+        findExpense: expenseApi.findItem,
+        updateExpense: expenseApi.updateItem,
+        postExpense: expenseApi.postItem,
+        purgeExpense: expenseApi.purgeItem
     };
 }]);
 
@@ -7568,372 +9024,56 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
     }
 }]);
 
-/*
- * Handlers
- */
-mobileSdkApiApp.factory('hydration', ['promiseService', 'taskApi', 'farmerApi', 'farmApi', 'assetApi', 'documentApi', 'legalEntityApi', 'underscore',
-    function (promiseService, taskApi, farmerApi, farmApi, assetApi, documentApi, legalEntityApi, underscore) {
-        // TODO: Allow for tree of hydrations/dehydrations (e.g. Farmer -> LegalEntities -> Assets)
-
-        var _relationTable = {
-            organization: {
-                hydrate: function (obj, type) {
-                    return promiseService.wrap(function (promise) {
-                        farmerApi.findFarmer({key: obj.organizationId, options: {one: true}}).then(function (farmer) {
-                            promiseService.all({
-                                farms: _relationTable.farms.hydrate(farmer, type),
-                                legalEntities: _relationTable.legalEntities.hydrate(farmer, type)
-                            }).then(function (results) {
-                                promise.resolve(underscore.extend(farmer, results));
-                            }, promise.reject);
-                        }, promise.reject);
-                    });
-                },
-                dehydrate: function (obj, type) {
-                    obj.organization.id = obj.organization.id || obj.organizationId;
-
-                    return farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: false, dirty: false}});
-                }
-            },
-            farms: {
-                hydrate: function (obj, type) {
-                    return farmApi.getFarms({id: obj.__id});
-                },
-                dehydrate: function (obj, type) {
-                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
-
-                    return promiseService.wrap(function (promise) {
-                        farmApi.purgeFarm({template: 'farms/:id', schema: {id: objId}, options: {force: false}})
-                            .then(function () {
-                                promiseService.arrayWrap(function (promises) {
-                                    angular.forEach(obj.farms, function (farm) {
-                                        promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: false, dirty: false}}));
-                                    });
-                                }).then(promise.resolve, promise.reject);
-                            }, promise.reject);
-                    });
-                }
-            },
-            farm: {
-                hydrate: function (obj, type) {
-                    return farmApi.findFarm({key: obj.farmId, options: {one: true}});
-                }
-            },
-            assets: {
-                hydrate: function (obj, type) {
-                    return assetApi.getAssets({id: obj.__id});
-                },
-                dehydrate: function (obj, type) {
-                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
-
-                    return promiseService.wrap(function (promise) {
-                        assetApi.purgeAsset({template: 'assets/:id', schema: {id: objId}, options: {force: false}})
-                            .then(function () {
-                                promiseService.arrayWrap(function (promises) {
-                                    angular.forEach(obj.assets, function (asset) {
-                                        promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: false, dirty: false}}));
-                                    });
-                                }).then(promise.resolve, promise.reject);
-                            }, promise.reject);
-                    });
-                }
-            },
-            legalEntities: {
-                hydrate: function (obj, type) {
-                    return promiseService.wrap(function (promise) {
-                        legalEntityApi.getEntities({id: obj.__id})
-                            .then(function (entities) {
-                                return promiseService.arrayWrap(function (promises) {
-                                    angular.forEach(entities, function (entity) {
-                                        promises.push(_relationTable.assets.hydrate(entity, type)
-                                            .then(function (assets) {
-                                                entity.assets = assets;
-                                                return entity;
-                                            }, promise.reject));
-                                    });
-                                });
-                            }, promise.reject).then(promise.resolve, promise.reject);
-                    });
-                },
-                dehydrate: function (obj, type) {
-                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
-
-                    return promiseService.wrap(function (promise) {
-                        legalEntityApi.purgeEntity({template: 'legalentities/:id', schema: {id: objId}, options: {force: false}})
-                            .then(function () {
-                                promiseService.arrayWrap(function (promises) {
-                                    angular.forEach(obj.legalEntities, function (entity) {
-                                        promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: false, dirty: false}}));
-                                        promises.push(_relationTable.assets.dehydrate(entity, type));
-                                    });
-                                }).then(promise.resolve, promise.reject);
-                            }, promise.reject);
-                    });
-                }
-            },
-            legalEntity: {
-                hydrate: function (obj, type) {
-                    return promiseService.wrap(function (promise) {
-                        legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true}})
-                            .then(function (entity) {
-                                return _relationTable.assets.hydrate(entity, type)
-                                    .then(function (assets) {
-                                        entity.assets = assets;
-                                        return entity;
-                                    }, promise.reject);
-                            })
-                            .then(promise.resolve, promise.reject);
-                    });
-                }
-            },
-            document: {
-                hydrate: function (obj, type) {
-                    return documentApi.findDocument({key: obj.documentId, options: {one: true}});
-                },
-                dehydrate: function (obj, type) {
-                    return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: false, dirty: false}});
-                }
-            },
-            subtasks: {
-                hydrate: function (obj, type) {
-                    return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.__id}});
-                },
-                dehydrate: function (obj, type) {
-                    var objId = (obj.__id !== undefined ? obj.__id : obj.id);
-
-                    return promiseService.wrap(function (promise) {
-                        taskApi.purgeTask({template: 'tasks/:id', schema: {id: objId}, options: {force: false}})
-                            .then(function () {
-                                promiseService.arrayWrap(function (promises) {
-                                    angular.forEach(obj.subtasks, function (subtask) {
-                                        promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: false, dirty: false}}));
-                                    });
-                                }).then(promise.resolve, promise.reject);
-                            }, promise.reject);
-                    });
-                }
-            }
-        };
-
-        var _hydrate = function (obj, type, relations) {
-            relations = relations || [];
-
-            return promiseService.wrap(function (promise) {
-                promiseService
-                    .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
-
-                            if (relation && relation.hydrate) {
-                                promises[relationName] = relation.hydrate(obj, type);
-                            }
-                        });
-                    })
-                    .then(function (results) {
-                        promise.resolve(underscore.extend(obj, results));
-                    }, function (results) {
-                        promise.resolve(underscore.extend(obj, results));
-                    });
-            });
-        };
-
-        var _dehydrate = function (obj, type, relations) {
-            relations = relations || [];
-
-            return promiseService.wrap(function (promise) {
-                promiseService
-                    .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
-
-                            if (relation && relation.dehydrate) {
-                                promises[relationName] = relation.dehydrate(obj, type);
-                            }
-                        });
-                    })
-                    .then(function () {
-                        angular.forEach(relations, function (relationName) {
-                            delete obj[relationName];
-                        });
-
-                        promise.resolve(obj);
-                    }, function () {
-                        promise.reject();
-                    });
-            });
-        };
-
-        return {
-            hydrate: _hydrate,
-            dehydrate: _dehydrate
-        }
-    }]);
-
-mobileSdkApiApp.factory('taskUtility', ['promiseService', 'hydration', 'taskApi', function (promiseService, hydration, taskApi) {
-    var _relations = ['organization', 'document', 'subtasks'];
-
-    return {
-        hydration: {
-            hydrate: function (taskOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof taskOrId !== 'object') {
-                        taskApi.findTask({key: taskOrId, options: {one: true}}).then(function (task) {
-                            hydration.hydrate(task, 'task', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(taskOrId, 'task', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (task, relations) {
-                relations = relations || _relations;
-
-                return hydration.dehydrate(task, 'task', relations).then(function (task) {
-                    taskApi.updateTask({data: task, options: {dirty: false}});
-                })
-            }
-        },
-        api: taskApi
-    };
-}]);
-
-mobileSdkApiApp.factory('farmerUtility', ['promiseService', 'hydration', 'farmerApi', function (promiseService, hydration, farmerApi) {
-    var _relations = ['farms', 'legalEntities'];
-
-    return {
-        hydration: {
-            hydrate: function (farmerOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof farmerOrId !== 'object') {
-                        farmerApi.findFarmer({key: farmerOrId, options: {one: true}}).then(function (farmer) {
-                            hydration.hydrate(farmer, 'farmer', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(farmerOrId, 'farmer', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (farmer, relations) {
-                relations = relations || _relations;
-
-                angular.forEach(farmer.teams, function (team, i) {
-                    if (typeof team === 'object') {
-                        farmer.teams[i] = team.name;
-                    }
-                });
-
-                return hydration.dehydrate(farmer, 'farmer', relations).then(function (farmer) {
-                    farmerApi.updateFarmer({data: farmer, options: {dirty: false}});
-                })
-            }
-        },
-        api: farmerApi
-    };
-}]);
-
-mobileSdkApiApp.factory('assetUtility', ['promiseService', 'hydration', 'assetApi', function (promiseService, hydration, assetApi) {
-    var _relations = ['farm', 'legalEntity'];
-
-    return {
-        hydration: {
-            hydrate: function (assetOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof assetOrId !== 'object') {
-                        assetApi.findAsset({key: assetOrId, options: {one: true}}).then(function (asset) {
-                            hydration.hydrate(asset, 'asset', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(assetOrId, 'asset', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (asset, relations) {
-                relations = relations || _relations;
-
-                return hydration.dehydrate(asset, 'asset', relations).then(function (asset) {
-                    assetApi.updateAsset({data: asset, options: {dirty: false}});
-                })
-            }
-        },
-        api: assetApi
-    };
-}]);
-
-mobileSdkApiApp.factory('documentUtility', ['promiseService', 'hydration', 'documentApi', function (promiseService, hydration, documentApi) {
-    var _relations = ['organization'];
-
-    return {
-        hydration: {
-            hydrate: function (documentOrId, relations) {
-                relations = relations || _relations;
-
-                return promiseService.wrap(function (promise) {
-                    if (typeof documentOrId !== 'object') {
-                        documentApi.findDocument({key: documentOrId, options: {one: true}}).then(function (document) {
-                            hydration.hydrate(document, 'document', relations).then(promise.resolve, promise.reject);
-                        }, promise.reject);
-                    } else {
-                        hydration.hydrate(documentOrId, 'document', relations).then(promise.resolve, promise.reject);
-                    }
-                });
-            },
-            dehydrate: function (document, relations) {
-                relations = relations || _relations;
-
-                return hydration.dehydrate(document, 'document', relations).then(function (document) {
-                    documentApi.updateDocument({data: document, options: {dirty: false}});
-                })
-            }
-        },
-        api: documentApi
-    };
-}]);
-
-var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library']);
+var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library', 'ag.mobile-sdk.cordova.storage']);
 
 /**
  * @name dataPurgeService
  */
 mobileSdkDataApp.provider('dataPurge', function () {
     this.$get = ['promiseService', 'dataStore', function (promiseService, dataStore) {
-        function _purgeDataStore(name) {
-            return promiseService.wrap(function (promise) {
-                var store = dataStore(name);
-
-                store.transaction(function (tx) {
-                    tx.purgeItems({callback: promise});
-                })
-            });
-        }
-
         return function purge(dataStoreList) {
             return promiseService.wrapAll(function(promises) {
-                for (var i = 0; i < dataStoreList.length; i++) {
-                    promises.push(_purgeDataStore(dataStoreList[i]));
-                }
+                angular.forEach(dataStoreList, function (item) {
+                    promises.push(dataStore(item).transaction()
+                        .then(function (tx) {
+                            return tx.purgeItems();
+                        }));
+                });
             });
         }
     }];
 });
 
-mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'underscore', function ($log, underscore) {
+mobileSdkDataApp.constant('dataStoreConstants', {
+    NoStoreParams: {code: 'NoStoreParams', message: 'No DataStore parameters defined'},
+    NoConfigDBNameParams: {code: 'NoConfigDBNameParams', message: 'No Config database name defined'},
+    NoConfigAPIParams: {code: 'NoConfigAPIParams', message: 'No Config API parameters defined'},
+    NoConfigPagingParams: {code: 'NoConfigPagingParams', message: 'No Config Paging parameters defined'},
+    NoReadParams: {code: 'NoReadParams', message: 'No DataRead parameters defined'},
+    NoPagingDefined: {code: 'NoPagingDefined', message: 'No Paging parameters have been defined in config'},
+    LocalDataStoreError: {code: 'LocalDataStoreError', message: 'Can not perform action on local data store'},
+    RemoteDataStoreError: {code: 'RemoteDataStoreError', message: 'Can not perform action on remote data store'},
+    RemoteNoDataError: {code: 'RemoteNoDataError', message: 'No data response from remote store'}
+});
+
+mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreConstants', 'promiseService', 'underscore', function ($log, $timeout, dataStoreConstants, promiseService, underscore) {
+    function _errorLog (err) {
+        if (typeof err === 'string') {
+            $log.warn('Error: ' + err);
+        } else if (err.message !== undefined) {
+            $log.warn('Error: ' + err.message + '(' + err.code + ')');
+        } else {
+            $log.warn(err);
+        }
+    }
+
     return {
         parseRequest: function (templateUrl, schemaData) {
-            $log.debug('Unresolved: ' + templateUrl);
-
             if (templateUrl !== undefined) {
                 angular.forEach(schemaData, function (data, key) {
                     templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
                 });
             }
-
-            $log.debug('Resolved: ' + templateUrl);
 
             return templateUrl;
         },
@@ -7944,6 +9084,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'underscore', function (
             return underscore.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
                 __id: item.id,
                 __uri: item.uri,
+                __complete: (item.complete == 1),
                 __dirty: (item.dirty == 1),
                 __local: (item.local == 1),
                 __saved: true
@@ -7953,10 +9094,57 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'underscore', function (
             return {
                 id: item.__id,
                 uri: item.__uri,
+                complete: item.__complete,
                 dirty: item.__dirty,
                 local: item.__local,
-                data: underscore.omit(item, ['__id', '__uri', '__dirty', '__local', '__saved'])
+                data: underscore.omit(item, ['__id', '__uri', '__complete', '__dirty', '__local', '__saved'])
             };
+        },
+        transactionPromise: function(db) {
+            var _transactionAttempts = 0;
+            var _getTransaction = function (promise) {
+                _transactionAttempts++;
+
+                db.transaction(function (res) {
+                    promise.resolve(res);
+                }, function (err) {
+                    if (_transactionAttempts <= 10) {
+                        $log.warn('Waiting for transaction');
+                        $log.warn(JSON.stringify(err));
+
+                        $timeout(function () {
+                            _getTransaction(promise);
+                        }, 250);
+                    } else {
+                        promise.reject(err);
+                    }
+                });
+            };
+
+            return promiseService.wrap(function (promise) {
+                if (db) {
+                    _getTransaction(promise);
+                } else {
+                    promise.reject(dataStoreConstants.LocalDataStoreError);
+                }
+            });
+        },
+        executeSqlPromise: function (tx, sql, data) {
+            data = data || [];
+
+            return promiseService.wrap(function (promise) {
+                if (tx) {
+                    tx.executeSql(sql, data, function (tx, res) {
+                        promise.resolve(res);
+                    }, function (tx, err) {
+                        _errorLog(err);
+
+                        promise.reject(err);
+                    });
+                } else {
+                    promise.reject(dataStoreConstants.LocalDataStoreError);
+                }
+            });
         }
     }
 }]);
@@ -7964,24 +9152,13 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', 'underscore', function (
 /**
  * @name dataStore
  */
-mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
+mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', function (dataStoreConstants, underscore) {
     var _defaultOptions = {
         pageLimit: 10,
         dbName: undefined,
+
         readLocal: true,
         readRemote: true
-    };
-
-    var _errors = {
-        NoStoreParams: {code: 'NoStoreParams', message: 'No DataStore parameters defined'},
-        NoConfigDBNameParams: {code: 'NoConfigDBNameParams', message: 'No Config database name defined'},
-        NoConfigAPIParams: {code: 'NoConfigAPIParams', message: 'No Config API parameters defined'},
-        NoConfigPagingParams: {code: 'NoConfigPagingParams', message: 'No Config Paging parameters defined'},
-        NoReadParams: {code: 'NoReadParams', message: 'No DataRead parameters defined'},
-        NoPagingDefined: {code: 'NoPagingDefined', message: 'No Paging parameters have been defined in config'},
-        LocalDataStoreError: {code: 'LocalDataStoreError', message: 'Can not perform action on local data store'},
-        RemoteDataStoreError: {code: 'RemoteDataStoreError', message: 'Can not perform action on remote data store'},
-        RemoteNoDataError: {code: 'RemoteNoDataError', message: 'No data response from remote store'}
     };
 
     var _localDatabase;
@@ -8000,8 +9177,20 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
      * dataStore service
      * @type {Array}
      */
-    this.$get = ['$http', '$log', '$q', '$rootScope', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $q, $rootScope, safeApply, configuration, dataStoreUtilities) {
+    this.$get = ['$http', '$log', '$rootScope', 'fileStorageService', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, fileStorageService, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
         var _hostApi = configuration.getServer() + 'api/';
+
+        var _defaultHydration = function (obj) {
+            return promiseService.wrap(function (promise) {
+                promise.resolve(obj);
+            })
+        };
+
+        function _errorCallback(err) {
+            $log.error('_errorCallback');
+            $log.error(err);
+            $log.error(JSON.stringify(err));
+        }
 
         /**
          * @name _initializeDatabase
@@ -8009,33 +9198,57 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
          * @returns {Database}
          * @private
          */
-        function _initializeDatabase(idCallback) {
-            var migrationSteps = [];
+        function _initializeDatabase() {
+            var migrationSteps = [{
+                current: '',
+                next: '1',
+                process: function (tx) {
+                    return dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
+                        return promiseService.wrapAll(function (promises) {
+                            for (var i = 0; i < res.rows.length; i++) {
+                                var table = res.rows.item(i);
+
+                                if (table.name.indexOf('__') === -1) {
+                                    promises.push(dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN complete INT DEFAULT 1'));
+                                }
+                            }
+                        });
+                    });
+                }
+            }];
 
             function _processMigration(db) {
                 $log.debug('_processMigration');
+
+                var currentDbVersion = localStore.getItem('dataStore-dbVersion', '');
+                $log.debug('Current version: ' + currentDbVersion);
 
                 if (migrationSteps.length > 0) {
                     var migration = migrationSteps[0];
                     migrationSteps.splice(0, 1);
 
-                    if (migration.current === db.version) {
-                        $log.debug('Database (' + db.version + ') has a newer version ' + migration.next);
+                    if (migration.current === currentDbVersion) {
+                        $log.debug('Database (' + currentDbVersion + ') has a newer version ' + migration.next);
 
-                        db.changeVersion(migration.current, migration.next, migration.process, _errorCallback, function () {
-                            $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
-                            _processMigration(db);
-                        });
+                        dataStoreUtilities.transactionPromise(db)
+                            .then(migration.process)
+                            .then(function () {
+                                $log.debug('Database version migrated from ' + migration.current + ' to ' + migration.next);
+
+                                localStore.setItem('dataStore-dbVersion', migration.next);
+
+                                _processMigration(db);
+                            });
                     } else {
                         _processMigration(db);
                     }
-                } else {
-                    idCallback(db);
                 }
-            };
+            }
 
-            _processMigration(window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576));
-        };
+            _localDatabase = window.openDatabase(_defaultOptions.dbName, '', _defaultOptions.dbName, 4 * 1048576);
+
+            _processMigration(_localDatabase);
+        }
 
         /**
          * @name DataStore
@@ -8053,12 +9266,14 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
 
             // Validate parameters
             if (typeof name !== 'string') {
-                throw new Error(_errors.NoStoreParams.msg);
+                throw new Error(dataStoreConstants.NoStoreParams.msg);
             }
 
             if (_defaultOptions.dbName === undefined) {
-                throw new Error(_errors.NoConfigDBNameParams.msg);
+                throw new Error(dataStoreConstants.NoConfigDBNameParams.msg);
             }
+
+            name = name.replace('-', '');
 
             /**
              * Private variables
@@ -8084,7 +9299,10 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                 indexerProperty: 'id',
 
                 readLocal: _defaultOptions.readLocal,
-                readRemote: _defaultOptions.readRemote
+                readRemote: _defaultOptions.readRemote,
+
+                hydrate: _defaultHydration,
+                dehydrate: _defaultHydration
             });
 
             if (_config.paging !== undefined) {
@@ -8098,33 +9316,20 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                 });
             }
 
-            function _initializeTable(itCallback) {
-                var asyncMon = new AsyncMonitor(2, itCallback);
-
-                _localDatabase.transaction(function (tx) {
-                    tx.executeSql('CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', [], asyncMon.done, _errorCallback);
-                    tx.executeSql('CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [], asyncMon.done, _errorCallback);
-                });
+            function _initializeTable() {
+                return dataStoreUtilities.transactionPromise(_localDatabase).then(function (tx) {
+                    return promiseService.all([
+                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, complete INT DEFAULT 0, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', []),
+                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [])
+                    ])
+                }, promiseService.throwError);
             }
 
-            function _countTableRows(cdrCallback) {
-                _localDatabase.transaction(function (tx) {
-                    tx.executeSql('SELECT COUNT(*) from ' + name, [], function (tx, res) {
-                        cdrCallback(res.rows.length == 1 ? res.rows.item(0) : 0);
-                    }, _errorCallback);
-                });
+            function _clearTable() {
+                return dataStoreUtilities.transactionPromise(_localDatabase).then(function (tx) {
+                    return dataStoreUtilities.executeSqlPromise(tx, 'DELETE FROM ' + name, []);
+                }, promiseService.throwError);
             }
-
-            function _clearTable(ctCallback) {
-                _localDatabase.transaction(function (tx) {
-                    tx.executeSql('DELETE FROM ' + name, [], function () {
-                        ctCallback(true);
-                    }, function () {
-                        ctCallback(false);
-                    });
-                });
-            }
-
 
             /*
              * Utility functions
@@ -8133,25 +9338,6 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
             function _traceCallback() {
                 $log.warn('_traceCallback');
                 $log.warn('Arguments: [' + Array.prototype.join.call(arguments, ', ') + ']');
-            }
-
-            function _dataCallback(tx, res) {
-                $log.debug('SQL complete: ' + res.rowsAffected);
-            }
-
-            function _errorCallback(tx, err) {
-                if (typeof err === 'undefined') {
-                    err = tx;
-                    tx = undefined;
-                }
-
-                if (typeof err === 'string') {
-                    $log.warn('Error: ' + err);
-                } else if (err.message !== undefined) {
-                    $log.warn('Error: ' + err.message + '(' + err.code + ')');
-                } else {
-                    $log.warn(err);
-                }
             }
 
             function _getItemIndex(item, id) {
@@ -8166,432 +9352,377 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
              * Local data storage
              */
 
-            var _getLocal = function (uri, options, glCallback) {
+            var _getLocal = function (uri, request) {
                 $log.debug('_getLocal');
-                if (typeof glCallback !== 'function') glCallback = angular.noop;
 
-                _localDatabase.transaction(function (tx) {
-                    tx.executeSql('SELECT * FROM ' + name + ' WHERE uri = ?', [uri], function (tx, res) {
-                        if (res.rows.length > 0) {
-                            if (options.one) {
-                                glCallback(dataStoreUtilities.injectMetadata(res.rows.item(0)));
-                            } else {
-                                var dataItems = [];
+                request.options = request.options || {};
 
-                                for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(dataStoreUtilities.injectMetadata(res.rows.item(i)));
-                                }
-
-                                glCallback(dataItems);
+                return dataStoreUtilities
+                    .transactionPromise(_localDatabase)
+                    .then(function (tx) {
+                        return dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name + ' WHERE uri = ?', [uri]);
+                    }, promiseService.throwError)
+                    .then(function (res) {
+                        return promiseService.wrapAll(function (promises) {
+                            for (var i = 0; i < res.rows.length; i++) {
+                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), request.options.hydrate));
                             }
-                        } else {
-                            glCallback(options.one ? undefined : []);
-                        }
-                    }, function (tx, err) {
-                        _errorCallback(tx, err);
-                        glCallback(null, _errors.LocalDataStoreError);
-                    });
-                });
+                        });
+                    }, promiseService.throwError);
             };
 
-            var _findLocal = function (key, column, options, flCallback) {
+            var _findLocal = function (key, column, options) {
                 $log.debug('_findLocal');
 
-                if (typeof flCallback !== 'function') flCallback = angular.noop;
-
-                _localDatabase.transaction(function (tx) {
-                    tx.executeSql('SELECT * FROM ' + name + ' WHERE ' + column + ' ' + (options.like ? 'LIKE' : '=') + ' ?', [(options.like ? "%" + key + "%" : key)], function (tx, res) {
-                        if (res.rows.length > 0) {
-                            if (options.one) {
-                                flCallback(dataStoreUtilities.injectMetadata(res.rows.item(0)));
-                            } else {
-                                var dataItems = [];
-
-                                for (var i = 0; i < res.rows.length; i++) {
-                                    dataItems.push(dataStoreUtilities.injectMetadata(res.rows.item(i)));
-                                }
-
-                                flCallback(dataItems);
+                return dataStoreUtilities
+                    .transactionPromise(_localDatabase)
+                    .then(function (tx) {
+                        return dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name + ' WHERE ' + column + ' ' + (options.like ? 'LIKE' : '=') + ' ?', [(options.like ? "%" + key + "%" : key)]);
+                    }, promiseService.throwError)
+                    .then(function (res) {
+                        return promiseService.wrapAll(function (promises) {
+                            for (var i = 0; i < res.rows.length; i++) {
+                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options.hydrate));
                             }
-                        } else {
-                            flCallback(options.one ? undefined : []);
-                        }
-                    }, function (tx, err) {
-                        flCallback(null, err);
-                    });
-                });
+                        });
+                    }, promiseService.throwError);
             };
 
-            var _syncLocal = function (dataItems, uri, slCallback) {
+            var _syncLocal = function (dataItems, uri, request) {
                 $log.debug('_syncLocal');
-                if (typeof slCallback !== 'function') slCallback = angular.noop;
 
-                _deleteAllLocal(uri, function () {
-                    _updateLocal(dataItems, function () {
-                        _getLocal(uri, {}, slCallback);
-                    });
-                });
+                return _deleteAllLocal(uri)
+                    .then(function () {
+                        return _updateLocal(dataItems, {});
+                    }, promiseService.throwError)
+                    .then(function () {
+                        return _getLocal(uri, request);
+                    }, promiseService.throwError);
             };
 
-            var _updateLocal = function (dataItems, options, ulCallback) {
+            var _updateLocal = function (dataItems, request) {
                 $log.debug('_updateLocal');
-                if (typeof options === 'function') {
-                    ulCallback = options;
-                    options = {};
-                }
 
-                if (typeof ulCallback !== 'function') ulCallback = angular.noop;
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                if (dataItems.length > 0) {
-                    options = underscore.defaults(options || {}, {
-                        replace: true,
-                        force: false
-                    });
+                request.options = underscore.defaults(request.options || {}, {
+                    replace: true,
+                    force: false
+                });
 
-                    var asyncMon = new AsyncMonitor(dataItems.length, function () {
-                        ulCallback(dataItems);
-                    });
+                return promiseService
+                    .wrapAll(function (promises) {
+                        angular.forEach(dataItems, function (dataItem) {
+                            promises.push(_config.dehydrate(dataItem, request.options.dehydrate));
+                        });
+                    })
+                    .then(function (dehydratedItems) {
+                        return dataStoreUtilities.transactionPromise(_localDatabase).then(function (tx) {
+                            return promiseService.wrapAll(function (promises) {
+                                angular.forEach(dehydratedItems, function (dehydratedItem) {
+                                    var item = dataStoreUtilities.extractMetadata(dehydratedItem);
+                                    var dataString = JSON.stringify(item.data);
+                                    var resolveItem = function () {
+                                        return dehydratedItem;
+                                    };
 
-                    _localDatabase.transaction(function (tx) {
-                        for (var i = 0; i < dataItems.length; i++) {
-                            var item = dataStoreUtilities.extractMetadata(dataItems[i]);
-                            var dataString = JSON.stringify(item.data);
+                                    item.dirty = (request.options.dirty === true ? true : item.dirty);
 
-                            tx.executeSql('INSERT INTO ' + name + ' (id, uri, data, dirty, local) VALUES (?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0)], asyncMon.done, function (tx, err) {
-                                // Insert failed
-                                if (options.replace === true) {
-                                    if (item.dirty === true || item.local === true || options.force) {
-                                        tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
-                                    } else {
-                                        tx.executeSql('UPDATE ' + name + ' SET uri = ?, data = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id], asyncMon.done, _errorCallback);
-                                    }
-                                } else {
-                                    asyncMon.done();
-                                }
+                                    promises.push(dataStoreUtilities
+                                        .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, complete, dirty, local) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
+                                        .then(resolveItem, function () {
+                                            if (request.options.replace === true) {
+                                                if (item.dirty === true || item.local === true || request.options.force) {
+                                                    return dataStoreUtilities
+                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                        .then(resolveItem);
+                                                } else {
+                                                    return dataStoreUtilities
+                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                        .then(resolveItem);
+                                                }
+                                            }
+
+                                            return null;
+                                        }));
+                                });
                             });
-                        }
-                    });
-                } else {
-                    ulCallback(dataItems);
-                }
+                        });
+                    }, promiseService.throwError)
+                    .then(function (dehydratedItems) {
+                        return promiseService.wrapAll(function (promises) {
+                            angular.forEach(underscore.compact(dehydratedItems), function (dehydratedItem) {
+                                promises.push(_config.hydrate(dehydratedItem, request.options.hydrate));
+                            });
+                        });
+                    }, promiseService.throwError);
             };
 
-            var _deleteLocal = function (dataItems, dlCallback) {
+            var _deleteLocal = function (dataItems) {
                 $log.debug('_deleteLocal');
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                if (dataItems.length > 0) {
-                    var asyncMon = new AsyncMonitor(dataItems.length, dlCallback);
+                return dataStoreUtilities
+                    .transactionPromise(_localDatabase)
+                    .then(function (tx) {
+                        return promiseService.wrapAll(function (promises) {
+                            angular.forEach(dataItems, function (dataItem) {
+                                var item = dataStoreUtilities.extractMetadata(dataItem);
 
-                    _localDatabase.transaction(function (tx) {
-                        for (var i = 0; i < dataItems.length; i++) {
-                            var item = dataStoreUtilities.extractMetadata(dataItems[i]);
-
-                            tx.executeSql('DELETE FROM ' + name + ' WHERE id = ? AND uri = ?', [item.id, item.uri], asyncMon.done, function (err) {
-                                _errorCallback(tx, err);
-                                asyncMon.done();
+                                promises.push(dataStoreUtilities.executeSqlPromise(tx, 'DELETE FROM ' + name + ' WHERE id = ? AND uri = ?', [item.id, item.uri]));
                             });
-                        }
-                    });
-                } else {
-                    dlCallback(dataItems);
-                }
+                        });
+                    }, promiseService.throwError)
+                    .then(function () {
+                        return dataItems;
+                    }, promiseService.throwError);
             };
 
-            var _deleteAllLocal = function (uri, options, dalCallback) {
+            var _deleteAllLocal = function (uri, options) {
                 $log.debug('_deleteAllLocal');
-                if (typeof options === 'function') {
-                    dalCallback = options;
-                    options = {};
-                }
 
-                options = underscore.defaults((options || {}), {force: false});
-
-                var asyncMon = new AsyncMonitor(1, dalCallback);
-
-                var handleSuccess = function () {
-                    $log.debug('handleSuccess');
-                    asyncMon.done();
-                };
-
-                var handleError = function (tx, err) {
-                    $log.debug('handleError');
-                    _errorCallback(tx, err);
-                    asyncMon.done();
-                };
-
-                $log.debug(uri);
-
-                _localDatabase.transaction(function (tx) {
-                    $log.debug('_deleteAllLocal transaction');
-
-                    if (options.force === true) {
-                        $log.debug('_deleteAllLocal force');
-                        tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ?', [uri], handleSuccess, handleError);
-                    } else {
-                        $log.debug('_deleteAllLocal not force');
-                        tx.executeSql('DELETE FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0], handleSuccess, handleError);
-                    }
+                options = underscore.defaults((options || {}), {
+                    force: false
                 });
 
-                $log.debug('_deleteAllLocal end');
+                return dataStoreUtilities
+                    .transactionPromise(_localDatabase)
+                    .then(function (tx) {
+                        if (options.force === true) {
+                            $log.debug('_deleteAllLocal force');
+                            return dataStoreUtilities.executeSqlPromise(tx, 'DELETE FROM ' + name + ' WHERE uri = ?', [uri]);
+                        }
+
+                        $log.debug('_deleteAllLocal not force');
+                        return dataStoreUtilities.executeSqlPromise(tx, 'DELETE FROM ' + name + ' WHERE uri = ? AND local = ? AND dirty = ?', [uri, 0, 0]);
+                    });
             };
 
-            /**
+            /*
              * Remote data storage
              */
 
-            var _getRemote = function (uri, paging, grCallback) {
+            var _getRemote = function (uri, request) {
                 $log.debug('_getRemote');
-                if (typeof paging == 'function') {
-                    grCallback = paging;
-                    paging = undefined;
-                }
 
-                if (typeof grCallback != 'function') grCallback = angular.noop;
+                request.options = request.options || {};
 
-                if (_config.apiTemplate !== undefined) {
-                    safeApply(function () {
-                        $http.get(_hostApi + uri, {params: paging, withCredentials: true}).then(function (res) {
-                            if (res.data != null && res.data !== 'null') {
-                                var data = res.data;
-
-                                if ((data instanceof Array) === false) {
-                                    grCallback([dataStoreUtilities.injectMetadata({
-                                        id: _getItemIndex(data),
-                                        uri: uri,
-                                        data: data,
-                                        dirty: false,
-                                        local: false
-                                    })]);
-                                } else {
-                                    var dataItems = [];
-
-                                    for (var i = 0; i < data.length; i++) {
-                                        var item = data[i];
-
-                                        dataItems.push(dataStoreUtilities.injectMetadata({
-                                            id: _getItemIndex(item),
-                                            uri: uri,
-                                            data: item,
-                                            dirty: false,
-                                            local: false
-                                        }));
-                                    }
-
-                                    grCallback(dataItems);
-                                }
-                            } else {
-                                grCallback(null, _errors.RemoteNoDataError);
-                            }
-                        }, function (err) {
-                            _errorCallback(err);
-                            grCallback(null, _errors.RemoteDataStoreError);
-                        });
+                return promiseService
+                    .wrap(function (promise) {
+                        if (_config.apiTemplate !== undefined) {
+                            $http.get(_hostApi + uri, {params: request.params, withCredentials: true})
+                                .then(function (res) {
+                                    return (res && res.data ? (res.data instanceof Array ? res.data : [res.data]) : []);
+                                }, promiseService.throwError)
+                                .then(function (res) {
+                                    return promiseService.wrapAll(function (promises) {
+                                        angular.forEach(res, function (item) {
+                                            promises.push(_config.dehydrate(dataStoreUtilities.injectMetadata({
+                                                id: _getItemIndex(item),
+                                                uri: request.options.forceUri || uri,
+                                                data: item,
+                                                complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
+                                                dirty: false,
+                                                local: false
+                                            }), true));
+                                        });
+                                    });
+                                }, promiseService.throwError)
+                                .then(promise.resolve, promise.reject);
+                        } else {
+                            promise.reject(dataStoreConstants.RemoteDataStoreError);
+                        }
                     });
-                } else {
-                    grCallback();
-                }
             };
 
             /**
              * @name _updateRemote
              * @param dataItems
-             * @param urCallback
+             * @param request
              * @private
              */
-            var _updateRemote = function (dataItems, writeUri, writeSchema, urCallback) {
+            var _updateRemote = function (dataItems, request) {
                 $log.debug('_updateRemote');
-                if (typeof writeSchema === 'function') {
-                    urCallback = writeSchema;
-                    writeSchema = {};
-                } else if (typeof writeUri === 'function') {
-                    urCallback = writeUri;
-                    writeSchema = {};
-                    writeUri = undefined;
-                }
 
-                if (typeof urCallback !== 'function') urCallback = angular.noop;
+                return promiseService.wrap(function (promise) {
+                    if (dataItems !== undefined && _config.apiTemplate !== undefined) {
+                        if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                if (dataItems !== undefined && _config.apiTemplate !== undefined) {
-                    if ((dataItems instanceof Array) === false) dataItems = [dataItems];
+                        promiseService
+                            .wrapAll(function (promises) {
+                                angular.forEach(dataItems, function (dataItem) {
+                                    var item = dataStoreUtilities.extractMetadata(dataItem);
+                                    var obj = item.data;
+                                    var uri = item.uri;
 
-                    var postedDataItems = undefined;
-                    var asyncMon = new AsyncMonitor(dataItems.length, function () {
-                        urCallback(postedDataItems);
-                    });
+                                    if (item.dirty === true) {
+                                        if (item.local || request.template !== undefined) {
+                                            if (item.local && item.data[_config.indexerProperty] !== undefined) {
+                                                delete item.data[_config.indexerProperty];
+                                            }
 
-                    var pushDataItem = function (item) {
-                        if (postedDataItems) {
-                            postedDataItems.push(item);
-                        } else {
-                            postedDataItems = [item];
-                        }
-                    };
+                                            uri = dataStoreUtilities.parseRequest(request.template || _config.apiTemplate, underscore.extend(request.schema, {id: item.local ? undefined : item.id}));
+                                        }
 
-                    var _makePost = function (item, uri) {
-                        safeApply(function () {
-                            $http.post(_hostApi + uri, item.data, {withCredentials: true}).then(function (res) {
-                                if (res.status === 200) {
-                                    var remoteItem = dataStoreUtilities.injectMetadata({
-                                        id: _getItemIndex(res.data, item.id),
-                                        uri: item.uri,
-                                        data: item.data,
-                                        dirty: false,
-                                        local: false
-                                    });
+                                        var cachedAttachments = (obj.data && obj.data.attachments ? angular.copy(obj.data.attachments) : undefined);
+                                        var toBeAttached = (cachedAttachments ? underscore.where(cachedAttachments, {local: true}) : []);
 
-                                    if (item.local == true) {
-                                        remoteItem.id = remoteItem.__id;
+                                        if (cachedAttachments && toBeAttached.length > 0) {
+                                            obj.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
+                                        }
 
-                                        _deleteLocal(item);
+                                        promises.push($http.post(_hostApi + uri, obj, {withCredentials: true})
+                                            .then(function (res) {
+                                                var postedItem = dataStoreUtilities.injectMetadata({
+                                                    id: _getItemIndex(res.data, item.id),
+                                                    uri: item.uri,
+                                                    data: res.data,
+                                                    complete: true,
+                                                    dirty: false,
+                                                    local: false
+                                                });
+
+                                                if (item.local == true) {
+                                                    postedItem.id = postedItem.__id;
+
+                                                    return _deleteLocal(dataItem).then(function () {
+                                                        return postedItem;
+                                                    });
+                                                }
+
+                                                    return postedItem;
+                                                }, promiseService.throwError)
+                                            .then(function (postedItem) {
+                                                if (toBeAttached.length > 0) {
+                                                    uri = dataStoreUtilities.parseRequest((request.template || _config.apiTemplate) + '/attach', underscore.extend(request.schema, {id: postedItem.id}));
+
+                                                    return promiseService
+                                                        .chain(function (chain) {
+                                                            angular.forEach(toBeAttached, function (attachment) {
+                                                                chain.push(function () {
+                                                                    return fileStorageService.read(attachment.src, true).then(function (fileData) {
+                                                                        return $http
+                                                                            .post(_hostApi + uri, {
+                                                                                archive: underscore.extend(underscore.omit(attachment, ['src', 'local', 'key', 'sizes']), {
+                                                                                    filename: fileData.file,
+                                                                                    content: fileData.content.substring(fileData.content.indexOf(',') + 1)
+                                                                                })
+                                                                            }, {withCredentials: true})
+                                                                            .then(function (res) {
+                                                                                return (res && res.data ? underscore.last(res.data) : undefined);
+                                                                            }, promiseService.throwError);
+                                                                    }, promiseService.throwError);
+                                                                });
+                                                            });
+                                                        })
+                                                        .then(function (attachments) {
+                                                            postedItem.data.attachments = underscore
+                                                                .chain(postedItem.data.attachments)
+                                                                .union(attachments)
+                                                                .compact()
+                                                                .value();
+
+                                                            return postedItem;
+                                                        }, promiseService.throwError);
+                                                } else {
+                                                    return postedItem;
+                                                }
+                                            }, promiseService.throwError));
                                     }
+                                });
+                            }, promiseService.throwError)
+                            .then(function(results) {
+                                request.options = underscore.defaults({force: true}, request.options);
 
-                                    pushDataItem(remoteItem);
-                                    _updateLocal(remoteItem, {force: true}, asyncMon.done);
-                                } else {
-                                    _errorCallback(err);
-                                    asyncMon.done();
-                                }
-                            }, function (err) {
-                                _errorCallback(err);
-                                asyncMon.done();
-                            });
-                        });
-                    };
-
-                    for (var i = 0; i < dataItems.length; i++) {
-                        var item = dataStoreUtilities.extractMetadata(dataItems[i]);
-
-                        if (item.dirty === true) {
-                            if (item.local || writeUri !== undefined) {
-                                if (item.local && item.data[_config.indexerProperty] !== undefined) {
-                                    delete item.data[_config.indexerProperty];
-                                }
-
-                                _makePost(item, dataStoreUtilities.parseRequest(writeUri || _config.apiTemplate, underscore.extend(writeSchema, {id: item.local ? undefined : item.id})));
-                            } else {
-                                _makePost(item, item.uri);
-                            }
-                        } else {
-                            asyncMon.done();
-                        }
+                                return _updateLocal(underscore.compact(results), request);
+                            }, promiseService.throwError)
+                            .then(promise.resolve, promise.reject);
+                    } else {
+                        promise.reject(dataStoreConstants.RemoteDataStoreError);
                     }
-                } else {
-                    urCallback();
-                }
-
+                });
             };
 
             /**
              * @name _deleteRemote
              * @param dataItems
-             * @param drCallback()
+             * @param writeUri
+             * @param writeSchema
              * @private
              */
-            var _deleteRemote = function (dataItems, writeUri, writeSchema, drCallback) {
+            var _deleteRemote = function (dataItems, writeUri, writeSchema) {
                 $log.debug('_deleteRemote');
-                if (typeof writeSchema === 'function') {
-                    drCallback = writeSchema;
-                    writeSchema = {};
-                } else if (typeof writeUri === 'function') {
-                    drCallback = writeUri;
-                    writeSchema = {};
-                    writeUri = undefined;
-                }
 
-                if (typeof drCallback !== 'function') drCallback = angular.noop;
+                return promiseService.wrap(function (promise) {
+                    if (dataItems !== undefined && writeUri !== undefined) {
+                        if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
-                if (dataItems !== undefined && writeUri !== undefined) {
-                    if ((dataItems instanceof Array) === false) dataItems = [dataItems];
+                        promiseService
+                            .wrapAll(function (promises) {
+                                angular.forEach(dataItems, function (dataItem) {
+                                    if (dataItem.local === false) {
+                                        var item = dataStoreUtilities.extractMetadata(dataItem);
+                                        var uri = dataStoreUtilities.parseRequest(writeUri, underscore.defaults(writeSchema, {id: item.id}));
 
-                    var asyncMon = new AsyncMonitor(dataItems.length, drCallback);
-
-                    var _makeDelete = function (item, uri) {
-                        safeApply(function () {
-                            $http.post(_hostApi + uri, {withCredentials: true}).then(function (res) {
-                                if (res.status === 200) {
-                                    _deleteLocal(item, asyncMon.done);
-                                } else {
-                                    _errorCallback(err);
-                                    asyncMon.done();
-                                }
-                            }, function (err) {
-                                _errorCallback(err);
-                                asyncMon.done();
-                            });
-                        });
-                    };
-
-                    for (var i = 0; i < dataItems.length; i++) {
-                        var item = dataStoreUtilities.extractMetadata(dataItems[i]);
-
-                        if (item.local === false) {
-                            _makeDelete(item, dataStoreUtilities.parseRequest(writeUri, underscore.defaults(writeSchema, {id: item.id})));
-                        } else {
-                            asyncMon.done();
-                        }
+                                        promises.push($http.post(_hostApi + uri, {withCredentials: true})
+                                            .then(function () {
+                                                return _deleteLocal(item);
+                                            }, promiseService.throwError));
+                                    }
+                                });
+                            }).then(promise.resolve, promise.reject);
+                    } else {
+                        promise.reject(dataStoreConstants.RemoteDataStoreError);
                     }
-                } else {
-                    drCallback();
-                }
-            };
-
-            /**
-             *
-             * @param size
-             * @param callback
-             * @returns {*} AsyncMonitor
-             * @constructor
-             * @funtion done
-             * */
-            function AsyncMonitor(size, callback) {
-                if (!(this instanceof AsyncMonitor)) {
-                    return new AsyncMonitor(size, callback);
-                }
-
-                return {
-                    done: function () {
-                        size--;
-
-                        if (size == 0 && callback) {
-                            callback.apply(this, arguments);
-                        }
-                    }
-                }
+                });
             };
 
             /**
              * Transactions
              */
-            var _dataStoreInitialized = false;
+            var _tableInitialized = false;
             var _transactionQueue = [];
 
             var _processTransactionQueue = function () {
-                if (_localDatabase !== undefined) {
+                if (_tableInitialized && _localDatabase !== undefined) {
                     while (_transactionQueue.length > 0) {
-                        var transactionItem = _transactionQueue[0];
+                        var deferredTransaction = _transactionQueue.shift();
 
-                        transactionItem(new DataTransaction());
-
-                        _transactionQueue.splice(0, 1);
+                        deferredTransaction.resolve(new DataTransaction());
                     }
                 }
             };
 
-            var _responseHandler = function (handle, res, err) {
-                if (handle !== undefined) {
-                    if (typeof handle === 'function') {
-                        handle(res, err);
-                    } else {
-                        if (res) {
-                            handle.resolve(res);
-                        } else {
-                            handle.reject(err);
-                        }
-                    }
-                }
+            var _responseFormatter = function (data, singular) {
+                return (singular === true && data instanceof Array && data.length > 0 ? data[0] : data);
+            };
+
+            var _handleIncompleteResponse = function (data, request, singular) {
+                request.options.one = true;
+                request.schema = request.schema || {};
+
+                return promiseService
+                    .chain(function (chain) {
+                        angular.forEach(data, function (dataItem) {
+                            chain.push(function () {
+                                if (dataItem.__complete === false && request.options.fallbackRemote) {
+                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
+
+                                    request.options.force = true;
+                                    request.options.forceUri = dataItem.__uri;
+
+                                    return _getRemote(uri, request).then(function (res) {
+                                        return _updateLocal(res, request);
+                                    });
+                                } else {
+                                    return dataItem;
+                                }
+                            });
+                        });
+                    })
+                    .then(function (res) {
+                        return _responseFormatter(res, singular);
+                    });
             };
 
             /**
@@ -8615,197 +9746,212 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
                             template: _config.apiTemplate,
                             schema: {},
                             data: [],
-                            options: {
-                                replace: true,
-                                force: false,
-                                dirty: true
-                            },
-                            callback: angular.noop
+                            options: {}
                         });
 
-                        if ((request.data instanceof Array) === false) {
-                            request.data = [request.data];
-                        }
-
-                        var asyncMon = new AsyncMonitor(request.data.length, function (res, err) {
-                            _responseHandler(request.callback, res, err);
+                        request.options = underscore.defaults(request.options, {
+                            replace: true,
+                            force: false,
+                            complete: true,
+                            dirty: true
                         });
 
-                        angular.forEach(request.data, function (data) {
-                            var id = _getItemIndex(data, dataStoreUtilities.generateItemIndex());
+                        return promiseService
+                            .wrapAll(function (promises) {
+                                if ((request.data instanceof Array) === false) request.data = [request.data];
 
-                            _updateLocal(dataStoreUtilities.injectMetadata({
-                                id: id,
-                                uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
-                                data: data,
-                                dirty: request.options.dirty,
-                                local: request.options.dirty
-                            }), request.options, asyncMon.done);
-                        });
+                                angular.forEach(request.data, function (data) {
+                                    var id = _getItemIndex(data, dataStoreUtilities.generateItemIndex());
+
+                                    promises.push(_config.dehydrate(dataStoreUtilities.injectMetadata({
+                                        id: id,
+                                        uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
+                                        data: data,
+                                        complete: request.options.complete,
+                                        dirty: request.options.dirty,
+                                        local: request.options.dirty
+                                    }), request.options.dehydrate));
+                                });
+                            }, promiseService.throwError)
+                            .then(function (results) {
+                                return _updateLocal(underscore.compact(results), request);
+                            }, promiseService.throwError)
+                            .then(function (results) {
+                                return _responseFormatter(results, true);
+                            }, promiseService.throwError);
                     },
                     getItems: function (req) {
                         var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
-                            options: {
-                                readLocal: _config.readLocal,
-                                readRemote: _config.readRemote,
-                                fallbackRemote: false
-                            },
-                            callback: angular.noop
+                            options: {}
                         });
 
-                        var handleRemote = function (_uri) {
-                            _getRemote(_uri, request.paging, function (res, err) {
-                                if (res) {
-                                    if (request.paging === undefined && request.options.readLocal === true) {
-                                        _syncLocal(res, _uri, function (res, err) {
-                                            _responseHandler(request.callback, res, err);
-                                        });
-                                    } else {
-                                        _updateLocal(res, function (res, err) {
-                                            _responseHandler(request.callback, res, err);
-                                        });
-                                    }
-                                } else if (request.options.readLocal === true) {
-                                    _getLocal(_uri, request.options, function (res, err) {
-                                        _responseHandler(request.callback, res, err);
+                        request.options = underscore.defaults(request.options, {
+                            fallbackRemote: false,
+                            one: (request.options.one !== undefined ? request.options.one : (request.schema.id !== undefined)),
+                            passThrough: false,
+                            readLocal: _config.readLocal,
+                            readRemote: _config.readRemote
+                        });
+
+                        return promiseService.wrap(function (promise) {
+                            var handleRemote = function (_uri) {
+                                _getRemote(_uri, request)
+                                    .then(function (res) {
+                                        if (request.options.passThrough === true) {
+                                            promise.resolve(_responseFormatter(underscore.map(res, function (item) {
+                                                var id = _getItemIndex(item, dataStoreUtilities.generateItemIndex());
+                                                return dataStoreUtilities.injectMetadata({
+                                                    id: id,
+                                                    uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
+                                                    data: item,
+                                                    complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
+                                                    dirty: false,
+                                                    local: false
+                                                });
+                                            }), request.options.one));
+                                        } else if (request.params === undefined && request.options.readLocal === true) {
+                                            _syncLocal(res, _uri, request).then(function (res) {
+                                                promise.resolve(_responseFormatter(res, request.options.one));
+                                            }, promise.reject);
+                                        } else {
+                                            _updateLocal(res, request).then(function (res) {
+                                                promise.resolve(_responseFormatter(res, request.options.one));
+                                            }, promise.reject);
+                                        }
+                                    }, function (err) {
+                                        if (request.options.readLocal === true) {
+                                            _getLocal(_uri, request).then(function (res) {
+                                                promise.resolve(_responseFormatter(res, request.options.one));
+                                            }, promise.reject);
+                                        } else {
+                                            _errorCallback(err);
+                                            promise.reject(err);
+                                        }
                                     });
+                            };
+
+                            if (typeof request.schema === 'object') {
+                                var _uri = dataStoreUtilities.parseRequest(request.template, request.schema);
+
+                                // Process request
+                                if (request.options.readRemote === true) {
+                                    handleRemote(_uri);
                                 } else {
-                                    _responseHandler(request.callback, res, err);
+                                    _getLocal(_uri, request).then(function (res) {
+                                        if (res.length == 0 && request.options.fallbackRemote === true) {
+                                            handleRemote(_uri);
+                                        } else {
+                                            _handleIncompleteResponse(res, request, request.options.one).then(promise.resolve, promise.reject);
+                                        }
+                                    }, function (err) {
+                                        _errorCallback(err);
+                                        promise.reject(err);
+                                    });
                                 }
-                            });
-                        };
-
-                        if (typeof request.schema === 'object') {
-                            var _uri = dataStoreUtilities.parseRequest(request.template, request.schema);
-
-                            // Process request
-                            if (request.options.readRemote === true) {
-                                handleRemote(_uri);
-                            } else if (request.options.readLocal === true) {
-                                _getLocal(_uri, request.options, function (res, err) {
-                                    if (res.length == 0 && request.options.fallbackRemote === true) {
-                                        handleRemote(_uri);
-                                    } else {
-                                        _responseHandler(request.callback, res, err);
-                                    }
-
-                                });
+                            } else {
+                                promise.reject(dataStoreConstants.NoReadParams);
                             }
-                        } else {
-                            _responseHandler(request.callback, null, _errors.NoReadParams);
-                        }
+                        });
                     },
                     findItems: function (req) {
                         var request = underscore.defaults(req || {}, {
                             key: '',
                             column: 'id',
-                            options: {
-                                like: false,
-                                one: false
-                            },
-                            callback: angular.noop
+                            options: {}
                         });
 
-                        _findLocal(request.key, request.column, request.options, function (res, err) {
-                            _responseHandler(request.callback, res, err);
+                        request.options = underscore.defaults(request.options, {
+                            fallbackRemote: true,
+                            like: false,
+                            one: false
                         });
+
+                        return _findLocal(request.key, request.column, request.options).then(function (res) {
+                            return _handleIncompleteResponse(res, request, true);
+                        }, promiseService.throwError);
                     },
                     updateItems: function (req) {
                         var request = underscore.defaults(req || {}, {
                             data: [],
-                            options: {
-                                dirty: true
-                            },
-                            callback: angular.noop
+                            options: {}
                         });
 
-                        if ((request.data instanceof Array) === false) {
-                            request.data = [request.data];
-                        }
-
-                        if (request.options.dirty) {
-                            angular.forEach(request.data, function (item) {
-                                item.__dirty = true;
-                            });
-                        }
-
-                        _updateLocal(request.data, request.options, function (res, err) {
-                            _responseHandler(request.callback, res, err);
+                        request.options = underscore.defaults(request.options, {
+                            dirty: true
                         });
+
+                        if ((request.data instanceof Array) === false) request.data = [request.data];
+
+                        return _updateLocal(request.data, request).then(function (res) {
+                            return _responseFormatter(res, true);
+                        }, promiseService.throwError);
                     },
                     postItems: function (req) {
                         var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
-                            data: [],
-                            callback: angular.noop
+                            data: []
                         });
 
-                        if ((request.data instanceof Array) === false) {
-                            request.data = [request.data];
-                        }
+                        if ((request.data instanceof Array) === false) request.data = [request.data];
 
-                        _updateRemote(request.data, request.template, request.schema, function (res, err) {
-                            _responseHandler(request.callback, res, err);
-                        });
+                        return _updateRemote(request.data, request).then(function (res) {
+                            return _responseFormatter(res, true);
+                        }, promiseService.throwError);
                     },
                     removeItems: function (req) {
                         var request = underscore.defaults(req || {}, {
                             template: undefined,
                             schema: {},
-                            data: [],
-                            callback: angular.noop
+                            data: []
                         });
 
-                        if ((request.data instanceof Array) === false) {
-                            request.data = [request.data];
-                        }
+                        if ((request.data instanceof Array) === false) request.data = [request.data];
 
-                        var asyncMon = new AsyncMonitor(request.data.length, function (res, err) {
-                            _responseHandler(request.callback, res, err);
-                        });
-
-                        angular.forEach(request.data, function (item) {
-                            if (item.__local === true) {
-                                _deleteLocal(item, asyncMon.done);
-                            } else {
-                                _deleteRemote(item, request.template, request.schema, asyncMon.done);
-                            }
-                        });
+                        return promiseService
+                            .wrapAll(function (promises) {
+                                angular.forEach(request.data, function (item) {
+                                    if (item.__local === true) {
+                                        promises.push(_deleteLocal(item));
+                                    } else {
+                                        promises.push(_deleteRemote(item, request.template, request.schema));
+                                    }
+                                });
+                            }).then(function (res) {
+                                return _responseFormatter(res, true);
+                            }, promiseService.throwError);
                     },
                     purgeItems: function (req) {
                         var request = underscore.defaults(req || {}, {
                             template: undefined,
                             schema: {},
-                            options: {
-                                force: true
-                            },
+                            options: {},
                             callback: angular.noop
                         });
 
-                        if (request.template !== undefined) {
-                            var _uri = dataStoreUtilities.parseRequest(request.template, request.schema);
+                        request.options = underscore.defaults(request.options, {
+                            force: true
+                        });
 
-                            _getLocal(_uri, request.options, function (res, err) {
-                                var deleteItems = [];
+                        return promiseService.wrap(function (promise) {
+                            if (request.template !== undefined) {
+                                var _uri = dataStoreUtilities.parseRequest(request.template, request.schema);
 
-                                angular.forEach(res, function (item) {
-                                    if (item.__dirty == false || request.options.force == true) {
-                                        deleteItems.push(item);
-                                    }
-                                });
+                                _getLocal(_uri, request)
+                                    .then(function (res) {
+                                        var items = underscore.filter(res, function (item) {
+                                            return (item.__dirty == false || request.options.force == true);
+                                        });
 
-                                _deleteLocal(deleteItems, function (res, err) {
-                                    _responseHandler(request.callback, res, err);
-                                });
-                            });
-                        } else {
-                            _clearTable(function (res, err) {
-                                _responseHandler(request.callback, res, err);
-                            });
-                        }
+                                        return _deleteLocal(items);
+                                    }, promiseService.throwError)
+                                    .then(promise.resolve, promise.reject);
+                            } else {
+                                _clearTable().then(promise.resolve, promise.reject);
+                            }
+                        });
                     }
                 }
             }
@@ -8814,12 +9960,12 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
              * Initialize table
              */
 
-            _initializeTable(function () {
+            _initializeTable().then(function () {
                 $log.debug('table initialized');
 
-                _dataStoreInitialized = true;
+                _tableInitialized = true;
                 _processTransactionQueue();
-            })
+            });
 
             /**
              * Public functions
@@ -8827,12 +9973,13 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
             return {
                 defaults: _defaultOptions,
                 config: _config,
-                transaction: function (tCallback) {
-                    if (typeof tCallback === 'function') {
-                        _transactionQueue.push(tCallback);
+                transaction: function () {
+                    var defer = promiseService.defer();
+                    _transactionQueue.push(defer);
 
-                        _processTransactionQueue();
-                    }
+                    _processTransactionQueue();
+
+                    return defer.promise;
                 }
             }
         }
@@ -8841,11 +9988,7 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
          * Initialize database
          */
 
-        _initializeDatabase(function (db) {
-            _localDatabase = db;
-
-            $log.debug('database initialized');
-        });
+        _initializeDatabase();
 
         /**
          * @name dataStore
@@ -8861,12 +10004,83 @@ mobileSdkDataApp.provider('dataStore', ['underscore', function (underscore) {
     }];
 }]);
 
+var mobileSdkHydrationApp = angular.module('ag.mobile-sdk.hydration', ['ag.sdk.utilities', 'ag.sdk.library']);
+
+/*
+ * Hydration
+ */
+mobileSdkHydrationApp.provider('hydration', [function () {
+    var _relationTable = {};
+
+    this.registerHydrate = function (model, fn) {
+        _relationTable[model] = _relationTable[model] || {};
+        _relationTable[model].hydrate = fn;
+    };
+
+    this.registerDehydrate = function (model, fn) {
+        _relationTable[model] = _relationTable[model] || {};
+        _relationTable[model].dehydrate = fn;
+    };
+
+    this.$get = ['$injector', 'promiseService', 'underscore', function ($injector, promiseService, underscore) {
+        return {
+            hydrate: function (obj, type, relations) {
+                relations = relations || [];
+
+                return promiseService
+                    .objectWrap(function (promises) {
+                        angular.forEach(relations, function (relationName) {
+                            var relation = _relationTable[relationName];
+
+                            if (relation && relation.hydrate) {
+                                if (relation.hydrate instanceof Array) {
+                                    _relationTable[relationName].hydrate = $injector.invoke(relation.hydrate);
+                                }
+
+                                promises[relationName] = relation.hydrate(obj, type);
+                            }
+                        });
+                    })
+                    .then(function (results) {
+                        return underscore.extend(obj, results);
+                    }, function (results) {
+                        return underscore.extend(obj, results);
+                    });
+            },
+            dehydrate: function (obj, type, relations) {
+                relations = relations || [];
+
+                return promiseService
+                    .objectWrap(function (promises) {
+                        angular.forEach(relations, function (relationName) {
+                            var relation = _relationTable[relationName];
+
+                            if (obj[relationName] && relation && relation.dehydrate) {
+                                if (relation.dehydrate instanceof Array) {
+                                    _relationTable[relationName].dehydrate = $injector.invoke(relation.dehydrate);
+                                }
+
+                                promises[relationName] = relation.dehydrate(obj, type);
+                            }
+                        });
+                    })
+                    .then(function () {
+                        return underscore.omit(obj, relations);
+                    }, function () {
+                        return underscore.omit(obj, relations);
+                    });
+            }
+        };
+    }];
+}]);
+
 angular.module('ag.sdk.helper', [
     'ag.sdk.helper.asset',
     'ag.sdk.helper.attachment',
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
+    'ag.sdk.helper.expense',
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
@@ -8877,6 +10091,7 @@ angular.module('ag.sdk.helper', [
 ]);
 
 angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.ui',
     'ag.sdk.interface.list',
     'ag.sdk.interface.map',
     'ag.sdk.interface.navigation'
@@ -8897,5 +10112,6 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.test',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',
-    'ag.mobile-sdk.data'
+    'ag.mobile-sdk.data',
+    'ag.mobile-sdk.hydration'
 ]);

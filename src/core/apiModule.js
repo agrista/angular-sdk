@@ -1,7 +1,15 @@
 var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
- * User API
+ * @ngdoc service
+ * @name ag.sdk.api.userApi
+ * @description
+ * API interface for the user model
+ *
+ * @requires $http
+ * @requires pagingService
+ * @requires promiseService
+ * @requires configuration
  */
 sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -267,9 +275,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        searchByService: function (query, point) {
+        searchByService: function (query, point, farmerId) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/merchants/services?search=' + query + (point ? '&x=' + point[0] + '&y=' + point[1] : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/merchants/services?search=' + query + (point ? '&x=' + point[0] + '&y=' + point[1] : '') + (farmerId ? '&farmerId=' + farmerId : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -602,6 +610,13 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
+        relateDocuments: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/document/' + id + '/relate', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/document/' + data.id, _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
@@ -716,20 +731,24 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
 /**
  * Agrista API
  */
-sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
         getMerchants: function () {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/merchants', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/providers', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchMerchants: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/merchants?search=' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -936,6 +955,34 @@ sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseSer
 }]);
 
 /**
+ * Expense API
+ */
+sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getExpenses: function (params) {
+            var url = 'api/expenses';
+            if(params) {
+                if(params.key && (params.id != undefined && params.id > -1)) {
+                    url += '/' + params.id + '/' + params.key;
+                    delete params.key;
+                    delete params.id;
+                }
+            }
+            return pagingService.page(_host + url, params);
+        },
+        updateExpense: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/expense/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Enterprise Budget API
  */
 sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
@@ -951,12 +998,12 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
         },
         searchEnterpriseBudgets: function (query) {
-            query = underscore.chain(query).map(function (value, key) {
+            query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
-            }).join('&').value();
+            }).join('&');
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/search?resulttype=simple&' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budgets/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1024,14 +1071,14 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 /**
  * Market Assumptions API
  */
-sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
         getProductDemandAssumptions: function(query) {
-            query = _.chain(query).map(function (value, key) {
+            query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
-            }).join('&').value();
+            }).join('&');
 
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -1064,6 +1111,23 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
             // data takes the form { id: 5, year: "2014"}, where either an id OR a year is given to specify which records to delete
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/demand-assumption/delete', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Import API
+ */
+sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        importData: function(data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/data-import', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

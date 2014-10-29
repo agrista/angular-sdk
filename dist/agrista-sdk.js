@@ -1,7 +1,15 @@
 var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
 
 /**
- * User API
+ * @ngdoc service
+ * @name ag.sdk.api.userApi
+ * @description
+ * API interface for the user model
+ *
+ * @requires $http
+ * @requires pagingService
+ * @requires promiseService
+ * @requires configuration
  */
 sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
@@ -267,9 +275,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        searchByService: function (query, point) {
+        searchByService: function (query, point, farmerId) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/merchants/services?search=' + query + (point ? '&x=' + point[0] + '&y=' + point[1] : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/merchants/services?search=' + query + (point ? '&x=' + point[0] + '&y=' + point[1] : '') + (farmerId ? '&farmerId=' + farmerId : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -602,6 +610,13 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
+        relateDocuments: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/document/' + id + '/relate', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/document/' + data.id, _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
@@ -716,20 +731,24 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
 /**
  * Agrista API
  */
-sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
         getMerchants: function () {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/merchants', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/providers', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchMerchants: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/merchants?search=' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -936,6 +955,34 @@ sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseSer
 }]);
 
 /**
+ * Expense API
+ */
+sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getExpenses: function (params) {
+            var url = 'api/expenses';
+            if(params) {
+                if(params.key && (params.id != undefined && params.id > -1)) {
+                    url += '/' + params.id + '/' + params.key;
+                    delete params.key;
+                    delete params.id;
+                }
+            }
+            return pagingService.page(_host + url, params);
+        },
+        updateExpense: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/expense/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Enterprise Budget API
  */
 sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
@@ -951,12 +998,12 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
         },
         searchEnterpriseBudgets: function (query) {
-            query = underscore.chain(query).map(function (value, key) {
+            query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
-            }).join('&').value();
+            }).join('&');
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/search?resulttype=simple&' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budgets/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1024,14 +1071,14 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 /**
  * Market Assumptions API
  */
-sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
         getProductDemandAssumptions: function(query) {
-            query = _.chain(query).map(function (value, key) {
+            query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
-            }).join('&').value();
+            }).join('&');
 
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -1071,6 +1118,22 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
     };
 }]);
 
+/**
+ * Import API
+ */
+sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        importData: function(data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/data-import', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
@@ -1679,31 +1742,28 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
 
                     _scroll.busy = true;
+                    delete params.complete;
 
-                    return promiseService.wrap(function(promise) {
-                        delete params.complete;
+                    return requestor(params).then(function(res) {
+                        if (params.search === undefined) {
+                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                            _scroll.complete = (res.length !== _scroll.page.limit);
+                        } else {
+                            _scroll.searching = params;
+                            _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                            _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                        }
 
-                        requestor(params).then(function(res) {
-                            if (params.search === undefined) {
-                                _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                                _scroll.complete = (res.length !== _scroll.page.limit);
-                            } else {
-                                _scroll.searching = params;
-                                _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
-                                _scroll.searching.complete = (res.length !== _scroll.searching.limit);
-                            }
+                        _scroll.busy = false;
 
-                            _scroll.busy = false;
+                        if (dataMap) {
+                            res = dataMapService(res, dataMap);
+                        }
 
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
+                        itemStore(res);
 
-                            itemStore(res);
-
-                            promise.resolve(res);
-                        }, promiseService.throwError);
-                    });
+                        return res;
+                    }, promiseService.throwError);
                 }
             };
 
@@ -1828,11 +1888,11 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
                 $cookieStore.put(key, value);
             }
         },
-        getItem: function (key) {
+        getItem: function (key, defaultValue) {
             if ($window.localStorage) {
-                return JSON.parse($window.localStorage.getItem(key));
+                return JSON.parse($window.localStorage.getItem(key)) || defaultValue;
             } else {
-                return $cookieStore.get(key);
+                return $cookieStore.get(key) || defaultValue;
             }
         },
         removeItem: function (key) {
@@ -1848,6 +1908,42 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
+    var _assetTitle = function (asset) {
+        if (asset.data) {
+            switch (asset.type) {
+                case 'crop':
+                case 'permanent crop':
+                case 'plantation':
+                    return (asset.data.plantedArea ? $filter('number')(asset.data.plantedArea, 2) + 'Ha' : '') +
+                       (asset.data.plantedArea && asset.data.crop ? ' of ' : '') +
+                       (asset.data.crop ? asset.data.crop : '') +
+                       (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'farmland':
+                    return (asset.data.portionLabel ? asset.data.portionLabel :
+                        (asset.data.portionNumber ? 'Portion ' + asset.data.portionNumber : 'Remainder of farm'));
+                case 'improvement':
+                    return asset.data.name;
+                case 'cropland':
+                    return (asset.data.irrigated ? asset.data.irrigation + ' from ' + asset.data.waterSource : 'Non irrigable ' + asset.type) +
+                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'livestock':
+                    return asset.data.type + (asset.data.category ? ' - ' + asset.data.category : '');
+                case 'pasture':
+                    return (asset.data.crop ? asset.data.crop : 'Natural') +
+                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                case 'vme':
+                    return asset.data.category + (asset.data.model ? ' model ' + asset.data.model : '');
+                case 'wasteland':
+                    return 'Wasteland';
+                case 'water source':
+                case 'water right':
+                    return asset.data.waterSource + (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+            }
+        }
+
+        return _assetTypes[type];
+    };
+
     var _listServiceMap = function(item, metadata) {
         var map = {
             id: item.id || item.__id,
@@ -1857,56 +1953,55 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
         if (item.data) {
             if (item.type == 'crop') {
-                map.title = (item.data.plantedArea ? item.data.plantedArea.toFixed(2) + 'Ha of ' : '') + (item.data.crop ? item.data.crop : '') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.season ? item.data.season : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'farmland') {
-                map.title = (item.data.portionLabel? item.data.portionLabel :
-                    (item.data.portionNumber ? 'Portion ' + item.data.portionNumber : 'Remainder of farm'));
-                map.subtitle = (item.data.area !== undefined ? 'Area: ' + item.data.area.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.area !== undefined ? 'Area: ' + $filter('number')(item.data.area, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
-                map.title = item.data.name;
+                map.title = _assetTitle(item);
                 map.subtitle = item.data.type + ' - ' + item.data.category;
                 map.summary = (item.data.description || '');
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
-                map.title = (item.data.irrigated ? item.data.irrigation + ' from ' + item.data.waterSource : 'Non irrigable ' + item.type) + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
-                map.title = item.data.type + ' - ' + item.data.category;
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.breed ? item.data.breed + ' for ' : 'For ') + item.data.purpose;
                 map.summary = (item.data.description || '');
                 map.groupby = item.data.type;
             } else if (item.type == 'pasture') {
-                map.title = (item.data.crop ? item.data.crop : 'Natural') + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.plantedDate ? 'Planted: ' + $filter('date')(item.data.plantedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'permanent crop') {
-                map.title = item.data.crop + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.establishedDate ? 'Established: ' + $filter('date')(item.data.establishedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'plantation') {
-                map.title = item.data.crop + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
+                map.title = _assetTitle(item);
                 map.subtitle = (item.data.establishedDate ? 'Established: ' + $filter('date')(item.data.establishedDate, 'dd/MM/yy') : '');
                 map.groupby = item.farmId;
             } else if (item.type == 'vme') {
-                map.title = item.data.category + (item.data.model ? ' model ' + item.data.model : '');
+                map.title = _assetTitle(item);
                 map.subtitle = 'Quantity: ' + item.data.quantity;
                 map.summary = (item.data.description || '');
                 map.groupby = item.data.type;
             } else if (item.type == 'wasteland') {
-                map.title = 'Wasteland';
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'water right') {
-                map.title = item.data.waterSource + (item.data.fieldName ? ' on field ' + item.data.fieldName : '');
-                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + item.data.size.toFixed(2) + 'Ha' : 'Unknown area');
+                map.title = _assetTitle(item);
+                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             }
 
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
+            map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/camera.png');
         }
 
         if (metadata) {
@@ -2007,16 +2102,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'water right': ['Water Right']
     };
 
-    var _commodityTypes = {
-        crop: 'Field Crops',
-        horticulture: 'Horticulture',
-        livestock: 'Livestock'
-    };
-
-    var _commodities = {
-        crop: ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        horticulture: ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
-        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+    var _landUseCropTypes = {
+        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
+        'Grazing': ['Bahia-Notatum', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Phalaris', 'Rescue', 'Rhodes', 'Smuts Finger', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'],
+        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
+        'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chili', 'Cucumber', 'Cucurbit', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lentil', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pea (Dry)', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
+        'Plantation': ['Bluegum', 'Pine', 'Wattle'],
+        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
     };
 
     return {
@@ -2029,8 +2121,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         listServiceMap: function () {
             return _listServiceMap;
         },
-        getAssetTitle: function (type) {
+        getAssetClass: function (type) {
             return _assetTypes[type];
+        },
+        getAssetTitle: function (asset) {
+            return _assetTitle(asset);
         },
         getAssetLandUse: function (type) {
             return _assetLandUse[type];
@@ -2044,24 +2139,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
         },
-        getCommodities: function (type) {
-            return _commodities[type] || '';
+        getCropsForLandUse: function (landUse) {
+            return _landUseCropTypes[landUse] || [];
         },
-
-        commodityTypes: function() {
-            return _commodityTypes;
-        },
-        commodities: function() {
-            return _commodities;
+        getZoneTitle: function (zone) {
+            return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
         },
         conditionTypes: function () {
             return _conditionTypes;
         },
-
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
-
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
                 (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
@@ -2201,37 +2290,102 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
 
 var sdkHelperAttachmentApp = angular.module('ag.sdk.helper.attachment', ['ag.sdk.library']);
 
-sdkHelperAttachmentApp.factory('attachmentHelper', ['underscore', function (underscore) {
-    var _getResizedAttachment = function (attachments, size) {
-        if (attachments !== undefined) {
+sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (underscore) {
+    var _options = {
+        defaultImage: 'img/camera.png'
+    };
+
+    this.config = function (options) {
+        _options = underscore.defaults(options || {}, _options);
+    };
+
+    this.$get = function () {
+        var _getResizedAttachment = function (attachments, size, defaultImage) {
             if ((attachments instanceof Array) == false) {
                 attachments = [attachments];
             }
 
-            return underscore.chain(attachments)
+            defaultImage = defaultImage || _options.defaultImage;
+
+            var src = underscore.chain(attachments)
                 .filter(function (attachment) {
                     return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
                 }).map(function (attachment) {
                     return attachment.sizes[size].src;
                 }).last().value();
-        }
 
-        return attachments;
-    };
+            return src || defaultImage;
+        };
 
-    return {
-        getSize: function (attachments, size) {
-            return _getResizedAttachment(attachments, size);
-        },
-        getThumbnail: function (attachments) {
-            return _getResizedAttachment(attachments, 'thumb');
-        }
+        return {
+            findSize: function (obj, size, defaultImage) {
+                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage);
+            },
+            getSize: function (attachments, size, defaultImage) {
+                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage);
+            },
+            getThumbnail: function (attachments, defaultImage) {
+                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage);
+            }
+        };
     };
 }]);
 
-var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document']);
+sdkHelperAttachmentApp.factory('resizeImageService', ['promiseService', 'underscore', function (promiseService, underscore) {
+    return function (imageOrUri, options) {
+        var _processImage = function (image) {
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d');
 
-sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', function(documentHelper) {
+            options = underscore.defaults(options || {}, {
+                width: 80,
+                height: 80,
+                center: true,
+                crop: true,
+                output: 'image/png'
+            });
+
+            canvas.width = options.width;
+            canvas.height = options.height;
+
+            if (options.crop) {
+                var sX = 0, sY = 0;
+                var scaleToHeight = (((options.width * image.height) / options.height) > image.width);
+
+                var sW = (scaleToHeight ? Math.floor(image.width) : Math.floor((options.width * image.height) / options.height));
+                var sH = (scaleToHeight ? Math.floor((options.height * image.width) / options.width) : Math.floor(image.height));
+
+                if (options.center) {
+                    sX = (scaleToHeight ? 0 : Math.floor((sW - options.width) / 2));
+                    sY = (scaleToHeight ? Math.floor((sH - options.height) / 2) : 0);
+                }
+
+                ctx.drawImage(image, sX, sY, sW, sH, 0, 0, options.width, options.height);
+            } else {
+                ctx.drawImage(image, 0, 0, options.width, options.height);
+            }
+
+            return canvas.toDataURL(options.output, 1);
+        };
+
+        return promiseService.wrap(function (promise) {
+            if (typeof imageOrUri == 'string') {
+                var image = new Image();
+
+                image.onload = function () {
+                    promise.resolve(_processImage(image));
+                };
+
+                image.src = imageOrUri;
+            } else {
+                promise.resolve(_processImage(imageOrUri));
+            }
+        });
+    };
+}]);
+var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document', 'ag.sdk.library']);
+
+sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'underscore', function(documentHelper, underscore) {
     var _approvalTypes = ['Approved', 'Not Approved', 'Not Planted'];
 
     var _commentTypes = ['Crop amendment', 'Crop re-plant', 'Insurance coverage discontinued', 'Multi-insured', 'Other', 'Without prejudice', 'Wrongfully reported'];
@@ -2262,18 +2416,18 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         'Maize': _growthStageTable[0],
         'Maize (White)': _growthStageTable[0],
         'Maize (Yellow)': _growthStageTable[0],
-        'Soybean': _growthStageTable[2],
+        'Soya Bean': _growthStageTable[2],
         'Sunflower': _growthStageTable[4],
         'Wheat': _growthStageTable[1],
         'Wheat (Durum)': _growthStageTable[1]
     };
 
     var _inspectionTypes = {
-        emergence: 'Emergence Inspection',
-        hail: 'Hail Inspection',
-        harvest: 'Harvest Inspection',
-        preharvest: 'Pre Harvest Inspection',
-        progress: 'Progress Inspection'
+        'emergence inspection': 'Emergence Inspection',
+        'hail inspection': 'Hail Inspection',
+        'harvest inspection': 'Harvest Inspection',
+        'preharvest inspection': 'Pre Harvest Inspection',
+        'progress inspection': 'Progress Inspection'
     };
 
     var _seedTypeTable = [
@@ -2286,16 +2440,11 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         'Maize (Yellow)': _seedTypeTable[0]
     };
 
-    var _policyTypes = {
-        'hail': 'Hail',
-        'multi peril': 'Multi Peril'
-    };
+    var _policyTypes = ['Hail', 'Multi Peril'];
 
     var _policyInspections = {
-        'hail': {
-            hail: _inspectionTypes.hail
-        },
-        'multi peril': _inspectionTypes
+        'Hail': ['hail inspection'],
+        'Multi Peril': underscore.keys(_inspectionTypes)
     };
 
     var _problemTypes = {
@@ -2308,42 +2457,42 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         weed: 'Weed'
     };
 
-    var _listServiceMap = function (item) {
-        var map = documentHelper.listServiceWithTaskMap()(item);
-
-        if (map && item.data.request) {
-            map.subtitle = map.title + ' - ' + item.data.enterprise;
-            map.title = item.documentId;
-            map.group = _inspectionTypes[item.data.inspectionType] || '';
-        }
-
-        return map;
+    var _flowerTypes = {
+        'Dry Bean': 'pod',
+        'Grain Sorghum': 'panicle',
+        'Maize (White)': 'ear',
+        'Maize (Yellow)': 'ear',
+        'Sunflower': 'flower',
+        'Wheat': 'spikelet',
+        'Soya Bean': 'pod'
     };
 
     return {
-        listServiceMap: function () {
-            return _listServiceMap;
-        },
-
         approvalTypes: function () {
             return _approvalTypes;
         },
         commentTypes: function () {
             return _commentTypes;
         },
-        inspectionTypes: function () {
+        inspectionTitles: function () {
             return _inspectionTypes;
+        },
+        inspectionTypes: function () {
+            return underscore.keys(_inspectionTypes);
         },
         policyTypes: function () {
             return _policyTypes;
         },
         policyInspectionTypes: function (policyType) {
-            return _policyInspections[policyType] || {};
+            return _policyInspections[policyType] || [];
         },
         problemTypes: function () {
             return _problemTypes;
         },
 
+        getFlowerType: function (crop) {
+            return _flowerTypes[crop] || '';
+        },
         getGrowthStages: function (crop) {
             return _growthStageCrops[crop] || _growthStageTable[0];
         },
@@ -2353,15 +2502,845 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', fu
         getInspectionTitle: function (type) {
             return _inspectionTypes[type] || '';
         },
-        getPolicyTitle: function (type) {
-            return _policyTypes[type] || '';
-        },
         getProblemTitle: function (type) {
             return _problemTypes[type] || '';
+        },
+        getSampleArea: function (asset, zone) {
+            return (_flowerTypes[asset.data.crop] === 'spikelet' ?
+                (zone && zone.plantedInRows === true ? '3m' : 'm²') :
+                (_flowerTypes[asset.data.crop] === 'pod' ? '3m' : '10m'));
         },
 
         hasSeedTypes: function (crop) {
             return _seedTypes[crop] !== undefined;
+        },
+
+        calculateProgressYield: function (asset, samples, pitWeight, realization) {
+            pitWeight = pitWeight || 0;
+            realization = (realization === undefined ? 100 : realization);
+
+            var reduceSamples = function (samples, prop) {
+                return (underscore.reduce(samples, function (total, sample) {
+                    return (sample[prop] ? total + sample[prop] : total);
+                }, 0) / samples.length) || 0
+            };
+
+            var zoneYields = underscore.map(asset.data.zones, function (zone, index) {
+                var zoneSamples = underscore.where(samples, {zone: index});
+                var total = {
+                    coverage: (zone.size / asset.data.plantedArea),
+                    heads: reduceSamples(zoneSamples, 'heads'),
+                    weight: reduceSamples(zoneSamples, 'weight')
+                };
+
+                if (_flowerTypes[asset.data.crop] === 'spikelet') {
+                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.plantedInRows ? zone.rowWidth * 3 : 1));
+                } else if (_flowerTypes[asset.data.crop] === 'pod') {
+                    total.pods = reduceSamples(zoneSamples, 'pods');
+                    total.seeds = reduceSamples(zoneSamples, 'seeds');
+                    total.yield = (pitWeight * total.seeds * total.pods * total.heads) / (zone.rowWidth * 300);
+                } else {
+                    total.yield = (total.weight * total.heads) / (zone.rowWidth * 1000);
+                }
+
+                total.yield *= (realization / 100);
+
+                return total;
+            });
+
+            return {
+                zones: zoneYields,
+                yield: underscore.reduce(zoneYields, function (total, item) {
+                    return total + (item.coverage * item.yield);
+                }, 0)
+            };
+        }
+    }
+}]);
+
+sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (underscore) {
+    var _providerCultivars = {
+        'Maize (Yellow)': {
+            'Afgri': [
+                'AFG 4222 B',
+                'AFG 4244',
+                'AFG 4270 B',
+                'AFG 4410',
+                'AFG 4412 B',
+                'AFG 4414',
+                'AFG 4416 B',
+                'AFG 4434 R',
+                'AFG 4440',
+                'AFG 4448',
+                'AFG 4452 B',
+                'AFG 4474 R',
+                'AFG 4476',
+                'AFG 4478 BR',
+                'AFG 4512',
+                'AFG 4520',
+                'AFG 4522 B',
+                'AFG 4530',
+                'AFG 4540',
+                'AFG 4546',
+                'AFG 4548',
+                'AFG 4566 B',
+                'AFG 4572 R',
+                'AFG 4660',
+                'AFG 4664',
+                'DK 618',
+                'Other'
+            ],
+            'Agricol': [
+                'IMP 50-90 BR',
+                'IMP 51-22 B',
+                'IMP 51-92',
+                'IMP 51-92 R',
+                'Other',
+                'QS 7646',
+                'SC 602',
+                'SC 608'
+            ],
+            'Capstone Seeds': [
+                'CAP 121-30',
+                'CAP 122-60',
+                'CAP 130-120',
+                'CAP 130-140',
+                'CAP 444 NG',
+                'CAP 766 NG',
+                'CAP 9004',
+                'CAP 9444 NG',
+                'Other'
+            ],
+            'Dekalb (Monsanto)': [
+                'DKC 61-90',
+                'DKC 62-80 BR',
+                'DKC 62-80 BR GEN',
+                'DKC 62-84 R',
+                'DKC 64-78 BR',
+                'DKC 64-78 BR GEN',
+                'DKC 66-32 B',
+                'DKC 66-36 R',
+                'DKC 66-60 BR',
+                'DKC 73-70 B GEN',
+                'DKC 73-72',
+                'DKC 73-74 BR GEN',
+                'DKC 73-76 R',
+                'DKC 80-10',
+                'DKC 80-12 B GEN',
+                'DKC 80-30 R',
+                'DKC 80-40 BR GEN',
+                'Other'
+            ],
+            'Delta Seed': [
+                'Amber',
+                'DE 2004',
+                'DE 2006',
+                'DE 2016',
+                'DE 222',
+                'Other'
+            ],
+            'Klein Karoo Saad': [
+                'Helen',
+                'KKS 8202',
+                'KKS 8204 B',
+                'KKS 8400',
+                'KKS 8402',
+                'Other'
+            ],
+            'Linksaad': [
+                'LS 8518',
+                'LS 8524 R',
+                'LS 8526',
+                'LS 8528 R',
+                'LS 8532 B',
+                'LS 8536 B',
+                'Other'
+            ],
+            'Pannar': [
+                'BG 3268',
+                'BG 3292',
+                'BG 3492BR',
+                'BG 3568R',
+                'BG 3592R',
+                'BG 3768BR',
+                'BG 4296',
+                'BG 6308B',
+                'Other',
+                'PAN 14',
+                'PAN 3D-736 BR',
+                'PAN 3P-502 R',
+                'PAN 3P-730 BR',
+                'PAN 3Q-222',
+                'PAN 3Q-240',
+                'PAN 3Q-740 BR',
+                'PAN 3R-644 R',
+                'PAN 4P-228',
+                'PAN 4P-716 BR',
+                'PAN 6126 ',
+                'PAN 66',
+                'PAN 6616',
+                'PAN 6P-110',
+                'PAN 6P110',
+                'PAN 6Q-408B',
+                'PAN 6Q-508 R',
+                'PAN 6Q-708 BR'
+            ],
+            'Pioneer': [
+                'Other',
+                'P 1615 R',
+                'P 2048',
+                'Phb 31D21 B',
+                'Phb 31D24',
+                'Phb 31D46 BR',
+                'Phb 31D48 B',
+                'Phb 31G54 BR',
+                'Phb 31G56 R',
+                'Phb 31K58 B',
+                'Phb 32D95 BR',
+                'Phb 32D96 B',
+                'Phb 32D99',
+                'Phb 32P68 R',
+                'Phb 32T50',
+                'Phb 32W71',
+                'Phb 32W72 B',
+                'Phb 33A14 B',
+                'Phb 33H52 B',
+                'Phb 33H56',
+                'Phb 33Y72 B',
+                'Phb 33Y74',
+                'Phb 3442',
+                'Phb 34N44 B',
+                'Phb 34N45 BR',
+                'Phb 35T05 R'
+            ],
+            'Sensako (Monsanto)': [
+                'Other',
+                'SNK 2472',
+                'SNK 2682',
+                'SNK 2778',
+                'SNK 2900',
+                'SNK 2942',
+                'SNK 2972',
+                'SNK 6326 B',
+                'SNK 7510 Y',
+                'SNK 8520'
+            ],
+            'Other': [
+                'Brasco',
+                'Cobber Flint',
+                'Cumbre',
+                'Energy',
+                'Gold Finger',
+                'High Flyer',
+                'IMP 50-10 R',
+                'IMP 51-22',
+                'IMP 52-12',
+                'MEH 114',
+                'MMH 1765',
+                'MMH 8825',
+                'Maverik',
+                'NK Arma',
+                'NK MAYOR B',
+                'NS 5000',
+                'NS 5004',
+                'NS 5066',
+                'NS 5914',
+                'NS 5916',
+                'NS 5918',
+                'NS 5920',
+                'Other',
+                'Premium Flex',
+                'QS 7608',
+                'RO 430',
+                'SA 24',
+                'SABI 7004',
+                'SABI 7200',
+                'Silmaster',
+                'Syncerus',
+                'US 9570',
+                'US 9580',
+                'US 9600',
+                'US 9610',
+                'US 9620',
+                'US 9770',
+                'US 9772',
+                'Woodriver'
+            ]
+        },
+        'Maize (White)': {
+            'Afgri': [
+                'AFG 4211',
+                'AFG 4321',
+                'AFG 4331',
+                'AFG 4333',
+                'AFG 4361',
+                'AFG 4383',
+                'AFG 4411',
+                'AFG 4445',
+                'AFG 4447',
+                'AFG 4471',
+                'AFG 4475 B',
+                'AFG 4477',
+                'AFG 4479 R',
+                'AFG 4501',
+                'AFG 4517',
+                'AFG 4555',
+                'AFG 4571 B',
+                'AFG 4573 B',
+                'AFG 4575',
+                'AFG 4577 B',
+                'AFG 4579 B',
+                'AFG 4581 BR',
+                'AFG 4611',
+                'AFG 4663',
+                'AFRIC 1',
+                'Other'
+            ],
+            'Agricol': [
+                'IMP 52-11',
+                'Other',
+                'SC 701',
+                'SC 709'
+            ],
+            'Capstone Seeds': [
+                'CAP 341 NG',
+                'CAP 341 T NG',
+                'CAP 441 NG',
+                'CAP 775 NG',
+                'CAP 9001',
+                'CAP 9013',
+                'CAP 9421',
+                'Other'
+            ],
+            'Dekalb (Monsanto)': [
+                'CRN 3505',
+                'CRN 4141',
+                'DKC 77-61 B',
+                'DKC 77-85 B GEN',
+                'DKC 78-15 B',
+                'DKC 78-17 B',
+                'DKC 78-35 R',
+                'DKC 78-45 BR',
+                'DKC 78-45 BR GEN',
+                'DKC 79-05',
+                'Other'
+            ],
+            'Delta Seed': [
+                'DE 111',
+                'DE 303',
+                'Other'
+            ],
+            'Klein Karoo Saad': [
+                'KKS 4383',
+                'KKS 4445',
+                'KKS 4447',
+                'KKS 4471',
+                'KKS 4473',
+                'KKS 4477',
+                'KKS 4479 R',
+                'KKS 4485',
+                'KKS 4501',
+                'KKS 4517',
+                'KKS 4519',
+                'KKS 4555',
+                'KKS 4575',
+                'KKS 4581 BR',
+                'KKS 8401',
+                'Other'
+            ],
+            'Linksaad': [
+                'LS 8519',
+                'LS 8529',
+                'LS 8533 R',
+                'LS 8535 B',
+                'LS 8537',
+                'LS 8539 B',
+                'Other'
+            ],
+            'Pannar': [
+                'BG 5485B',
+                'BG 5685R',
+                'BG4201',
+                'BG4401B',
+                'BG5285',
+                'BG5785BR',
+                'BG6683R',
+                'Other',
+                'PAN 413',
+                'PAN 4P-767BR',
+                'PAN 53',
+                'PAN 5Q-649 R',
+                'PAN 5Q-749 BR',
+                'PAN 5Q-751BR',
+                'PAN 6227',
+                'PAN 6479',
+                'PAN 6611',
+                'PAN 6671',
+                'PAN 67',
+                'PAN 6777',
+                'PAN 69',
+                'PAN 6Q-745BR',
+                'PAN 93',
+                'PAN413',
+                'PAN53',
+                'PAN6Q245',
+                'PAN6Q345CB',
+                'SC 701 (Green mealie)'
+            ],
+            'Pioneer': [
+                'Other',
+                'P 2369 W',
+                'P 2653 WB',
+                'P 2823 WB',
+                'P 2961 W',
+                'Phb 30B95 B',
+                'Phb 30B97 BR',
+                'Phb 30D04 R',
+                'Phb 30D07 B',
+                'Phb 30D09 BR',
+                'Phb 30Y79 B',
+                'Phb 30Y81 R',
+                'Phb 30Y83',
+                'Phb 31M09',
+                'Phb 31M84 BR',
+                'Phb 31T91',
+                'Phb 31V31',
+                'Phb 3210B',
+                'Phb 32A05 B',
+                'Phb 32B07 BR',
+                'Phb 32Y85',
+                'Phb 32Y87 B'
+            ],
+            'Sensako (Monsanto)': [
+                'SNK 2021',
+                'SNK 2147',
+                'SNK 2401',
+                'SNK 2551',
+                'SNK 2721',
+                'SNK 2911',
+                'SNK 2969',
+                'SNK 6025',
+                'SNK 7811 B'
+            ],
+            'Other': [
+                'CG 4141',
+                'GM 2000',
+                'KGALAGADI',
+                'MRI 514',
+                'MRI 624',
+                'NG 761',
+                'NS 5913',
+                'NS 5917',
+                'NS 5919',
+                'Other',
+                'PGS 7053',
+                'PGS 7061',
+                'PGS 7071',
+                'PLATINUM',
+                'Panthera',
+                'QS 7707',
+                'RO 413',
+                'RO 413',
+                'RO 419',
+                'SAFFIER',
+                'SC 401',
+                'SC 403',
+                'SC 405',
+                'SC 407',
+                'SC 513',
+                'SC 627',
+                'SC 631',
+                'SC 633',
+                'SC 713',
+                'SC 715',
+                'Scout'
+            ]
+        },
+        'Soya Bean': {
+            'Agriocare': [
+                'AGC 58007 R',
+                'AGC 60104 R',
+                'AGC 64107 R',
+                'AS 4801 R',
+                'Other'
+            ],
+            'Linksaad': [
+                'LS 6146 R',
+                'LS 6150 R',
+                'LS 6161 R',
+                'LS 6164 R',
+                'LS 6248 R',
+                'LS 6261 R',
+                'LS 6444 R',
+                'LS 6466 R',
+                'Other'
+            ],
+            'Pannar': [
+                'A 5409 RG',
+                'Other',
+                'PAN 1454 R',
+                'PAN 1583 R',
+                'PAN 1664 R',
+                'PAN 1666 R'
+            ],
+            'Pioneer': [
+                'Other',
+                'Phb 94Y80 R',
+                'Phb 95B53 R',
+                'Phb 95Y20 R',
+                'Phb 95Y40 R'
+            ],
+            'Other': [
+                'AG 5601',
+                'AMSTEL NO 1',
+                'DUMELA',
+                'DUNDEE',
+                'EGRET',
+                'HERON',
+                'HIGHVELD TOP',
+                'IBIS 2000',
+                'JF 91',
+                'JIMMY',
+                'KIAAT',
+                'KNAP',
+                'LEX 1233 R',
+                'LEX 1235 R',
+                'LEX 2257 R',
+                'LEX 2685 R',
+                'LIGHTNING',
+                'MARULA',
+                'MARUTI',
+                'MOPANIE',
+                'MPIMBO',
+                'MUKWA',
+                'NQUTU',
+                'OCTA',
+                'Other',
+                'SONOP',
+                'SPITFIRE',
+                'STORK',
+                'TAMBOTIE',
+                'WENNER'
+            ]
+        },
+        'Sunflower': {
+            'Agricol': [
+                'AGSUN 5161 CL',
+                'AGSUN 5182 CL',
+                'Agsun 5264',
+                'Agsun 5671',
+                'Agsun 8251',
+                'Nonjana',
+                'Other',
+                'SUNSTRIPE'
+            ],
+            'Klein Karoo Saad': [
+                'AFG 271',
+                'HYSUN 333',
+                'KKS 318',
+                'NK ADAGIO',
+                'NK Armoni',
+                'NK FERTI',
+                'Other',
+                'Sirena',
+                'Sunbird'
+            ],
+            'Pannar': [
+                'Other',
+                'PAN 7033',
+                'PAN 7049',
+                'PAN 7050',
+                'PAN 7057',
+                'PAN 7063 CL',
+                'PAN 7080',
+                'PAN 7086 HO',
+                'PAN 7095 CL',
+                'PAN 7351'
+            ],
+            'Other': [
+                'Ella',
+                'Grainco Sunstripe',
+                'HV 3037',
+                'HYSUN 334',
+                'HYSUN 338',
+                'HYSUN 346',
+                'HYSUN 350',
+                'Jade Emperor',
+                'Marica-2',
+                'NK Adagio CL',
+                'Nallimi CL',
+                'Other',
+                'SEA 2088 CL AO',
+                'SY 4045',
+                'SY 4200',
+                'Sikllos CL',
+                'WBS 3100'
+            ]
+        }
+    };
+
+    // Create Maize from Maize (Yellow) and Maize (White)
+    _providerCultivars['Maize'] = angular.copy(_providerCultivars['Maize (Yellow)']);
+
+    angular.forEach(_providerCultivars['Maize (White)'], function (cultivars, seedProvider) {
+        _providerCultivars['Maize'][seedProvider] = _.chain(_providerCultivars['Maize'][seedProvider] || [])
+            .union(cultivars)
+            .compact()
+            .uniq()
+            .sortBy(function (cultivar) {
+                return cultivar;
+            })
+            .value();
+    });
+
+    var _cultivarLeafTable = {
+        'Phb 30F40': 23,
+        'Phb 31G54 BR': 19,
+        'Phb 31G58': 21,
+        'Phb 32D95BR': 18,
+        'Phb 32D96 B': 18,
+        'Phb 32P68 R': 20,
+        'Phb 32T50': 18,
+        'Phb 32W71': 21,
+        'Phb 32W72 B': 20,
+        'Phb 33A14 B': 19,
+        'Phb 33H56': 20,
+        'Phb 33R78 B': 21,
+        'Phb 33Y72B': 17,
+        'Phb 3442': 21,
+        'Phb 30B95 B': 23,
+        'Phb 30B97 BR': 23,
+        'Phb 30D09 BR': 20,
+        'Phb 31M09': 18,
+        'Phb 32A05 B': 19,
+        'Phb 32B10': 18,
+        'Phb 32Y85': 21,
+        'Phb 31D48 BR': 21,
+        'Phb 32D91 R': 20,
+        'Phb 32D99': 20,
+        'Phb 32Y68': 20,
+        'Phb 3394': 19,
+        'Phb 33A13': 19,
+        'Phb 33H52 B': 19,
+        'Phb 33H54 BR': 19,
+        'Phb 33P34': 20,
+        'Phb 33P66': 20,
+        'Phb 33P67': 20,
+        'X 70200 T': 23,
+        'X 7268 TR': 21,
+        'Phb 30N35': 23,
+        'Phb 32A03': 19,
+        'Phb 32Y52': 19,
+        'Phb 32Y53': 20,
+        'Phb 33A03': 19,
+        'Phb 30H22': 21,
+        'Phb 32P75': 20,
+        'Phb 3335': 20,
+        'DKC62-74R': 20,
+        'DKC62-80BR': 18,
+        'DKC64-78BR': 17,
+        'DKC66-32B': 21,
+        'DKC66-36R': 19,
+        'DKC73-70BGEN': 20,
+        'DKC73-74BR': 20,
+        'DKC73-74BRGEN': 20,
+        'DKC73-76R': 20,
+        'DKC80-10': 20,
+        'DKC80-12B': 20,
+        'DKC80-30R': 20,
+        'DKC80-40BR': 19,
+        'DKC80-40BRGEN': 21,
+        'CRN3505': 21,
+        'DKC77-61B': 20,
+        'DKC77-71R': 20,
+        'DKC77-85B': 21,
+        'DKC78-15B': 20,
+        'DKC78-35BR': 21,
+        'DKC78-45BRGEN': 21,
+        'DKC 78-79 BR': 21,
+        'CRN 3604': 21,
+        'CRN 37-60': 20,
+        'CRN 4760 B': 23,
+        'DKC 63-20': 20,
+        'DKC 66-21': 21,
+        'DKC 66-38 B': 21,
+        'DKC 63-28 R': 21,
+        'CRN 3549': 21,
+        'DKC 71-21': 20,
+        'SNK 2472': 23,
+        'SNK 2682': 23,
+        'SNK 2778': 23,
+        'SNK 2900': 20,
+        'SNK 2942': 24,
+        'SNK 2972': 21,
+        'SNK 6326 B': 21,
+        'SNK 8520': 24,
+        'SNK 2911': 21,
+        'SNK 6025': 18,
+        'LS 8504': 20,
+        'LS 8512': 20,
+        'LS 8518': 19,
+        'LS 8522 R': 19,
+        'LS 8511': 19,
+        'LS 8513': 19,
+        'LS 8519': 19,
+        'LS 8521 B': 19,
+        'LS 8523 B': 19,
+        'LS 8527 BR': 19,
+        'LS 8506': 21,
+        'LS 8508': 20,
+        'LS 8524 R': 20,
+        'LEX 800': 23,
+        'LS 8509': 21,
+        'LS 8517': 23,
+        'LS 8525': 21,
+        'LS 8529': 21,
+        'LS 8533 R': 21,
+        'LS 8536 B': 19,
+        'PAN 3D-432Bt ': 18,
+        'PAN 3D-736BR': 18,
+        'PAN 3P-502RR': 19,
+        'PAN 3P-730BR': 18,
+        'PAN 3Q-422B': 18,
+        'PAN 3Q-740BR': 19,
+        'PAN 3R-644R': 18,
+        'PAN 4P-116': 19,
+        'PAN 4P-316Bt': 19,
+        'PAN 4P-516RR': 20,
+        'PAN 4P-716BR': 19,
+        'PAN 6114': 19,
+        'PAN 6126': 18,
+        'PAN 6146': 24,
+        'PAN 6236Bt': 18,
+        'PAN 6238RR': 18,
+        'PAN 6480': 23,
+        'PAN 6616': 23,
+        'PAN 6724Bt': 25,
+        'PAN 6734': 23,
+        'PAN 6P-110': 21,
+        'PAN 6Q-308 B': 21,
+        'PAN 6Q-308 Bt': 21,
+        'PAN 6Q-408 CB': 21,
+        'PAN 6Q-508R': 21,
+        'PAN 6Q-508RR': 20,
+        'PAN 4P-767BR': 19,
+        'PAN 5Q-433Bt *': 20,
+        'PAN 5R-541RR': 19,
+        'PAN 6013Bt': 23,
+        'PAN 6017': 21,
+        'PAN 6043': 23,
+        'PAN 6053': 23,
+        'PAN 6223Bt': 21,
+        'PAN 6479': 23,
+        'PAN 6611': 23,
+        'PAN 6723': 23,
+        'PAN 6777': 25,
+        'PAN 6Q-419B': 20,
+        'PAN 6Q-445Bt': 21,
+        'PAN 6000 Bt': 19,
+        'PAN 6012 Bt': 21,
+        'PAN 6118': 19,
+        'PAN 6124 Bt': 19,
+        'PAN 6128 RR': 19,
+        'PAN 6256': 24,
+        'PAN 6310': 24,
+        'PAN 6316': 25,
+        'PAN 6320': 25,
+        'PAN 6432 B': 23,
+        'PAN 6568': 23,
+        'PAN 6622': 25,
+        'PAN 6710': 21,
+        'PAN 6804': 20,
+        'PAN 6844': 25,
+        'PAN 6994 Bt': 24,
+        'PAN 5Q-749 BR': 23,
+        'PAN 6243': 24,
+        'PAN 6335': 23,
+        'PAN 6573': 23,
+        'PAN 6633': 23,
+        'PAN 6757': 25,
+        'PAN 6839': 23,
+        'PAN 6Q-321 B': 23,
+        'PAN 6Q-345 CB': 21,
+        'AFG 4270B': 18,
+        'AFG 4412B': 19,
+        'AFG 4434R': 20,
+        'AFG 4522B': 20,
+        'AFG 4530': 19,
+        'AFG 4222 B': 19,
+        'AFG 4244': 19,
+        'AFG 4410': 19,
+        'AFG 4414': 20,
+        'AFG 4416 B': 20,
+        'AFG 4448': 20,
+        'AFG 4474 R': 19,
+        'AFG 4476': 20,
+        'AFG 4512': 23,
+        'AFG 4520': 20,
+        'AFG 4540': 20,
+        'DK 618': 21,
+        'EXPG 5002': 20,
+        'EXP Stack': 20,
+        'AFG 4321': 19,
+        'AFG 4331': 20,
+        'AFG 4333': 20,
+        'AFG 4411': 21,
+        'AFG 4445': 21,
+        'AFG 4447': 21,
+        'AFG 4471': 23,
+        'AFG 4475 B': 21,
+        'AFG 4477': 20,
+        'AFG 4479 R': 21,
+        'AFG 4573 B': 21,
+        'AFG 4577 B': 21,
+        'AFG 4611': 23,
+        'KKS 8204B': 15,
+        'KKS 4581 BR': 21,
+        'KKS 8301': 19,
+        'IMP 50 - 90BR': 18,
+        'IMP 51 - 22': 19,
+        'IMP 51-92': 19,
+        'IMP 52-12': 20,
+        'NS 5920': 20,
+        'QS 7646': 20,
+        'BG 5485 B': 23,
+        'BG 8285': 23,
+        'Brasco': 19,
+        'Energy': 18,
+        'Gold Finger': 19,
+        'Helen': 17,
+        'High Flyer': 17,
+        'Maverik': 19,
+        'NK Arma': 18,
+        'QS 7608': 23,
+        'SC 506': 19,
+        'SC 602': 21,
+        'Woodriver': 18,
+        'P 1615 R': 19,
+        'P 1973 Y': 19,
+        'P 2653 WB': 20,
+        'P 2048': 20,
+        'IMP 52-11 B': 18,
+        'Panthera': 21,
+        'QS 7707': 23,
+        'SC 401': 18,
+        'SC 403': 20,
+        'SC 405': 20,
+        'SC 407': 20,
+        'SC 533': 21,
+        'SC 719': 24,
+        'Scout': 20
+    };
+
+    return {
+        getCultivars: function (crop, seedProvider) {
+            return (_providerCultivars[crop] && _providerCultivars[crop][seedProvider] ? _providerCultivars[crop][seedProvider] : []);
+        },
+        getCultivarLeafCount: function (cultivar) {
+            return _cultivarLeafTable[cultivar] || 22;
+        },
+        getSeedProviders: function (crop) {
+            return (_providerCultivars[crop] ? underscore.keys(_providerCultivars[crop]) : []);
         }
     }
 }]);
@@ -2483,7 +3462,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         return {
             id: item.id || item.__id,
             title: item.name,
-            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : '')
+            subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
+            status: (item.published ? {text: 'published', label: 'label-success'} : false)
         }
     };
 
@@ -2504,450 +3484,379 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
-    var _groups = {
-        'Crop Sales': {
+    var _groups = underscore.indexBy([
+        {
             code: 'INC-CPS',
             name: 'Crop Sales'
-        },
-        'Fruit Sales': {
+        }, {
             code: 'INC-FRS',
             name: 'Fruit Sales'
-        },
-        'Harvest': {
+        }, {
             code: 'HVT',
             name: 'Harvest'
-        },
-        'Preharvest': {
+        }, {
             code: 'HVP',
             name: 'Preharvest'
-        },
-
-
-        'Livestock Sales': {
+        }, {
             code: 'INC-LSS',
             name: 'Livestock Sales'
-        },
-        'Product Sales': {
+        }, {
             code: 'INC-LSP',
             name: 'Product Sales'
-        },
-        'Animal Feed': {
+        }, {
             code: 'EXP-AMF',
             name: 'Animal Feed'
-        },
-        'Husbandry': {
+        }, {
             code: 'HBD',
             name: 'Husbandry'
-        },
-        'Indirect Costs': {
+        }, {
             code: 'IDR',
             name: 'Indirect Costs'
-        },
-        'Marketing': {
+        }, {
             code: 'MRK',
             name: 'Marketing'
-        },
-        'Replacements': {
+        }, {
             code: 'RPM',
             name: 'Replacements'
         }
-    };
+    ], 'name');
 
-    var _categories = {
+    var _categories = underscore.indexBy([
         //*********** Income *********
         // livestock sales
         // Sheep
-        'INC-LSS-SLAMB': {
+        {
             code: 'INC-LSS-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'INC-LSS-SWEAN': {
+        }, {
             code: 'INC-LSS-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'INC-LSS-SEWE': {
+        }, {
             code: 'INC-LSS-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'INC-LSS-SWTH': {
+        }, {
             code: 'INC-LSS-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-SRAM': {
+        }, {
             code: 'INC-LSS-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'INC-LSS-CCALV':{
+        {
             code: 'INC-LSS-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'INC-LSS-CWEN':{
+        }, {
             code: 'INC-LSS-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'INC-LSS-CCOW':{
+        }, {
             code: 'INC-LSS-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'INC-LSS-CST18':{
+        }, {
             code: 'INC-LSS-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'INC-LSS-CST36':{
+        }, {
             code: 'INC-LSS-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'INC-LSS-CBULL':{
+        }, {
             code: 'INC-LSS-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'INC-LSS-GKID':{
+        {
             code: 'INC-LSS-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'INC-LSS-GWEAN':{
+        }, {
             code: 'INC-LSS-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'INC-LSS-GEWE':{
+        }, {
             code: 'INC-LSS-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GCAST':{
+        }, {
             code: 'INC-LSS-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'INC-LSS-GRAM':{
+        }, {
             code: 'INC-LSS-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
 
         // livestock product sales
-        'INC-LSP-MILK': {
+        {
             code: 'INC-LSP-MILK',
             name: 'Milk',
             unit: 'l'
-        },
-        'INC-LSP-WOOL': {
+        }, {
             code: 'INC-LSP-WOOL',
             name: 'Wool',
             unit: 'kg'
         },
 
         //Crops
-        'INC-HVT-CROP': {
+        {
             code: 'INC-HVT-CROP',
             name: 'Crop',
             unit: 't'
         },
         //Horticulture (non-perennial)
-        'INC-HVT-FRUT': {
+        {
             code: 'INC-HVT-FRUT',
             name: 'Fruit',
             unit: 't'
         },
         //*********** Expenses *********
         // Preharvest
-        'EXP-HVP-SEED': {
+        {
             code: 'EXP-HVP-SEED',
             name: 'Seed',
             unit: 'kg'
-        },
-        'EXP-HVP-PLTM': {
+        }, {
             code: 'EXP-HVP-PLTM',
             name: 'Plant Material',
             unit: 'each'
-        },
-        'EXP-HVP-FERT': {
+        }, {
             code: 'EXP-HVP-FERT',
             name: 'Fertiliser',
             unit: 't'
-        },
-        'EXP-HVP-LIME': {
+        }, {
             code: 'EXP-HVP-LIME',
             name: 'Lime',
             unit: 't'
-        },
-        'EXP-HVP-HERB': {
+        }, {
             code: 'EXP-HVP-HERB',
             name: 'Herbicides',
             unit: 'l'
-        },
-        'EXP-HVP-PEST': {
+        }, {
             code: 'EXP-HVP-PEST',
             name: 'Pesticides',
             unit: 'l'
-        },
-        'EXP-HVP-SPYA': {
+        }, {
             code: 'EXP-HVP-SPYA',
             name: 'Aerial spraying',
             unit: 'ha'
-        },
-        'EXP-HVP-INSH': {
+        }, {
             code: 'EXP-HVP-INSH',
             name: 'Crop Insurance (Hail)',
             unit: 't'
-        },
-        'EXP-HVP-INSM': {
+        }, {
             code: 'EXP-HVP-INSM',
             name: 'Crop Insurance (Multiperil)',
             unit: 't'
-        },
-        'EXP-HVP-HEDG': {
+        }, {
             code: 'EXP-HVP-HEDG',
             name: 'Hedging cost',
             unit: 't'
         },
         //Harvest
-        'EXP-HVT-LABC': {
+        {
             code: 'EXP-HVT-LABC',
             name: 'Contract work (Harvest)',
             unit: 'ha'
-        },
-        'EXP-HVT-STOR': {
+        }, {
             code: 'EXP-HVT-STOR',
             name: 'Storage',
             unit: 'days'
-        },
-        'EXP-HVT-PAKM': {
+        }, {
             code: 'EXP-HVT-PAKM',
             name: 'Packaging material',
             unit: 'each'
-        },
-        'EXP-HVT-DYCL': {
+        }, {
             code: 'EXP-HVT-DYCL',
             name: 'Drying and cleaning',
             unit: 't'
-        },
-        'EXP-HVT-PAKC': {
+        }, {
             code: 'EXP-HVT-PAKC',
             name: 'Packing cost',
             unit: 'each'
         },
         //Indirect
-        'EXP-IDR-FUEL': {
+        {
             code: 'EXP-IDR-FUEL',
             name: 'Fuel',
             unit: 'l'
-        },
-        'EXP-IDR-REPP': {
+        }, {
             code: 'EXP-IDR-REPP',
             name: 'Repairs & parts',
             unit: 'Total'
-        },
-        'EXP-IDR-ELEC': {
+        }, {
             code: 'EXP-IDR-ELEC',
             name: 'Electricity',
             unit: 'Total'
-        },
-        'EXP-IDR-WATR': {
+        }, {
             code: 'EXP-IDR-WATR',
             name: 'Water',
             unit: 'Total'
-        },
-        'EXP-IDR-LABP': {
+        }, {
             code: 'EXP-IDR-LABP',
             name: 'Permanent labour',
             unit: 'Total'
-        },
-        'EXP-IDR-SCHED': {
+        }, {
             code: 'EXP-IDR-SCHED',
             name: 'Scheduling',
             unit: 'Total'
-        },
-        'EXP-IDR-LICS': {
+        }, {
             code: 'EXP-IDR-LICS',
             name: 'License',
             unit: 'Total'
-        },
-        'EXP-IDR-INSA': {
+        }, {
             code: 'EXP-IDR-INSA',
             name: 'Insurance assets',
             unit: 'Total'
-        },
-        'EXP-IDR-OTHER': {
+        }, {
             code: 'EXP-IDR-OTHER',
             name: 'Other costs',
             unit: 'Total'
         },
         //Replacements
         // Sheep
-        'EXP-RPM-SLAMB': {
+        {
             code: 'EXP-RPM-SLAMB',
             name: 'Lamb',
             unit: 'head'
-        },
-        'EXP-RPM-SWEAN': {
+        }, {
             code: 'EXP-RPM-SWEAN',
             name: 'Weaner lambs',
             unit: 'head'
-        },
-        'EXP-RPM-SEWE': {
+        }, {
             code: 'EXP-RPM-SEWE',
             name: 'Ewe',
             unit: 'head'
-        },
-        'EXP-RPM-SWTH': {
+        }, {
             code: 'EXP-RPM-SWTH',
             name: 'Wether (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-SRAM': {
+        }, {
             code: 'EXP-RPM-SRAM',
             name: 'Ram',
             unit: 'head'
         },
 
         // Cattle
-        'EXP-RPM-CCALV':{
+        {
             code: 'EXP-RPM-CCALV',
             name: 'Calf',
             unit: 'head'
-        },
-        'EXP-RPM-CWEN':{
+        }, {
             code: 'EXP-RPM-CWEN',
             name: 'Weaner calves',
             unit: 'head'
-        },
-        'EXP-RPM-CCOW':{
+        }, {
             code: 'EXP-RPM-CCOW',
             name: 'Cow or heifer',
             unit: 'head'
-        },
-        'EXP-RPM-CST18':{
+        }, {
             code: 'EXP-RPM-CST18',
             name: 'Steer (18 moths plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CST36':{
+        }, {
             code: 'EXP-RPM-CST36',
             name: 'Steer (3 years plus)',
             unit: 'head'
-        },
-        'EXP-RPM-CBULL':{
+        }, {
             code: 'EXP-RPM-CBULL',
             name: 'Bull (3 years plus)',
             unit: 'head'
         },
 
         //Goats
-        'EXP-RPM-GKID':{
+        {
             code: 'EXP-RPM-GKID',
             name: 'Kid',
             unit: 'head'
-        },
-        'EXP-RPM-GWEAN':{
+        }, {
             code: 'EXP-RPM-GWEAN',
             name: 'Weaner kids',
             unit: 'head'
-        },
-        'EXP-RPM-GEWE':{
+        }, {
             code: 'EXP-RPM-GEWE',
             name: 'Ewe (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GCAST':{
+        }, {
             code: 'EXP-RPM-GCAST',
             name: 'Castrate (2-tooth plus)',
             unit: 'head'
-        },
-        'EXP-RPM-GRAM':{
+        }, {
             code: 'EXP-RPM-GRAM',
             name: 'Ram (2-tooth plus)',
             unit: 'head'
         },
         //Animal feed
-        'EXP-AMF-LICK': {
+        {
             code: 'EXP-AMF-LICK',
             name: 'Lick',
             unit: 'kg'
         },
         //Husbandry
-        'EXP-HBD-VACC': {
+        {
             code: 'EXP-HBD-VACC',
             name: 'Drenching & vaccination',
             unit: 'head'
-        },
-        'EXP-HBD-DIPP': {
+        }, {
             code: 'EXP-HBD-DIPP',
             name: 'Dipping & jetting',
             unit: 'head'
-        },
-        'EXP-HBD-VETY': {
+        }, {
             code: 'EXP-HBD-VETY',
             name: 'Veterinary',
             unit: 'head'
-        },
-        'EXP-HBD-SHER': {
+        }, {
             code: 'EXP-HBD-SHER',
             name: 'Shearing',
             unit: 'head'
-        },
-        'EXP-HBD-CRCH': {
+        }, {
             code: 'EXP-HBD-CRCH',
             name: 'Crutching',
             unit: 'head'
-        },
-        'EXP-MRK-LSSF': {
+        }, {
             code: 'EXP-MRK-LSSF',
             name: 'Livestock sales marketing fees',
-            calculationFactor: 'Livestock Sales',
+            incomeGroup: 'Livestock Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSPF': {
+        }, {
             code: 'EXP-MRK-LSPF',
             name: 'Livestock products marketing fees',
-            calculationFactor: 'Product Sales',
+            incomeGroup: 'Product Sales',
             unit: '%'
-        },
-        'EXP-MRK-HOTF': {
+        }, {
             code: 'EXP-MRK-HOTF',
             name: 'Horticulture marketing fees',
-            calculationFactor: 'Fruit Sales',
+            incomeGroup: 'Fruit Sales',
             unit: '%'
-        },
-        'EXP-MRK-CRPF': {
+        }, {
             code: 'EXP-MRK-CRPF',
             name: 'Crop marketing fees',
-            calculationFactor: 'Crop Sales',
+            incomeGroup: 'Crop Sales',
             unit: '%'
-        },
-        'EXP-MRK-LSTP': {
+        }, {
             code: 'EXP-MRK-LSTP',
             name: 'Livestock transport',
             unit: 'head'
-        },
-        'EXP-MRK-HOTT': {
+        }, {
             code: 'EXP-MRK-HOTT',
             name: 'Horticulture transport',
             unit: 't'
-        },
-        'EXP-MRK-CRPT': {
+        }, {
             code: 'EXP-MRK-CRPT',
             name: 'Crop transport',
             unit: 't'
         }
-    };
+    ], 'code');
 
     // todo: extend the categories with products for future features.
 //    var _productsMap = {
@@ -3101,7 +4010,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 },
                 expenses: {
                     'Replacements': [
-                        _categories['EXP-RPM-GID'],
+                        _categories['EXP-RPM-GKID'],
                         _categories['EXP-RPM-GWEAN'],
                         _categories['EXP-RPM-GEWE'],
                         _categories['EXP-RPM-GCAST'],
@@ -3192,6 +4101,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         Goats: 'Ewe (2-tooth plus)'
     };
 
+    var _baseAnimal = {
+        'Cattle (Extensive)': 'Cattle',
+        'Cattle (Feedlot)': 'Cattle',
+        'Cattle (Stud)': 'Cattle',
+        'Sheep (Extensive)': 'Sheep',
+        'Sheep (Feedlot)': 'Sheep',
+        'Sheep (Stud)': 'Sheep'
+    };
+
     var _conversionRate = {
         Cattle: {
             'Calf': 0.32,
@@ -3217,17 +4135,42 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     };
 
+    var _commodityTypes = {
+        crop: 'Field Crops',
+        horticulture: 'Horticulture',
+        livestock: 'Livestock'
+    };
+
+    // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
+    var _commodities = {
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+};
+
     var _horticultureStages = {
-        'Pears': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Apples': ['1-7 years', '7-12 years', '12-20 years', '20+ years'],
-        'Olives': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Pecan nuts': ['1-2 years', '4-5 years', '6-8 years', '8+ years'],
-        'Peaches': ['1-2 years', '3-5 years', '5-8 years', '8+ years'],
-        'Stone Fruit': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Grapes': ['0-1 years', '1-2 years', '2-3 years', '3+ years'],
-        'Citrus': ['2-3 years', '5-7 years', '9-19 years', '21-25 years', '25+ years'],
-        'Macadamia': ['0-1 years', '2-3 years', '4-6 years', '7-9 years','10+ years']
-    }
+        'Apple': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Apricot': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Avocado': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Blueberry': ['0-1 years', '1-3 years', '3-5 years', '5-8 years', '8+ years'],
+        'Citrus (Hardpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Citrus (Softpeel)': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Fig': ['0-1 years', '1-3 years', '3-6 years', '6-18 years', '18-30 years', '30+ years'],
+        'Grape (Table)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Grape (Wine)': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Macadamia Nut': ['0-1 years', '1-3 years', '3-6 years', '6-9 years','10+ years'],
+        'Mango': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Nectarine': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Olive': ['0-1 years', '1-3 years', '3-5 years', '5-10 years', '10+ years'],
+        'Orange': ['0-1 years', '1-4 years', '4-8 years', '8-20 years', '20-25 years', '25+ years'],
+        'Pecan Nut': ['0-1 years', '1-3 years', '3-7 years', '7-10 years', '10+ years'],
+        'Peach': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pear': ['0-3 years', '3-10 years', '10-15 years', '15-25 years', '25+ years'],
+        'Persimmon': ['0-1 years', '1-4 years', '4-12 years', '12-20 years', '20+ years'],
+        'Plum': ['0-2 years', '2-5 years', '5-15 years', '15-18 years', '18+ years'],
+        'Pomegranate': ['0-1 years', '1-3 years', '3-5 years', '5-18 years', '18-30 years', '30+ years'],
+        'Rooibos': ['0-1 years', '1-2 years', '2-4 years', '4-5 years', '5+ years']
+    };
 
     var _productsMap = {
         'INC-PDS-MILK': {
@@ -3243,18 +4186,57 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         budget.data.sections = budget.data.sections || [];
     }
 
+    function getBaseAnimal (commodityType) {
+        return _baseAnimal[commodityType] || commodityType;
+    }
+
+    function checkBudgetSection (budget, stage) {
+        angular.forEach(['income', 'expenses'], function (section) {
+            var foundSection = underscore.findWhere(budget.data.sections,
+                (stage === undefined ? {code: _sections[section].code} : {code: _sections[section].code, horticultureStage: stage}));
+
+            if (foundSection === undefined) {
+                foundSection = {
+                    code: _sections[section].code,
+                    name: _sections[section].name,
+                    productCategoryGroups: [],
+                    total: {
+                        value: 0
+                    }
+                };
+
+                if (stage !== undefined) {
+                    foundSection.horticultureStage = stage;
+                }
+
+                budget.data.sections.push(foundSection);
+            }
+        });
+
+        return budget;
+    }
+
     return {
         listServiceMap: function () {
             return _listServiceMap;
         },
+        commodityTypes: function() {
+            return _commodityTypes;
+        },
+        commodities: function() {
+            return _commodities;
+        },
         getRepresentativeAnimal: function(commodityType) {
-            return _representativeAnimal[commodityType];
+            return _representativeAnimal[getBaseAnimal(commodityType)];
         },
         getConversionRate: function(commodityType) {
-            return _conversionRate[commodityType][_representativeAnimal[commodityType]];
+            return _conversionRate[getBaseAnimal(commodityType)][_representativeAnimal[getBaseAnimal(commodityType)]];
         },
         getConversionRates: function(commodityType) {
-            return _conversionRate[commodityType];
+            return _conversionRate[getBaseAnimal(commodityType)];
+        },
+        getCommodities: function (type) {
+            return _commodities[type] || '';
         },
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];
@@ -3262,8 +4244,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         getCategories: function (budget, assetType, commodityType, sectionType, horticultureStage) {
             var categories = {};
 
-            if(assetType == 'livestock' && _categoryOptions[assetType][commodityType]) {
-                categories = angular.copy(_categoryOptions[assetType][commodityType][sectionType]) || {};
+            if(assetType == 'livestock' && _categoryOptions[assetType][getBaseAnimal(commodityType)]) {
+                categories = angular.copy(_categoryOptions[assetType][getBaseAnimal(commodityType)][sectionType]) || {};
             }
 
             if(assetType == 'crop' && _categoryOptions[assetType][sectionType]) {
@@ -3306,20 +4288,24 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             return _modelTypes[type] || '';
         },
 
-        validateBudgetData: function (budget) {
+        validateBudgetData: function (budget, stage) {
             checkBudgetTemplate(budget);
+            checkBudgetSection(budget, stage);
             return this.calculateTotals(budget);
+        },
+        initNewSections: function (budget, stage) {
+            return checkBudgetSection(budget, stage);
         },
         addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             var category = angular.copy(_categories[categoryCode]);
             category.quantity = 0;
             category.pricePerUnit = 0;
             category.value = 0;
-            
+
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
-                if(_conversionRate[budget.commodityType][category.name]) {
-                    category.conversionRate = _conversionRate[budget.commodityType][category.name];
+                if(_conversionRate[getBaseAnimal(budget.commodityType)][category.name]) {
+                    category.conversionRate = _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                 }
             }
 
@@ -3371,7 +4357,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             checkBudgetTemplate(budget);
 
             if(budget.assetType == 'livestock') {
-                budget.data.details.calculatedLSU = budget.data.details.herdSize * _conversionRate[budget.commodityType][_representativeAnimal[budget.commodityType]];
+                budget.data.details.calculatedLSU = budget.data.details.herdSize *
+                    _conversionRate[getBaseAnimal(budget.commodityType)][_representativeAnimal[getBaseAnimal(budget.commodityType)]];
             }
 
             var income = 0;
@@ -3380,36 +4367,35 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                 section.total = {
                     value: 0
                 };
-                
+
                 if(budget.assetType == 'livestock') {
                     section.total.valuePerLSU = 0;
                 }
-                
+
                 section.productCategoryGroups.forEach(function(group, j) {
                     group.total = {
                         value: 0
                     };
-                    
+
                     if(budget.assetType == 'livestock') {
                         group.total.valuePerLSU = 0;
                     }
-                    
+
                     group.productCategories.forEach(function(category, k) {
                         if(category.unit == '%') {
-                            var groupSum = 0;
-
-                            angular.forEach(budget.data.sections, function(cSection, x) {
-                                angular.forEach(cSection.productCategoryGroups, function(cGroup, y) {
-                                    if(cGroup.name == category.calculationFactor) {
-                                        groupSum = cGroup.total.value;
-                                    }
-                                });
-                            });
+                            var groupSum = underscore
+                                .chain(budget.data.sections)
+                                .pluck('productCategoryGroups')
+                                .flatten()
+                                .reduce(function(total, group) {
+                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
+                                }, 0)
+                                .value();
 
                             category.value = category.pricePerUnit * groupSum / 100;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         } else {
                             if(category.unit == 'Total') {
@@ -3419,7 +4405,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                             category.value = category.pricePerUnit * category.quantity;
 
                             if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[budget.commodityType][category.name];
+                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             }
                         }
 
@@ -3449,20 +4435,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             if(budget.assetType == 'horticulture') {
                 budget.data.details.grossProfitByStage = {};
 
-                angular.forEach(_horticultureStages[budget.commodityType], function(stage, i) {
-                    var stageIncome = 0;
-                    var stageCosts = 0;
-
-                    angular.forEach(budget.data.sections, function(section, j) {
-                        if(section.horticultureStage == stage && section.name == 'Income') {
-                            stageIncome = section.total.value;
-                        }
-                        if(section.horticultureStage == stage && section.name == 'Expenses') {
-                            stageCosts = section.total.value;
-                        }
-                    });
-
-                    budget.data.details.grossProfitByStage[stage] = stageIncome - stageCosts;
+                angular.forEach(_horticultureStages[budget.commodityType], function(stage) {
+                    budget.data.details.grossProfitByStage[stage] = underscore
+                        .chain(budget.data.sections)
+                        .where({horticultureStage: stage})
+                        .reduce(function (total, section) {
+                            return (section.name === 'Income' ? total + section.total.value :
+                                (section.name === 'Expenses' ? total - section.total.value : total));
+                        }, 0)
+                        .value();
                 });
             }
 
@@ -3474,15 +4455,52 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         }
     }
 }]);
+var sdkHelperExpenseApp = angular.module('ag.sdk.helper.expense', ['ag.sdk.library']);
+
+sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore) {
+    var _expenseTypes = {
+        area: 'Area',
+        distance: 'Distance',
+        hours: 'Hours'
+    };
+
+    var _expenseUnits = {
+        area: 'Ha',
+        distance: 'km',
+        hours: 'h'
+    };
+
+    var _expenseAction = {
+        area: 'inspected',
+        distance: 'travelled',
+        hours: 'worked'
+    };
+
+    return {
+        expenseTypes: function () {
+            return _expenseTypes;
+        },
+
+        getExpenseTitle: function (type) {
+            return _expenseTypes[type] || '';
+        },
+        getExpenseUnit: function (type) {
+            return _expenseUnits[type] || '';
+        },
+        getExpenseAction: function (type) {
+            return _expenseAction[type] || '';
+        }
+    };
+}]);
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperFarmerApp.factory('farmerHelper', ['geoJSONHelper', function(geoJSONHelper) {
+sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
-            profileImage : item.profilePhotoSrc,
+            thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item)
         };
         
@@ -3551,18 +4569,17 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             subtitle: item.type
         };
 
-        if (item.data) {
-            map.image = attachmentHelper.getThumbnail(item.data.attachments);
-        }
+        map.thumbnailUrl = attachmentHelper.findSize(item, 'thumb', 'img/profile-user.png');
 
         return map;
     };
 
     var _legalEntityTypes = ['Individual', 'Sole Proprietary', 'Joint account', 'Partnership', 'Close Corporation', 'Private Company', 'Public Company', 'Trust', 'Non-Profitable companies', 'Cooperatives', 'In- Cooperatives', 'Other Financial Intermediaries'];
 
+    // When updating, also update the _commodities list in the enterpriseBudgetHelper
     var _enterpriseTypes = {
-        'Field Crops': ['Barley', 'Cabbage', 'Canola', 'Chicory', 'Citrus (Hardpeel)', 'Cotton', 'Cow Peas', 'Dry Bean', 'Dry Grapes', 'Dry Peas', 'Garlic', 'Grain Sorghum', 'Green Bean', 'Ground Nut', 'Hybrid Maize Seed', 'Lentils', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Onion', 'Onion (Seed)', 'Popcorn', 'Potato', 'Pumpkin', 'Rye', 'Soya Bean', 'Sugar Cane', 'Sunflower', 'Sweetcorn', 'Tobacco', 'Tobacco (Oven dry)', 'Tomatoes', 'Watermelon', 'Wheat'],
-        'Horticulture': ['Almonds', 'Apples', 'Apricots', 'Avo', 'Avocado', 'Bananas', 'Cherries', 'Chilli', 'Citrus (Hardpeel Class 1)', 'Citrus (Softpeel)', 'Coffee', 'Figs', 'Grapes (Table)', 'Grapes (Wine)', 'Guavas', 'Hops', 'Kiwi Fruit', 'Lemons', 'Macadamia Nut', 'Mango', 'Mangos', 'Melons', 'Nectarines', 'Olives', 'Oranges', 'Papaya', 'Peaches', 'Peanut', 'Pears', 'Pecan Nuts', 'Persimmons', 'Pineapples', 'Pistachio Nuts', 'Plums', 'Pomegranates', 'Prunes', 'Quinces', 'Rooibos', 'Strawberries', 'Triticale', 'Watermelons'],
+        'Field Crops': ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
+        'Horticulture': ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         'Livestock': ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
 
@@ -3627,15 +4644,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     var _terrainTypes = ['Plains', 'Mountains'];
     var _waterSourceTypes = ['Irrigation Scheme', 'River', 'Dam', 'Borehole'];
 
-    var _landUseCropTypes = {
-        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soybean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
-        'Grazing': ['Bahia-Notatum', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Phalaris', 'Rescue', 'Rhodes', 'Smuts Finger', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'],
-        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
-        'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chilly', 'Cucumber', 'Cucurbit', 'Dry Pea', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
-        'Plantation': ['Bluegum', 'Pine', 'Wattle'],
-        'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
-    };
-
     return {
         croppingPotentialTypes: function () {
             return _croppingPotentialTypes;
@@ -3658,11 +4666,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
         waterSourceTypes: function () {
             return _waterSourceTypes;
         },
-
-        getCropsForLandUse: function (landUse) {
-            return _landUseCropTypes[landUse] || [];
-        },
-
         isCroppingPotentialRequired: function (landUse) {
             return (landUse == 'Cropland');
         },
@@ -4022,7 +5025,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                 return {
                     id: task.id || item.__id,
                     title: item.organization.name,
-                    subtitle: _getTaskTitle(task.todo),
+                    subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,
                     groupby: title,
                     status: {
@@ -4053,8 +5056,10 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
         return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].state : undefined);
     };
 
-    var _getTaskTitle = function (taskType) {
-        return (_taskTodoMap[taskType] ? _taskTodoMap[taskType].title : undefined);
+    var _getTaskTitle = function (taskType, task) {
+        var taskMap = _taskTodoMap[taskType];
+
+        return (taskMap !== undefined ? (typeof taskMap.title == 'string' ? taskMap.title : taskMap.title(task)) : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
@@ -4449,7 +5454,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         length: function () {
             return _items.length;
         },
-        addItems: function(items) {
+        addItems: function(items, top) {
             if (items !== undefined) {
                 if ((items instanceof Array) === false) {
                     items = [items];
@@ -4473,7 +5478,11 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                         }
 
                         if (found == false) {
-                            _items.push(item);
+                            if (top === true) {
+                                _items.unshift(item);
+                            } else {
+                                _items.push(item);
+                            }
                         }
                     } else {
                         _items[item.id] = item;
@@ -4582,15 +5591,24 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return bounds;
         },
         getCenter: function (bounds) {
-            var center = [0, 0];
             bounds = bounds || this.getBounds();
 
-            angular.forEach(bounds, function(coordinate) {
-                center[0] += coordinate[0];
-                center[1] += coordinate[1];
+            var lat1 = 0, lat2 = 0,
+                lng1 = 0, lng2 = 0;
+
+            angular.forEach(bounds, function(coordinate, index) {
+                if (index == 0) {
+                    lat1 = lat2 = coordinate[0];
+                    lng1 = lng2 = coordinate[1];
+                } else {
+                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
+                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
+                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
+                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
+                }
             });
 
-            return (bounds.length ? [(center[0] / bounds.length), (center[1] / bounds.length)] : center);
+            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
@@ -4665,6 +5683,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return this;
         },
         formatGeoJson: function (geoJson, toType) {
+            // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
             if(toType.toLowerCase() == 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
@@ -4690,6 +5709,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return geoJson;
         },
         validGeoJson: function (geoJson, typeRestriction) {
+            // TODO: REFACTOR
             var validate = true;
             if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
                 return false;
@@ -4869,7 +5889,6 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             },
             zone: {
                 icon: _markerIcons.zone.success,
-                draggable: true,
                 style: {
                     weight: 4,
                     color: 'white',
@@ -4975,7 +5994,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                 }
             },
             zone: {
-                icon: _markerIcons.asset.default,
+                icon: _markerIcons.zone.default,
                 style: {
                     weight: 2,
                     color: 'white',
@@ -5524,6 +6543,33 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 return properties.featureId;
             },
+            addPhotoMarker: function(layerName, geojson, options, properties, onAddCallback) {
+                if (typeof properties == 'function') {
+                    onAddCallback = properties;
+                    properties = {};
+                }
+
+                properties = underscore.defaults(properties || {},  {
+                    featureId: objectId().toString()
+                });
+
+                var data = {
+                    layerName: layerName,
+                    geojson: geojson,
+                    options: options,
+                    properties: properties,
+                    onAddCallback: onAddCallback
+                };
+
+                data.properties.isMedia = true;
+
+                this._config.geojson[layerName] = this._config.geojson[layerName] || {};
+                this._config.geojson[layerName][properties.featureId] = data;
+
+                $rootScope.$broadcast('mapbox-' + this._id + '::add-photo-marker', data);
+
+                return properties.featureId;
+            },
             removeGeoJSONFeature: function(layerName, featureId) {
                 if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
                     $rootScope.$broadcast('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId]);
@@ -5847,6 +6893,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         // GeoJSON
         scope.$on('mapbox-' + id + '::add-geojson', function (event, args) {
             _this.addGeoJSONFeature(args);
+        });
+
+        // photoMarker
+        scope.$on('mapbox-' + id + '::add-photo-marker', function (event, args) {
+            _this.addPhotoMarker(args);
         });
 
         scope.$on('mapbox-' + id + '::remove-geojson-feature', function (event, args) {
@@ -6222,6 +7273,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             if (bounds.coordinates instanceof Array) {
                 if (bounds.coordinates.length > 1) {
                     this._map.fitBounds(bounds.coordinates, bounds.options);
+                } else if (bounds.coordinates.length == 1) {
+                    this._map.fitBounds(bounds.coordinates.concat(bounds.coordinates), bounds.options);
                 }
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
@@ -6394,11 +7447,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         }
     };
 
+    Mapbox.prototype.addPhotoMarker = function (item) {
+        this.addGeoJSONFeature(item);
+    };
+
     Mapbox.prototype.addGeoJSONFeature = function (item) {
         var _this = this;
         var geojson = geoJSONHelper(item.geojson, item.properties);
 
-        _this.createLayer(item.layerName);
+        _this.createLayer(item.layerName, item.type, item.options);
 
         _this._geoJSON[item.layerName] = _this._geoJSON[item.layerName] || {};
         _this._geoJSON[item.layerName][item.properties.featureId] = item;
@@ -6409,43 +7466,95 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             geojsonOptions.icon = _this.makeIcon(geojsonOptions.icon);
         }
 
-        L.geoJson(geojson.getJson(), {
-            style: geojsonOptions.style,
-            pointToLayer: function(feature, latlng) {
-                var marker = L.marker(latlng, geojsonOptions);
 
-                if (geojsonOptions.label) {
-                    marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
-                }
-
-                return marker;
-            },
-            onEachFeature: function(feature, layer) {
-                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-                _this.addLabel(geojsonOptions.label, feature, layer);
-
-                if (typeof item.onAddCallback === 'function') {
-                    item.onAddCallback(feature, layer);
-                }
-
-                if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
-                    // highlight polygon on click
-                    layer.on('click', function(e) {
-                        if(feature && feature.properties) {
-                            if(feature.properties.highlighted) {
-                                feature.properties.highlighted = false;
-                                layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
-                            } else {
-                                feature.properties.highlighted = true;
-                                layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
-                            }
+        if(item.properties.isMedia) {
+            var image = item;
+            var icon = {
+                iconSize: [40, 40],
+                className: 'leaflet-marker-agrista-photo'
+            }
+            var fancyboxOptions = {
+                helpers: {
+                    overlay : {
+                        css : {
+                            'background' : 'rgba(0,0,0,0.7)'
                         }
-
-                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
+                    }
+                },
+                aspectRatio: true,
+                autoSize: false,
+                width: 640,
+                height: 640
+            }
+            L.geoJson(geojson.getJson(), {
+                pointToLayer: function(feature, latlng) {
+                    var marker = L.marker(latlng, {
+                        icon: L.icon(L.extend({
+                            iconUrl: image.geojson.properties.data.src
+                        }, icon)),
+                        title: image.caption || ''
+                    });
+                    return marker;
+                },
+                onEachFeature: function(feature, layer) {
+                    console.log('calling add layer to layer');
+                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                    if (typeof item.onAddCallback === 'function') {
+                        item.onAddCallback(feature, layer);
+                    }
+                    layer.on('click', function(e) {
+                        //todo: video
+                        //image
+                        $.fancybox({
+                            href: feature.properties.data.src,
+                            title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
+                                + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
+                                + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
+                            type: 'image'
+                        }, fancyboxOptions);
                     });
                 }
-            }
-        });
+            });
+        } else {
+            L.geoJson(geojson.getJson(), {
+                style: geojsonOptions.style,
+                pointToLayer: function(feature, latlng) {
+                    var marker = L.marker(latlng, geojsonOptions);
+
+                    if (geojsonOptions.label) {
+                        marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
+                    }
+
+                    return marker;
+                },
+                onEachFeature: function(feature, layer) {
+
+                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                    _this.addLabel(geojsonOptions.label, feature, layer);
+
+                    if (typeof item.onAddCallback === 'function') {
+                        item.onAddCallback(feature, layer);
+                    }
+
+                    if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
+                        // highlight polygon on click
+                        layer.on('click', function(e) {
+                            if(feature && feature.properties) {
+                                if(feature.properties.highlighted) {
+                                    feature.properties.highlighted = false;
+                                    layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
+                                } else {
+                                    feature.properties.highlighted = true;
+                                    layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
+                                }
+                            }
+
+                            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
+                        });
+                    }
+                }
+            });
+        }
     };
 
     Mapbox.prototype.removeGeoJSONFeature = function (data) {
@@ -7219,6 +8328,116 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
     }];
 }]);
 
+var sdkInterfaceUiApp = angular.module('ag.sdk.interface.ui', []);
+
+sdkInterfaceUiApp.directive('dynamicName', function() {
+    return {
+        restrict: 'A',
+        require: '?form',
+        link: function(scope, element, attrs, controller) {
+            var formCtrl = (controller != null) ? controller :  element.parent().controller('form');
+            var currentElementCtrl = formCtrl[element.attr('name')];
+
+            element.attr('name', attrs.name);
+            formCtrl.$removeControl(currentElementCtrl);
+            currentElementCtrl.$name = attrs.name;
+            formCtrl.$addControl(currentElementCtrl);
+        }
+    }
+});
+
+sdkInterfaceUiApp.directive('defaultSrc', [function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attrs) {
+            element.bind('error', function() {
+                element.attr("src", attrs.defaultSrc);
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
+    return function (value) {
+        return ((value && value.geometry ? $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) : '') + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
+    };
+}]);
+
+sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$formatters.push(function (value) {
+                var viewValue = '';
+                if (value !== undefined) {
+                    viewValue = $filter('location')(value);
+
+                    if (attrs.ngChange) {
+                        scope.$eval(attrs.ngChange);
+                    }
+                }
+
+                return viewValue;
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.directive('dateFormatter', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$formatters.push(function (value) {
+                return (value !== undefined ? $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd') : '');
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.directive('dateParser', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            ngModel.$parsers.push(function (value) {
+                return (value !== undefined ? $filter('date')(new Date(value), attrs['dateFormat'] || 'yyyy-MM-dd') : '');
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            var _max = (attrs.max ? parseFloat(attrs.max) : false);
+            var _min = (attrs.min ? parseFloat(attrs.min) : false);
+            var _round = (attrs.round ? parseInt(attrs.round) : false);
+
+            ngModel.$formatters.push(function (value) {
+                return (_round === false ? value : $filter('number')(value, _round));
+            });
+
+            ngModel.$parsers.push(function (value) {
+                var isNan = isNaN(value);
+
+                ngModel.$setValidity('number', isNan === false);
+
+                if (isNan === false) {
+                    var float = parseFloat(value);
+
+                    ngModel.$setValidity('range', (_min === false || float >= _min) && (_max === false || float <= _max));
+                    return float;
+                } else {
+                    return value;
+                }
+            });
+        }
+    };
+}]);
 var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
 sdkTestDataApp.provider('mockDataService', ['underscore', function (underscore) {
@@ -7282,6 +8501,7 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
     'ag.sdk.helper.enterprise-budget',
+    'ag.sdk.helper.expense',
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
@@ -7292,6 +8512,7 @@ angular.module('ag.sdk.helper', [
 ]);
 
 angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.ui',
     'ag.sdk.interface.list',
     'ag.sdk.interface.map',
     'ag.sdk.interface.navigation'
