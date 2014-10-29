@@ -1,9 +1,9 @@
 var cordovaToasterApp = angular.module('ag.mobile-sdk.cordova.toaster', []);
 
 cordovaToasterApp.factory('toasterService', [function () {
-    var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
-
     var _show = function (message, duration, position) {
+        var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
+
         if (_toaster !== undefined) {
             _toaster.show(message, duration, position);
         }

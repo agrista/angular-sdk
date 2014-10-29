@@ -8001,9 +8001,9 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
 var cordovaToasterApp = angular.module('ag.mobile-sdk.cordova.toaster', []);
 
 cordovaToasterApp.factory('toasterService', [function () {
-    var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
-
     var _show = function (message, duration, position) {
+        var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
+
         if (_toaster !== undefined) {
             _toaster.show(message, duration, position);
         }
@@ -8285,13 +8285,13 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
             return {
                 synchronize: function (models) {
+                    var _this = this;
+
                     return promiseService.wrap(function (promise) {
                         if (connectionService.isOnline()) {
                             models = models || _options.models;
 
-                            var _this = this;
-
-                            return _this.upload(models)
+                            _this.upload(models)
                                 .then(function () {
                                     return _this.download(models);
                                 })
