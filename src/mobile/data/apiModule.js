@@ -1,4 +1,4 @@
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.hydration', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.hydration', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.connection', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -27,8 +27,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
         _options = underscore.extend(_options, options);
     }
 
-    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'organizationalUnitApi', 'pagingService', 'promiseService', 'taskApi',
-        function ($http, $log, assetApi, configuration, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, organizationalUnitApi, pagingService, promiseService, taskApi) {
+    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'organizationalUnitApi', 'pagingService', 'promiseService', 'taskApi',
+        function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, organizationalUnitApi, pagingService, promiseService, taskApi) {
             function _getFarmers (getParams) {
                 getParams = getParams || {limit: 20, resulttype: 'simple'};
 
@@ -264,12 +264,24 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
             return {
                 synchronize: function (models) {
-                    models = models || _options.models;
+                    return promiseService.wrap(function (promise) {
+                        if (connectionService.isOnline()) {
+                            models = models || _options.models;
 
-                    var _this = this;
+                            var _this = this;
 
-                    return _this.upload(models).then(function () {
-                        return _this.download(models);
+                            return _this.upload(models)
+                                .then(function () {
+                                    return _this.download(models);
+                                })
+                                .then(promise.resolve, promise.reject);
+                        } else {
+                            promise.reject({
+                                data: {
+                                    message: 'Cannot connect to the server. Please try again later'
+                                }
+                            });
+                        }
                     });
                 },
                 upload: function (models) {
