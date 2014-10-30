@@ -873,7 +873,7 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
         getProductionRegionByPoint: function (x,y) {
             return promiseService.wrap(function(promise) {
                 var param = '';
-                if(x && y) {
+                if((typeof x) === 'number' && (typeof y) === 'number') {
                     param = '?x=' + x + '&y=' + y;
                 } else {
                     promise.reject();
