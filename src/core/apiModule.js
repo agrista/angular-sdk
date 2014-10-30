@@ -810,20 +810,6 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
                 }, promise.reject);
             });
         },
-        getProductionRegionByPoint: function (x,y) {
-            return promiseService.wrap(function(promise) {
-                var param = '';
-                if(x && y) {
-                    param = '?x=' + x + '&y=' + y;
-                } else {
-                    promise.reject();
-                }
-                $http.get(_host + 'api/aggregation/production-region' + param, {withCredentials: true}).then(function (res) {
-                    $log.debug(res.data);
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
         updateProductionRegion: function(region) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/subregion/' + region.id, region, {withCredentials: true}).then(function (res) {
@@ -883,6 +869,20 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
         },
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
+        },
+        getProductionRegionByPoint: function (x,y) {
+            return promiseService.wrap(function(promise) {
+                var param = '';
+                if(x && y) {
+                    param = '?x=' + x + '&y=' + y;
+                } else {
+                    promise.reject();
+                }
+                $http.get(_host + 'api/aggregation/production-region' + param, {withCredentials: true}).then(function (res) {
+                    $log.debug(res.data);
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
