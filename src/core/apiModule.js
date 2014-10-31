@@ -824,7 +824,7 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
 /**
  * Aggregation API
  */
-sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', function ($http, configuration, promiseService, pagingService) {
+sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseService', 'pagingService', function ($log, $http, configuration, promiseService, pagingService) {
     // TODO: Refactor so that the aggregationApi can be extended for downstream platforms
     var _host = configuration.getServer();
 
