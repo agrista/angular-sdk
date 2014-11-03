@@ -752,6 +752,13 @@ sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'co
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getMerchant: function (uuid) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/agrista/provider/' + uuid, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
