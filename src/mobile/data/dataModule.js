@@ -518,6 +518,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             var _updateRemote = function (dataItems, request) {
                 $log.debug('_updateRemote');
 
+                request.options = request.options || {};
+
                 return promiseService.wrap(function (promise) {
                     if (dataItems !== undefined && _config.apiTemplate !== undefined) {
                         if ((dataItems instanceof Array) === false) dataItems = [dataItems];
@@ -529,7 +531,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     var obj = item.data;
                                     var uri = item.uri;
 
-                                    if (item.dirty === true) {
+                                    if (item.dirty === true || request.options.force) {
                                         if (item.local || request.template !== undefined) {
                                             if (item.local && item.data[_config.indexerProperty] !== undefined) {
                                                 delete item.data[_config.indexerProperty];
@@ -866,7 +868,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
-                            data: []
+                            data: [],
+                            options: {}
                         });
 
                         if ((request.data instanceof Array) === false) request.data = [request.data];
