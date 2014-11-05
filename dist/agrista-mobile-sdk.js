@@ -1294,6 +1294,8 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         'progress inspection': 'Progress Inspection'
     };
 
+    var _moistureStatusTypes = ['Dry', 'Moist', 'Wet'];
+
     var _seedTypeTable = [
         ['Maize Commodity', 'Maize Hybrid', 'Maize Silo Fodder']
     ];
@@ -1343,6 +1345,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         },
         inspectionTypes: function () {
             return underscore.keys(_inspectionTypes);
+        },
+        moistureStatusTypes: function () {
+            return _moistureStatusTypes;
         },
         policyTypes: function () {
             return _policyTypes;
