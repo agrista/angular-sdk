@@ -1294,6 +1294,8 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         'progress inspection': 'Progress Inspection'
     };
 
+    var _moistureStatusTypes = ['Dry', 'Moist', 'Wet'];
+
     var _seedTypeTable = [
         ['Maize Commodity', 'Maize Hybrid', 'Maize Silo Fodder']
     ];
@@ -1343,6 +1345,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         },
         inspectionTypes: function () {
             return underscore.keys(_inspectionTypes);
+        },
+        moistureStatusTypes: function () {
+            return _moistureStatusTypes;
         },
         policyTypes: function () {
             return _policyTypes;
@@ -8508,6 +8513,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @param req.template {String} Optional write uri template
              * @param req.schema {Object} Optional schema for template
              * @param req.data {Object} Required
+             * @param req.options {Object} Optional
              * @returns {Promise}
              */
             postItem: function (req) {
@@ -8515,7 +8521,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
 
                 return _itemStore.transaction().then(function (tx) {
                     if (req.data) {
-                        return tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data)});
+                        return tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), options: req.options});
                     } else {
                         promiseService.throwError(apiConstants.MissingParams);
                     }
@@ -9544,6 +9550,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             var _updateRemote = function (dataItems, request) {
                 $log.debug('_updateRemote');
 
+                request.options = request.options || {};
+
                 return promiseService.wrap(function (promise) {
                     if (dataItems !== undefined && _config.apiTemplate !== undefined) {
                         if ((dataItems instanceof Array) === false) dataItems = [dataItems];
@@ -9555,7 +9563,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     var obj = item.data;
                                     var uri = item.uri;
 
-                                    if (item.dirty === true) {
+                                    if (item.dirty === true || request.options.force) {
                                         if (item.local || request.template !== undefined) {
                                             if (item.local && item.data[_config.indexerProperty] !== undefined) {
                                                 delete item.data[_config.indexerProperty];
@@ -9892,7 +9900,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         var request = underscore.defaults(req || {}, {
                             template: _config.apiTemplate,
                             schema: {},
-                            data: []
+                            data: [],
+                            options: {}
                         });
 
                         if ((request.data instanceof Array) === false) request.data = [request.data];

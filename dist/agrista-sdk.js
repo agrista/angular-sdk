@@ -752,6 +752,13 @@ sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'co
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getMerchant: function (uuid) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/agrista/provider/' + uuid, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -824,7 +831,7 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
 /**
  * Aggregation API
  */
-sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', function ($http, configuration, promiseService, pagingService) {
+sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseService', 'pagingService', function ($log, $http, configuration, promiseService, pagingService) {
     // TODO: Refactor so that the aggregationApi can be extended for downstream platforms
     var _host = configuration.getServer();
 
@@ -869,6 +876,22 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
         },
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
+        },
+        getProductionRegionByPoint: function (x, y) {
+            return promiseService.wrap(function(promise) {
+                var param = '';
+
+                if (typeof x == 'number' && typeof y == 'number') {
+                    param = '?x=' + x + '&y=' + y;
+                } else {
+                    promise.reject();
+                }
+
+                $http.get(_host + 'api/aggregation/production-region' + param, {withCredentials: true}).then(function (res) {
+                    $log.debug(res.data);
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -1134,6 +1157,7 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
         }
     };
 }]);
+
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
@@ -2430,6 +2454,8 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         'progress inspection': 'Progress Inspection'
     };
 
+    var _moistureStatusTypes = ['Dry', 'Moist', 'Wet'];
+
     var _seedTypeTable = [
         ['Maize Commodity', 'Maize Hybrid', 'Maize Silo Fodder']
     ];
@@ -2479,6 +2505,9 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
         },
         inspectionTypes: function () {
             return underscore.keys(_inspectionTypes);
+        },
+        moistureStatusTypes: function () {
+            return _moistureStatusTypes;
         },
         policyTypes: function () {
             return _policyTypes;
