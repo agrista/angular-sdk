@@ -935,14 +935,14 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
             });
         },
         searchPortions: function (query) {
-            for (var key in query) {
-                if (query[key] === null || query[key] === "") {
-                    delete query[key];
-                }
-            }
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
-            }).join('&');
+            query = underscore.chain(query)
+                .filter(function (value) {
+                    return (value !== null && value !== '');
+                })
+                .map(function (value, key) {
+                    return key + '=' + value;
+                })
+                .value().join('&');
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/portion-polygons' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
