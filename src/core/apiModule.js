@@ -934,6 +934,22 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
                 }, promise.reject);
             });
         },
+        searchPortions: function (query) {
+            for (var key in query) {
+                if (query[key] === null || query[key] === "") {
+                    delete query[key];
+                }
+            }
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion-polygons' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getDistrictPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/district-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
