@@ -945,7 +945,10 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', func
                 .value().join('&');
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion-polygons' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                if (!query) {
+                    promise.reject();
+                }
+                $http.get(_host + 'api/geo/portion-polygons' + query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
