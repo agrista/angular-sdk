@@ -916,7 +916,7 @@ sdkApiApp.factory('applicationApi', ['$http', 'promiseService', 'configuration',
 /**
 * PIP geo API
 */
-sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
