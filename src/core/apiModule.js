@@ -935,8 +935,8 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'und
             });
         },
         searchPortions: function (query) {
-            query = underscore.chain(query)
-                .filter(function (value) {
+            underscore.chain(query)
+                .omit(function (value) {
                     return (value !== null && value !== '');
                 })
                 .map(function (value, key) {
