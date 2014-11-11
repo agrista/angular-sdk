@@ -4771,6 +4771,16 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             },
             homestead: {
                 icon: 'success'
+            },
+            search: {
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#f7b2bf",
+                    fillOpacity: 0.8,
+                    dashArray: "5,5"
+                }
             }
         },
         background: {
