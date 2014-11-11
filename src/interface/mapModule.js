@@ -253,7 +253,8 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (undersco
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {
         asset: mapMarkerHelperProvider.getMarkerStates('asset', ['default', 'success', 'error']),
-        zone: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
+        zone: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error']),
+        search: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
     };
 
     var _mapStyles = {
@@ -361,6 +362,17 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             },
             homestead: {
                 icon: 'success'
+            },
+            search: {
+                icon: _markerIcons.search.error,
+                style: {
+                    weight: 2,
+                    color: 'white',
+                    opacity: 0.8,
+                    fillColor: "#f7b2bf",
+                    fillOpacity: 0.8,
+                    dashArray: "5,5"
+                }
             }
         },
         background: {
