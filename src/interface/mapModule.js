@@ -1762,16 +1762,21 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
      */
     Mapbox.prototype.createLayer = function (name, type, options) {
         type = type || 'featureGroup';
-        options = options || {};
+
+        options = underscore.defaults(options || {},  {
+            enabled: true
+        });
 
         if (this._layers[name] === undefined) {
             if (type == 'featureGroup' && L.featureGroup) {
                 this._layers[name] = L.featureGroup(options);
+            } else if (type == 'layerGroup' && L.layerGroup) {
+                this._layers[name] = L.layerGroup(options);
             } else if (type == 'markerClusterGroup' && L.markerClusterGroup) {
                 this._layers[name] = L.markerClusterGroup(options);
             }
 
-            if (this._layers[name]) {
+            if (this._layers[name] && options.enabled) {
                 this._layers[name].addTo(this._map);
             }
         }
