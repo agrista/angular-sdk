@@ -4825,8 +4825,10 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
         },
 
         validateFieldName: function (farm, newField, oldField) {
-            newField.fieldName = (newField.fieldName ? newField.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, '') : newField.fieldName);
-            var foundField = underscore.findWhere(farm.data.fields, {fieldName: newField.fieldName});
+            newField.fieldName = (newField.fieldName ? newField.fieldName.trim().replace(/[^0-9A-Za-z\s]/g, '') : '');
+            var foundField = underscore.find(farm.data.fields, function (field) {
+                return (field.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, '') === newField.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, ''))
+            });
 
             return (angular.isObject(foundField) ? (angular.isObject(oldField) && foundField.fieldName === oldField.fieldName) : true);
         }
