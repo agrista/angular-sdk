@@ -97,12 +97,21 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         var paging = pagingService.initialize(function (page) {
                             return taskApi.getTasks({params: page, options: _options.remote});
                         }, function (tasks) {
-                            if (paging.complete) {
-                                taskApi.getTasks({options: {fallbackRemote: true, hydrate: ['organization', 'subtasks']}})
-                                    .then(promise.resolve, promise.reject);
-                            } else {
-                                paging.request().catch(promise.reject);
-                            }
+                            promiseService
+                                .chain(function (chain) {
+                                    angular.forEach(tasks, function (task) {
+                                        chain.push(function () {
+                                            return taskApi.findTask({key: task.id, options: {fallbackRemote: true, hydrate: ['organization', 'subtasks']}});
+                                        });
+                                    });
+                                })
+                                .then(function () {
+                                    if (paging.complete) {
+                                        promise.resolve();
+                                    } else {
+                                        paging.request().catch(promise.reject);
+                                    }
+                                });
                         }, getParams);
 
                         paging.request().catch(promise.reject);
