@@ -73,7 +73,8 @@ cordovaHelperApp.factory('geolocationHelper', ['promiseService', 'geolocationSer
 cordovaHelperApp.factory('cameraHelper', ['promiseService', 'geolocationService', 'cameraService', function(promiseService, geolocationService, cameraService) {
     var _defaults = {
         geolocation: {
-            timeout: 20000
+            enableHighAccuracy: true,
+            timeout: 30000
         },
         camera: {
             quality: 50,
