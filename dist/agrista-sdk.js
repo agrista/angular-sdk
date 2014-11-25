@@ -1696,6 +1696,17 @@ skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     };
 }]);
 
+skdUtilitiesApp.directive('stopEvent', function () {
+    return {
+        restrict: 'A',
+        link: function (scope, element, attr) {
+            element.bind(attr.stopEvent, function (e) {
+                e.stopPropagation();
+            });
+        }
+    };
+});
+
 skdUtilitiesApp.factory('dataMapService', [function() {
     return function(items, mapping, excludeId) {
         var mappedItems = [];
