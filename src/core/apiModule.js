@@ -206,6 +206,13 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        deleteNotification: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/notification/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
