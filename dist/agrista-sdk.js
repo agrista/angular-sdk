@@ -1871,8 +1871,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         }
     };
 
-    var _chainAll = function (action, init) {
-        var list = init;
+    var _chainAll = function (action, list) {
         var deferred = $q.defer();
         var chain = deferred.promise;
         var results = [];
@@ -1902,9 +1901,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         return chainItem();
     };
 
-    var _wrapAll = function (action, init) {
-        var list = init;
-
+    var _wrapAll = function (action, list) {
         action(list);
 
         return $q.all(list);
@@ -2164,11 +2161,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
     };
 
     var _landUseCropTypes = {
-        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
+        'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Peanut', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
         'Grazing': ['Bahia-Notatum', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Phalaris', 'Rescue', 'Rhodes', 'Smuts Finger', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'],
-        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Sugarcane', 'Tea', 'Walnuts'],
+        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Tea', 'Walnut'],
         'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chili', 'Cucumber', 'Cucurbit', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lentil', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pea (Dry)', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
-        'Plantation': ['Bluegum', 'Pine', 'Wattle'],
+        'Plantation': ['Bluegum', 'Pine', 'Sugarcane', 'Wattle'],
         'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
     };
 
@@ -2626,6 +2623,209 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
 
 sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (underscore) {
     var _providerCultivars = {
+        'Barley': {
+            'Agricol': [
+                'Other',
+                'SKG 9',
+                'SVG 13'
+            ],
+            'Other': [
+                'Clipper',
+                'Cocktail',
+                'Other',
+                'Puma',
+                'SabbiErica',
+                'SabbiNemesia',
+                'SSG 564',
+                'SSG 585'
+            ]
+        },
+        'Bean (Dry)': {
+            'Capstone': [
+                'CAP 2000',
+                'CAP 2001',
+                'CAP 2008',
+                'Other'
+            ],
+            'Dry Bean Seed Pty (Ltd)': [
+                'DBS 310',
+                'DBS 360',
+                'DBS 830',
+                'DBS 840',
+                'Kranskop HR1',
+                'OPS RS1',
+                'OPS RS2',
+                'OPS RS4',
+                'OPS-KW1',
+                'Other',
+                'RS 5',
+                'RS 6',
+                'RS 7'
+            ],
+            'Pannar': [
+                'Other',
+                'PAN 116',
+                'PAN 123',
+                'PAN 128',
+                'PAN 135',
+                'PAN 139',
+                'PAN 146',
+                'PAN 148',
+                'PAN 148 Plus',
+                'PAN 9213',
+                'PAN 9216',
+                'PAN 9225',
+                'PAN 9249',
+                'PAN 9280',
+                'PAN 9281',
+                'PAN 9292',
+                'PAN 9298'
+            ],
+            'Other': [
+                'AFG 470',
+                'AFG 471',
+                'BONUS',
+                'CALEDON',
+                'CARDINAL',
+                'CERRILLOS',
+                'DONGARA',
+                'DPO 820',
+                'JENNY',
+                'KAMIESBERG',
+                'KOMATI',
+                'KRANSKOP',
+                'MAJUBA',
+                'MASKAM',
+                'MINERVA',
+                'MKONDENI',
+                'MKUZI',
+                'Other',
+                'RUBY',
+                'SC Silk',
+                'SC Superior',
+                'SEDERBERG',
+                'SSB 20',
+                'STORMBERG',
+                'TEEBUS',
+                'TEEBUS-RCR2',
+                'TEEBUS-RR1',
+                'TYGERBERG',
+                'UKULINGA',
+                'UMTATA',
+                'WERNA'
+            ]
+        },
+        'Canola': {
+            'Agricol': [
+                'Aga Max',
+                'AV Garnet',
+                'CB Jardee HT',
+                'Cobbler',
+                'Other',
+                'Tawriffic'
+            ],
+            'Klein Karoo': [
+                'Hyola 61',
+                'Other',
+                'Rocket CL',
+                'Thunder TT',
+                'Varola 54'
+            ],
+            'Other': [
+                'Other'
+            ]
+        },
+        'Grain Sorghum': {
+            'Agricol': [
+                'AVENGER GH',
+                'DOMINATOR GM',
+                'ENFORCER GM',
+                'MAXIMIZER',
+                'Other',
+                'PREMIUM 4065 T GH',
+                'PREMIUM 100',
+                'NS 5511 GH',
+                'NS 5540',
+                'NS 5555',
+                'NS 5655 GM',
+                'NS 5751',
+                'NS 5832',
+                'TIGER GM'
+            ],
+            'Capstone': [
+                'CAP 1002',
+                'CAP 1003',
+                'CAP 1004',
+                'Other'
+            ],
+            'Klein Karoo Saad': [
+                'MR 32 GL',
+                'MR 43 GL',
+                'MR BUSTER GL',
+                'MR PACER',
+                'Other'
+            ],
+            'Pannar': [
+                'PAN 8625 GH',
+                'PAN 8816 GM',
+                'PAN 8906 GM',
+                'PAN 8909 GM',
+                'PAN 8006 T',
+                'PAN 8507',
+                'PAN 8609',
+                'PAN 8648',
+                'PAN 8706',
+                'PAN 8806',
+                'PAN 8901',
+                'PAN 8902',
+                'PAN 8903',
+                'PAN 8904',
+                'PAN 8905',
+                'PAN 8906',
+                'PAN 8907',
+                'PAN 8908',
+                'PAN 8909',
+                'PAN 8911',
+                'PAN 8912',
+                'PAN 8913',
+                'PAN 8914',
+                'PAN 8915',
+                'PAN 8916',
+                'PAN 8918',
+                'PAN 8919',
+                'PAN 8920',
+                'PAN 8921',
+                'PAN 8922',
+                'PAN 8923',
+                'PAN 8924',
+                'PAN 8925',
+                'PAN 8926',
+                'PAN 8927',
+                'PAN 8928',
+                'PAN 8929',
+                'PAN 8930',
+                'PAN 8931',
+                'PAN 8932',
+                'PAN 8933',
+                'PAN 8936',
+                'PAN 8937',
+                'PAN 8938',
+                'PAN 8939',
+                'PAN 8940',
+                'PAN 8966',
+                'Other'
+            ],
+            'Other': [
+                'APN 881',
+                'MACIA-SA',
+                'NK 8830',
+                'Other',
+                'OVERFLOW',
+                'SA 1302-M27',
+                'TITAN',
+                'X868'
+            ]
+        },
         'Maize (Yellow)': {
             'Afgri': [
                 'AFG 4222 B',
@@ -3022,6 +3222,45 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'Scout'
             ]
         },
+        'Oats': {
+            'Agricol': [
+                'Magnifico',
+                'Maida',
+                'Nugene',
+                'Other',
+                'Overberg',
+                'Pallinup',
+                'Saia',
+                'SWK001'
+            ],
+            'Sensako (Monsanto)': [
+                'Other',
+                'SSH 39W',
+                'SSH 405',
+                'SSH 421',
+                'SSH 423',
+                'SSH 491'
+            ],
+            'Other': [
+                'Drakensberg',
+                'H06/19',
+                'H06/20',
+                'H07/04',
+                'H07/05',
+                'Heros',
+                'Kompasberg',
+                'Le Tucana',
+                'Maluti',
+                'Other',
+                'Potoroo',
+                'Witteberg'
+            ]
+        },
+        'Peanut': {
+            'Other': [
+                'Other'
+            ]
+        },
         'Soya Bean': {
             'Agriocare': [
                 'AGC 58007 R',
@@ -3089,6 +3328,50 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'WENNER'
             ]
         },
+        'Sugarcane': {
+            'Other': [
+                'ACRUNCH',
+                'BONITA',
+                'CHIEFTAIN',
+                'EARLISWEET',
+                'GLADIATOR',
+                'GSS 9299',
+                'HOLLYWOOD',
+                'HONEYMOON',
+                'INFERNO',
+                'JUBILEE',
+                'MADHUR',
+                'MAJESTY',
+                'MANTRA',
+                'MATADOR',
+                'MAX',
+                'MEGATON',
+                'MMZ 9903',
+                'ORLA',
+                'OSCAR',
+                'Other',
+                'OVERLAND',
+                'PRIMEPLUS',
+                'RUSALTER',
+                'RUSTICO',
+                'RUSTLER',
+                'SENTINEL',
+                'SHIMMER',
+                'STAR 7708',
+                'STAR 7713',
+                'STAR 7714',
+                'STAR 7715',
+                'STAR 7717',
+                'STAR 7718',
+                'STAR 7719',
+                'STETSON',
+                'SWEET SUCCESS',
+                'SWEET SURPRISE',
+                'SWEET TALK',
+                'TENDER TREAT',
+                'WINSTAR'
+            ]
+        },
         'Sunflower': {
             'Agricol': [
                 'AGSUN 5161 CL',
@@ -3143,173 +3426,44 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'WBS 3100'
             ]
         },
-        'Grain Sorghum': {
+        'Triticale': {
             'Agricol': [
-                'AVENGER GH',
-                'DOMINATOR GM',
-                'ENFORCER GM',
-                'NS 5511 GH',
-                'NS 5655 GM',
-                'PREMIUM 4065 T GH',
-                'TIGER GM',
-                'NS 5555',
-                'NS 5832',
-                'PREMIUM 100',
-                'MAXIMIZER',
-                'NS 5540',
-                'NS 5751'
-            ],
-            'Capstone': [
-                'CAP 1002',
-                'CAP 1003',
-                'CAP 1004'
-            ],
-            'Klein Karoo Saad': [
-                'MR 32 GL',
-                'MR 43 GL',
-                'MR BUSTER GL',
-                'MR PACER'
+                'AG Beacon',
+                'Other',
+                'Rex'
             ],
             'Pannar': [
-                'PAN 8625 GH',
-                'PAN 8816 GM',
-                'PAN 8906 GM',
-                'PAN 8909 GM',
-                'PAN 8006 T',
-                'PAN 8507',
-                'PAN 8609',
-                'PAN 8648',
-                'PAN 8706',
-                'PAN 8806',
-                'PAN 8901',
-                'PAN 8902',
-                'PAN 8903',
-                'PAN 8904',
-                'PAN 8905',
-                'PAN 8906',
-                'PAN 8907',
-                'PAN 8908',
-                'PAN 8909',
-                'PAN 8911',
-                'PAN 8912',
-                'PAN 8913',
-                'PAN 8914',
-                'PAN 8915',
-                'PAN 8916',
-                'PAN 8918',
-                'PAN 8919',
-                'PAN 8920',
-                'PAN 8921',
-                'PAN 8922',
-                'PAN 8923',
-                'PAN 8924',
-                'PAN 8925',
-                'PAN 8926',
-                'PAN 8927',
-                'PAN 8928',
-                'PAN 8929',
-                'PAN 8930',
-                'PAN 8931',
-                'PAN 8932',
-                'PAN 8933',
-                'PAN 8936',
-                'PAN 8937',
-                'PAN 8938',
-                'PAN 8939',
-                'PAN 8940',
-                'PAN 8966'
+                'PAN 248',
+                'PAN 299',
+                'Other'
             ],
             'Other': [
-                'APN 881',
-                'NK 8830',
-                'OVERFLOW',
-                'X868',
-                'TITAN',
-                'MACIA-SA',
-                'SA 1302-M27'
-            ]
-        },
-        'Dry Beans': {
-            'Capstone': [
-                'CAP 2000',
-                'CAP 2001',
-                'CAP 2008'
-            ],
-            'Dry Bean Seed Pty (Ltd)': [
-                'DBS 310',
-                'DBS 360',
-                'DBS 830',
-                'DBS 840',
-                'Kranskop HR1',
-                'OPS RS1',
-                'OPS RS2',
-                'OPS RS4',
-                'OPS-KW1',
-                'RS 5',
-                'RS 6',
-                'RS 7'
-            ],
-            'Pannar': [
-                'PAN 116',
-                'PAN 123',
-                'PAN 128',
-                'PAN 135',
-                'PAN 139',
-                'PAN 146',
-                'PAN 148',
-                'PAN 148 Plus',
-                'PAN 9213',
-                'PAN 9216',
-                'PAN 9225',
-                'PAN 9249',
-                'PAN 9280',
-                'PAN 9281',
-                'PAN 9292',
-                'PAN 9298'
-            ],
-            'Other': [
-                'AFG 470',
-                'AFG 471',
-                'BONUS',
-                'CARDINAL',
-                'CERRILLOS',
-                'DPO 820',
-                'JENNY',
-                'KOMATI',
-                'KRANSKOP',
-                'MAJUBA',
-                'MASKAM',
-                'MINERVA',
-                'MKONDENI',
-                'MKUZI',
-                'RUBY',
-                'SEDERBERG',
-                'SSB 20',
-                'STORMBERG',
-                'TEEBUS',
-                'TEEBUS-RCR2',
-                'TEEBUS-RR1',
-                'TYGERBERG',
-                'UKULINGA',
-                'UMTATA',
-                'WERNA',
-                'CALEDON',
-                'DONGARA',
-                'KAMIESBERG',
-                'SC Silk',
-                'SC Superior'
+                'Bacchus',
+                'Cloc 1',
+                'Cultivars',
+                'Falcon',
+                'Ibis',
+                'Kiewiet',
+                'Korhaan',
+                'Other',
+                'Tobie',
+                'US 2009',
+                'US 2010',
+                'US2007'
             ]
         },
         'Wheat': {
             'Afgri': [
                 'AFG 554-8',
-                'AFG 75-3'
+                'AFG 75-3',
+                'Other'
             ],
             'All-Grow Seed': [
                 'BUFFELS',
                 'DUZI',
                 'KARIEGA',
                 'KROKODIL',
+                'Other',
                 'SABIE',
                 'STEENBRAS'
             ],
@@ -3318,12 +3472,14 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'KOMATI',
                 'KOONAP',
                 'MATLABAS',
+                'Other',
                 'SELATI',
                 'SENQU'
             ],
             'Sensako': [
                 'CRN 826',
                 'ELANDS',
+                'Other',
                 'SST 015',
                 'SST 026',
                 'SST 027',
@@ -3361,6 +3517,7 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'SST 802',
                 'SST 805',
                 'SST 806',
+                'SST 807',
                 'SST 815',
                 'SST 816',
                 'SST 822',
@@ -3388,7 +3545,6 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'SST 972',
                 'SST 983',
                 'SST 0127',
-                'SST 807',
                 'SST 1327',
                 'SST 3137',
                 'SST 8125',
@@ -3398,6 +3554,7 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'SST 8136'
             ],
             'Pannar': [
+                'Other',
                 'PAN 3118',
                 'PAN 3120',
                 'PAN 3122',
@@ -3448,6 +3605,7 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'MARICO',
                 'NOSSOB',
                 'OLIFANTS',
+                'Other',
                 'SNACK',
                 'TAMBOTI',
                 'TANKWA',
@@ -3456,133 +3614,6 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'TUGELA-DN',
                 'UMLAZI',
                 'RATEL'
-            ]
-        },
-        'Canola': {
-            'Agricol': [
-                'Aga Max',
-                'AV Garnet',
-                'CB Jardee HT',
-                'Cobbler',
-                'Tawriffic'
-            ],
-            'Klein Karoo': [
-                'Hyola 61',
-                'Rocket CL',
-                'Thunder TT',
-                'Varola 54'
-            ]
-        },
-        'Barley': {
-            'Agricol': [
-                'SKG 9',
-                'SVG 13'
-            ],
-            'Other': [
-                'Clipper',
-                'Cocktail',
-                'Puma',
-                'SabbiErica',
-                'SabbiNemesia',
-                'SSG 564',
-                'SSG 585'
-            ]
-        },
-        'Oats': {
-            'Agricol': [
-                'Magnifico',
-                'Maida',
-                'Nugene',
-                'Overberg',
-                'Pallinup',
-                'Saia',
-                'SWK001'
-            ],
-            'Sensako (Monsanto)': [
-                'SSH 39W',
-                'SSH 405',
-                'SSH 421',
-                'SSH 423',
-                'SSH 491'
-            ],
-            'Other': [
-                'Drakensberg',
-                'H06/19',
-                'H06/20',
-                'H07/04',
-                'H07/05',
-                'Heros',
-                'Kompasberg',
-                'Le Tucana',
-                'Maluti',
-                'Potoroo',
-                'Witteberg'
-            ]
-        },
-        'Triticale': {
-            'Agricol': [
-                'AG Beacon',
-                'Rex'
-            ],
-            'Pannar': [
-                'PAN 248',
-                'PAN 299'
-            ],
-            'Other': [
-                'Bacchus',
-                'Cloc 1',
-                'Cultivars',
-                'Falcon',
-                'Ibis',
-                'Kiewiet',
-                'Korhaan',
-                'Tobie',
-                'US 2009',
-                'US 2010',
-                'US2007'
-            ]
-        },
-        'Sugarcane': {
-            'Other': [
-                'ACRUNCH',
-                'BONITA',
-                'CHIEFTAIN',
-                'EARLISWEET',
-                'GLADIATOR',
-                'GSS 9299',
-                'HOLLYWOOD',
-                'HONEYMOON',
-                'INFERNO',
-                'JUBILEE',
-                'MADHUR',
-                'MAJESTY',
-                'MANTRA',
-                'MATADOR',
-                'MAX',
-                'MEGATON',
-                'MMZ 9903',
-                'ORLA',
-                'OSCAR',
-                'OVERLAND',
-                'PRIMEPLUS',
-                'RUSALTER',
-                'RUSTICO',
-                'RUSTLER',
-                'SENTINEL',
-                'SHIMMER',
-                'STAR 7708',
-                'STAR 7713',
-                'STAR 7714',
-                'STAR 7715',
-                'STAR 7717',
-                'STAR 7718',
-                'STAR 7719',
-                'STETSON',
-                'SWEET SUCCESS',
-                'SWEET SURPRISE',
-                'SWEET TALK',
-                'TENDER TREAT',
-                'WINSTAR'
             ]
         }
     };

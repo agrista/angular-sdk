@@ -23,9 +23,11 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
         }
     };
 
+    var _busy = false;
+
     this.config = function (options) {
         _options = underscore.extend(_options, options);
-    }
+    };
 
     this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'organizationalUnitApi', 'pagingService', 'promiseService', 'taskApi',
         function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, organizationalUnitApi, pagingService, promiseService, taskApi) {
@@ -272,80 +274,119 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
             }
 
             return {
+                isSynchronizing: function () {
+                    return _busy;
+                },
                 synchronize: function (models) {
                     var _this = this;
 
-                    return promiseService.wrap(function (promise) {
-                        if (connectionService.isOnline()) {
-                            models = models || _options.models;
+                    models = models || _options.models;
 
-                            _this.upload(models)
-                                .then(function () {
-                                    return _this.download(models);
-                                })
-                                .then(promise.resolve, promise.reject);
-                        } else {
-                            promise.reject({
-                                data: {
-                                    message: 'Cannot connect to the server. Please try again later'
-                                }
-                            });
-                        }
+                    return _this.upload(models).then(function () {
+                        return _this.download(models);
                     });
                 },
                 upload: function (models) {
                     models = models || _options.models;
 
-                    return promiseService
-                        .chain(function (chain) {
-                            if (models.indexOf('farmers') !== -1) {
-                                chain.push(_postFarmers);
-                            }
+                    return promiseService.wrap(function (promise) {
+                        if (_busy) {
+                            promise.reject({
+                                data: {
+                                    message: 'Syncing with server. Please wait'
+                                }
+                            });
+                        } else if (connectionService.isOnline() == false) {
+                            promise.reject({
+                                data: {
+                                    message: 'Cannot connect to the server. Please try again later'
+                                }
+                            });
+                        } else {
+                            _busy = true;
 
-                            if (models.indexOf('documents') !== -1) {
-                                chain.push(_postDocuments);
-                            }
+                            promiseService
+                                .chain(function (chain) {
+                                    if (models.indexOf('farmers') !== -1) {
+                                        chain.push(_postFarmers);
+                                    }
 
-                            if (models.indexOf('tasks') !== -1) {
-                                chain.push(_postTasks);
-                            }
+                                    if (models.indexOf('documents') !== -1) {
+                                        chain.push(_postDocuments);
+                                    }
 
-                            if (models.indexOf('expenses') !== -1) {
-                                chain.push(_postExpenses);
-                            }
-                        })
-                        .catch(promiseService.throwError);
+                                    if (models.indexOf('tasks') !== -1) {
+                                        chain.push(_postTasks);
+                                    }
+
+                                    if (models.indexOf('expenses') !== -1) {
+                                        chain.push(_postExpenses);
+                                    }
+                                })
+                                .then(function (res) {
+                                    _busy = false;
+                                    promise.resolve(res);
+                                }, function (err) {
+                                    _busy = false;
+                                    promise.reject(err);
+                                });
+                        }
+                    });
                 },
                 download: function (models) {
                     models = models || _options.models;
 
-                    return promiseService
-                        .chain(function (chain) {
-                            if (models.indexOf('farmers') !== -1) {
-                                chain.push(_getFarmers);
-                            }
+                    return promiseService.wrap(function (promise) {
+                        if (_busy) {
+                            promise.reject({
+                                data: {
+                                    message: 'Syncing with server. Please wait'
+                                }
+                            });
+                        } else if (connectionService.isOnline() == false) {
+                            promise.reject({
+                                data: {
+                                    message: 'Cannot connect to the server. Please try again later'
+                                }
+                            });
+                        } else {
+                            _busy = true;
 
-                            if (models.indexOf('documents') !== -1) {
-                                chain.push(_getDocuments);
-                            }
+                            promiseService
+                                .chain(function (chain) {
+                                    if (models.indexOf('farmers') !== -1) {
+                                        chain.push(_getFarmers);
+                                    }
 
-                            if (models.indexOf('tasks') !== -1) {
-                                chain.push(_getTasks);
-                            }
+                                    if (models.indexOf('documents') !== -1) {
+                                        chain.push(_getDocuments);
+                                    }
 
-                            if (models.indexOf('budgets') !== -1) {
-                                chain.push(_getEnterpriseBudgets);
-                            }
+                                    if (models.indexOf('tasks') !== -1) {
+                                        chain.push(_getTasks);
+                                    }
 
-                            if (models.indexOf('expenses') !== -1) {
-                                chain.push(_getExpenses);
-                            }
+                                    if (models.indexOf('budgets') !== -1) {
+                                        chain.push(_getEnterpriseBudgets);
+                                    }
 
-                            if (models.indexOf('organizational-units') !== -1) {
-                                chain.push(_getOrganizationalUnits);
-                            }
-                        })
-                        .catch(promiseService.throwError);
+                                    if (models.indexOf('expenses') !== -1) {
+                                        chain.push(_getExpenses);
+                                    }
+
+                                    if (models.indexOf('organizational-units') !== -1) {
+                                        chain.push(_getOrganizationalUnits);
+                                    }
+                                })
+                                .then(function (res) {
+                                    _busy = false;
+                                    promise.resolve(res);
+                                }, function (err) {
+                                    _busy = false;
+                                    promise.reject(err);
+                                });
+                        }
+                    });
                 }
             };
         }];
