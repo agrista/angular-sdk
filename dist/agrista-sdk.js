@@ -8849,10 +8849,6 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
             });
         });
 
-        $rootScope.$on('navigation::item__selected', function(event, args) {
-            $state.go(args);
-        });
-
         $rootScope.$on('authorization::login', function (event, currentUser) {
             _updateUserApps(currentUser);
         });
@@ -8880,6 +8876,11 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
 
                     $rootScope.$broadcast('navigation::items__changed', _groupedApps);
                 }
+            },
+            selectItem: function (id) {
+                $rootScope.$broadcast('navigation::item__selected', id);
+
+                return $state.go(id);
             },
             /*
              * App registration
