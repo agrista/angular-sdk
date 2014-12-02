@@ -3142,6 +3142,448 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'Sikllos CL',
                 'WBS 3100'
             ]
+        },
+        'Grain Sorghum': {
+            'Agricol': [
+                'AVENGER GH',
+                'DOMINATOR GM',
+                'ENFORCER GM',
+                'NS 5511 GH',
+                'NS 5655 GM',
+                'PREMIUM 4065 T GH',
+                'TIGER GM',
+                'NS 5555',
+                'NS 5832',
+                'PREMIUM 100',
+                'MAXIMIZER',
+                'NS 5540',
+                'NS 5751'
+            ],
+            'Capstone': [
+                'CAP 1002',
+                'CAP 1003',
+                'CAP 1004'
+            ],
+            'Klein Karoo Saad': [
+                'MR 32 GL',
+                'MR 43 GL',
+                'MR BUSTER GL',
+                'MR PACER'
+            ],
+            'Pannar': [
+                'PAN 8625 GH',
+                'PAN 8816 GM',
+                'PAN 8906 GM',
+                'PAN 8909 GM',
+                'PAN 8006 T',
+                'PAN 8507',
+                'PAN 8609',
+                'PAN 8648',
+                'PAN 8706',
+                'PAN 8806',
+                'PAN 8901',
+                'PAN 8902',
+                'PAN 8903',
+                'PAN 8904',
+                'PAN 8905',
+                'PAN 8906',
+                'PAN 8907',
+                'PAN 8908',
+                'PAN 8909',
+                'PAN 8911',
+                'PAN 8912',
+                'PAN 8913',
+                'PAN 8914',
+                'PAN 8915',
+                'PAN 8916',
+                'PAN 8918',
+                'PAN 8919',
+                'PAN 8920',
+                'PAN 8921',
+                'PAN 8922',
+                'PAN 8923',
+                'PAN 8924',
+                'PAN 8925',
+                'PAN 8926',
+                'PAN 8927',
+                'PAN 8928',
+                'PAN 8929',
+                'PAN 8930',
+                'PAN 8931',
+                'PAN 8932',
+                'PAN 8933',
+                'PAN 8936',
+                'PAN 8937',
+                'PAN 8938',
+                'PAN 8939',
+                'PAN 8940',
+                'PAN 8966'
+            ],
+            'Other': [
+                'APN 881',
+                'NK 8830',
+                'OVERFLOW',
+                'X868',
+                'TITAN',
+                'MACIA-SA',
+                'SA 1302-M27'
+            ]
+        },
+        'Dry Beans': {
+            'Capstone': [
+                'CAP 2000',
+                'CAP 2001',
+                'CAP 2008'
+            ],
+            'Dry Bean Seed Pty (Ltd)': [
+                'DBS 310',
+                'DBS 360',
+                'DBS 830',
+                'DBS 840',
+                'Kranskop HR1',
+                'OPS RS1',
+                'OPS RS2',
+                'OPS RS4',
+                'OPS-KW1',
+                'RS 5',
+                'RS 6',
+                'RS 7'
+            ],
+            'Pannar': [
+                'PAN 116',
+                'PAN 123',
+                'PAN 128',
+                'PAN 135',
+                'PAN 139',
+                'PAN 146',
+                'PAN 148',
+                'PAN 148 Plus',
+                'PAN 9213',
+                'PAN 9216',
+                'PAN 9225',
+                'PAN 9249',
+                'PAN 9280',
+                'PAN 9281',
+                'PAN 9292',
+                'PAN 9298'
+            ],
+            'Other': [
+                'AFG 470',
+                'AFG 471',
+                'BONUS',
+                'CARDINAL',
+                'CERRILLOS',
+                'DPO 820',
+                'JENNY',
+                'KOMATI',
+                'KRANSKOP',
+                'MAJUBA',
+                'MASKAM',
+                'MINERVA',
+                'MKONDENI',
+                'MKUZI',
+                'RUBY',
+                'SEDERBERG',
+                'SSB 20',
+                'STORMBERG',
+                'TEEBUS',
+                'TEEBUS-RCR2',
+                'TEEBUS-RR1',
+                'TYGERBERG',
+                'UKULINGA',
+                'UMTATA',
+                'WERNA',
+                'CALEDON',
+                'DONGARA',
+                'KAMIESBERG',
+                'SC Silk',
+                'SC Superior'
+            ]
+        },
+        'Wheat': {
+            'Afgri': [
+                'AFG 554-8',
+                'AFG 75-3'
+            ],
+            'All-Grow Seed': [
+                'BUFFELS',
+                'DUZI',
+                'KARIEGA',
+                'KROKODIL',
+                'SABIE',
+                'STEENBRAS'
+            ],
+            'Klein Karoo Saad': [
+                'HARTBEES',
+                'KOMATI',
+                'KOONAP',
+                'MATLABAS',
+                'SELATI',
+                'SENQU'
+            ],
+            'Sensako': [
+                'CRN 826',
+                'ELANDS',
+                'SST 015',
+                'SST 026',
+                'SST 027',
+                'SST 035',
+                'SST 036',
+                'SST 037',
+                'SST 039',
+                'SST 047',
+                'SST 056',
+                'SST 057',
+                'SST 065',
+                'SST 077',
+                'SST 087',
+                'SST 088',
+                'SST 094',
+                'SST 096',
+                'SST 107',
+                'SST 124',
+                'SST 308',
+                'SST 316',
+                'SST 317',
+                'SST 319',
+                'SST 322',
+                'SST 333',
+                'SST 334',
+                'SST 347',
+                'SST 356',
+                'SST 363',
+                'SST 366',
+                'SST 367',
+                'SST 374',
+                'SST 387',
+                'SST 398',
+                'SST 399',
+                'SST 802',
+                'SST 805',
+                'SST 806',
+                'SST 815',
+                'SST 816',
+                'SST 822',
+                'SST 825',
+                'SST 835',
+                'SST 843',
+                'SST 866',
+                'SST 867',
+                'SST 875',
+                'SST 876',
+                'SST 877',
+                'SST 878',
+                'SST 884',
+                'SST 885',
+                'SST 886',
+                'SST 895',
+                'SST 896',
+                'SST 935',
+                'SST 936',
+                'SST 946',
+                'SST 954',
+                'SST 963',
+                'SST 964',
+                'SST 966',
+                'SST 972',
+                'SST 983',
+                'SST 0127',
+                'SST 807',
+                'SST 1327',
+                'SST 3137',
+                'SST 8125',
+                'SST 8126',
+                'SST 8134',
+                'SST 8135',
+                'SST 8136'
+            ],
+            'Pannar': [
+                'PAN 3118',
+                'PAN 3120',
+                'PAN 3122',
+                'PAN 3144',
+                'PAN 3161',
+                'PAN 3172',
+                'PAN 3195',
+                'PAN 3198',
+                'PAN 3355',
+                'PAN 3364',
+                'PAN 3368',
+                'PAN 3369',
+                'PAN 3377',
+                'PAN 3378',
+                'PAN 3379',
+                'PAN 3394',
+                'PAN 3400',
+                'PAN 3404',
+                'PAN 3405',
+                'PAN 3408',
+                'PAN 3434',
+                'PAN 3471',
+                'PAN 3478',
+                'PAN 3489',
+                'PAN 3490',
+                'PAN 3492',
+                'PAN 3497',
+                'PAN 3111',
+                'PAN 3349',
+                'PAN 3515',
+                'PAN 3623'
+            ],
+            'Other': [
+                'BAVIAANS',
+                'BELINDA',
+                'BETTA-DN',
+                'BIEDOU',
+                'CALEDON',
+                'CARINA',
+                'CAROL',
+                'GARIEP',
+                'HUGENOOT',
+                'INIA',
+                'KOUGA',
+                'KWARTEL',
+                'LIMPOPO',
+                'MacB',
+                'MARICO',
+                'NOSSOB',
+                'OLIFANTS',
+                'SNACK',
+                'TAMBOTI',
+                'TANKWA',
+                'TARKA',
+                'TIMBAVATI',
+                'TUGELA-DN',
+                'UMLAZI',
+                'RATEL'
+            ]
+        },
+        'Canola': {
+            'Agricol': [
+                'Aga Max',
+                'AV Garnet',
+                'CB Jardee HT',
+                'Cobbler',
+                'Tawriffic'
+            ],
+            'Klein Karoo': [
+                'Hyola 61',
+                'Rocket CL',
+                'Thunder TT',
+                'Varola 54'
+            ]
+        },
+        'Barley': {
+            'Agricol': [
+                'SKG 9',
+                'SVG 13'
+            ],
+            'Other': [
+                'Clipper',
+                'Cocktail',
+                'Puma',
+                'SabbiErica',
+                'SabbiNemesia',
+                'SSG 564',
+                'SSG 585'
+            ]
+        },
+        'Oats': {
+            'Agricol': [
+                'Magnifico',
+                'Maida',
+                'Nugene',
+                'Overberg',
+                'Pallinup',
+                'Saia',
+                'SWK001'
+            ],
+            'Sensako (Monsanto)': [
+                'SSH 39W',
+                'SSH 405',
+                'SSH 421',
+                'SSH 423',
+                'SSH 491'
+            ],
+            'Other': [
+                'Drakensberg',
+                'H06/19',
+                'H06/20',
+                'H07/04',
+                'H07/05',
+                'Heros',
+                'Kompasberg',
+                'Le Tucana',
+                'Maluti',
+                'Potoroo',
+                'Witteberg'
+            ]
+        },
+        'Triticale': {
+            'Agricol': [
+                'AG Beacon',
+                'Rex'
+            ],
+            'Pannar': [
+                'PAN 248',
+                'PAN 299'
+            ],
+            'Other': [
+                'Bacchus',
+                'Cloc 1',
+                'Cultivars',
+                'Falcon',
+                'Ibis',
+                'Kiewiet',
+                'Korhaan',
+                'Tobie',
+                'US 2009',
+                'US 2010',
+                'US2007'
+            ]
+        },
+        'Sugarcane': {
+            'Other': [
+                'ACRUNCH',
+                'BONITA',
+                'CHIEFTAIN',
+                'EARLISWEET',
+                'GLADIATOR',
+                'GSS 9299',
+                'HOLLYWOOD',
+                'HONEYMOON',
+                'INFERNO',
+                'JUBILEE',
+                'MADHUR',
+                'MAJESTY',
+                'MANTRA',
+                'MATADOR',
+                'MAX',
+                'MEGATON',
+                'MMZ 9903',
+                'ORLA',
+                'OSCAR',
+                'OVERLAND',
+                'PRIMEPLUS',
+                'RUSALTER',
+                'RUSTICO',
+                'RUSTLER',
+                'SENTINEL',
+                'SHIMMER',
+                'STAR 7708',
+                'STAR 7713',
+                'STAR 7714',
+                'STAR 7715',
+                'STAR 7717',
+                'STAR 7718',
+                'STAR 7719',
+                'STETSON',
+                'SWEET SUCCESS',
+                'SWEET SURPRISE',
+                'SWEET TALK',
+                'TENDER TREAT',
+                'WINSTAR'
+            ]
         }
     };
 
@@ -4238,6 +4680,60 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         'Rooibos': ['0-1 years', '1-2 years', '2-4 years', '4-5 years', '5+ years']
     };
 
+    /*
+     * Extended Budgets
+     */
+    var _cycleMonths = [
+        {
+            id: 0,
+            name: 'January',
+            shortname: 'Jan'
+        }, {
+            id: 1,
+            name: 'February',
+            shortname: 'Feb'
+        }, {
+            id: 2,
+            name: 'March',
+            shortname: 'Mar'
+        }, {
+            id: 3,
+            name: 'April',
+            shortname: 'Apr'
+        }, {
+            id: 4,
+            name: 'May',
+            shortname: 'May'
+        }, {
+            id: 5,
+            name: 'June',
+            shortname: 'Jun'
+        }, {
+            id: 6,
+            name: 'July',
+            shortname: 'Jul'
+        }, {
+            id: 7,
+            name: 'August',
+            shortname: 'Aug'
+        }, {
+            id: 8,
+            name: 'September',
+            shortname: 'Sep'
+        }, {
+            id: 9,
+            name: 'October',
+            shortname: 'Oct'
+        }, {
+            id: 10,
+            name: 'November',
+            shortname: 'Nov'
+        }, {
+            id: 11,
+            name: 'December',
+            shortname: 'Dec'
+        }];
+
     var _productsMap = {
         'INC-PDS-MILK': {
             code: 'INC-PDS-MILK-M13',
@@ -4250,6 +4746,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         budget.data = budget.data || {};
         budget.data.details = budget.data.details || {};
         budget.data.sections = budget.data.sections || [];
+        budget.data.schedules = budget.data.schedules || {
+            Monthly: [true, true, true, true, true, true, true, true, true, true, true, true]
+        };
     }
 
     function getBaseAnimal (commodityType) {
@@ -4291,6 +4790,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         commodities: function() {
             return _commodities;
+        },
+        cycleMonths: function () {
+            return _cycleMonths;
         },
         getRepresentativeAnimal: function(commodityType) {
             return _representativeAnimal[getBaseAnimal(commodityType)];
@@ -4454,32 +4956,35 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                                 .pluck('productCategoryGroups')
                                 .flatten()
                                 .reduce(function(total, group) {
-                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
+                                    return (group.name == category.calculationFactor && group.total !== undefined ? total + group.total.value : total);
                                 }, 0)
                                 .value();
 
                             category.value = category.pricePerUnit * groupSum / 100;
-
-                            if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
-                            }
                         } else {
-                            if(category.unit == 'Total') {
-                                category.quantity = 1;
-                            }
-
+                            category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
                             category.value = category.pricePerUnit * category.quantity;
+                        }
 
-                            if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
-                            }
+                        if (category.schedule !== undefined && budget.data.schedules[category.schedule] !== undefined) {
+                            var schedule = budget.data.schedules[category.schedule];
+                            var valuePerMonth = category.value / underscore.reduce(schedule, function (total, value) {
+                                return (value ? total + 1 : total);
+                            }, 0);
+
+                            category.valuePerMonth = underscore.map(schedule, function (value) {
+                                return (value ? valuePerMonth : 0);
+                            });
+                        } else {
+                            delete category.valuePerMonth;
+                        }
+
+                        if(budget.assetType == 'livestock') {
+                            category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
+                            group.total.valuePerLSU += category.valuePerLSU;
                         }
 
                         group.total.value += category.value;
-
-                        if(budget.assetType == 'livestock') {
-                            group.total.valuePerLSU += category.valuePerLSU;
-                        }
                     });
 
                     section.total.value += group.total.value;
@@ -6602,6 +7107,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     properties = {};
                 }
 
+                var _this = this;
+
                 properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
@@ -6611,7 +7118,13 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     geojson: geojson,
                     options: options,
                     properties: properties,
-                    onAddCallback: onAddCallback
+                    handler: function (layer, feature, featureLayer) {
+                        _this._config.layers[layerName] = layer;
+
+                        if (typeof onAddCallback == 'function') {
+                            onAddCallback(feature, featureLayer);
+                        }
+                    }
                 };
 
                 this._config.geojson[layerName] = this._config.geojson[layerName] || {};
@@ -6627,6 +7140,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     properties = {};
                 }
 
+                var _this = this;
+
                 properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
@@ -6636,7 +7151,13 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     geojson: geojson,
                     options: options,
                     properties: properties,
-                    onAddCallback: onAddCallback
+                    handler: function (layer, feature, featureLayer) {
+                        _this._config.layers[layerName] = layer;
+
+                        if (typeof onAddCallback == 'function') {
+                            onAddCallback(feature, featureLayer);
+                        }
+                    }
                 };
 
                 data.properties.isMedia = true;
@@ -6664,6 +7185,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     if (_this._config.geojson[layerName]) {
                         $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
 
+                        delete _this._config.layers[layerName];
                         delete _this._config.geojson[layerName];
                     }
                 });
@@ -6674,6 +7196,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 angular.forEach(_this._config.geojson, function(layer, name) {
                     $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', name);
 
+                    delete _this._config.layers[name];
                     delete _this._config.geojson[name];
                 });
             },
@@ -7371,16 +7894,21 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
      */
     Mapbox.prototype.createLayer = function (name, type, options) {
         type = type || 'featureGroup';
-        options = options || {};
+
+        options = underscore.defaults(options || {},  {
+            enabled: true
+        });
 
         if (this._layers[name] === undefined) {
             if (type == 'featureGroup' && L.featureGroup) {
                 this._layers[name] = L.featureGroup(options);
+            } else if (type == 'layerGroup' && L.layerGroup) {
+                this._layers[name] = L.layerGroup(options);
             } else if (type == 'markerClusterGroup' && L.markerClusterGroup) {
                 this._layers[name] = L.markerClusterGroup(options);
             }
 
-            if (this._layers[name]) {
+            if (this._layers[name] && options.enabled) {
                 this._layers[name].addTo(this._map);
             }
         }
@@ -7526,7 +8054,62 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.addPhotoMarker = function (item) {
-        this.addGeoJSONFeature(item);
+        var _this = this;
+        var geojson = geoJSONHelper(item.geojson, item.properties);
+
+        _this.createLayer(item.layerName, item.type, item.options);
+
+        _this._geoJSON[item.layerName] = _this._geoJSON[item.layerName] || {};
+        _this._geoJSON[item.layerName][item.properties.featureId] = item;
+
+        var image = item;
+        var icon = {
+            iconSize: [40, 40],
+            className: 'leaflet-marker-agrista-photo'
+        };
+        var fancyboxOptions = {
+            helpers: {
+                overlay : {
+                    css : {
+                        'background' : 'rgba(0,0,0,0.7)'
+                    }
+                }
+            },
+            aspectRatio: true,
+            autoSize: false,
+            width: 640,
+            height: 640
+        };
+
+        L.geoJson(geojson.getJson(), {
+            pointToLayer: function(feature, latlng) {
+                return L.marker(latlng, {
+                    icon: L.icon(L.extend({
+                        iconUrl: image.geojson.properties.data.src
+                    }, icon)),
+                    title: image.caption || ''
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+
+                if (typeof item.handler === 'function') {
+                    item.handler(_this._layers[item.layerName], feature, layer);
+                }
+
+                layer.on('click', function(e) {
+                    //todo: video
+                    //image
+                    $.fancybox({
+                        href: feature.properties.data.src,
+                        title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
+                            + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
+                            + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
+                        type: 'image'
+                    }, fancyboxOptions);
+                });
+            }
+        });
     };
 
     Mapbox.prototype.addGeoJSONFeature = function (item) {
@@ -7544,95 +8127,43 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             geojsonOptions.icon = _this.makeIcon(geojsonOptions.icon);
         }
 
+        L.geoJson(geojson.getJson(), {
+            style: geojsonOptions.style,
+            pointToLayer: function(feature, latlng) {
+                var marker = L.marker(latlng, geojsonOptions);
 
-        if(item.properties.isMedia) {
-            var image = item;
-            var icon = {
-                iconSize: [40, 40],
-                className: 'leaflet-marker-agrista-photo'
-            }
-            var fancyboxOptions = {
-                helpers: {
-                    overlay : {
-                        css : {
-                            'background' : 'rgba(0,0,0,0.7)'
-                        }
-                    }
-                },
-                aspectRatio: true,
-                autoSize: false,
-                width: 640,
-                height: 640
-            }
-            L.geoJson(geojson.getJson(), {
-                pointToLayer: function(feature, latlng) {
-                    var marker = L.marker(latlng, {
-                        icon: L.icon(L.extend({
-                            iconUrl: image.geojson.properties.data.src
-                        }, icon)),
-                        title: image.caption || ''
-                    });
-                    return marker;
-                },
-                onEachFeature: function(feature, layer) {
-                    console.log('calling add layer to layer');
-                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-                    if (typeof item.onAddCallback === 'function') {
-                        item.onAddCallback(feature, layer);
-                    }
+                if (geojsonOptions.label) {
+                    marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
+                }
+
+                return marker;
+            },
+            onEachFeature: function(feature, layer) {
+                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                _this.addLabel(geojsonOptions.label, feature, layer);
+
+                if (typeof item.handler === 'function') {
+                    item.handler(_this._layers[item.layerName], feature, layer);
+                }
+
+                if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
+                    // highlight polygon on click
                     layer.on('click', function(e) {
-                        //todo: video
-                        //image
-                        $.fancybox({
-                            href: feature.properties.data.src,
-                            title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
-                                + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
-                                + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
-                            type: 'image'
-                        }, fancyboxOptions);
+                        if(feature && feature.properties) {
+                            if(feature.properties.highlighted) {
+                                feature.properties.highlighted = false;
+                                layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
+                            } else {
+                                feature.properties.highlighted = true;
+                                layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
+                            }
+                        }
+
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
                     });
                 }
-            });
-        } else {
-            L.geoJson(geojson.getJson(), {
-                style: geojsonOptions.style,
-                pointToLayer: function(feature, latlng) {
-                    var marker = L.marker(latlng, geojsonOptions);
-
-                    if (geojsonOptions.label) {
-                        marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
-                    }
-
-                    return marker;
-                },
-                onEachFeature: function(feature, layer) {
-
-                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-                    _this.addLabel(geojsonOptions.label, feature, layer);
-
-                    if (typeof item.onAddCallback === 'function') {
-                        item.onAddCallback(feature, layer);
-                    }
-
-                    if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
-                        // highlight polygon on click
-                        layer.on('click', function(e) {
-                            if(feature && feature.properties) {
-                                if(feature.properties.highlighted) {
-                                    feature.properties.highlighted = false;
-                                    layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
-                                } else {
-                                    feature.properties.highlighted = true;
-                                    layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
-                                }
-                            }
-
-                            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
-                        });
-                    }
-                }
-            });
-        }
+            }
+        });
     };
 
     Mapbox.prototype.removeGeoJSONFeature = function (data) {
@@ -8318,10 +8849,6 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
             });
         });
 
-        $rootScope.$on('navigation::item__selected', function(event, args) {
-            $state.go(args);
-        });
-
         $rootScope.$on('authorization::login', function (event, currentUser) {
             _updateUserApps(currentUser);
         });
@@ -8349,6 +8876,11 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
 
                     $rootScope.$broadcast('navigation::items__changed', _groupedApps);
                 }
+            },
+            selectItem: function (id) {
+                $rootScope.$broadcast('navigation::item__selected', id);
+
+                return $state.go(id);
             },
             /*
              * App registration

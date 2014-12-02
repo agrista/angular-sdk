@@ -993,6 +993,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     properties = {};
                 }
 
+                var _this = this;
+
                 properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
@@ -1002,7 +1004,13 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     geojson: geojson,
                     options: options,
                     properties: properties,
-                    onAddCallback: onAddCallback
+                    handler: function (layer, feature, featureLayer) {
+                        _this._config.layers[layerName] = layer;
+
+                        if (typeof onAddCallback == 'function') {
+                            onAddCallback(feature, featureLayer);
+                        }
+                    }
                 };
 
                 this._config.geojson[layerName] = this._config.geojson[layerName] || {};
@@ -1018,6 +1026,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     properties = {};
                 }
 
+                var _this = this;
+
                 properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
@@ -1027,7 +1037,13 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     geojson: geojson,
                     options: options,
                     properties: properties,
-                    onAddCallback: onAddCallback
+                    handler: function (layer, feature, featureLayer) {
+                        _this._config.layers[layerName] = layer;
+
+                        if (typeof onAddCallback == 'function') {
+                            onAddCallback(feature, featureLayer);
+                        }
+                    }
                 };
 
                 data.properties.isMedia = true;
@@ -1055,6 +1071,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     if (_this._config.geojson[layerName]) {
                         $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
 
+                        delete _this._config.layers[layerName];
                         delete _this._config.geojson[layerName];
                     }
                 });
@@ -1065,6 +1082,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 angular.forEach(_this._config.geojson, function(layer, name) {
                     $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', name);
 
+                    delete _this._config.layers[name];
                     delete _this._config.geojson[name];
                 });
             },
@@ -1762,16 +1780,21 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
      */
     Mapbox.prototype.createLayer = function (name, type, options) {
         type = type || 'featureGroup';
-        options = options || {};
+
+        options = underscore.defaults(options || {},  {
+            enabled: true
+        });
 
         if (this._layers[name] === undefined) {
             if (type == 'featureGroup' && L.featureGroup) {
                 this._layers[name] = L.featureGroup(options);
+            } else if (type == 'layerGroup' && L.layerGroup) {
+                this._layers[name] = L.layerGroup(options);
             } else if (type == 'markerClusterGroup' && L.markerClusterGroup) {
                 this._layers[name] = L.markerClusterGroup(options);
             }
 
-            if (this._layers[name]) {
+            if (this._layers[name] && options.enabled) {
                 this._layers[name].addTo(this._map);
             }
         }
@@ -1917,7 +1940,62 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.addPhotoMarker = function (item) {
-        this.addGeoJSONFeature(item);
+        var _this = this;
+        var geojson = geoJSONHelper(item.geojson, item.properties);
+
+        _this.createLayer(item.layerName, item.type, item.options);
+
+        _this._geoJSON[item.layerName] = _this._geoJSON[item.layerName] || {};
+        _this._geoJSON[item.layerName][item.properties.featureId] = item;
+
+        var image = item;
+        var icon = {
+            iconSize: [40, 40],
+            className: 'leaflet-marker-agrista-photo'
+        };
+        var fancyboxOptions = {
+            helpers: {
+                overlay : {
+                    css : {
+                        'background' : 'rgba(0,0,0,0.7)'
+                    }
+                }
+            },
+            aspectRatio: true,
+            autoSize: false,
+            width: 640,
+            height: 640
+        };
+
+        L.geoJson(geojson.getJson(), {
+            pointToLayer: function(feature, latlng) {
+                return L.marker(latlng, {
+                    icon: L.icon(L.extend({
+                        iconUrl: image.geojson.properties.data.src
+                    }, icon)),
+                    title: image.caption || ''
+                });
+            },
+            onEachFeature: function(feature, layer) {
+                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+
+                if (typeof item.handler === 'function') {
+                    item.handler(_this._layers[item.layerName], feature, layer);
+                }
+
+                layer.on('click', function(e) {
+                    //todo: video
+                    //image
+                    $.fancybox({
+                        href: feature.properties.data.src,
+                        title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
+                            + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
+                            + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
+                        type: 'image'
+                    }, fancyboxOptions);
+                });
+            }
+        });
     };
 
     Mapbox.prototype.addGeoJSONFeature = function (item) {
@@ -1935,95 +2013,43 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             geojsonOptions.icon = _this.makeIcon(geojsonOptions.icon);
         }
 
+        L.geoJson(geojson.getJson(), {
+            style: geojsonOptions.style,
+            pointToLayer: function(feature, latlng) {
+                var marker = L.marker(latlng, geojsonOptions);
 
-        if(item.properties.isMedia) {
-            var image = item;
-            var icon = {
-                iconSize: [40, 40],
-                className: 'leaflet-marker-agrista-photo'
-            }
-            var fancyboxOptions = {
-                helpers: {
-                    overlay : {
-                        css : {
-                            'background' : 'rgba(0,0,0,0.7)'
-                        }
-                    }
-                },
-                aspectRatio: true,
-                autoSize: false,
-                width: 640,
-                height: 640
-            }
-            L.geoJson(geojson.getJson(), {
-                pointToLayer: function(feature, latlng) {
-                    var marker = L.marker(latlng, {
-                        icon: L.icon(L.extend({
-                            iconUrl: image.geojson.properties.data.src
-                        }, icon)),
-                        title: image.caption || ''
-                    });
-                    return marker;
-                },
-                onEachFeature: function(feature, layer) {
-                    console.log('calling add layer to layer');
-                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-                    if (typeof item.onAddCallback === 'function') {
-                        item.onAddCallback(feature, layer);
-                    }
+                if (geojsonOptions.label) {
+                    marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
+                }
+
+                return marker;
+            },
+            onEachFeature: function(feature, layer) {
+                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                _this.addLabel(geojsonOptions.label, feature, layer);
+
+                if (typeof item.handler === 'function') {
+                    item.handler(_this._layers[item.layerName], feature, layer);
+                }
+
+                if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
+                    // highlight polygon on click
                     layer.on('click', function(e) {
-                        //todo: video
-                        //image
-                        $.fancybox({
-                            href: feature.properties.data.src,
-                            title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
-                                + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
-                                + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
-                            type: 'image'
-                        }, fancyboxOptions);
+                        if(feature && feature.properties) {
+                            if(feature.properties.highlighted) {
+                                feature.properties.highlighted = false;
+                                layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
+                            } else {
+                                feature.properties.highlighted = true;
+                                layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
+                            }
+                        }
+
+                        _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
                     });
                 }
-            });
-        } else {
-            L.geoJson(geojson.getJson(), {
-                style: geojsonOptions.style,
-                pointToLayer: function(feature, latlng) {
-                    var marker = L.marker(latlng, geojsonOptions);
-
-                    if (geojsonOptions.label) {
-                        marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
-                    }
-
-                    return marker;
-                },
-                onEachFeature: function(feature, layer) {
-
-                    _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-                    _this.addLabel(geojsonOptions.label, feature, layer);
-
-                    if (typeof item.onAddCallback === 'function') {
-                        item.onAddCallback(feature, layer);
-                    }
-
-                    if (_this._featureClickable && (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon')) {
-                        // highlight polygon on click
-                        layer.on('click', function(e) {
-                            if(feature && feature.properties) {
-                                if(feature.properties.highlighted) {
-                                    feature.properties.highlighted = false;
-                                    layer.setStyle({color: layer.options.fillColor || 'blue', opacity: layer.options.fillOpacity || 0.4});
-                                } else {
-                                    feature.properties.highlighted = true;
-                                    layer.setStyle({color: 'white', opacity: 1, fillColor: layer.options.fillColor || 'blue', fillOpacity: layer.options.fillOpacity || 0.4});
-                                }
-                            }
-
-                            _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::polygon-clicked', {properties: feature.properties, highlighted: feature.properties.highlighted});
-                        });
-                    }
-                }
-            });
-        }
+            }
+        });
     };
 
     Mapbox.prototype.removeGeoJSONFeature = function (data) {

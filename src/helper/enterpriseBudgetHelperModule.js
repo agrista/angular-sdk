@@ -715,6 +715,60 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         'Rooibos': ['0-1 years', '1-2 years', '2-4 years', '4-5 years', '5+ years']
     };
 
+    /*
+     * Extended Budgets
+     */
+    var _cycleMonths = [
+        {
+            id: 0,
+            name: 'January',
+            shortname: 'Jan'
+        }, {
+            id: 1,
+            name: 'February',
+            shortname: 'Feb'
+        }, {
+            id: 2,
+            name: 'March',
+            shortname: 'Mar'
+        }, {
+            id: 3,
+            name: 'April',
+            shortname: 'Apr'
+        }, {
+            id: 4,
+            name: 'May',
+            shortname: 'May'
+        }, {
+            id: 5,
+            name: 'June',
+            shortname: 'Jun'
+        }, {
+            id: 6,
+            name: 'July',
+            shortname: 'Jul'
+        }, {
+            id: 7,
+            name: 'August',
+            shortname: 'Aug'
+        }, {
+            id: 8,
+            name: 'September',
+            shortname: 'Sep'
+        }, {
+            id: 9,
+            name: 'October',
+            shortname: 'Oct'
+        }, {
+            id: 10,
+            name: 'November',
+            shortname: 'Nov'
+        }, {
+            id: 11,
+            name: 'December',
+            shortname: 'Dec'
+        }];
+
     var _productsMap = {
         'INC-PDS-MILK': {
             code: 'INC-PDS-MILK-M13',
@@ -727,6 +781,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         budget.data = budget.data || {};
         budget.data.details = budget.data.details || {};
         budget.data.sections = budget.data.sections || [];
+        budget.data.schedules = budget.data.schedules || {
+            Monthly: [true, true, true, true, true, true, true, true, true, true, true, true]
+        };
     }
 
     function getBaseAnimal (commodityType) {
@@ -768,6 +825,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         commodities: function() {
             return _commodities;
+        },
+        cycleMonths: function () {
+            return _cycleMonths;
         },
         getRepresentativeAnimal: function(commodityType) {
             return _representativeAnimal[getBaseAnimal(commodityType)];
@@ -931,32 +991,35 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                                 .pluck('productCategoryGroups')
                                 .flatten()
                                 .reduce(function(total, group) {
-                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
+                                    return (group.name == category.calculationFactor && group.total !== undefined ? total + group.total.value : total);
                                 }, 0)
                                 .value();
 
                             category.value = category.pricePerUnit * groupSum / 100;
-
-                            if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
-                            }
                         } else {
-                            if(category.unit == 'Total') {
-                                category.quantity = 1;
-                            }
-
+                            category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
                             category.value = category.pricePerUnit * category.quantity;
+                        }
 
-                            if(budget.assetType == 'livestock') {
-                                category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
-                            }
+                        if (category.schedule !== undefined && budget.data.schedules[category.schedule] !== undefined) {
+                            var schedule = budget.data.schedules[category.schedule];
+                            var valuePerMonth = category.value / underscore.reduce(schedule, function (total, value) {
+                                return (value ? total + 1 : total);
+                            }, 0);
+
+                            category.valuePerMonth = underscore.map(schedule, function (value) {
+                                return (value ? valuePerMonth : 0);
+                            });
+                        } else {
+                            delete category.valuePerMonth;
+                        }
+
+                        if(budget.assetType == 'livestock') {
+                            category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
+                            group.total.valuePerLSU += category.valuePerLSU;
                         }
 
                         group.total.value += category.value;
-
-                        if(budget.assetType == 'livestock') {
-                            group.total.valuePerLSU += category.valuePerLSU;
-                        }
                     });
 
                     section.total.value += group.total.value;
