@@ -178,8 +178,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         }
     };
 
-    var _chainAll = function (action, init) {
-        var list = init;
+    var _chainAll = function (action, list) {
         var deferred = $q.defer();
         var chain = deferred.promise;
         var results = [];
@@ -209,9 +208,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         return chainItem();
     };
 
-    var _wrapAll = function (action, init) {
-        var list = init;
-
+    var _wrapAll = function (action, list) {
         action(list);
 
         return $q.all(list);
