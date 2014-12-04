@@ -30,7 +30,6 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
         } else {
             onSuccessCb();
         }
-        ;
     };
 
     /**
@@ -132,13 +131,14 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
 
             // Initialize & request the file entry
             _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
+                var fileName = fileEntry.name.replace(/^([^.]+)/, new Date().getTime());
 
                 _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function (directoryEntry) {
-                    fileEntry.copyTo(directoryEntry, fileEntry.name, function (newFileEntry) {
+                    fileEntry.copyTo(directoryEntry, fileName, function (newFileEntry) {
                         defer.resolve({
                             copy: true,
                             file: newFileEntry.name,
-                            path: newFileEntry.fullPath
+                            path: newFileEntry.toURL()
                         });
                     }, function () {
                         defer.reject(_errors.fileNotFound);
@@ -157,13 +157,14 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
 
             // Initialize & request the file entry
             _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
+                var fileName = fileEntry.name.replace(/^([^.]+)/, new Date().getTime());
 
                 _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function (directoryEntry) {
-                    fileEntry.moveTo(directoryEntry, fileEntry.name, function (newFileEntry) {
+                    fileEntry.moveTo(directoryEntry, fileName, function (newFileEntry) {
                         defer.resolve({
                             move: true,
                             file: newFileEntry.name,
-                            path: newFileEntry.fullPath
+                            path: newFileEntry.toURL()
                         });
                     }, function () {
                         defer.reject(_errors.fileNotFound);
