@@ -1,4 +1,4 @@
-var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities', 'ag.sdk.library']);
+var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities', 'ag.sdk.library', 'ag.mobile-sdk.cordova.storage']);
 
 /**
  * @name cordovaCameraApp.cameraService
@@ -13,7 +13,7 @@ var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.u
         });
 
  */
-cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', function (promiseService, underscore) {
+cordovaCameraApp.factory('cameraService', ['fileStorageService', 'promiseService', 'underscore', function (fileStorageService, promiseService, underscore) {
     if (typeof window.Camera === 'undefined') {
         window.Camera = {};
     }
@@ -27,7 +27,13 @@ cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', funct
 
         if (navigator.camera !== undefined) {
             navigator.camera.getPicture(function (data) {
-                defer.resolve(data);
+                if (options.destinationType === _destinationTypes.FILE_URI) {
+                    fileStorageService.move(data, 'photos').then(function (res) {
+                        defer.resolve(res.path);
+                    });
+                } else {
+                    defer.resolve(data);
+                }
             }, function (err) {
                 defer.reject(err);
             }, options);
@@ -36,7 +42,7 @@ cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', funct
         }
 
         return defer.promise;
-    };
+    }
 
     return {
         getDestinationTypes: _destinationTypes,
