@@ -355,7 +355,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                         ((field.terrain === undefined && item.terrain === undefined) || item.terrain === field.terrain);
                 });
             } else if (asset.type === 'permanent crop') {
-                var establishedDate = moment(new Date(Date.parse(asset.data.establishedDate)));
+                var establishedDate = moment(asset.data.establishedDate);
                 var monthsFromEstablished = moment().diff(establishedDate, 'months');
 
                 chain = chain.filter(function (item) {
