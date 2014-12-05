@@ -2343,14 +2343,21 @@ var sdkHelperAttachmentApp = angular.module('ag.sdk.helper.attachment', ['ag.sdk
 
 sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (underscore) {
     var _options = {
-        defaultImage: 'img/camera.png'
+        defaultImage: 'img/camera.png',
+        fileResolver: function (uri) {
+            return uri;
+        }
     };
 
     this.config = function (options) {
         _options = underscore.defaults(options || {}, _options);
     };
 
-    this.$get = function () {
+    this.$get = ['$injector', 'promiseService', function ($injector, promiseService) {
+        if (_options.fileResolver instanceof Array) {
+            _options.fileResolver = $injector.invoke(_options.fileResolver);
+        }
+
         var _getResizedAttachment = function (attachments, size, defaultImage) {
             if ((attachments instanceof Array) == false) {
                 attachments = [attachments];
@@ -2365,7 +2372,7 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
                     return attachment.sizes[size].src;
                 }).last().value();
 
-            return src || defaultImage;
+            return (src ? _options.fileResolver(src) : defaultImage);
         };
 
         return {
@@ -2377,9 +2384,12 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
             },
             getThumbnail: function (attachments, defaultImage) {
                 return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage);
+            },
+            resolveUri: function (uri) {
+                return _options.fileResolver(uri);
             }
         };
-    };
+    }];
 }]);
 
 sdkHelperAttachmentApp.factory('resizeImageService', ['promiseService', 'underscore', function (promiseService, underscore) {
@@ -2476,8 +2486,8 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
     var _inspectionTypes = {
         'emergence inspection': 'Emergence Inspection',
         'hail inspection': 'Hail Inspection',
-        'harvest inspection': 'Harvest Inspection',
-        'preharvest inspection': 'Pre Harvest Inspection',
+        //'harvest inspection': 'Harvest Inspection',
+        //'preharvest inspection': 'Pre Harvest Inspection',
         'progress inspection': 'Progress Inspection'
     };
 
@@ -2496,7 +2506,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
     var _policyTypes = ['Hail', 'Multi Peril'];
 
     var _policyInspections = {
-        'Hail': ['hail inspection'],
+        'Hail': ['emergence inspection', 'hail inspection'],
         'Multi Peril': underscore.keys(_inspectionTypes)
     };
 

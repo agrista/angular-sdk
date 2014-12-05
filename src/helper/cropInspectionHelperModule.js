@@ -40,8 +40,8 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
     var _inspectionTypes = {
         'emergence inspection': 'Emergence Inspection',
         'hail inspection': 'Hail Inspection',
-        'harvest inspection': 'Harvest Inspection',
-        'preharvest inspection': 'Pre Harvest Inspection',
+        //'harvest inspection': 'Harvest Inspection',
+        //'preharvest inspection': 'Pre Harvest Inspection',
         'progress inspection': 'Progress Inspection'
     };
 
@@ -60,7 +60,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
     var _policyTypes = ['Hail', 'Multi Peril'];
 
     var _policyInspections = {
-        'Hail': ['hail inspection'],
+        'Hail': ['emergence inspection', 'hail inspection'],
         'Multi Peril': underscore.keys(_inspectionTypes)
     };
 

@@ -1157,14 +1157,21 @@ var sdkHelperAttachmentApp = angular.module('ag.sdk.helper.attachment', ['ag.sdk
 
 sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (underscore) {
     var _options = {
-        defaultImage: 'img/camera.png'
+        defaultImage: 'img/camera.png',
+        fileResolver: function (uri) {
+            return uri;
+        }
     };
 
     this.config = function (options) {
         _options = underscore.defaults(options || {}, _options);
     };
 
-    this.$get = function () {
+    this.$get = ['$injector', 'promiseService', function ($injector, promiseService) {
+        if (_options.fileResolver instanceof Array) {
+            _options.fileResolver = $injector.invoke(_options.fileResolver);
+        }
+
         var _getResizedAttachment = function (attachments, size, defaultImage) {
             if ((attachments instanceof Array) == false) {
                 attachments = [attachments];
@@ -1179,7 +1186,7 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
                     return attachment.sizes[size].src;
                 }).last().value();
 
-            return src || defaultImage;
+            return (src ? _options.fileResolver(src) : defaultImage);
         };
 
         return {
@@ -1191,9 +1198,12 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
             },
             getThumbnail: function (attachments, defaultImage) {
                 return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage);
+            },
+            resolveUri: function (uri) {
+                return _options.fileResolver(uri);
             }
         };
-    };
+    }];
 }]);
 
 sdkHelperAttachmentApp.factory('resizeImageService', ['promiseService', 'underscore', function (promiseService, underscore) {
@@ -1290,8 +1300,8 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
     var _inspectionTypes = {
         'emergence inspection': 'Emergence Inspection',
         'hail inspection': 'Hail Inspection',
-        'harvest inspection': 'Harvest Inspection',
-        'preharvest inspection': 'Pre Harvest Inspection',
+        //'harvest inspection': 'Harvest Inspection',
+        //'preharvest inspection': 'Pre Harvest Inspection',
         'progress inspection': 'Progress Inspection'
     };
 
@@ -1310,7 +1320,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
     var _policyTypes = ['Hail', 'Multi Peril'];
 
     var _policyInspections = {
-        'Hail': ['hail inspection'],
+        'Hail': ['emergence inspection', 'hail inspection'],
         'Multi Peril': underscore.keys(_inspectionTypes)
     };
 
@@ -7965,9 +7975,9 @@ cordovaHelperApp.factory('cameraHelper', ['promiseService', 'geolocationService'
             timeout: 30000
         },
         camera: {
-            quality: 50,
-            targetWidth: 1280,
-            targetHeight: 720,
+            quality: 40,
+            targetWidth: 960,
+            targetHeight: 540,
             correctOrientation: true,
             encodingType: cameraService.getEncodingTypes.JPEG,
             destinationType: cameraService.getDestinationTypes.FILE_URI
@@ -8205,7 +8215,7 @@ sdkTestDataApp.provider('mockDataService', ['underscore', function (underscore) 
     }];
 }]);
 
-var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities', 'ag.sdk.library']);
+var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.utilities', 'ag.sdk.library', 'ag.mobile-sdk.cordova.storage']);
 
 /**
  * @name cordovaCameraApp.cameraService
@@ -8220,7 +8230,7 @@ var cordovaCameraApp = angular.module('ag.mobile-sdk.cordova.camera', ['ag.sdk.u
         });
 
  */
-cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', function (promiseService, underscore) {
+cordovaCameraApp.factory('cameraService', ['fileStorageService', 'promiseService', 'underscore', function (fileStorageService, promiseService, underscore) {
     if (typeof window.Camera === 'undefined') {
         window.Camera = {};
     }
@@ -8234,7 +8244,13 @@ cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', funct
 
         if (navigator.camera !== undefined) {
             navigator.camera.getPicture(function (data) {
-                defer.resolve(data);
+                if (options.destinationType === _destinationTypes.FILE_URI) {
+                    fileStorageService.move(data, 'photos').then(function (res) {
+                        defer.resolve(res.path);
+                    });
+                } else {
+                    defer.resolve(data);
+                }
             }, function (err) {
                 defer.reject(err);
             }, options);
@@ -8243,7 +8259,7 @@ cordovaCameraApp.factory('cameraService', ['promiseService', 'underscore', funct
         }
 
         return defer.promise;
-    };
+    }
 
     return {
         getDestinationTypes: _destinationTypes,
@@ -8523,7 +8539,6 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
         } else {
             onSuccessCb();
         }
-        ;
     };
 
     /**
@@ -8625,13 +8640,14 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
 
             // Initialize & request the file entry
             _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
+                var fileName = fileEntry.name.replace(/^([^.]+)/, new Date().getTime());
 
                 _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function (directoryEntry) {
-                    fileEntry.copyTo(directoryEntry, fileEntry.name, function (newFileEntry) {
+                    fileEntry.copyTo(directoryEntry, fileName, function (newFileEntry) {
                         defer.resolve({
                             copy: true,
                             file: newFileEntry.name,
-                            path: newFileEntry.fullPath
+                            path: newFileEntry.toURL()
                         });
                     }, function () {
                         defer.reject(_errors.fileNotFound);
@@ -8650,13 +8666,14 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
 
             // Initialize & request the file entry
             _getFileEntry(fileURI, {create: false}).then(function (fileEntry) {
+                var fileName = fileEntry.name.replace(/^([^.]+)/, new Date().getTime());
 
                 _fileSystem.root.getDirectory(directory, {create: true, exclusive: false}, function (directoryEntry) {
-                    fileEntry.moveTo(directoryEntry, fileEntry.name, function (newFileEntry) {
+                    fileEntry.moveTo(directoryEntry, fileName, function (newFileEntry) {
                         defer.resolve({
                             move: true,
                             file: newFileEntry.name,
-                            path: newFileEntry.fullPath
+                            path: newFileEntry.toURL()
                         });
                     }, function () {
                         defer.reject(_errors.fileNotFound);

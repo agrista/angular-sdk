@@ -77,9 +77,9 @@ cordovaHelperApp.factory('cameraHelper', ['promiseService', 'geolocationService'
             timeout: 30000
         },
         camera: {
-            quality: 50,
-            targetWidth: 1280,
-            targetHeight: 720,
+            quality: 40,
+            targetWidth: 960,
+            targetHeight: 540,
             correctOrientation: true,
             encodingType: cameraService.getEncodingTypes.JPEG,
             destinationType: cameraService.getDestinationTypes.FILE_URI
