@@ -17,7 +17,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 case 'improvement':
                     return asset.data.name;
                 case 'cropland':
-                    return (asset.data.irrigated ? (asset.data.irrigation || 'Irrigated ') + ' from ' + asset.data.waterSource : 'Non irrigable ' + asset.type) +
+                    return (asset.data.irrigated ? (asset.data.irrigation || 'Irrigated') + ' from ' + asset.data.waterSource : 'Non irrigable ' + asset.type) +
                         (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
                 case 'livestock':
                     return asset.data.type + (asset.data.category ? ' - ' + asset.data.category : '');
@@ -340,14 +340,9 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
 
             if (asset.type === 'cropland') {
                 chain = chain.filter(function (item) {
-                    if (field.irrigated === true) {
-                        return (asset.data.waterSource ? (item.waterSource &&
-                            item.waterSource.indexOf(asset.data.waterSource) !== -1) :
-                            item.category === 'Potential Irrigable Land');
-                    } else {
-                        return (item.assetClass === 'Cropland' && (item.soilPotential === undefined ||
-                            item.soilPotential === field.croppingPotential));
-                    }
+                    return (field.irrigated ?
+                        (asset.data.waterSource ? (item.waterSource && item.waterSource.indexOf(asset.data.waterSource) !== -1) : item.category === 'Potential Irrigable Land') :
+                        (item.assetClass === 'Cropland' && (item.soilPotential === undefined || item.soilPotential === field.croppingPotential)));
                 });
             } else if (asset.type === 'pasture' || asset.type === 'wasteland') {
                 chain = chain.where({assetClass: field.landUse}).filter(function (item) {
