@@ -824,6 +824,13 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
                 }, promise.reject);
             });
         },
+        createProductionRegion: function (data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/subregion', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateProductionRegion: function(region) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/subregion/' + region.id, region, {withCredentials: true}).then(function (res) {
