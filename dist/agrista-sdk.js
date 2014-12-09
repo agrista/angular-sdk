@@ -227,6 +227,9 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
         getTasks: function (params) {
             return pagingService.page(_host + 'api/tasks', params);
         },
+        getManagerTasks: function (params) {
+            return pagingService.page(_host + 'api/tasks/manager', params);
+        },
         createTask: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/task', _.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
