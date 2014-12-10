@@ -1992,8 +1992,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 case 'improvement':
                     return asset.data.name;
                 case 'cropland':
-                    return (asset.data.irrigated ? (asset.data.irrigation || 'Irrigated') + ' from ' + asset.data.waterSource : 'Non irrigable ' + asset.type) +
-                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                    return (asset.data.equipped ? 'Irrigated ' + asset.type + ' (' + (asset.data.irrigation ? asset.data.irrigation + ' irrigation from ' : '')
+                        + asset.data.waterSource + ')' : (asset.data.irrigated ? 'Irrigable, unequipped ' : 'Non irrigable ') + asset.type)
+                        + (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
                 case 'livestock':
                     return asset.data.type + (asset.data.category ? ' - ' + asset.data.category : '');
                 case 'pasture':
@@ -2044,7 +2045,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.data.type;
             } else if (item.type == 'pasture') {
                 map.title = _assetTitle(item);
-                map.subtitle = (item.data.plantedDate ? 'Planted: ' + $filter('date')(item.data.plantedDate, 'dd/MM/yy') : '');
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'permanent crop') {
                 map.title = _assetTitle(item);
