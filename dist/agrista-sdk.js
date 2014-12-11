@@ -827,12 +827,22 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
                 }, promise.reject);
             });
         },
+        createProductionRegion: function (data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/subregion', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateProductionRegion: function(region) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/subregion/' + region.id, region, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getParentRegions: function (params) {
+            return pagingService.page(_host + 'api/regions', params);
         }
     };
 }]);
@@ -1985,12 +1995,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 case 'improvement':
                     return asset.data.name;
                 case 'cropland':
-                    return (asset.data.irrigated ? asset.data.irrigation + ' from ' + asset.data.waterSource : 'Non irrigable ' + asset.type) +
-                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
+                    return (asset.data.equipped ? 'Irrigated ' + asset.type + ' (' + (asset.data.irrigation ? asset.data.irrigation + ' irrigation from ' : '')
+                        + asset.data.waterSource + ')' : (asset.data.irrigated ? 'Irrigable, unequipped ' : 'Non irrigable ') + asset.type)
+                        + (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
                 case 'livestock':
                     return asset.data.type + (asset.data.category ? ' - ' + asset.data.category : '');
                 case 'pasture':
-                    return (asset.data.crop ? asset.data.crop : 'Natural') +
+                    return (asset.data.intensified ? (asset.data.crop || 'Intensified pasture') : 'Natural grazing') +
                         (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
                 case 'vme':
                     return asset.data.category + (asset.data.model ? ' model ' + asset.data.model : '');
@@ -2037,7 +2048,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.data.type;
             } else if (item.type == 'pasture') {
                 map.title = _assetTitle(item);
-                map.subtitle = (item.data.plantedDate ? 'Planted: ' + $filter('date')(item.data.plantedDate, 'dd/MM/yy') : '');
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'permanent crop') {
                 map.title = _assetTitle(item);
@@ -2276,13 +2287,6 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
         };
     };
 
-    function monthDiff (d1, d2) {
-        var months = (d2.getFullYear() - d1.getFullYear()) * 12;
-        months -= d1.getMonth() + 1;
-        months += d2.getMonth();
-        return months <= 0 ? 0 : months;
-    }
-
     return {
         listServiceMap: function () {
             return _listServiceMap;
@@ -2315,9 +2319,9 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
 
             if (asset.type === 'cropland') {
                 chain = chain.filter(function (item) {
-                    return (field.irrigated === true && item.assetClass === 'Irrigated Cropland') ||
-                        (field.irrigated !== true && item.assetClass === 'Cropland' &&
-                            (item.soilPotential === undefined || item.soilPotential === field.croppingPotential));
+                    return (field.irrigated ?
+                        (asset.data.waterSource ? (item.waterSource && item.waterSource.indexOf(asset.data.waterSource) !== -1) : item.category === 'Potential Irrigable Land') :
+                        (item.assetClass === 'Cropland' && (item.soilPotential === undefined || item.soilPotential === field.croppingPotential)));
                 });
             } else if (asset.type === 'pasture' || asset.type === 'wasteland') {
                 chain = chain.where({assetClass: field.landUse}).filter(function (item) {
@@ -2325,14 +2329,15 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                         ((field.terrain === undefined && item.terrain === undefined) || item.terrain === field.terrain);
                 });
             } else if (asset.type === 'permanent crop') {
-                var establishedDate = new Date(Date.parse(asset.data.establishedDate));
-                var monthsFromEstablised = monthDiff(establishedDate, new Date());
+                var establishedDate = moment(asset.data.establishedDate);
+                var monthsFromEstablished = moment().diff(establishedDate, 'months');
 
                 chain = chain.filter(function (item) {
-                    return (item.crop === undefined || item.crop.indexOf(asset.data.crop) !== -1) &&
-                        (item.irrigationType === undefined || item.irrigationType.indexOf(field.irrigation) !== -1) &&
-                        (item.minAge === undefined || monthsFromEstablised >= item.minAge) &&
-                        (item.maxAge === undefined || monthsFromEstablised < item.maxAge);
+                    return (item.crop && item.crop.indexOf(asset.data.crop) !== -1) &&
+                        (!asset.data.irrigation || item.irrigationType === undefined ||
+                            item.irrigationType.indexOf(asset.data.irrigation) !== -1) &&
+                        (item.minAge === undefined || monthsFromEstablished >= item.minAge) &&
+                        (item.maxAge === undefined || monthsFromEstablished < item.maxAge);
                 });
             } else if (asset.type === 'plantation') {
                 chain = chain.filter(function (item) {
