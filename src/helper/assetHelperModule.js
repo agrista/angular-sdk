@@ -355,8 +355,9 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 var monthsFromEstablished = moment().diff(establishedDate, 'months');
 
                 chain = chain.filter(function (item) {
-                    return (item.crop === undefined || item.crop.indexOf(asset.data.crop) !== -1) &&
-                        (item.irrigationType === undefined || item.irrigationType.indexOf(asset.data.irrigation) !== -1) &&
+                    return (item.crop && item.crop.indexOf(asset.data.crop) !== -1) &&
+                        (!asset.data.irrigation || item.irrigationType === undefined ||
+                            item.irrigationType.indexOf(asset.data.irrigation) !== -1) &&
                         (item.minAge === undefined || monthsFromEstablished >= item.minAge) &&
                         (item.maxAge === undefined || monthsFromEstablished < item.maxAge);
                 });
