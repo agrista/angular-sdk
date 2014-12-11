@@ -840,6 +840,9 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getParentRegions: function (params) {
+            return pagingService.page(_host + 'api/regions', params);
         }
     };
 }]);
