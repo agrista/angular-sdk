@@ -679,8 +679,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             clearLayers: function () {
                 this.removeOverlays();
-                this.removeLayers();
                 this.removeGeoJSON();
+                this.removeLayers();
             },
 
             /*
@@ -947,7 +947,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 var _this = this;
                 
                 angular.forEach(this._config.layers, function(layer, name) {
-                    $rootScope.$broadcast('mapbox-' + -this._id + '::remove-layer', name);
+                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
                 });
