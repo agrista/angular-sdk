@@ -4547,9 +4547,11 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
             getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
 
-            filterTasks: function (tasks) {
+            filterTasks: function (tasks, excludeStatus) {
+                excludeStatus = excludeStatus || [];
+
                 return underscore.filter(tasks, function (task) {
-                    return (_getTaskState(task.todo) !== undefined);
+                    return (_getTaskState(task.todo) !== undefined && underscore.contains(excludeStatus, task.status) == false);
                 });
             },
             updateListService: function (id, todo, tasks, organization) {
