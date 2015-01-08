@@ -6235,6 +6235,8 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
+            bounds = bounds || this.getBounds();
+
             return {
                 coordinates: this.getCenter(bounds).reverse(),
                 type: 'Point'
@@ -8055,14 +8057,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.makeIcon = function (data) {
-        if (data) {
-            if (data.type && L[data.type] && L[data.type].icon) {
-                return L[data.type].icon(data);
+        if (data instanceof L.Class) {
+            return data;
+        } else {
+            if (data.type && L[data.type]) {
+                return L[data.type](data);
             } else {
                 return L.icon(data);
             }
-        } else {
-            return L.Icon.Default();
         }
     };
 
