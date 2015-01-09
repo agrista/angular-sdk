@@ -5591,6 +5591,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             zoom: 6
         },
         bounds: {},
+        leafletLayers: {},
         layers: {},
         geojson: {}
     };
@@ -5878,25 +5879,27 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 var _this = this;
 
-                this.enqueueRequest('mapbox-' + this._id + '::create-layer', {
+                this._config.layers[name] = {
                     name: name,
                     type: type,
                     options: options,
                     handler: function (layer) {
-                        _this._config.layers[name] = layer;
+                        _this._config.leafletLayers[name] = layer;
 
                         handler(layer);
                     }
-                });
+                };
+
+                this.enqueueRequest('mapbox-' + this._id + '::create-layer', this._config.layers[name]);
             },
             getLayer: function (name) {
-                return this._config.layers[name];
+                return this._config.leafletLayers[name];
             },
             getLayers: function () {
                 return this._config.layers;
             },
             addLayer: function (name, layer) {
-                this._config.layers[name] = layer;
+                this._config.leafletLayers[name] = layer;
 
                 $rootScope.$broadcast('mapbox-' + this._id + '::add-layer', name);
             },
@@ -5909,6 +5912,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
+                    delete _this._config.leafletLayers[name];
                 });
             },
             removeLayers: function () {
@@ -5918,6 +5922,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
+                    delete _this._config.leafletLayers[name];
                 });
             },
             showLayer: function (name) {
@@ -5973,7 +5978,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     options: options,
                     properties: properties,
                     handler: function (layer, feature, featureLayer) {
-                        _this._config.layers[layerName] = layer;
+                        _this._config.leafletLayers[layerName] = layer;
 
                         if (typeof onAddCallback == 'function') {
                             onAddCallback(feature, featureLayer);
@@ -6006,7 +6011,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     options: options,
                     properties: properties,
                     handler: function (layer, feature, featureLayer) {
-                        _this._config.layers[layerName] = layer;
+                        _this._config.leafletLayers[layerName] = layer;
 
                         if (typeof onAddCallback == 'function') {
                             onAddCallback(feature, featureLayer);
@@ -6039,7 +6044,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     if (_this._config.geojson[layerName]) {
                         $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
 
-                        delete _this._config.layers[layerName];
+                        delete _this._config.leafletLayers[layerName];
                         delete _this._config.geojson[layerName];
                     }
                 });
@@ -6050,7 +6055,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 angular.forEach(_this._config.geojson, function(layer, name) {
                     $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', name);
 
-                    delete _this._config.layers[name];
+                    delete _this._config.leafletLayers[name];
                     delete _this._config.geojson[name];
                 });
             },
@@ -6223,11 +6228,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this._editableFeature.addTo(_this._map);
 
         _this.setEventHandlers(_this._mapboxServiceInstance.getEventHandlers());
-        _this.resetLayers(_this._mapboxServiceInstance.getLayers());
-        _this.resetGeoJSON(_this._mapboxServiceInstance.getGeoJSON());
         _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
         _this.addControls(_this._mapboxServiceInstance.getControls());
         _this.setBounds(_this._mapboxServiceInstance.getBounds());
+        _this.resetLayers(_this._mapboxServiceInstance.getLayers());
+        _this.resetGeoJSON(_this._mapboxServiceInstance.getGeoJSON());
 
         _this._map.on('draw:drawstart', _this.onDrawStart, _this);
         _this._map.on('draw:editstart', _this.onDrawStart, _this);
@@ -6544,9 +6549,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         });
 
         angular.forEach(layers, function (layer, name) {
-            _this._layers[name] = layer;
-
-            _this._map.addLayer(layer);
+            if (typeof layer.handler === 'function') {
+                layer.handler(_this.createLayer(name, layer.type, layer.options));
+            }
         });
     };
 
@@ -6862,7 +6867,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             return data;
         } else {
             if (data.type && L[data.type]) {
-                return L[data.type](data);
+                return (L[data.type].icon ? L[data.type].icon(data) : L[data.type](data));
             } else {
                 return L.icon(data);
             }
