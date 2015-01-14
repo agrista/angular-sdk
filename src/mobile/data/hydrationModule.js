@@ -18,50 +18,50 @@ mobileSdkHydrationApp.provider('hydration', [function () {
 
     this.$get = ['$injector', 'promiseService', 'underscore', function ($injector, promiseService, underscore) {
         return {
-            hydrate: function (obj, type, relations) {
-                relations = relations || [];
-
+            hydrate: function (obj, type, options) {
                 return promiseService
                     .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
+                        if (options.hydrate && options.hydrate instanceof Array) {
+                            angular.forEach(options.hydrate, function (relationName) {
+                                var relation = _relationTable[relationName];
 
-                            if (relation && relation.hydrate) {
-                                if (relation.hydrate instanceof Array) {
-                                    _relationTable[relationName].hydrate = $injector.invoke(relation.hydrate);
+                                if (relation && relation.hydrate) {
+                                    if (relation.hydrate instanceof Array) {
+                                        _relationTable[relationName].hydrate = $injector.invoke(relation.hydrate);
+                                    }
+
+                                    promises[relationName] = relation.hydrate(obj, type, options);
                                 }
-
-                                promises[relationName] = relation.hydrate(obj, type);
-                            }
-                        });
+                            });
+                        }
                     })
                     .then(function (results) {
-                        return underscore.extend(obj, results);
-                    }, function (results) {
-                        return underscore.extend(obj, results);
+                        return (results ? underscore.extend(obj, results) : obj);
+                    }, function () {
+                        return obj;
                     });
             },
-            dehydrate: function (obj, type, relations) {
-                relations = relations || [];
-
+            dehydrate: function (obj, type, options) {
                 return promiseService
                     .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
+                        if (options.dehydrate && options.dehydrate instanceof Array) {
+                            angular.forEach(options.dehydrate, function (relationName) {
+                                var relation = _relationTable[relationName];
 
-                            if (obj[relationName] && relation && relation.dehydrate) {
-                                if (relation.dehydrate instanceof Array) {
-                                    _relationTable[relationName].dehydrate = $injector.invoke(relation.dehydrate);
+                                if (obj[relationName] && relation && relation.dehydrate) {
+                                    if (relation.dehydrate instanceof Array) {
+                                        _relationTable[relationName].dehydrate = $injector.invoke(relation.dehydrate);
+                                    }
+
+                                    promises[relationName] = relation.dehydrate(obj, type);
                                 }
-
-                                promises[relationName] = relation.dehydrate(obj, type);
-                            }
-                        });
+                            });
+                        }
                     })
                     .then(function () {
-                        return underscore.omit(obj, relations);
+                        return underscore.omit(obj, options.dehydrate);
                     }, function () {
-                        return underscore.omit(obj, relations);
+                        return underscore.omit(obj, options.dehydrate);
                     });
             }
         };

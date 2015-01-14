@@ -664,13 +664,13 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
             plural: 'tasks',
             singular: 'task',
             strip: hydrateRelations,
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
-                return hydration.hydrate(obj, 'task', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'task', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
-                return hydration.dehydrate(obj, 'task', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'task', options);
             }
         });
 
@@ -705,8 +705,8 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
 
 mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('organization', ['farmerApi', function (farmerApi) {
-        return function (obj, type) {
-            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
+        return function (obj, type, options) {
+            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -730,13 +730,13 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
             plural: 'farmers',
             singular: 'farmer',
             strip: ['farms', 'legalEntities'],
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
-                return hydration.hydrate(obj, 'farmer', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'farmer', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
-                return hydration.dehydrate(obj, 'farmer', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'farmer', options);
             }
         });
 
@@ -756,7 +756,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
 mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('legalEntity', ['legalEntityApi', function (legalEntityApi) {
         return function (obj, type) {
-            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true}});
+            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -796,13 +796,13 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
             plural: 'legalentities',
             singular: 'legalentity',
             strip: defaultRelations,
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
-                return hydration.hydrate(obj, 'legalentity', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'legalentity', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
-                return hydration.dehydrate(obj, 'legalentity', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'legalentity', options);
             }
         });
 
@@ -822,7 +822,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
         return function (obj, type) {
-            return farmApi.findFarm({key: obj.farmId, options: {one: true}});
+            return farmApi.findFarm({key: obj.farmId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -893,13 +893,13 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
             plural: 'assets',
             singular: 'asset',
             strip: ['farm', 'legalEntity'],
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : []);
-                return hydration.hydrate(obj, 'asset', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : []);
+                return hydration.hydrate(obj, 'asset', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : []);
-                return hydration.dehydrate(obj, 'asset', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : []);
+                return hydration.dehydrate(obj, 'asset', options);
             }
         });
 
@@ -919,7 +919,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type) {
-            return documentApi.findDocument({key: obj.documentId, options: {one: true}});
+            return documentApi.findDocument({key: obj.documentId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -936,13 +936,13 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
             plural: 'documents',
             singular: 'document',
             strip: ['organization', 'tasks'],
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
-                return hydration.hydrate(obj, 'document', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'document', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
-                return hydration.dehydrate(obj, 'document', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'document', options);
             }
         });
 
@@ -997,13 +997,13 @@ mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'un
         plural: 'expenses',
         singular: 'expense',
         strip: ['document', 'organization', 'user'],
-        hydrate: function (obj, relations) {
-            relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
-            return hydration.hydrate(obj, 'expense', relations);
+        hydrate: function (obj, options) {
+            options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+            return hydration.hydrate(obj, 'expense', options);
         },
-        dehydrate: function (obj, relations) {
+        dehydrate: function (obj, options) {
             return promiseService.wrap(function (promise) {
-                promise.resolve(underscore.omit(obj, relations || defaultRelations));
+                promise.resolve(underscore.omit(obj, options.dehydrate || defaultRelations));
             });
         }
     });
