@@ -4410,6 +4410,21 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
     }
 }]);
 
+var sdkHelperProductionPlanApp = angular.module('ag.sdk.helper.production-plan', []);
+
+sdkHelperProductionPlanApp.factory('productionPlanHelper', [function() {
+    var _assetTypeMap = {
+        'crop': ['Cropland'],
+        'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
+        'horticulture': ['Horticulture (Perennial)']
+    };
+
+    return {
+        isFieldApplicable: function (type, field) {
+            return (_assetTypeMap[type] && _assetTypeMap[type].indexOf(field.landUse) !== -1);
+        }
+    }
+}]);
 var sdkHelperRegionApp = angular.module('ag.sdk.helper.region', []);
 
 sdkHelperRegionApp.factory('regionHelper', [function() {
@@ -9447,13 +9462,13 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
             plural: 'tasks',
             singular: 'task',
             strip: hydrateRelations,
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
-                return hydration.hydrate(obj, 'task', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'task', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
-                return hydration.dehydrate(obj, 'task', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'task', options);
             }
         });
 
@@ -9488,8 +9503,8 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
 
 mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('organization', ['farmerApi', function (farmerApi) {
-        return function (obj, type) {
-            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true}});
+        return function (obj, type, options) {
+            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -9513,13 +9528,13 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
             plural: 'farmers',
             singular: 'farmer',
             strip: ['farms', 'legalEntities'],
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
-                return hydration.hydrate(obj, 'farmer', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'farmer', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
-                return hydration.dehydrate(obj, 'farmer', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'farmer', options);
             }
         });
 
@@ -9539,7 +9554,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
 mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('legalEntity', ['legalEntityApi', function (legalEntityApi) {
         return function (obj, type) {
-            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true}});
+            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -9579,13 +9594,13 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
             plural: 'legalentities',
             singular: 'legalentity',
             strip: defaultRelations,
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
-                return hydration.hydrate(obj, 'legalentity', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'legalentity', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : defaultRelations));
-                return hydration.dehydrate(obj, 'legalentity', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'legalentity', options);
             }
         });
 
@@ -9605,7 +9620,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
         return function (obj, type) {
-            return farmApi.findFarm({key: obj.farmId, options: {one: true}});
+            return farmApi.findFarm({key: obj.farmId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -9676,13 +9691,13 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
             plural: 'assets',
             singular: 'asset',
             strip: ['farm', 'legalEntity'],
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : []);
-                return hydration.hydrate(obj, 'asset', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : []);
+                return hydration.hydrate(obj, 'asset', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : []);
-                return hydration.dehydrate(obj, 'asset', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : []);
+                return hydration.dehydrate(obj, 'asset', options);
             }
         });
 
@@ -9702,7 +9717,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type) {
-            return documentApi.findDocument({key: obj.documentId, options: {one: true}});
+            return documentApi.findDocument({key: obj.documentId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
 
@@ -9719,13 +9734,13 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
             plural: 'documents',
             singular: 'document',
             strip: ['organization', 'tasks'],
-            hydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === true ? hydrateRelations : []));
-                return hydration.hydrate(obj, 'document', relations);
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'document', options);
             },
-            dehydrate: function (obj, relations) {
-                relations = (relations instanceof Array ? relations : (relations === false ? [] : dehydrateRelations));
-                return hydration.dehydrate(obj, 'document', relations);
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'document', options);
             }
         });
 
@@ -9780,13 +9795,13 @@ mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'un
         plural: 'expenses',
         singular: 'expense',
         strip: ['document', 'organization', 'user'],
-        hydrate: function (obj, relations) {
-            relations = (relations instanceof Array ? relations : (relations === true ? defaultRelations : []));
-            return hydration.hydrate(obj, 'expense', relations);
+        hydrate: function (obj, options) {
+            options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+            return hydration.hydrate(obj, 'expense', options);
         },
-        dehydrate: function (obj, relations) {
+        dehydrate: function (obj, options) {
             return promiseService.wrap(function (promise) {
-                promise.resolve(underscore.omit(obj, relations || defaultRelations));
+                promise.resolve(underscore.omit(obj, options.dehydrate || defaultRelations));
             });
         }
     });
@@ -10178,7 +10193,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {
                             for (var i = 0; i < res.rows.length; i++) {
-                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), request.options.hydrate));
+                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), request.options));
                             }
                         });
                     }, promiseService.throwError);
@@ -10195,7 +10210,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {
                             for (var i = 0; i < res.rows.length; i++) {
-                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options.hydrate));
+                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options));
                             }
                         });
                     }, promiseService.throwError);
@@ -10226,7 +10241,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 return promiseService
                     .wrapAll(function (promises) {
                         angular.forEach(dataItems, function (dataItem) {
-                            promises.push(_config.dehydrate(dataItem, request.options.dehydrate));
+                            promises.push(_config.dehydrate(dataItem, request.options));
                         });
                     })
                     .then(function (dehydratedItems) {
@@ -10265,7 +10280,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (dehydratedItems) {
                         return promiseService.wrapAll(function (promises) {
                             angular.forEach(underscore.compact(dehydratedItems), function (dehydratedItem) {
-                                promises.push(_config.hydrate(dehydratedItem, request.options.hydrate));
+                                promises.push(_config.hydrate(dehydratedItem, request.options));
                             });
                         });
                     }, promiseService.throwError);
@@ -10337,7 +10352,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
                                                 dirty: false,
                                                 local: false
-                                            }), true));
+                                            }), underscore.defaults(request.options, {
+                                                dehydrate: true
+                                            })));
                                         });
                                     });
                                 }, promiseService.throwError)
@@ -10520,7 +10537,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .chain(function (chain) {
                         angular.forEach(data, function (dataItem) {
                             chain.push(function () {
-                                if (dataItem.__complete === false && request.options.fallbackRemote) {
+                                if (dataItem.__complete === false && request.options.remoteHydration === true && request.options.fallbackRemote) {
                                     var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
 
                                     request.options.force = true;
@@ -10585,7 +10602,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         complete: request.options.complete,
                                         dirty: request.options.dirty,
                                         local: request.options.dirty
-                                    }), request.options.dehydrate));
+                                    }), request.options));
                                 });
                             }, promiseService.throwError)
                             .then(function (results) {
@@ -10607,7 +10624,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                             one: (request.options.one !== undefined ? request.options.one : (request.schema.id !== undefined)),
                             passThrough: false,
                             readLocal: _config.readLocal,
-                            readRemote: _config.readRemote
+                            readRemote: _config.readRemote,
+                            remoteHydration: true
                         });
 
                         return promiseService.wrap(function (promise) {
@@ -10680,7 +10698,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         request.options = underscore.defaults(request.options, {
                             fallbackRemote: true,
                             like: false,
-                            one: false
+                            one: false,
+                            remoteHydration: true
                         });
 
                         return _findLocal(request.key, request.column, request.options).then(function (res) {
@@ -10840,50 +10859,50 @@ mobileSdkHydrationApp.provider('hydration', [function () {
 
     this.$get = ['$injector', 'promiseService', 'underscore', function ($injector, promiseService, underscore) {
         return {
-            hydrate: function (obj, type, relations) {
-                relations = relations || [];
-
+            hydrate: function (obj, type, options) {
                 return promiseService
                     .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
+                        if (options.hydrate && options.hydrate instanceof Array) {
+                            angular.forEach(options.hydrate, function (relationName) {
+                                var relation = _relationTable[relationName];
 
-                            if (relation && relation.hydrate) {
-                                if (relation.hydrate instanceof Array) {
-                                    _relationTable[relationName].hydrate = $injector.invoke(relation.hydrate);
+                                if (relation && relation.hydrate) {
+                                    if (relation.hydrate instanceof Array) {
+                                        _relationTable[relationName].hydrate = $injector.invoke(relation.hydrate);
+                                    }
+
+                                    promises[relationName] = relation.hydrate(obj, type, options);
                                 }
-
-                                promises[relationName] = relation.hydrate(obj, type);
-                            }
-                        });
+                            });
+                        }
                     })
                     .then(function (results) {
-                        return underscore.extend(obj, results);
-                    }, function (results) {
-                        return underscore.extend(obj, results);
+                        return (results ? underscore.extend(obj, results) : obj);
+                    }, function () {
+                        return obj;
                     });
             },
-            dehydrate: function (obj, type, relations) {
-                relations = relations || [];
-
+            dehydrate: function (obj, type, options) {
                 return promiseService
                     .objectWrap(function (promises) {
-                        angular.forEach(relations, function (relationName) {
-                            var relation = _relationTable[relationName];
+                        if (options.dehydrate && options.dehydrate instanceof Array) {
+                            angular.forEach(options.dehydrate, function (relationName) {
+                                var relation = _relationTable[relationName];
 
-                            if (obj[relationName] && relation && relation.dehydrate) {
-                                if (relation.dehydrate instanceof Array) {
-                                    _relationTable[relationName].dehydrate = $injector.invoke(relation.dehydrate);
+                                if (obj[relationName] && relation && relation.dehydrate) {
+                                    if (relation.dehydrate instanceof Array) {
+                                        _relationTable[relationName].dehydrate = $injector.invoke(relation.dehydrate);
+                                    }
+
+                                    promises[relationName] = relation.dehydrate(obj, type);
                                 }
-
-                                promises[relationName] = relation.dehydrate(obj, type);
-                            }
-                        });
+                            });
+                        }
                     })
                     .then(function () {
-                        return underscore.omit(obj, relations);
+                        return underscore.omit(obj, options.dehydrate);
                     }, function () {
-                        return underscore.omit(obj, relations);
+                        return underscore.omit(obj, options.dehydrate);
                     });
             }
         };
@@ -10900,6 +10919,7 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
+    'ag.sdk.helper.production-plan',
     'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',

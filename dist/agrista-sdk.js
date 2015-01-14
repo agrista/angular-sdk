@@ -5609,6 +5609,21 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
     }
 }]);
 
+var sdkHelperProductionPlanApp = angular.module('ag.sdk.helper.production-plan', []);
+
+sdkHelperProductionPlanApp.factory('productionPlanHelper', [function() {
+    var _assetTypeMap = {
+        'crop': ['Cropland'],
+        'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
+        'horticulture': ['Horticulture (Perennial)']
+    };
+
+    return {
+        isFieldApplicable: function (type, field) {
+            return (_assetTypeMap[type] && _assetTypeMap[type].indexOf(field.landUse) !== -1);
+        }
+    }
+}]);
 var sdkHelperRegionApp = angular.module('ag.sdk.helper.region', []);
 
 sdkHelperRegionApp.factory('regionHelper', [function() {
@@ -9173,6 +9188,7 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
+    'ag.sdk.helper.production-plan',
     'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',
