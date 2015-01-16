@@ -338,8 +338,14 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     }, promiseService.throwError)
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {
+                            var applyFilter = (typeof request.options.filter == 'function');
+
                             for (var i = 0; i < res.rows.length; i++) {
-                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), request.options));
+                                var dataItem = dataStoreUtilities.injectMetadata(res.rows.item(i));
+
+                                if (!applyFilter || request.options.filter(dataItem)) {
+                                    promises.push(_config.hydrate(dataItem, request.options));
+                                }
                             }
                         });
                     }, promiseService.throwError);
