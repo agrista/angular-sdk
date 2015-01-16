@@ -4680,15 +4680,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             'Lamb': 0.08,
             'Weaner Lambs': 0.11,
             'Ewe': 0.16,
-            'Wether (2-tooth plus)': 0.23,
+            'Wether (2-tooth plus)': 0.16,
             'Ram (2-tooth plus)': 0.23
         },
         Goats: {
-            'Kid': 0.12,
+            'Kid': 0.08,
             'Weaner kids': 0.12,
             'Ewe (2-tooth plus)': 0.17,
             'Castrate (2-tooth plus)': 0.17,
-            'Ram (2-tooth plus)': 0.12
+            'Ram (2-tooth plus)': 0.22
         }
     };
 
