@@ -1,6 +1,6 @@
 var sdkHelperProductionPlanApp = angular.module('ag.sdk.helper.production-plan', []);
 
-sdkHelperProductionPlanApp.factory('productionPlanHelper', [function() {
+sdkHelperProductionPlanApp.factory('productionPlanHelper', [function () {
     var _assetTypeMap = {
         'crop': ['Cropland'],
         'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
@@ -8,8 +8,20 @@ sdkHelperProductionPlanApp.factory('productionPlanHelper', [function() {
     };
 
     return {
-        isFieldApplicable: function (type, field) {
-            return (_assetTypeMap[type] && _assetTypeMap[type].indexOf(field.landUse) !== -1);
+        isFieldApplicable: function (field) {
+            return (this.getAssetType(field) !== undefined);
+        },
+
+        getAssetType: function (field) {
+            var assetType;
+
+            angular.forEach(_assetTypeMap, function (fieldTypes, type) {
+                if (fieldTypes.indexOf(field.landUse) !== -1) {
+                    assetType = type;
+                }
+            });
+
+            return assetType;
         }
     }
 }]);

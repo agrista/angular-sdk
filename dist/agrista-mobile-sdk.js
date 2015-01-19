@@ -3502,7 +3502,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
     // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
         crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
-        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
 };
 
@@ -3658,6 +3658,24 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];
+        },
+        getHorticultureStage: function (commodityType, asset) {
+            var stages = this.getHorticultureStages(commodityType),
+                result = (stages.length > 0 ? stages[0] : undefined);
+
+            if (asset && asset.data.establishedDate) {
+                var assetAge = moment().diff(asset.data.establishedDate, 'years', true);
+
+                angular.forEach(stages, function (stage) {
+                    var matchYears = stage.match(/\d+/g);
+
+                    if ((matchYears.length == 1 && matchYears[0] <= assetAge) || (matchYears.length == 2 && matchYears[0] <= assetAge && matchYears[1] >= assetAge)) {
+                        result = stage;
+                    }
+                });
+            }
+
+            return result;
         },
         getCategories: function (budget, assetType, commodityType, sectionType, horticultureStage) {
             var categories = {};
@@ -4122,14 +4140,19 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
 
             return found;
         },
-        getCenter: function (assets, farm) {
+        getCenter: function (farmer, farm) {
             var geojson = geoJSONHelper();
 
-            angular.forEach(assets, function(asset) {
-                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                    geojson.addGeometry(asset.data.loc);
-                }
-            });
+            underscore
+                .chain(farmer.legalEntities)
+                .pluck('assets')
+                .flatten()
+                .compact()
+                .each(function (asset) {
+                    if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
+                        geojson.addGeometry(asset.data.loc);
+                    }
+                });
 
             return geojson.getCenterAsGeojson();
         },
@@ -4412,7 +4435,7 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
 
 var sdkHelperProductionPlanApp = angular.module('ag.sdk.helper.production-plan', []);
 
-sdkHelperProductionPlanApp.factory('productionPlanHelper', [function() {
+sdkHelperProductionPlanApp.factory('productionPlanHelper', [function () {
     var _assetTypeMap = {
         'crop': ['Cropland'],
         'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
@@ -4420,8 +4443,20 @@ sdkHelperProductionPlanApp.factory('productionPlanHelper', [function() {
     };
 
     return {
-        isFieldApplicable: function (type, field) {
-            return (_assetTypeMap[type] && _assetTypeMap[type].indexOf(field.landUse) !== -1);
+        isFieldApplicable: function (field) {
+            return (this.getAssetType(field) !== undefined);
+        },
+
+        getAssetType: function (field) {
+            var assetType;
+
+            angular.forEach(_assetTypeMap, function (fieldTypes, type) {
+                if (fieldTypes.indexOf(field.landUse) !== -1) {
+                    assetType = type;
+                }
+            });
+
+            return assetType;
         }
     }
 }]);
@@ -9553,7 +9588,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
 
 mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('legalEntity', ['legalEntityApi', function (legalEntityApi) {
-        return function (obj, type) {
+        return function (obj, type, options) {
             return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true, remoteHydration: options.remoteHydration}});
         }
     }]);
@@ -9619,7 +9654,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
-        return function (obj, type) {
+        return function (obj, type, options) {
             return farmApi.findFarm({key: obj.farmId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
@@ -9716,7 +9751,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 
 mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
-        return function (obj, type) {
+        return function (obj, type, options) {
             return documentApi.findDocument({key: obj.documentId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
