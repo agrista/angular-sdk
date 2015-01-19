@@ -755,7 +755,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
 
 mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('legalEntity', ['legalEntityApi', function (legalEntityApi) {
-        return function (obj, type) {
+        return function (obj, type, options) {
             return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true, remoteHydration: options.remoteHydration}});
         }
     }]);
@@ -821,7 +821,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
-        return function (obj, type) {
+        return function (obj, type, options) {
             return farmApi.findFarm({key: obj.farmId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
@@ -918,7 +918,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 
 mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
-        return function (obj, type) {
+        return function (obj, type, options) {
             return documentApi.findDocument({key: obj.documentId, options: {one: true, remoteHydration: options.remoteHydration}});
         }
     }]);
