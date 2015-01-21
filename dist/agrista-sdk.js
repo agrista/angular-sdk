@@ -25,6 +25,13 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
                 }, promise.reject);
             });
         },
+        getUsersPositions: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/users/positions', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         createUser: function (userData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/user', userData, {withCredentials: true}).then(function (res) {
@@ -45,6 +52,13 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
         updateUser: function (userData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/user/' + userData.id, userData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateUserGroups: function (userData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/user/' + userData.id + '/groups', userData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -143,11 +157,21 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
     var _host = configuration.getServer();
 
     return {
+        createOrganizationalUnit: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/organizational-unit' + (data.type ? '/' + data.type.toLowerCase() : ''), data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getOrganizationalUnits: function (params) {
             return pagingService.page(_host + 'api/organizational-units', params);
         },
         getOrganizationalUnitBranches: function (params) {
             return pagingService.page(_host + 'api/organizational-units/branches', params);
+        },
+        getOrganizationalUnitGroups: function (params) {
+            return pagingService.page(_host + 'api/organizational-units/groups', params);
         },
         getOrganizationalUnitRegions: function (params) {
             return pagingService.page(_host + 'api/organizational-units/regions', params);
@@ -162,6 +186,13 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
         updateOrganizationalUnit: function(data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/organizational-unit/' + data.id, _.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteOrganizationalUnit: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/organizational-unit/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
