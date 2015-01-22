@@ -5054,7 +5054,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                                 .pluck('productCategoryGroups')
                                 .flatten()
                                 .reduce(function(total, group) {
-                                    return (group.name == category.calculationFactor && group.total !== undefined ? total + group.total.value : total);
+                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
                                 }, 0)
                                 .value();
 
