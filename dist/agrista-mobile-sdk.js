@@ -505,7 +505,7 @@ sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, sa
     }
 }]);
 
-var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies', 'ag.sdk.id']);
 
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
@@ -569,7 +569,9 @@ skdUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', function($rootScope, $http, promiseService, dataMapService) {
+skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', function($rootScope, $http, promiseService, dataMapService, generateUUID) {
+    var _listId = generateUUID();
+
     return {
         initialize: function(requestor, dataMap, itemStore, options) {
             if (typeof itemStore == 'object') {
@@ -584,6 +586,7 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                 dataMap = undefined;
             }
 
+            _listId = generateUUID();
             itemStore = itemStore || function (data) {
                 $rootScope.$broadcast('paging::items', data);
             };
@@ -614,6 +617,8 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     }
                 },
                 request: function (params) {
+                    var currentListId = _listId;
+
                     params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
 
                     _scroll.busy = true;
@@ -631,11 +636,13 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                         _scroll.busy = false;
 
-                        if (dataMap) {
-                            res = dataMapService(res, dataMap);
-                        }
+                        if (currentListId === _listId) {
+                            if (dataMap) {
+                                res = dataMapService(res, dataMap);
+                            }
 
-                        itemStore(res);
+                            itemStore(res);
+                        }
 
                         return res;
                     }, promiseService.throwError);
