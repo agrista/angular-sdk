@@ -207,14 +207,19 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
 
             return found;
         },
-        getCenter: function (assets, farm) {
+        getCenter: function (farmer, farm) {
             var geojson = geoJSONHelper();
 
-            angular.forEach(assets, function(asset) {
-                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                    geojson.addGeometry(asset.data.loc);
-                }
-            });
+            underscore
+                .chain(farmer.legalEntities)
+                .pluck('assets')
+                .flatten()
+                .compact()
+                .each(function (asset) {
+                    if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
+                        geojson.addGeometry(asset.data.loc);
+                    }
+                });
 
             return geojson.getCenterAsGeojson();
         },

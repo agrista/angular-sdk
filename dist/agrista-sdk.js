@@ -25,6 +25,13 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
                 }, promise.reject);
             });
         },
+        getUsersPositions: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/users/positions', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         createUser: function (userData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/user', userData, {withCredentials: true}).then(function (res) {
@@ -45,6 +52,13 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
         updateUser: function (userData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/user/' + userData.id, userData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateUserGroups: function (userData) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/user/' + userData.id + '/groups', userData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -143,11 +157,21 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
     var _host = configuration.getServer();
 
     return {
+        createOrganizationalUnit: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/organizational-unit' + (data.type ? '/' + data.type.toLowerCase() : ''), data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getOrganizationalUnits: function (params) {
             return pagingService.page(_host + 'api/organizational-units', params);
         },
         getOrganizationalUnitBranches: function (params) {
             return pagingService.page(_host + 'api/organizational-units/branches', params);
+        },
+        getOrganizationalUnitGroups: function (params) {
+            return pagingService.page(_host + 'api/organizational-units/groups', params);
         },
         getOrganizationalUnitRegions: function (params) {
             return pagingService.page(_host + 'api/organizational-units/regions', params);
@@ -162,6 +186,13 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
         updateOrganizationalUnit: function(data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/organizational-unit/' + data.id, _.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteOrganizationalUnit: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/organizational-unit/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1704,7 +1735,7 @@ sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, sa
     }
 }]);
 
-var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies']);
+var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies', 'ag.sdk.id']);
 
 skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
@@ -1768,7 +1799,9 @@ skdUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', function($rootScope, $http, promiseService, dataMapService) {
+skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', function($rootScope, $http, promiseService, dataMapService, generateUUID) {
+    var _listId = generateUUID();
+
     return {
         initialize: function(requestor, dataMap, itemStore, options) {
             if (typeof itemStore == 'object') {
@@ -1783,6 +1816,7 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                 dataMap = undefined;
             }
 
+            _listId = generateUUID();
             itemStore = itemStore || function (data) {
                 $rootScope.$broadcast('paging::items', data);
             };
@@ -1813,6 +1847,8 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     }
                 },
                 request: function (params) {
+                    var currentListId = _listId;
+
                     params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
 
                     _scroll.busy = true;
@@ -1830,11 +1866,13 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                         _scroll.busy = false;
 
-                        if (dataMap) {
-                            res = dataMapService(res, dataMap);
-                        }
+                        if (currentListId === _listId) {
+                            if (dataMap) {
+                                res = dataMapService(res, dataMap);
+                            }
 
-                        itemStore(res);
+                            itemStore(res);
+                        }
 
                         return res;
                     }, promiseService.throwError);
@@ -4701,7 +4739,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
     // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
         crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
-        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grapes (Table)', 'Grapes (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
 };
 
@@ -4858,6 +4896,24 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         getHorticultureStages: function(commodityType) {
             return _horticultureStages[commodityType] || [];
         },
+        getHorticultureStage: function (commodityType, asset) {
+            var stages = this.getHorticultureStages(commodityType),
+                result = (stages.length > 0 ? stages[0] : undefined);
+
+            if (asset && asset.data.establishedDate) {
+                var assetAge = moment().diff(asset.data.establishedDate, 'years', true);
+
+                angular.forEach(stages, function (stage) {
+                    var matchYears = stage.match(/\d+/g);
+
+                    if ((matchYears.length == 1 && matchYears[0] <= assetAge) || (matchYears.length == 2 && matchYears[0] <= assetAge && matchYears[1] >= assetAge)) {
+                        result = stage;
+                    }
+                });
+            }
+
+            return result;
+        },
         getCategories: function (budget, assetType, commodityType, sectionType, horticultureStage) {
             var categories = {};
 
@@ -5005,7 +5061,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                                 .pluck('productCategoryGroups')
                                 .flatten()
                                 .reduce(function(total, group) {
-                                    return (group.name == category.calculationFactor && group.total !== undefined ? total + group.total.value : total);
+                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
                                 }, 0)
                                 .value();
 
@@ -5321,14 +5377,19 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
 
             return found;
         },
-        getCenter: function (assets, farm) {
+        getCenter: function (farmer, farm) {
             var geojson = geoJSONHelper();
 
-            angular.forEach(assets, function(asset) {
-                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                    geojson.addGeometry(asset.data.loc);
-                }
-            });
+            underscore
+                .chain(farmer.legalEntities)
+                .pluck('assets')
+                .flatten()
+                .compact()
+                .each(function (asset) {
+                    if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
+                        geojson.addGeometry(asset.data.loc);
+                    }
+                });
 
             return geojson.getCenterAsGeojson();
         },
@@ -5609,6 +5670,33 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
     }
 }]);
 
+var sdkHelperProductionPlanApp = angular.module('ag.sdk.helper.production-plan', []);
+
+sdkHelperProductionPlanApp.factory('productionPlanHelper', [function () {
+    var _assetTypeMap = {
+        'crop': ['Cropland'],
+        'livestock': ['Grazing', 'Planted Pastures', 'Conservation'],
+        'horticulture': ['Horticulture (Perennial)']
+    };
+
+    return {
+        isFieldApplicable: function (field) {
+            return (this.getAssetType(field) !== undefined);
+        },
+
+        getAssetType: function (field) {
+            var assetType;
+
+            angular.forEach(_assetTypeMap, function (fieldTypes, type) {
+                if (fieldTypes.indexOf(field.landUse) !== -1) {
+                    assetType = type;
+                }
+            });
+
+            return assetType;
+        }
+    }
+}]);
 var sdkHelperRegionApp = angular.module('ag.sdk.helper.region', []);
 
 sdkHelperRegionApp.factory('regionHelper', [function() {
@@ -6235,6 +6323,8 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
             return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
+            bounds = bounds || this.getBounds();
+
             return {
                 coordinates: this.getCenter(bounds).reverse(),
                 type: 'Point'
@@ -6788,6 +6878,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             zoom: 6
         },
         bounds: {},
+        leafletLayers: {},
         layers: {},
         geojson: {}
     };
@@ -6844,8 +6935,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             clearLayers: function () {
                 this.removeOverlays();
-                this.removeLayers();
                 this.removeGeoJSON();
+                this.removeLayers();
             },
 
             /*
@@ -7075,25 +7166,27 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 var _this = this;
 
-                this.enqueueRequest('mapbox-' + this._id + '::create-layer', {
+                this._config.layers[name] = {
                     name: name,
                     type: type,
                     options: options,
                     handler: function (layer) {
-                        _this._config.layers[name] = layer;
+                        _this._config.leafletLayers[name] = layer;
 
                         handler(layer);
                     }
-                });
+                };
+
+                this.enqueueRequest('mapbox-' + this._id + '::create-layer', this._config.layers[name]);
             },
             getLayer: function (name) {
-                return this._config.layers[name];
+                return this._config.leafletLayers[name];
             },
             getLayers: function () {
                 return this._config.layers;
             },
             addLayer: function (name, layer) {
-                this._config.layers[name] = layer;
+                this._config.leafletLayers[name] = layer;
 
                 $rootScope.$broadcast('mapbox-' + this._id + '::add-layer', name);
             },
@@ -7106,15 +7199,17 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
+                    delete _this._config.leafletLayers[name];
                 });
             },
             removeLayers: function () {
                 var _this = this;
                 
                 angular.forEach(this._config.layers, function(layer, name) {
-                    $rootScope.$broadcast('mapbox-' + -this._id + '::remove-layer', name);
+                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
+                    delete _this._config.leafletLayers[name];
                 });
             },
             showLayer: function (name) {
@@ -7170,7 +7265,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     options: options,
                     properties: properties,
                     handler: function (layer, feature, featureLayer) {
-                        _this._config.layers[layerName] = layer;
+                        _this._config.leafletLayers[layerName] = layer;
 
                         if (typeof onAddCallback == 'function') {
                             onAddCallback(feature, featureLayer);
@@ -7203,7 +7298,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     options: options,
                     properties: properties,
                     handler: function (layer, feature, featureLayer) {
-                        _this._config.layers[layerName] = layer;
+                        _this._config.leafletLayers[layerName] = layer;
 
                         if (typeof onAddCallback == 'function') {
                             onAddCallback(feature, featureLayer);
@@ -7236,7 +7331,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     if (_this._config.geojson[layerName]) {
                         $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
 
-                        delete _this._config.layers[layerName];
+                        delete _this._config.leafletLayers[layerName];
                         delete _this._config.geojson[layerName];
                     }
                 });
@@ -7247,7 +7342,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 angular.forEach(_this._config.geojson, function(layer, name) {
                     $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', name);
 
-                    delete _this._config.layers[name];
+                    delete _this._config.leafletLayers[name];
                     delete _this._config.geojson[name];
                 });
             },
@@ -7420,11 +7515,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this._editableFeature.addTo(_this._map);
 
         _this.setEventHandlers(_this._mapboxServiceInstance.getEventHandlers());
-        _this.resetLayers(_this._mapboxServiceInstance.getLayers());
-        _this.resetGeoJSON(_this._mapboxServiceInstance.getGeoJSON());
         _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
         _this.addControls(_this._mapboxServiceInstance.getControls());
         _this.setBounds(_this._mapboxServiceInstance.getBounds());
+        _this.resetLayers(_this._mapboxServiceInstance.getLayers());
+        _this.resetGeoJSON(_this._mapboxServiceInstance.getGeoJSON());
 
         _this._map.on('draw:drawstart', _this.onDrawStart, _this);
         _this._map.on('draw:editstart', _this.onDrawStart, _this);
@@ -7741,9 +7836,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         });
 
         angular.forEach(layers, function (layer, name) {
-            _this._layers[name] = layer;
-
-            _this._map.addLayer(layer);
+            if (typeof layer.handler === 'function') {
+                layer.handler(_this.createLayer(name, layer.type, layer.options));
+            }
         });
     };
 
@@ -8055,14 +8150,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.makeIcon = function (data) {
-        if (data) {
-            if (data.type && L[data.type] && L[data.type].icon) {
-                return L[data.type].icon(data);
+        if (data instanceof L.Class) {
+            return data;
+        } else {
+            if (data.type && L[data.type]) {
+                return (L[data.type].icon ? L[data.type].icon(data) : L[data.type](data));
             } else {
                 return L.icon(data);
             }
-        } else {
-            return L.Icon.Default();
         }
     };
 
@@ -9166,6 +9261,7 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
+    'ag.sdk.helper.production-plan',
     'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',

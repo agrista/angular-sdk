@@ -338,8 +338,14 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     }, promiseService.throwError)
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {
+                            var applyFilter = (typeof request.options.filter == 'function');
+
                             for (var i = 0; i < res.rows.length; i++) {
-                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), request.options.hydrate));
+                                var dataItem = dataStoreUtilities.injectMetadata(res.rows.item(i));
+
+                                if (!applyFilter || request.options.filter(dataItem)) {
+                                    promises.push(_config.hydrate(dataItem, request.options));
+                                }
                             }
                         });
                     }, promiseService.throwError);
@@ -356,7 +362,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {
                             for (var i = 0; i < res.rows.length; i++) {
-                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options.hydrate));
+                                promises.push(_config.hydrate(dataStoreUtilities.injectMetadata(res.rows.item(i)), options));
                             }
                         });
                     }, promiseService.throwError);
@@ -387,7 +393,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 return promiseService
                     .wrapAll(function (promises) {
                         angular.forEach(dataItems, function (dataItem) {
-                            promises.push(_config.dehydrate(dataItem, request.options.dehydrate));
+                            promises.push(_config.dehydrate(dataItem, request.options));
                         });
                     })
                     .then(function (dehydratedItems) {
@@ -426,7 +432,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .then(function (dehydratedItems) {
                         return promiseService.wrapAll(function (promises) {
                             angular.forEach(underscore.compact(dehydratedItems), function (dehydratedItem) {
-                                promises.push(_config.hydrate(dehydratedItem, request.options.hydrate));
+                                promises.push(_config.hydrate(dehydratedItem, request.options));
                             });
                         });
                     }, promiseService.throwError);
@@ -498,7 +504,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
                                                 dirty: false,
                                                 local: false
-                                            }), true));
+                                            }), underscore.defaults(request.options, {
+                                                dehydrate: true
+                                            })));
                                         });
                                     });
                                 }, promiseService.throwError)
@@ -681,7 +689,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .chain(function (chain) {
                         angular.forEach(data, function (dataItem) {
                             chain.push(function () {
-                                if (dataItem.__complete === false && request.options.fallbackRemote) {
+                                if (dataItem.__complete === false && request.options.remoteHydration === true && request.options.fallbackRemote) {
                                     var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
 
                                     request.options.force = true;
@@ -746,7 +754,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         complete: request.options.complete,
                                         dirty: request.options.dirty,
                                         local: request.options.dirty
-                                    }), request.options.dehydrate));
+                                    }), request.options));
                                 });
                             }, promiseService.throwError)
                             .then(function (results) {
@@ -768,7 +776,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                             one: (request.options.one !== undefined ? request.options.one : (request.schema.id !== undefined)),
                             passThrough: false,
                             readLocal: _config.readLocal,
-                            readRemote: _config.readRemote
+                            readRemote: _config.readRemote,
+                            remoteHydration: true
                         });
 
                         return promiseService.wrap(function (promise) {
@@ -841,7 +850,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         request.options = underscore.defaults(request.options, {
                             fallbackRemote: true,
                             like: false,
-                            one: false
+                            one: false,
+                            remoteHydration: true
                         });
 
                         return _findLocal(request.key, request.column, request.options).then(function (res) {
