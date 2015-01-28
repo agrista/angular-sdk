@@ -1,10 +1,11 @@
 var sdkInterfaceListApp = angular.module('ag.sdk.interface.list', ['ag.sdk.id']);
 
 sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function ($rootScope, objectId) {
-    var _button;
-    var _groupby;
-    var _infiniteScroll;
-    var _search;
+    var _button,
+        _groupby,
+        _infiniteScroll,
+        _search,
+        _title;
 
     var _items = [];
     var _activeItemId;
@@ -60,6 +61,14 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
             }
 
             $rootScope.$broadcast('list::search__changed', _search);
+        }
+    };
+
+    var _setTitle = function (title) {
+        if (_title !== title) {
+            _title = (title ? title : undefined);
+
+            $rootScope.$broadcast('list::title__changed', _title);
         }
     };
 
@@ -134,6 +143,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                 _groupby = undefined;
                 _infiniteScroll = undefined;
                 _search = undefined;
+                _title = undefined;
 
                 _items = [];
                 _activeItemId = undefined;
@@ -143,6 +153,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
             _setGroupby(config.groupby);
             _setScroll(config.infiniteScroll);
             _setSearch(config.search);
+            _setTitle(config.title);
         },
         button: function(button) {
             if (arguments.length == 1) {
@@ -177,6 +188,13 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
             }
 
             return _search;
+        },
+        title: function(title) {
+            if(arguments.length == 1) {
+                _setTitle(title);
+            }
+
+            return _title;
         },
 
         /* ITEMS */
