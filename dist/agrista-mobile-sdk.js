@@ -1109,8 +1109,8 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
             } else if (asset.type == 'improvement') {
                 asset.data.valuation = asset.data.valuation || {};
                 asset.data.valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation', 'purchaserResistance'], function (total, type) {
-                    return isNaN(asset.data.valuation[type]) ? total : total + (asset.data.valuation[type] / 100);
-                }, 0);
+                    return isNaN(asset.data.valuation[type]) ? total : total * (1 - asset.data.valuation[type]);
+                }, 1);
 
                 asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * (1 - Math.min(asset.data.valuation.totalDepreciation, 1)));
             } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
@@ -5578,8 +5578,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     'minzoom': 5
                 },
                 'center': [24.631347656249993, -28.97931203672245, 6],
-                'data': ['http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/markers.geojsonp'],
-                'geocoder': 'http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/geocode/{query}.jsonp',
+                'data': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/markers.geojsonp'],
+                'geocoder': 'https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/geocode/{query}.jsonp',
                 'id': 'agrista.map-65ftbmpi',
                 'maxzoom': 19,
                 'minzoom': 0,
@@ -5587,7 +5587,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 'private': true,
                 'scheme': 'xyz',
                 'tilejson': '2.0.0',
-                'tiles': ['http://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png', 'http://b.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png'],
+                'tiles': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png', 'https://b.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png'],
                 'vector_layers': [
                     {
                         'fields': {},
@@ -5615,8 +5615,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                             'minzoom': 15
                         },
                         'center': [23.843663473727442, -29.652475838000733, 7],
-                        'data': ['http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/markers.geojsonp'],
-                        'geocoder': 'http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/geocode/{query}.jsonp',
+                        'data': ['https://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/markers.geojsonp'],
+                        'geocoder': 'https://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/geocode/{query}.jsonp',
                         'id': 'agrista.map-tlsadyhb',
                         'maxzoom': 22,
                         'minzoom': 0,
@@ -5625,8 +5625,8 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                         'scheme': 'xyz',
                         'tilejson': '2.0.0',
                         'tiles': [
-                            'http://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png',
-                            'http://b.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png'
+                            'https://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png',
+                            'https://b.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png'
                         ],
                         'vector_layers': [
                             {
@@ -9564,7 +9564,7 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
 mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('organization', ['farmerApi', function (farmerApi) {
         return function (obj, type, options) {
-            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true, remoteHydration: options.remoteHydration}});
+            return farmerApi.findFarmer({key: obj.organizationId, options: {one: true, hydrateRemote: options.remoteHydration}});
         }
     }]);
 
@@ -9614,7 +9614,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
 mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('legalEntity', ['legalEntityApi', function (legalEntityApi) {
         return function (obj, type, options) {
-            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true, remoteHydration: options.remoteHydration}});
+            return legalEntityApi.findEntity({key: obj.legalEntityId, options: {one: true, hydrate: true, hydrateRemote: options.remoteHydration}});
         }
     }]);
 
@@ -9680,7 +9680,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
         return function (obj, type, options) {
-            return farmApi.findFarm({key: obj.farmId, options: {one: true, remoteHydration: options.remoteHydration}});
+            return farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}});
         }
     }]);
 
@@ -9777,7 +9777,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type, options) {
-            return documentApi.findDocument({key: obj.documentId, options: {one: true, remoteHydration: options.remoteHydration}});
+            return documentApi.findDocument({key: obj.documentId, options: {one: true, hydrateRemote: options.remoteHydration}});
         }
     }]);
 
@@ -10603,8 +10603,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .chain(function (chain) {
                         angular.forEach(data, function (dataItem) {
                             chain.push(function () {
-                                if (dataItem.__complete === false && request.options.remoteHydration === true && request.options.fallbackRemote) {
-                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
+                                if (dataItem.__complete === false && request.options.fallbackRemote === true &&
+                                    (request.options.hydrateRemote === undefined || request.options.hydrateRemote === true)) {
+                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema));
 
                                     request.options.force = true;
                                     request.options.forceUri = dataItem.__uri;
@@ -10739,7 +10740,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     handleRemote(_uri);
                                 } else {
                                     _getLocal(_uri, request).then(function (res) {
-                                        if (res.length == 0 && request.options.fallbackRemote === true) {
+                                        if (res.length == 0 && request.options.fallbackRemote === true && request.options.filter === undefined) {
                                             handleRemote(_uri);
                                         } else {
                                             _handleIncompleteResponse(res, request, request.options.one).then(promise.resolve, promise.reject);

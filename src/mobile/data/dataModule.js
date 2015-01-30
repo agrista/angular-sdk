@@ -689,8 +689,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .chain(function (chain) {
                         angular.forEach(data, function (dataItem) {
                             chain.push(function () {
-                                if (dataItem.__complete === false && request.options.remoteHydration === true && request.options.fallbackRemote) {
-                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema))
+                                if (dataItem.__complete === false && request.options.fallbackRemote === true &&
+                                    (request.options.hydrateRemote === undefined || request.options.hydrateRemote === true)) {
+                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema));
 
                                     request.options.force = true;
                                     request.options.forceUri = dataItem.__uri;
@@ -825,7 +826,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     handleRemote(_uri);
                                 } else {
                                     _getLocal(_uri, request).then(function (res) {
-                                        if (res.length == 0 && request.options.fallbackRemote === true) {
+                                        if (res.length == 0 && request.options.fallbackRemote === true && request.options.filter === undefined) {
                                             handleRemote(_uri);
                                         } else {
                                             _handleIncompleteResponse(res, request, request.options.one).then(promise.resolve, promise.reject);
