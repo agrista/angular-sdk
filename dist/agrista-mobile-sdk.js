@@ -3835,10 +3835,10 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                                 }, 0)
                                 .value();
 
-                            category.value = category.pricePerUnit * groupSum / 100;
+                            category.value = (category.pricePerUnit || 0) * groupSum / 100;
                         } else {
                             category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
-                            category.value = category.pricePerUnit * category.quantity;
+                            category.value = (category.pricePerUnit || 0) * (category.quantity || 0);
                         }
 
                         if (category.schedule !== undefined && budget.data.schedules[category.schedule] !== undefined) {
@@ -3855,7 +3855,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                         }
 
                         if(budget.assetType == 'livestock') {
-                            category.valuePerLSU = category.pricePerUnit / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
+                            category.valuePerLSU = (category.pricePerUnit || 0) / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             group.total.valuePerLSU += category.valuePerLSU;
                         }
 
