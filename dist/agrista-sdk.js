@@ -5058,6 +5058,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                         if(category.unit == '%') {
                             var groupSum = underscore
                                 .chain(budget.data.sections)
+                                .filter(function (groupingSection) {
+                                    return (budget.assetType != 'horticulture' || groupingSection.horticultureStage === section.horticultureStage);
+                                })
                                 .pluck('productCategoryGroups')
                                 .flatten()
                                 .reduce(function(total, group) {
