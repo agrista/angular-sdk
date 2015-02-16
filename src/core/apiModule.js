@@ -1231,7 +1231,8 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
 /**
  * Farmland Value API
  */
-sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration', 'underscore',
+    function ($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
