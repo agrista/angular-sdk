@@ -1242,7 +1242,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
             }).join('&');
 
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/farmland-value/' + id + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/farmland-value/' + id + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1253,7 +1253,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
             }).join('&');
 
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/farmland-values' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/farmland-values' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
