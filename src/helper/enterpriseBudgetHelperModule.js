@@ -780,6 +780,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
     function checkBudgetTemplate (budget) {
         budget.data = budget.data || {};
         budget.data.details = budget.data.details || {};
+        budget.data.details.cycleStart = budget.data.details.cycleStart || 0;
         budget.data.sections = budget.data.sections || [];
         budget.data.schedules = budget.data.schedules || {};
     }
