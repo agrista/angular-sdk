@@ -781,9 +781,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         budget.data = budget.data || {};
         budget.data.details = budget.data.details || {};
         budget.data.sections = budget.data.sections || [];
-        budget.data.schedules = budget.data.schedules || {
-            Monthly: [true, true, true, true, true, true, true, true, true, true, true, true]
-        };
+        budget.data.schedules = budget.data.schedules || {};
     }
 
     function getBaseAnimal (commodityType) {
@@ -1026,7 +1024,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
 
                         var schedule = (category.schedule && budget.data.schedules[category.schedule] ?
                             budget.data.schedules[category.schedule] :
-                            [8.3, 8.3, 8.3, 8.3, 8.3, 8.3, 8.3, 8.3, 8.3, 8.3, 8.3, 8.3]);
+                            underscore.range(12).map(function () {
+                                return 100 / 12;
+                            }));
 
                         category.valuePerMonth = underscore.map(schedule, function (month) {
                             return (month / 100) * category.value;
