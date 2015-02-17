@@ -245,7 +245,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
-        isFinancable: function (type) {
+        isFinanceable: function (type) {
             return (['farmland', 'improvement', 'livestock', 'vme', 'water right'].indexOf(type) !== -1);
         },
         isRentable: function (type) {
