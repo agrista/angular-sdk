@@ -459,6 +459,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        setFlag: function (ids, flag) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/farmer/flag', {ids: ids, flag: flag}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -5218,12 +5225,16 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
+        angular.forEach(item.flags, function(flag) {
+            flag.style = {'background-color': flag.color}
+        })
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
-            searchingIndex: searchingIndex(item)
+            searchingIndex: searchingIndex(item),
+            flags: item.flags
         };
         
         function searchingIndex(item) {

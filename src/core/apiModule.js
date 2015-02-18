@@ -459,6 +459,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        setFlag: function (ids, flag) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/farmer/flag', {ids: ids, flag: flag}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
