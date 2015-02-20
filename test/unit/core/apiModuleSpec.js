@@ -6,15 +6,9 @@
  */
 
 describe('Service: ag.sdk.api.userApi', function () {
-
-    // load the service's module
-    beforeEach(module('ag.sdk.api'));
-
-    // instantiate service
     var service;
-
-    //update the injection
-    beforeEach(inject(function (userApi) {
+    beforeEach(module('ag.sdk.api'));
+    beforeEach(inject(function(userApi) {
         service = userApi;
     }));
 

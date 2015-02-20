@@ -22,6 +22,13 @@ angular.module('ag.sdk.interface', [
     'ag.sdk.interface.navigation'
 ]);
 
+angular.module('ag.sdk.model', [
+    'ag.sdk.model.base',
+    'ag.sdk.model.errors',
+    'ag.sdk.model.validation',
+    'ag.sdk.model.validators'
+]);
+
 angular.module('ag.sdk.test', [
     'ag.sdk.test.data'
 ]);
@@ -30,6 +37,7 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
     'ag.sdk.utilities',
+    'ag.sdk.model',
     'ag.sdk.monitor',
     'ag.sdk.interface.map',
     'ag.sdk.helper',
