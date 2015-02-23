@@ -459,13 +459,6 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
-        },
-        setFlag: function (ids, flag) {
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/flag', {ids: ids, flag: flag}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
         }
     };
 }]);
@@ -521,6 +514,23 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
             });
         }
     };
+}]);
+
+/**
+ * Flag API
+ */
+sdkApiApp.factory('flagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        setFlag: function (ids, flag, targetType) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/flag/set', {ids: ids, flag: flag, targetType: targetType}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);
 
 /**

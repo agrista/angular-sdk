@@ -459,13 +459,6 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
-        },
-        setFlag: function (ids, flag) {
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/flag', {ids: ids, flag: flag}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
         }
     };
 }]);
@@ -521,6 +514,23 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
             });
         }
     };
+}]);
+
+/**
+ * Flag API
+ */
+sdkApiApp.factory('flagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        setFlag: function (ids, flag, targetType) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/flag/set', {ids: ids, flag: flag, targetType: targetType}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);
 
 /**
@@ -5225,16 +5235,25 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
-        angular.forEach(item.flags, function(flag) {
-            flag.style = {'background-color': flag.color}
-        })
+        typeColorMap = {
+            'common': 'FireBrick'
+        };
+        var flagsByType = _.groupBy(item.flags, function(flag) {return flag.type});
+        var flagLabels = [];
+        angular.forEach(flagsByType, function(group, type) {
+            flagLabels.push({
+                style: {'background-color': typeColorMap[type]},
+                count: group.length
+            });
+        });
+
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item),
-            flags: item.flags
+            flags: flagLabels
         };
         
         function searchingIndex(item) {
