@@ -512,8 +512,32 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getDuplicateEntity: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/legalentity/duplicates', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
+}]);
+
+/**
+ * Flag API
+ */
+sdkApiApp.factory('flagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        setFlag: function (ids, flag, targetType) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/flag/set', {ids: ids, flag: flag, targetType: targetType}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);
 
 /**

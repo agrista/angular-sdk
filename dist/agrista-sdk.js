@@ -512,8 +512,32 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getDuplicateEntity: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/legalentity/duplicates', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
+}]);
+
+/**
+ * Flag API
+ */
+sdkApiApp.factory('flagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        setFlag: function (ids, flag, targetType) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/flag/set', {ids: ids, flag: flag, targetType: targetType}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);
 
 /**
@@ -5219,12 +5243,26 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
+        typeColorMap = {
+            'common': 'label-danger'
+        };
+        var flagLabels = _.chain(item.flags)
+            .groupBy('type')
+            .map(function (group, type) {
+                return {
+                    label: typeColorMap[type],
+                    count: group.length
+                }
+            })
+            .value();
+
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
-            searchingIndex: searchingIndex(item)
+            searchingIndex: searchingIndex(item),
+            flags: flagLabels
         };
         
         function searchingIndex(item) {

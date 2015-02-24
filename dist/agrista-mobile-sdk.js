@@ -3989,12 +3989,26 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
+        typeColorMap = {
+            'common': 'label-danger'
+        };
+        var flagLabels = _.chain(item.flags)
+            .groupBy('type')
+            .map(function (group, type) {
+                return {
+                    label: typeColorMap[type],
+                    count: group.length
+                }
+            })
+            .value();
+
         return {
             id: item.id || item.__id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
-            searchingIndex: searchingIndex(item)
+            searchingIndex: searchingIndex(item),
+            flags: flagLabels
         };
         
         function searchingIndex(item) {
