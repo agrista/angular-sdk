@@ -2404,11 +2404,12 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 asset.data.assetValue = asset.data.expectedYield * (asset.data.unitValue || 0);
             } else if (asset.type == 'improvement') {
                 asset.data.valuation = asset.data.valuation || {};
+                asset.data.valuation.replacementValue = asset.data.size * ((asset.data.valuation && asset.data.valuation.constructionCost) || 0);
                 asset.data.valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation', 'purchaserResistance'], function (total, type) {
                     return isNaN(asset.data.valuation[type]) ? total : total * (1 - asset.data.valuation[type]);
                 }, 1);
 
-                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * (1 - Math.min(asset.data.valuation.totalDepreciation, 1)));
+                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * Math.min(asset.data.valuation.totalDepreciation, 1));
             } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
                 asset.data.assetValue = asset.data.size * (asset.data.unitValue || 0);
             }
