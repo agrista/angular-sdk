@@ -3,16 +3,17 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
         typeColorMap = {
-            'common': 'FireBrick'
+            'common': 'label-danger'
         };
-        var flagsByType = _.groupBy(item.flags, function(flag) {return flag.type});
-        var flagLabels = [];
-        angular.forEach(flagsByType, function(group, type) {
-            flagLabels.push({
-                style: {'background-color': typeColorMap[type]},
-                count: group.length
-            });
-        });
+        var flagLabels = _.chain(item.flags)
+            .groupBy('type')
+            .map(function (group, type) {
+                return {
+                    label: typeColorMap[type],
+                    count: group.length
+                }
+            })
+            .value();
 
         return {
             id: item.id || item.__id,
