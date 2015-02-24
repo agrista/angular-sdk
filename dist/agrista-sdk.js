@@ -515,7 +515,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
         },
         getDuplicateEntity: function () {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/legalentity/duplicate', {}, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/legalentity/duplicates', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
