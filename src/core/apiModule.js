@@ -512,6 +512,13 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getDuplicateEntity: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/legalentity/duplicate', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
