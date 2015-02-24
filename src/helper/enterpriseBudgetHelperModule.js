@@ -780,10 +780,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
     function checkBudgetTemplate (budget) {
         budget.data = budget.data || {};
         budget.data.details = budget.data.details || {};
+        budget.data.details.cycleStart = budget.data.details.cycleStart || 0;
         budget.data.sections = budget.data.sections || [];
-        budget.data.schedules = budget.data.schedules || {
-            Monthly: [true, true, true, true, true, true, true, true, true, true, true, true]
-        };
+        budget.data.schedules = budget.data.schedules || {};
     }
 
     function getBaseAnimal (commodityType) {
@@ -919,9 +918,6 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             var category = angular.copy(_categories[categoryCode]);
-            category.quantity = 0;
-            category.pricePerUnit = 0;
-            category.value = 0;
 
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
@@ -1022,28 +1018,33 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                             category.value = (category.pricePerUnit || 0) * (category.quantity || 0);
                         }
 
-                        if (category.schedule !== undefined && budget.data.schedules[category.schedule] !== undefined) {
-                            var schedule = budget.data.schedules[category.schedule];
-                            var valuePerMonth = category.value / underscore.reduce(schedule, function (total, value) {
-                                return (value ? total + 1 : total);
-                            }, 0);
-
-                            category.valuePerMonth = underscore.map(schedule, function (value) {
-                                return (value ? valuePerMonth : 0);
-                            });
-                        } else {
-                            delete category.valuePerMonth;
-                        }
-
                         if(budget.assetType == 'livestock') {
                             category.valuePerLSU = (category.pricePerUnit || 0) / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             group.total.valuePerLSU += category.valuePerLSU;
                         }
 
+                        var schedule = (category.schedule && budget.data.schedules[category.schedule] ?
+                            budget.data.schedules[category.schedule] :
+                            underscore.range(12).map(function () {
+                                return 100 / 12;
+                            }));
+
+                        category.valuePerMonth = underscore.map(schedule, function (month) {
+                            return (month / 100) * category.value;
+                        });
+
                         group.total.value += category.value;
+                        group.total.valuePerMonth = (group.total.valuePerMonth ?
+                            underscore.map(group.total.valuePerMonth, function (month, i) {
+                                return month + category.valuePerMonth[i];
+                            }) : category.valuePerMonth);
                     });
 
                     section.total.value += group.total.value;
+                    section.total.valuePerMonth = (section.total.valuePerMonth ?
+                        underscore.map(section.total.valuePerMonth, function (month, i) {
+                            return month + group.total.valuePerMonth[i];
+                        }) : group.total.valuePerMonth);
 
                     if(budget.assetType == 'livestock') {
                         section.total.valuePerLSU += group.total.valuePerLSU;

@@ -2261,6 +2261,12 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
+        isFinanceable: function (type) {
+            return (['farmland', 'improvement', 'livestock', 'vme', 'water right'].indexOf(type) !== -1);
+        },
+        isRentable: function (type) {
+            return (['farmland', 'vme', 'water right'].indexOf(type) !== -1);
+        },
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
                 (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
@@ -2287,6 +2293,42 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             }
 
             return asset;
+        },
+        calculateLiability: function (asset) {
+            if (asset.data.financing && (asset.data.financing.financed || asset.data.financing.leased)) {
+                asset.data.financing.closingBalance = this.calculateLiabilityForMonth(asset, moment().format('YYYY-MM'))
+            }
+
+            return asset;
+        },
+        calculateLiabilityForMonth: function (asset, month) {
+            var freq = {
+                Monthly: 12,
+                'Bi-Monthly': 24,
+                Quarterly: 4,
+                'Bi-Yearly': 2,
+                Yearly: 1
+            };
+
+            var financing = asset.data.financing,
+                closingBalance = financing.openingBalance || 0;
+
+            var startMonth = moment(financing.paymentStart),
+                endMonth = moment(financing.paymentEnd),
+                currentMonth = moment(month);
+
+            var installmentsSince = (financing.leased && currentMonth > endMonth ? endMonth : currentMonth)
+                    .diff(startMonth, 'months') * ((freq[financing.paymentFrequency] || 1) / 12);
+
+            if (asset.data.financing.financed) {
+                for (var i = 0; i <= installmentsSince; i++) {
+                    closingBalance -= Math.min(closingBalance, (financing.installment || 0) - ((((financing.interestRate || 0) / 100) / freq[financing.paymentFrequency]) * closingBalance));
+                }
+            } else if (startMonth <= currentMonth) {
+                closingBalance = Math.ceil(installmentsSince) * (financing.installment || 0);
+            }
+
+            return closingBalance;
         },
         calculateValuation: function (asset, valuation) {
             if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
@@ -2338,11 +2380,12 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 asset.data.assetValue = asset.data.expectedYield * (asset.data.unitValue || 0);
             } else if (asset.type == 'improvement') {
                 asset.data.valuation = asset.data.valuation || {};
+                asset.data.valuation.replacementValue = asset.data.size * ((asset.data.valuation && asset.data.valuation.constructionCost) || 0);
                 asset.data.valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation', 'purchaserResistance'], function (total, type) {
                     return isNaN(asset.data.valuation[type]) ? total : total * (1 - asset.data.valuation[type]);
                 }, 1);
 
-                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * (1 - Math.min(asset.data.valuation.totalDepreciation, 1)));
+                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * Math.min(asset.data.valuation.totalDepreciation, 1));
             } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
                 asset.data.assetValue = asset.data.size * (asset.data.unitValue || 0);
             }
@@ -4832,10 +4875,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
     function checkBudgetTemplate (budget) {
         budget.data = budget.data || {};
         budget.data.details = budget.data.details || {};
+        budget.data.details.cycleStart = budget.data.details.cycleStart || 0;
         budget.data.sections = budget.data.sections || [];
-        budget.data.schedules = budget.data.schedules || {
-            Monthly: [true, true, true, true, true, true, true, true, true, true, true, true]
-        };
+        budget.data.schedules = budget.data.schedules || {};
     }
 
     function getBaseAnimal (commodityType) {
@@ -4971,9 +5013,6 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         addCategoryToBudget: function (budget, sectionName, groupName,  categoryCode, horticultureStage) {
             var category = angular.copy(_categories[categoryCode]);
-            category.quantity = 0;
-            category.pricePerUnit = 0;
-            category.value = 0;
 
             if(budget.assetType == 'livestock') {
                 category.valuePerLSU = 0;
@@ -5074,28 +5113,33 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
                             category.value = (category.pricePerUnit || 0) * (category.quantity || 0);
                         }
 
-                        if (category.schedule !== undefined && budget.data.schedules[category.schedule] !== undefined) {
-                            var schedule = budget.data.schedules[category.schedule];
-                            var valuePerMonth = category.value / underscore.reduce(schedule, function (total, value) {
-                                return (value ? total + 1 : total);
-                            }, 0);
-
-                            category.valuePerMonth = underscore.map(schedule, function (value) {
-                                return (value ? valuePerMonth : 0);
-                            });
-                        } else {
-                            delete category.valuePerMonth;
-                        }
-
                         if(budget.assetType == 'livestock') {
                             category.valuePerLSU = (category.pricePerUnit || 0) / _conversionRate[getBaseAnimal(budget.commodityType)][category.name];
                             group.total.valuePerLSU += category.valuePerLSU;
                         }
 
+                        var schedule = (category.schedule && budget.data.schedules[category.schedule] ?
+                            budget.data.schedules[category.schedule] :
+                            underscore.range(12).map(function () {
+                                return 100 / 12;
+                            }));
+
+                        category.valuePerMonth = underscore.map(schedule, function (month) {
+                            return (month / 100) * category.value;
+                        });
+
                         group.total.value += category.value;
+                        group.total.valuePerMonth = (group.total.valuePerMonth ?
+                            underscore.map(group.total.valuePerMonth, function (month, i) {
+                                return month + category.valuePerMonth[i];
+                            }) : category.valuePerMonth);
                     });
 
                     section.total.value += group.total.value;
+                    section.total.valuePerMonth = (section.total.valuePerMonth ?
+                        underscore.map(section.total.valuePerMonth, function (month, i) {
+                            return month + group.total.valuePerMonth[i];
+                        }) : group.total.valuePerMonth);
 
                     if(budget.assetType == 'livestock') {
                         section.total.valuePerLSU += group.total.valuePerLSU;
@@ -6803,40 +6847,40 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             zoomControl: true
         },
         layerControl: {
-            baseTile: {
-                'autoscale': true,
-                'bounds': [-180, -85, 180, 85],
-                'cache': {
-                    'maxzoom': 16,
-                    'minzoom': 5
-                },
-                'center': [24.631347656249993, -28.97931203672245, 6],
-                'data': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/markers.geojsonp'],
-                'geocoder': 'https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/geocode/{query}.jsonp',
-                'id': 'agrista.map-65ftbmpi',
-                'maxzoom': 19,
-                'minzoom': 0,
-                'name': 'SA Agri Backdrop',
-                'private': true,
-                'scheme': 'xyz',
-                'tilejson': '2.0.0',
-                'tiles': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png', 'https://b.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png'],
-                'vector_layers': [
-                    {
-                        'fields': {},
-                        'id': 'mapbox_streets'
-                    },
-                    {
-                        'description': '',
-                        'fields': {},
-                        'id': 'agrista_agri_backdrop'
-                    }
-                ]
-            },
+            baseTile: 'Agriculture',
             baseLayers: {
                 'Agriculture': {
-                    base: true,
-                    type: 'mapbox'
+                    type: 'mapbox',
+                    tiles: {
+                        'autoscale': true,
+                        'bounds': [-180, -85, 180, 85],
+                        'cache': {
+                            'maxzoom': 16,
+                            'minzoom': 5
+                        },
+                        'center': [24.631347656249993, -28.97931203672245, 6],
+                        'data': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/markers.geojsonp'],
+                        'geocoder': 'https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/geocode/{query}.jsonp',
+                        'id': 'agrista.map-65ftbmpi',
+                        'maxzoom': 19,
+                        'minzoom': 0,
+                        'name': 'SA Agri Backdrop',
+                        'private': true,
+                        'scheme': 'xyz',
+                        'tilejson': '2.0.0',
+                        'tiles': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png', 'https://b.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png'],
+                        'vector_layers': [
+                            {
+                                'fields': {},
+                                'id': 'mapbox_streets'
+                            },
+                            {
+                                'description': '',
+                                'fields': {},
+                                'id': 'agrista_agri_backdrop'
+                            }
+                        ]
+                    }
                 },
                 'Satellite': {
                     type: 'mapbox',
@@ -7048,6 +7092,14 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             setBaseLayers: function (layers) {
                 this._config.layerControl.baseLayers = layers;
                 this.enqueueRequest('mapbox-' + this._id + '::set-baselayers', layers);
+            },
+            addBaseLayer: function (name, layer, show) {
+                this._config.layerControl.baseLayers[name] = layer;
+                this.enqueueRequest('mapbox-' + this._id + '::add-baselayer', {
+                    name: name,
+                    layer: layer,
+                    show: show
+                });
             },
 
             getOverlays: function () {
@@ -7287,6 +7339,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     properties: properties,
                     handler: function (layer, feature, featureLayer) {
                         _this._config.leafletLayers[layerName] = layer;
+                        _this._config.leafletLayers[properties.featureId] = featureLayer;
 
                         if (typeof onAddCallback == 'function') {
                             onAddCallback(feature, featureLayer);
@@ -7592,6 +7645,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             _this.setBaseLayers(args);
         });
 
+        scope.$on('mapbox-' + id + '::add-baselayer', function (event, args) {
+            _this.addBaseLayer(args.layer, args.name, args.show);
+        });
+
         scope.$on('mapbox-' + id + '::add-overlay', function (event, args) {
             _this.addOverlay(args.layerName, args.name);
         });
@@ -7882,14 +7939,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     /*
      * Layer Controls
      */
-    Mapbox.prototype.setBaseTile = function (tile) {
+    Mapbox.prototype.setBaseTile = function (name) {
         var _this = this;
 
-        _this._layerControls.baseTile = tile;
+        _this._layerControls.baseTile = name;
 
-        angular.forEach(_this._layerControls.baseLayers, function (baselayer) {
-            if (baselayer.base && baselayer.layer) {
-                baselayer.layer.setUrl(tile);
+        angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
+            if (name === _this._layerControls.baseTile) {
+                baselayer.layer.addTo(_this._map);
             }
         });
     };
@@ -7920,32 +7977,30 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             } else {
                 baselayer =  _this._layerControls.baseLayers[name];
 
-                if (baselayer.base) {
-                    baselayer.layer.addTo(this._map);
+                if (name === _this._layerControls.baseTile) {
+                    baselayer.layer.addTo(_this._map);
                 }
             }
         });
     };
 
-    Mapbox.prototype.addBaseLayer = function (baselayer, name) {
-        if (baselayer.base) {
-            baselayer.tiles = this._layerControls.baseTile;
-        }
+    Mapbox.prototype.addBaseLayer = function (baselayer, name, show) {
+        if (this._layerControls.baseLayers[name] === undefined) {
+            if (baselayer.type == 'tile') {
+                baselayer.layer = L.tileLayer(baselayer.tiles);
+            } else if (baselayer.type == 'mapbox') {
+                baselayer.layer = L.mapbox.tileLayer(baselayer.tiles);
+            } else if (baselayer.type == 'google' && typeof L.Google === 'function') {
+                baselayer.layer = new L.Google(baselayer.tiles);
+            }
 
-        if (baselayer.type == 'tile') {
-            baselayer.layer = L.tileLayer(baselayer.tiles);
-        } else if (baselayer.type == 'mapbox') {
-            baselayer.layer = L.mapbox.tileLayer(baselayer.tiles);
-        } else if (baselayer.type == 'google' && typeof L.Google === 'function') {
-            baselayer.layer = new L.Google(baselayer.tiles);
-        }
+            if (name === this._layerControls.baseTile || show) {
+                baselayer.layer.addTo(this._map);
+            }
 
-        if (baselayer.base) {
-            baselayer.layer.addTo(this._map);
+            this._layerControls.baseLayers[name] = baselayer;
+            this._layerControls.control.addBaseLayer(baselayer.layer, name);
         }
-
-        this._layerControls.baseLayers[name] = baselayer;
-        this._layerControls.control.addBaseLayer(baselayer.layer, name);
     };
 
     Mapbox.prototype.setOverlays = function (overlays) {
@@ -8131,11 +8186,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (layer && this._map.hasLayer(layer) == false) {
             this._map.addLayer(layer);
 
-            layer.eachLayer(function (item) {
-                if (item.bindLabel && item.feature.properties.label) {
-                    item.bindLabel(item.feature.properties.label.message, item.feature.properties.label.options);
-                }
-            });
+            if (layer.eachLayer) {
+                layer.eachLayer(function (item) {
+                    if (item.bindLabel && item.feature.properties.label) {
+                        item.bindLabel(item.feature.properties.label.message, item.feature.properties.label.options);
+                    }
+                });
+            }
         }
     };
 

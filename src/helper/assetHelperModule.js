@@ -245,6 +245,12 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
         },
+        isFinanceable: function (type) {
+            return (['farmland', 'improvement', 'livestock', 'vme', 'water right'].indexOf(type) !== -1);
+        },
+        isRentable: function (type) {
+            return (['farmland', 'vme', 'water right'].indexOf(type) !== -1);
+        },
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
                 (asset.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
@@ -271,6 +277,42 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             }
 
             return asset;
+        },
+        calculateLiability: function (asset) {
+            if (asset.data.financing && (asset.data.financing.financed || asset.data.financing.leased)) {
+                asset.data.financing.closingBalance = this.calculateLiabilityForMonth(asset, moment().format('YYYY-MM'))
+            }
+
+            return asset;
+        },
+        calculateLiabilityForMonth: function (asset, month) {
+            var freq = {
+                Monthly: 12,
+                'Bi-Monthly': 24,
+                Quarterly: 4,
+                'Bi-Yearly': 2,
+                Yearly: 1
+            };
+
+            var financing = asset.data.financing,
+                closingBalance = financing.openingBalance || 0;
+
+            var startMonth = moment(financing.paymentStart),
+                endMonth = moment(financing.paymentEnd),
+                currentMonth = moment(month);
+
+            var installmentsSince = (financing.leased && currentMonth > endMonth ? endMonth : currentMonth)
+                    .diff(startMonth, 'months') * ((freq[financing.paymentFrequency] || 1) / 12);
+
+            if (asset.data.financing.financed) {
+                for (var i = 0; i <= installmentsSince; i++) {
+                    closingBalance -= Math.min(closingBalance, (financing.installment || 0) - ((((financing.interestRate || 0) / 100) / freq[financing.paymentFrequency]) * closingBalance));
+                }
+            } else if (startMonth <= currentMonth) {
+                closingBalance = Math.ceil(installmentsSince) * (financing.installment || 0);
+            }
+
+            return closingBalance;
         },
         calculateValuation: function (asset, valuation) {
             if (asset.type == 'vme' && isNaN(asset.data.quantity) == false) {
@@ -322,11 +364,12 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['assetHelper', 'underscore', 
                 asset.data.assetValue = asset.data.expectedYield * (asset.data.unitValue || 0);
             } else if (asset.type == 'improvement') {
                 asset.data.valuation = asset.data.valuation || {};
+                asset.data.valuation.replacementValue = asset.data.size * ((asset.data.valuation && asset.data.valuation.constructionCost) || 0);
                 asset.data.valuation.totalDepreciation = underscore.reduce(['physicalDepreciation', 'functionalDepreciation', 'economicDepreciation', 'purchaserResistance'], function (total, type) {
                     return isNaN(asset.data.valuation[type]) ? total : total * (1 - asset.data.valuation[type]);
                 }, 1);
 
-                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * (1 - Math.min(asset.data.valuation.totalDepreciation, 1)));
+                asset.data.assetValue = Math.round((asset.data.valuation.replacementValue || 0) * Math.min(asset.data.valuation.totalDepreciation, 1));
             } else if (asset.type != 'improvement' && isNaN(asset.data.size) == false) {
                 asset.data.assetValue = asset.data.size * (asset.data.unitValue || 0);
             }
