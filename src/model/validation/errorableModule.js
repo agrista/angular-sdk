@@ -61,7 +61,7 @@ sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
                 }
             });
 
-            this.__$errors = _$errors;
+            privateProperty(this, '__$errors', _$errors);
         }
 
         return Errorable;

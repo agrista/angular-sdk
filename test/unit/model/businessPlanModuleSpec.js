@@ -17,7 +17,9 @@ describe('ag.sdk.model.business-plan', function () {
                 author: 'Agrista',
                 title: 'Business Time',
                 organizationId: 1,
-                data: {}
+                data: {
+                    startDate: '2015-10-10T10:20:00'
+                }
             });
         });
 
@@ -74,9 +76,6 @@ describe('ag.sdk.model.business-plan', function () {
         });
 
         it('validates startDate as a date', function () {
-            //expect(businessPlan.validate()).toBe(true);
-
-            businessPlan.startDate = '2015-10-10T10:20:00';
             expect(businessPlan.validate()).toBe(true);
 
             businessPlan.startDate = 'this is not a date';

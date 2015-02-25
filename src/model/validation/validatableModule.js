@@ -56,12 +56,12 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     .value();
             }
 
-            this.validations = _validations;
-            this.validates   = _validations.add;
+            privateProperty(this, 'validations', _validations);
+            privateProperty(this, 'validates', _validations.add);
 
-            this.__validate = function (fieldName) {
+            privateProperty(this, '__validate', function (fieldName) {
                 return this.constructor.validations.validate(this, fieldName);
-            };
+            });
 
             computedProperty(this, '__$valid', function () {
                 return this.constructor.validations.validate(this);

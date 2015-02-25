@@ -7,9 +7,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             this.docType = 'business plan';
 
-            privateProperty(this, 'productionPlan', this.data.productionPlan);
-            privateProperty(this, 'startDate', this.data.startDate);
-
             // Add Assets & Liabilities
             privateProperty(this, 'addAsset', function (asset) {
                 this.data.plannedAssets = this.data.plannedAssets || [];
@@ -25,6 +22,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             // View added Assets & Liabilities
+            computedProperty(this, 'startDate', function () {
+                return this.data.startDate;
+            });
+
             computedProperty(this, 'plannedAssets', function () {
                 return this.data.plannedAssets;
             });

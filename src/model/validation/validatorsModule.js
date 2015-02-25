@@ -98,8 +98,6 @@ sdkModelValidators.factory('Validator.format.date', ['moment', 'underscore', 'Va
                 return true;
             }
 
-            console.log(value);
-
             return moment(value).isValid();
         }
 

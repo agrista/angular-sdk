@@ -9462,9 +9462,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             this.docType = 'business plan';
 
-            privateProperty(this, 'productionPlan', this.data.productionPlan);
-            privateProperty(this, 'startDate', this.data.startDate);
-
             // Add Assets & Liabilities
             privateProperty(this, 'addAsset', function (asset) {
                 this.data.plannedAssets = this.data.plannedAssets || [];
@@ -9480,6 +9477,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             // View added Assets & Liabilities
+            computedProperty(this, 'startDate', function () {
+                return this.data.startDate;
+            });
+
             computedProperty(this, 'plannedAssets', function () {
                 return this.data.plannedAssets;
             });
@@ -9637,7 +9638,7 @@ sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
                 }
             });
 
-            this.__$errors = _$errors;
+            privateProperty(this, '__$errors', _$errors);
         }
 
         return Errorable;
@@ -9700,12 +9701,12 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     .value();
             }
 
-            this.validations = _validations;
-            this.validates   = _validations.add;
+            privateProperty(this, 'validations', _validations);
+            privateProperty(this, 'validates', _validations.add);
 
-            this.__validate = function (fieldName) {
+            privateProperty(this, '__validate', function (fieldName) {
                 return this.constructor.validations.validate(this, fieldName);
-            };
+            });
 
             computedProperty(this, '__$valid', function () {
                 return this.constructor.validations.validate(this);
@@ -10010,8 +10011,6 @@ sdkModelValidators.factory('Validator.format.date', ['moment', 'underscore', 'Va
             if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
                 return true;
             }
-
-            console.log(value);
 
             return moment(value).isValid();
         }
