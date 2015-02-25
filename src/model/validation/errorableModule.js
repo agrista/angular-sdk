@@ -1,6 +1,6 @@
-var sdkModalErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModalErrors.factory('Errorable', ['privateProperty', 'underscore',
+sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
     function (privateProperty, underscore) {
         function Errorable () {
             var _$errors = {};

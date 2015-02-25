@@ -1,10 +1,32 @@
 angular.module('ag.test.model.mocks')
-    .factory('Document', ['Model', 'inheritModel', function (Model, inheritModel) {
-        function Document (attrs) {
-            this.id = attrs.id;
-        }
+    .factory('Document', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+        function (inheritModel, Model, readOnlyProperty, underscore) {
+            function Document (attrs) {
+                this.id = attrs.id;
+                this.author = attrs.author;
 
-        inheritModel(Document, Model.Base);
+                readOnlyProperty(this, 'docTypes', {
+                    'asset register': 'Asset Register'
+                });
+            }
 
-        return Document;
-    }]);
+            inheritModel(Document, Model.Base);
+
+            Document.validates({
+                author: {
+                    required: true,
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                docType: {
+                    required: true,
+                    inclusion: {
+                        in: underscore.keys(Document.docTypes)
+                    }
+                }
+            });
+
+            return Document;
+        }]);

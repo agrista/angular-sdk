@@ -7,6 +7,7 @@ module.exports = function(config) {
             'examples/components/angular-mocks/angular-mocks.js',
             'examples/components/angular-route/angular-route.js',
             'examples/components/geojson-js-utils/geojson-utils.js',
+            'examples/components/moment/moment.js',
             'examples/components/underscore/underscore.js',
             'src/**/*.js',
             'test/unit/**/mocks/mock.js',

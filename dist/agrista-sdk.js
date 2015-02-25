@@ -1686,6 +1686,8 @@ var sdkLibraryApp = angular.module('ag.sdk.library', []);
  */
 sdkLibraryApp.constant('underscore', window._);
 
+sdkLibraryApp.constant('moment', window.moment);
+
 sdkLibraryApp.constant('geojsonUtils', window.gju);
 
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
@@ -9310,6 +9312,44 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
         }
     };
 }]);
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelAsset.factory('Asset', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, readOnlyProperty, underscore) {
+        function Asset (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (arguments.length === 0) return;
+
+            this.id = attrs.id;
+            this.type = attrs.type;
+            this.organizationId = attrs.organizationId;
+
+            this.data = attrs.data || {};
+        }
+
+        inheritModel(Asset, Model.Base);
+
+        readOnlyProperty(Asset, 'assetTypes', {
+            'crop': 'Crop'
+        });
+
+        Asset.validates({
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Asset.assetTypes)
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return Asset;
+    }]);
+
 angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors'])
     .factory('Model', ['Base', function (Base) {
         var Model = {};
@@ -9371,10 +9411,26 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             });
         }
     }])
-    .factory('inheritModel', [function () {
+    .factory('readOnlyProperty', [function () {
+        return function (object, name, value) {
+            Object.defineProperty(object, name, {
+                writable: false,
+                value: value
+            });
+        }
+    }])
+    .factory('inheritModel', ['underscore', function (underscore) {
         return function (object, base) {
-            var _constructor = object;
-            _constructor = base.apply(_constructor);
+            base.apply(object);
+
+            // Apply defined properties to extended object
+            underscore.each(Object.getOwnPropertyNames(base), function (name) {
+                var descriptor = Object.getOwnPropertyDescriptor(base, name);
+
+                if (underscore.isUndefined(object[name]) && descriptor) {
+                    Object.defineProperty(object, name, descriptor);
+                }
+            });
         }
     }])
     .factory('privateProperty', [function () {
@@ -9397,9 +9453,130 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModalErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
-sdkModalErrors.factory('Errorable', ['privateProperty', 'underscore',
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Asset, computedProperty, Document, inheritModel, privateProperty, readOnlyProperty, underscore) {
+        function BusinessPlan (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'business plan';
+
+            privateProperty(this, 'productionPlan', this.data.productionPlan);
+            privateProperty(this, 'startDate', this.data.startDate);
+
+            // Add Assets & Liabilities
+            privateProperty(this, 'addAsset', function (asset) {
+                this.data.plannedAssets = this.data.plannedAssets || [];
+
+                if (Asset.new(asset).validate()) {
+                    this.data.plannedAssets.push(asset);
+                }
+            });
+
+            privateProperty(this, 'addLiability', function (liability) {
+                this.data.plannedLiabilities = this.data.plannedLiabilities || [];
+                this.data.plannedLiabilities.push(liability);
+            });
+
+            // View added Assets & Liabilities
+            computedProperty(this, 'plannedAssets', function () {
+                return this.data.plannedAssets;
+            });
+
+            computedProperty(this, 'plannedLiabilities', function () {
+                return this.data.plannedLiabilities;
+            });
+        }
+
+        inheritModel(BusinessPlan, Document);
+
+        BusinessPlan.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'business plan'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            startDate: {
+                required: true,
+                format: {
+                    date: true
+                }
+            },
+            title: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return BusinessPlan;
+    }]);
+
+var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+        function (inheritModel, Model, readOnlyProperty, underscore) {
+            function Document (attrs) {
+                Model.Base.apply(this, arguments);
+
+                if (arguments.length === 0) return;
+
+                this.id = attrs.id;
+                this.author = attrs.author;
+                this.docType = attrs.docType;
+                this.organizationId = attrs.organizationId;
+                this.title = attrs.title;
+
+                this.data = attrs.data || {};
+            }
+
+            inheritModel(Document, Model.Base);
+
+            readOnlyProperty(Document, 'docTypes', {
+                'asset register': 'Asset Register'
+            });
+
+            Document.validates({
+                author: {
+                    required: true,
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                docType: {
+                    required: true,
+                    inclusion: {
+                        in: underscore.keys(Document.docTypes)
+                    }
+                },
+                organizationId: {
+                    required: true,
+                    numeric: true
+                }
+            });
+
+            return Document;
+        }]);
+
+var sdkModelErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
     function (privateProperty, underscore) {
         function Errorable () {
             var _$errors = {};
@@ -9465,9 +9642,19 @@ sdkModalErrors.factory('Errorable', ['privateProperty', 'underscore',
 
         return Errorable;
     }]);
-var sdkModalValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.validators']);
+var sdkModelValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.validators']);
 
-sdkModalValidation.factory('Validatable', ['computedProperty', 'privateProperty', 'underscore', 'Validatable.Field', 'Validator.required', 'Validator.length', 'Validator.length.min', 'Validator.length.min',
+sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty', 'underscore', 'Validatable.Field',
+    'Validator.dateRange',
+    'Validator.dateRange.after',
+    'Validator.dateRange.before',
+    'Validator.equal',
+    'Validator.format',
+    'Validator.format.date',
+    'Validator.inclusion',
+    'Validator.length', 'Validator.length.min', 'Validator.length.min',
+    'Validator.numeric',
+    'Validator.required',
     function (computedProperty, privateProperty, underscore, Field) {
         function Validatable () {
             var _validations = {};
@@ -9532,8 +9719,8 @@ sdkModalValidation.factory('Validatable', ['computedProperty', 'privateProperty'
         return Validatable;
     }]);
 
-sdkModalValidation.factory('Validatable.DuplicateValidatorError', [function () {
-    function DuplicateValidatorError() {
+sdkModelValidation.factory('Validatable.DuplicateValidatorError', [function () {
+    function DuplicateValidatorError(name) {
         this.name = 'DuplicateValidatorError';
         this.message = 'A validator by the name ' + name + ' is already registered';
     }
@@ -9543,7 +9730,7 @@ sdkModalValidation.factory('Validatable.DuplicateValidatorError', [function () {
     return DuplicateValidatorError;
 }]);
 
-sdkModalValidation.factory('Validatable.ValidationMessageNotFoundError', [function() {
+sdkModelValidation.factory('Validatable.ValidationMessageNotFoundError', [function() {
     function ValidationMessageNotFoundError(validatorName, fieldName) {
         this.name    = 'ValidationMessageNotFound';
         this.message = 'Validation message not found for validator ' + validatorName + ' on the field ' + fieldName + '. Validation messages must be added to validators in order to provide your users with useful error messages.';
@@ -9554,7 +9741,7 @@ sdkModalValidation.factory('Validatable.ValidationMessageNotFoundError', [functi
     return ValidationMessageNotFoundError;
 }]);
 
-sdkModalValidation.factory('Validatable.Field', ['privateProperty', 'underscore', 'Validatable.Validation', 'Validatable.ValidationMessageNotFoundError', 'Validatable.Validator', 'Validatable.validators',
+sdkModelValidation.factory('Validatable.Field', ['privateProperty', 'underscore', 'Validatable.Validation', 'Validatable.ValidationMessageNotFoundError', 'Validatable.Validator', 'Validatable.validators',
     function (privateProperty, underscore, Validation, ValidationMessageNotFoundError, Validator, validators) {
         function Field (name, validationSet) {
             var field = [];
@@ -9584,7 +9771,7 @@ sdkModalValidation.factory('Validatable.Field', ['privateProperty', 'underscore'
         return Field;
     }]);
 
-sdkModalValidation.factory('Validatable.Validation', ['privateProperty', function (privateProperty) {
+sdkModelValidation.factory('Validatable.Validation', ['privateProperty', function (privateProperty) {
     function Validation (field, validationFunction) {
         privateProperty(this, 'field', field);
         privateProperty(this, 'message', validationFunction.message);
@@ -9596,7 +9783,7 @@ sdkModalValidation.factory('Validatable.Validation', ['privateProperty', functio
     return Validation;
 }]);
 
-sdkModalValidation.factory('Validatable.ValidationFunction', ['underscore', function (underscore) {
+sdkModelValidation.factory('Validatable.ValidationFunction', ['underscore', function (underscore) {
     function ValidationFunction (validationFunction, options) {
         var boundFunction = underscore.bind(validationFunction, options);
         boundFunction.message = configureMessage();
@@ -9617,7 +9804,7 @@ sdkModalValidation.factory('Validatable.ValidationFunction', ['underscore', func
     return ValidationFunction;
 }]);
 
-sdkModalValidation.factory('Validatable.ValidatorNotFoundError', [function() {
+sdkModelValidation.factory('Validatable.ValidatorNotFoundError', [function() {
     function ValidatorNotFoundError(name) {
         this.name    = 'ValidatorNotFoundError';
         this.message = 'No validator found by the name of ' + name + '. Custom validators must define a validator key containing the custom validation function';
@@ -9628,7 +9815,7 @@ sdkModalValidation.factory('Validatable.ValidatorNotFoundError', [function() {
     return ValidatorNotFoundError;
 }]);
 
-sdkModalValidation.factory('Validatable.Validator', ['privateProperty', 'underscore', 'Validatable.ValidationFunction', 'Validatable.ValidatorNotFoundError', 'Validatable.validators',
+sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'underscore', 'Validatable.ValidationFunction', 'Validatable.ValidatorNotFoundError', 'Validatable.validators',
     function (privateProperty, underscore, ValidationFunction, ValidatorNotFoundError, validators) {
         function AnonymousValidator(options, name) {
             if (underscore.isFunction(options.validator)) {
@@ -9705,7 +9892,7 @@ sdkModalValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
         return Validator;
     }]);
 
-sdkModalValidation.factory('Validatable.validators', ['Validatable.DuplicateValidatorError', 'privateProperty', 'underscore',
+sdkModelValidation.factory('Validatable.validators', ['Validatable.DuplicateValidatorError', 'privateProperty', 'underscore',
     function (DuplicateValidatorError, privateProperty, underscore) {
         var validators = {};
 
@@ -9724,36 +9911,152 @@ sdkModalValidation.factory('Validatable.validators', ['Validatable.DuplicateVali
         return validators;
     }]);
 
-var sdkModalValidators = angular.module('ag.sdk.model.validators', ['ag.sdk.library', 'ag.sdk.model.validation']);
+var sdkModelValidators = angular.module('ag.sdk.model.validators', ['ag.sdk.library', 'ag.sdk.model.validation']);
 
 /**
- * Required Validators
+ * Date Validator
  */
-sdkModalValidators.factory('Validator.required', ['underscore', 'Validatable.Validator',
-    function (underscore, Validator) {
-        function required (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value)) {
-                return false;
+sdkModelValidators.factory('Validator.dateRange', ['moment', 'underscore', 'Validatable.Validator', 'Validator.dateRange.after', 'Validator.dateRange.before',
+    function (moment, underscore, Validator, after, before) {
+        function dateRange (value, instance, field) {}
+
+        dateRange.message = function () {
+            return 'Is not a valid date';
+        };
+
+        dateRange.options = {
+            after: after,
+            before: before
+        };
+
+        return new Validator(dateRange);
+    }]);
+
+sdkModelValidators.factory('Validator.dateRange.after', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function after (value, instance, field) {
+            if (underscore.isUndefined(this.after) || underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
             }
 
-            if (value.constructor.name === 'String') {
-                return !!(value && value.length || typeof value == 'object');
-            }
-
-            return value !== undefined;
+            return moment(value) >= moment(this.after);
         }
 
-        required.message = 'cannot be blank';
+        after.message = function () {
+            return 'Must be at least ' + moment(this.after).format("dddd, MMMM Do YYYY, h:mm:ss a");
+        };
 
-        return new Validator(required);
+        return new Validator(after);
+    }]);
+
+sdkModelValidators.factory('Validator.dateRange.before', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function before (value, instance, field) {
+            if (underscore.isUndefined(this.before) || underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return moment(value) <= moment(this.before);
+        }
+
+        before.message = function () {
+            return 'Must be no more than ' + moment(this.before).format("dddd, MMMM Do YYYY, h:mm:ss a");
+        };
+
+        return new Validator(before);
+    }]);
+
+/**
+ * Equals Validator
+ */
+sdkModelValidators.factory('Validator.equal', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function equal (value, instance, field) {
+            if (underscore.isUndefined(this.to)) {
+                throw 'Equal validator must specify an \'to\' attribute';
+            }
+
+            return value === this.to;
+        }
+
+        equal.message = function () {
+            return 'Must be equal to \'' + this.to + '\'';
+        };
+
+        return new Validator(equal);
+    }]);
+
+/**
+ * Format Validator
+ */
+sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date',
+    function (underscore, Validator, date) {
+        function format (value, instance, field) {}
+
+        format.message = function () {
+            return 'Must be the correct format';
+        };
+
+        format.options = {
+            date: date
+        };
+
+        return new Validator(format);
+    }]);
+
+sdkModelValidators.factory('Validator.format.date', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function date (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            console.log(value);
+
+            return moment(value).isValid();
+        }
+
+        date.message = function () {
+            return 'Must be a valid date';
+        };
+
+        return new Validator(date);
+    }]);
+
+/**
+ * Inclusion Validator
+ */
+sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function inclusion (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {
+                throw 'Inclusion validator must specify an \'in\' attribute';
+            }
+
+            return underscore.some(this.in, function (item) {
+                return value === item;
+            })
+        }
+
+        inclusion.message = function () {
+            return 'Must be one of \''+ this.in.join(', ') + '\'';
+        };
+
+        return new Validator(inclusion);
     }]);
 
 /**
  * Length Validators
  */
-sdkModalValidators.factory('Validator.length', ['Validatable.Validator', 'Validator.length.min', 'Validator.length.max',
+sdkModelValidators.factory('Validator.length', ['Validatable.Validator', 'Validator.length.min', 'Validator.length.max',
     function (Validator, min, max) {
-        function length () {}
+        function length () {
+            return true;
+        }
 
         length.message = 'does not meet the length requirement';
 
@@ -9765,7 +10068,7 @@ sdkModalValidators.factory('Validator.length', ['Validatable.Validator', 'Valida
         return new Validator(length);
     }]);
 
-sdkModalValidators.factory('Validator.length.min', ['underscore', 'Validatable.Validator',
+sdkModelValidators.factory('Validator.length.min', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function min (value, instance, field) {
             if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
@@ -9782,7 +10085,7 @@ sdkModalValidators.factory('Validator.length.min', ['underscore', 'Validatable.V
         return new Validator(min);
     }]);
 
-sdkModalValidators.factory('Validator.length.max', ['underscore', 'Validatable.Validator',
+sdkModelValidators.factory('Validator.length.max', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function max (value, instance, field) {
             if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
@@ -9800,24 +10103,45 @@ sdkModalValidators.factory('Validator.length.max', ['underscore', 'Validatable.V
     }]);
 
 /**
- * Number Validator
+ * Numeric Validator
  */
-
-sdkModalValidators.factory('Validator.numberical', ['underscore', 'Validatable.Validator',
+sdkModelValidators.factory('Validator.numeric', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
-        function numberical (value, instance, field) {
+        function numeric (value, instance, field) {
             if (this.ignore) {
                 value = value.replace(this.ignore, '');
             }
 
-            return underscore.inNumber(value) === false;
+            return underscore.isNumber(value);
         }
 
-        numberical.message = function () {
+        numeric.message = function () {
             return 'Must be a number. Can include ' + String(this.ignore);
         };
 
-        return new Validator(numberical);
+        return new Validator(numeric);
+    }]);
+
+/**
+ * Required Validator
+ */
+sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function required (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return false;
+            }
+
+            if (value.constructor.name === 'String') {
+                return !!(value && value.length || typeof value == 'object');
+            }
+
+            return value !== undefined;
+        }
+
+        required.message = 'cannot be blank';
+
+        return new Validator(required);
     }]);
 var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
@@ -9901,7 +10225,10 @@ angular.module('ag.sdk.interface', [
 ]);
 
 angular.module('ag.sdk.model', [
+    'ag.sdk.model.asset',
     'ag.sdk.model.base',
+    'ag.sdk.model.business-plan',
+    'ag.sdk.model.document',
     'ag.sdk.model.errors',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'

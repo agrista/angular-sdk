@@ -1,6 +1,16 @@
-var sdkModalValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.validators']);
+var sdkModelValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.validators']);
 
-sdkModalValidation.factory('Validatable', ['computedProperty', 'privateProperty', 'underscore', 'Validatable.Field', 'Validator.required', 'Validator.length', 'Validator.length.min', 'Validator.length.min',
+sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty', 'underscore', 'Validatable.Field',
+    'Validator.dateRange',
+    'Validator.dateRange.after',
+    'Validator.dateRange.before',
+    'Validator.equal',
+    'Validator.format',
+    'Validator.format.date',
+    'Validator.inclusion',
+    'Validator.length', 'Validator.length.min', 'Validator.length.min',
+    'Validator.numeric',
+    'Validator.required',
     function (computedProperty, privateProperty, underscore, Field) {
         function Validatable () {
             var _validations = {};
@@ -65,8 +75,8 @@ sdkModalValidation.factory('Validatable', ['computedProperty', 'privateProperty'
         return Validatable;
     }]);
 
-sdkModalValidation.factory('Validatable.DuplicateValidatorError', [function () {
-    function DuplicateValidatorError() {
+sdkModelValidation.factory('Validatable.DuplicateValidatorError', [function () {
+    function DuplicateValidatorError(name) {
         this.name = 'DuplicateValidatorError';
         this.message = 'A validator by the name ' + name + ' is already registered';
     }
@@ -76,7 +86,7 @@ sdkModalValidation.factory('Validatable.DuplicateValidatorError', [function () {
     return DuplicateValidatorError;
 }]);
 
-sdkModalValidation.factory('Validatable.ValidationMessageNotFoundError', [function() {
+sdkModelValidation.factory('Validatable.ValidationMessageNotFoundError', [function() {
     function ValidationMessageNotFoundError(validatorName, fieldName) {
         this.name    = 'ValidationMessageNotFound';
         this.message = 'Validation message not found for validator ' + validatorName + ' on the field ' + fieldName + '. Validation messages must be added to validators in order to provide your users with useful error messages.';
@@ -87,7 +97,7 @@ sdkModalValidation.factory('Validatable.ValidationMessageNotFoundError', [functi
     return ValidationMessageNotFoundError;
 }]);
 
-sdkModalValidation.factory('Validatable.Field', ['privateProperty', 'underscore', 'Validatable.Validation', 'Validatable.ValidationMessageNotFoundError', 'Validatable.Validator', 'Validatable.validators',
+sdkModelValidation.factory('Validatable.Field', ['privateProperty', 'underscore', 'Validatable.Validation', 'Validatable.ValidationMessageNotFoundError', 'Validatable.Validator', 'Validatable.validators',
     function (privateProperty, underscore, Validation, ValidationMessageNotFoundError, Validator, validators) {
         function Field (name, validationSet) {
             var field = [];
@@ -117,7 +127,7 @@ sdkModalValidation.factory('Validatable.Field', ['privateProperty', 'underscore'
         return Field;
     }]);
 
-sdkModalValidation.factory('Validatable.Validation', ['privateProperty', function (privateProperty) {
+sdkModelValidation.factory('Validatable.Validation', ['privateProperty', function (privateProperty) {
     function Validation (field, validationFunction) {
         privateProperty(this, 'field', field);
         privateProperty(this, 'message', validationFunction.message);
@@ -129,7 +139,7 @@ sdkModalValidation.factory('Validatable.Validation', ['privateProperty', functio
     return Validation;
 }]);
 
-sdkModalValidation.factory('Validatable.ValidationFunction', ['underscore', function (underscore) {
+sdkModelValidation.factory('Validatable.ValidationFunction', ['underscore', function (underscore) {
     function ValidationFunction (validationFunction, options) {
         var boundFunction = underscore.bind(validationFunction, options);
         boundFunction.message = configureMessage();
@@ -150,7 +160,7 @@ sdkModalValidation.factory('Validatable.ValidationFunction', ['underscore', func
     return ValidationFunction;
 }]);
 
-sdkModalValidation.factory('Validatable.ValidatorNotFoundError', [function() {
+sdkModelValidation.factory('Validatable.ValidatorNotFoundError', [function() {
     function ValidatorNotFoundError(name) {
         this.name    = 'ValidatorNotFoundError';
         this.message = 'No validator found by the name of ' + name + '. Custom validators must define a validator key containing the custom validation function';
@@ -161,7 +171,7 @@ sdkModalValidation.factory('Validatable.ValidatorNotFoundError', [function() {
     return ValidatorNotFoundError;
 }]);
 
-sdkModalValidation.factory('Validatable.Validator', ['privateProperty', 'underscore', 'Validatable.ValidationFunction', 'Validatable.ValidatorNotFoundError', 'Validatable.validators',
+sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'underscore', 'Validatable.ValidationFunction', 'Validatable.ValidatorNotFoundError', 'Validatable.validators',
     function (privateProperty, underscore, ValidationFunction, ValidatorNotFoundError, validators) {
         function AnonymousValidator(options, name) {
             if (underscore.isFunction(options.validator)) {
@@ -238,7 +248,7 @@ sdkModalValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
         return Validator;
     }]);
 
-sdkModalValidation.factory('Validatable.validators', ['Validatable.DuplicateValidatorError', 'privateProperty', 'underscore',
+sdkModelValidation.factory('Validatable.validators', ['Validatable.DuplicateValidatorError', 'privateProperty', 'underscore',
     function (DuplicateValidatorError, privateProperty, underscore) {
         var validators = {};
 

@@ -59,10 +59,26 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             });
         }
     }])
-    .factory('inheritModel', [function () {
+    .factory('readOnlyProperty', [function () {
+        return function (object, name, value) {
+            Object.defineProperty(object, name, {
+                writable: false,
+                value: value
+            });
+        }
+    }])
+    .factory('inheritModel', ['underscore', function (underscore) {
         return function (object, base) {
-            var _constructor = object;
-            _constructor = base.apply(_constructor);
+            base.apply(object);
+
+            // Apply defined properties to extended object
+            underscore.each(Object.getOwnPropertyNames(base), function (name) {
+                var descriptor = Object.getOwnPropertyDescriptor(base, name);
+
+                if (underscore.isUndefined(object[name]) && descriptor) {
+                    Object.defineProperty(object, name, descriptor);
+                }
+            });
         }
     }])
     .factory('privateProperty', [function () {

@@ -23,7 +23,10 @@ angular.module('ag.sdk.interface', [
 ]);
 
 angular.module('ag.sdk.model', [
+    'ag.sdk.model.asset',
     'ag.sdk.model.base',
+    'ag.sdk.model.business-plan',
+    'ag.sdk.model.document',
     'ag.sdk.model.errors',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'
