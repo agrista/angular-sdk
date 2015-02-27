@@ -100,8 +100,6 @@ describe('ag.sdk.model.legal-entity', function () {
             });
 
             expect(legalEntity.validate()).toBe(true);
-
-            console.log(legalEntity.$errors)
         })
     });
 });

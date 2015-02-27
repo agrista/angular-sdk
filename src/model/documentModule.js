@@ -20,6 +20,7 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
                             .pluck('assets')
                             .flatten()
                             .compact()
+                            .groupBy('type')
                             .value()
                     });
                 });

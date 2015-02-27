@@ -7,9 +7,10 @@ sdkModelAsset.factory('Asset', ['computedProperty', 'inheritModel', 'Liability',
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.assetKey = attrs.assetKey;
+            this.legalEntityId = attrs.legalEntityId;
             this.id = attrs.id;
             this.type = attrs.type;
-            this.legalEntityId = attrs.legalEntityId;
 
             this.data = attrs.data || {};
 
@@ -18,15 +19,65 @@ sdkModelAsset.factory('Asset', ['computedProperty', 'inheritModel', 'Liability',
             computedProperty(this, 'liability', function () {
                 return this.data.financing;
             });
+
+            computedProperty(this, 'title', function () {
+                switch (this.type) {
+                    case 'crop':
+                    case 'permanent crop':
+                    case 'plantation':
+                        return (this.data.plantedArea ? $filter('number')(this.data.plantedArea, 2) + 'Ha' : '') +
+                            (this.data.plantedArea && this.data.crop ? ' of ' : '') +
+                            (this.data.crop ? this.data.crop : '') +
+                            (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    case 'farmland':
+                        return (this.data.portionLabel ? this.data.portionLabel :
+                            (this.data.portionNumber ? 'Portion ' + this.data.portionNumber : 'Remainder of farm'));
+                    case 'cropland':
+                        return (this.data.equipped ? 'Irrigated ' + this.type + ' (' + (this.data.irrigation ? this.data.irrigation + ' irrigation from ' : '')
+                            + this.data.waterSource + ')' : (this.data.irrigated ? 'Irrigable, unequipped ' : 'Non irrigable ') + this.type)
+                            + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    case 'livestock':
+                        return this.data.type + (this.data.category ? ' - ' + this.data.category : '');
+                    case 'pasture':
+                        return (this.data.intensified ? (this.data.crop || 'Intensified pasture') : 'Natural grazing') +
+                            (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    case 'vme':
+                        return this.data.category + (this.data.model ? ' model ' + this.data.model : '');
+                    case 'wasteland':
+                        return 'Wasteland';
+                    case 'water source':
+                    case 'water right':
+                        return this.data.waterSource + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    default:
+                        return this.data.name || this.assetTypes[this.type];
+                }
+            });
+
+            computedProperty(this, 'description', function () {
+                return this.data.description || '';
+            });
         }
 
         inheritModel(Asset, Model.Base);
 
         readOnlyProperty(Asset, 'assetTypes', {
-            'crop': 'Crop'
+            'crop': 'Crops',
+            'farmland': 'Farmlands',
+            'improvement': 'Fixed Improvements',
+            'cropland': 'Cropland',
+            'livestock': 'Livestock',
+            'pasture': 'Pastures',
+            'permanent crop': 'Permanent Crops',
+            'plantation': 'Plantations',
+            'vme': 'Vehicles, Machinery & Equipment',
+            'wasteland': 'Wasteland',
+            'water right': 'Water Rights'
         });
 
         Asset.validates({
+            assetKey: {
+                required: true
+            },
             type: {
                 required: true,
                 inclusion: {
@@ -106,6 +157,10 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
                     });
             });
 
+            computedProperty(this, 'hasLiabilities', function () {
+                return this.leased === true || this.financed === true;
+            });
+
             privateProperty(this, 'liabilityInMonth', function (month) {
                 var previousMonth = moment(month).subtract(1, 'M'),
                     currentMonth = moment(month),
@@ -169,9 +224,11 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
             this.leased = attrs.leased;
             this.financed = attrs.financed;
 
+            this.description = attrs.description;
             this.installment = attrs.installment;
             this.interestRate = attrs.interestRate;
             this.legalEntityId = attrs.legalEntityId;
+            this.name = attrs.name;
             this.openingBalance = attrs.openingBalance;
             this.organizationName = attrs.organizationName;
             this.paymentFrequency = attrs.paymentFrequency;
@@ -190,15 +247,15 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
             'Yearly']);
 
         function isFinanced (value, instance, field) {
-            return instance.financed;
+            return instance.financed === true;
         }
 
         function isLeased (value, instance, field) {
-            return instance.leased;
+            return instance.leased === true;
         }
 
         function isFinancedOrLeased (value, instance, field) {
-            return instance.leased || instance.financed;
+            return instance.leased === true || instance.financed === true;
         }
 
         Liability.validates({

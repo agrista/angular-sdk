@@ -48,9 +48,9 @@ module.exports = function(grunt) {
             }
         },
         watch: {
-            karma: {
+            testbuild: {
                 files: ['src/**/*.js', 'test/unit/**/*.js'],
-                tasks: ['karma:unit:run']
+                tasks: ['karma:single', 'concat', 'uglify']
             }
         }
     });

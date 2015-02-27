@@ -15,6 +15,7 @@ describe('ag.sdk.model.asset', function () {
 
         beforeEach(function () {
             asset = Asset.new({
+                assetKey: 'asset key',
                 legalEntityId: 1,
                 type: 'crop'
             });
@@ -63,6 +64,10 @@ describe('ag.sdk.model.asset', function () {
                 financed: true
             }).validate()).toBe(false);
         });
+
+        it('computes property hasLiabilities', function () {
+            expect(Liability.new().hasLiabilities).toBe(false);
+        });
     });
 
     describe('Liability leasing', function () {
@@ -81,8 +86,10 @@ describe('ag.sdk.model.asset', function () {
 
         it('validates if leasing', function () {
             expect(liability.validate()).toBe(true);
+        });
 
-            console.log(liability.$errors);
+        it('computes property hasLiabilities', function () {
+            expect(liability.hasLiabilities).toBe(true);
         });
 
         it('validates installment', function () {
@@ -149,6 +156,10 @@ describe('ag.sdk.model.asset', function () {
 
         it('validates if financing', function () {
             expect(liability.validate()).toBe(true);
+        });
+
+        it('computes property hasLiabilities', function () {
+            expect(liability.hasLiabilities).toBe(true);
         });
 
         it('validates installment', function () {
