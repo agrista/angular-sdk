@@ -247,28 +247,38 @@ describe('ag.sdk.model.business-plan', function () {
 
             businessPlan.addLegalEntity(legalEntity);
 
-            expect(businessPlan.monthlyStatement.length).toBe(3);
+            expect(businessPlan.monthlyStatement.length).toBe(7);
 
             expect(businessPlan.monthlyStatement[0]).toEqual({
                 uuid: 'CBAAFB3B-B0C3-4CD2-9091-0943578BC5AC',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Barn',
                 description: 'Farm Buildings',
-                type: 'improvement',
+                type: 'asset',
+                subtype: 'improvement',
                 source: 'legal entity',
-                value: 0,
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                value: 0
             });
 
             expect(businessPlan.monthlyStatement[1]).toEqual({
+                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                name: 'Barn',
+                description: 'Farm Buildings',
+                type: 'liability',
+                subtype: 'improvement',
+                source: 'legal entity',
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            });
+
+            expect(businessPlan.monthlyStatement[2]).toEqual({
                 uuid: '3D7C250A-A9D0-455B-97C0-F9499B7C079B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Office',
                 description: 'Office Buildings',
-                type: 'improvement',
+                type: 'asset',
+                subtype: 'improvement',
                 source: 'legal entity',
-                value: 0,
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]
+                value: 0
             });
 
             businessPlan.removeLegalEntity(legalEntity);
@@ -314,28 +324,38 @@ describe('ag.sdk.model.business-plan', function () {
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(3);
+            expect(businessPlan.monthlyStatement.length).toBe(7);
 
             expect(businessPlan.monthlyStatement[0]).toEqual({
                 uuid: 'CBAAFB3B-B0C3-4CD2-9091-0943578BC5AC',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Barn',
                 description: 'Farm Buildings',
-                type: 'improvement',
+                type: 'asset',
+                subtype: 'improvement',
                 source: 'farm valuation',
-                value: 100000,
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                value: 100000
             });
 
             expect(businessPlan.monthlyStatement[1]).toEqual({
+                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                name: 'Barn',
+                description: 'Farm Buildings',
+                type: 'liability',
+                subtype: 'improvement',
+                source: 'legal entity',
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            });
+
+            expect(businessPlan.monthlyStatement[2]).toEqual({
                 uuid: '3D7C250A-A9D0-455B-97C0-F9499B7C079B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Office',
                 description: 'Office Buildings',
-                type: 'improvement',
+                type: 'asset',
+                subtype: 'improvement',
                 source: 'legal entity',
-                value: 0,
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]
+                value: 0
             });
         });
 
@@ -377,28 +397,38 @@ describe('ag.sdk.model.business-plan', function () {
                 uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(3);
+            expect(businessPlan.monthlyStatement.length).toBe(7);
 
             expect(businessPlan.monthlyStatement[0]).toEqual({
                 uuid: 'CBAAFB3B-B0C3-4CD2-9091-0943578BC5AC',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Barn',
                 description: 'Farm Buildings',
-                type: 'improvement',
+                type: 'asset',
+                subtype: 'improvement',
                 source: 'farm valuation',
-                value: 100000,
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                value: 100000
             });
 
             expect(businessPlan.monthlyStatement[1]).toEqual({
+                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                name: 'Barn',
+                description: 'Farm Buildings',
+                type: 'liability',
+                subtype: 'improvement',
+                source: 'legal entity',
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            });
+
+            expect(businessPlan.monthlyStatement[2]).toEqual({
                 uuid: '3D7C250A-A9D0-455B-97C0-F9499B7C079B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Office',
                 description: 'Office Buildings',
-                type: 'improvement',
+                type: 'asset',
+                subtype: 'improvement',
                 source: 'legal entity',
-                value: 0,
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]
+                value: 0
             });
         });
 
@@ -456,34 +486,37 @@ describe('ag.sdk.model.business-plan', function () {
                 uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(6);
+            expect(businessPlan.monthlyStatement.length).toBe(10);
 
-            expect(businessPlan.monthlyStatement[3]).toEqual({
+            expect(businessPlan.monthlyStatement[7]).toEqual({
                 uuid: 'Dry Land-Medium Potential',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Dry Land',
                 description: 'Medium Potential',
-                type: 'land use',
+                type: 'asset',
+                subtype: 'land use',
                 source: 'farm valuation',
                 value: 100000
             });
 
-            expect(businessPlan.monthlyStatement[4]).toEqual({
+            expect(businessPlan.monthlyStatement[8]).toEqual({
                 uuid: 'Dry Land-High Potential',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Dry Land',
                 description: 'High Potential',
-                type: 'land use',
+                type: 'asset',
+                subtype: 'land use',
                 source: 'farm valuation',
                 value: 150000
             });
 
-            expect(businessPlan.monthlyStatement[5]).toEqual({
+            expect(businessPlan.monthlyStatement[9]).toEqual({
                 uuid: 'Grazing-Planted pastures',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Grazing',
                 description: 'Planted pastures',
-                type: 'land use',
+                type: 'asset',
+                subtype: 'land use',
                 source: 'farm valuation',
                 value: 250000
             });
@@ -558,14 +591,15 @@ describe('ag.sdk.model.business-plan', function () {
                 uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(4);
+            expect(businessPlan.monthlyStatement.length).toBe(8);
 
-            expect(businessPlan.monthlyStatement[3]).toEqual({
+            expect(businessPlan.monthlyStatement[7]).toEqual({
                 uuid: 'Grazing-Planted pastures',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Grazing',
                 description: 'Planted pastures',
-                type: 'land use',
+                type: 'asset',
+                subtype: 'land use',
                 source: 'farm valuation',
                 value: 600000
             });
@@ -581,7 +615,7 @@ describe('ag.sdk.model.business-plan', function () {
                 uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(3);
+            expect(businessPlan.monthlyStatement.length).toBe(7);
 
             businessPlan.addAsset({
                 id: 7,
@@ -602,16 +636,27 @@ describe('ag.sdk.model.business-plan', function () {
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(4);
+            expect(businessPlan.monthlyStatement.length).toBe(9);
 
-            expect(businessPlan.monthlyStatement[3]).toEqual({
+            expect(businessPlan.monthlyStatement[7]).toEqual({
                 uuid: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Vehicle model Toyota D',
                 description: '',
-                type: 'vme',
+                type: 'asset',
+                subtype: 'vme',
                 source: 'asset',
-                value: 0,
+                value: 0
+            });
+
+            expect(businessPlan.monthlyStatement[8]).toEqual({
+                uuid: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
+                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                name: 'Vehicle model Toyota D',
+                description: '',
+                type: 'liability',
+                subtype: 'vme',
+                source: 'asset',
                 liability: [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
             });
         });
@@ -626,7 +671,7 @@ describe('ag.sdk.model.business-plan', function () {
                 uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(3);
+            expect(businessPlan.monthlyStatement.length).toBe(7);
 
             businessPlan.addAsset({
                 legalEntityId: 2,
@@ -639,17 +684,17 @@ describe('ag.sdk.model.business-plan', function () {
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(4);
+            expect(businessPlan.monthlyStatement.length).toBe(8);
 
-            expect(businessPlan.monthlyStatement[3]).toEqual({
+            expect(businessPlan.monthlyStatement[7]).toEqual({
                 uuid: 'A7C803F5-F2CB-4FE1-A6FC-BAAD50D4AAB4',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Life Insurance',
                 description: 'Its for life',
-                type: 'custom',
+                type: 'asset',
+                subtype: 'custom',
                 source: 'asset',
-                value: 300000,
-                liability: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                value: 300000
             });
         });
 
@@ -663,7 +708,7 @@ describe('ag.sdk.model.business-plan', function () {
                 uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(3);
+            expect(businessPlan.monthlyStatement.length).toBe(7);
 
             businessPlan.addLiability({
                 financed: true,
@@ -677,15 +722,7 @@ describe('ag.sdk.model.business-plan', function () {
                 paymentStart: '2015-10-10T10:20:00'
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(4);
-
-            expect(businessPlan.monthlyStatement[3]).toEqual({
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Livestock Loan',
-                description: '',
-                source: 'liability',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]
-            });
+            expect(businessPlan.monthlyStatement.length).toBe(8);
         });
     });
 });

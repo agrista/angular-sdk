@@ -1,7 +1,7 @@
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelAsset.factory('Asset', ['computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 

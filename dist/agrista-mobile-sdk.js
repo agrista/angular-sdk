@@ -8320,8 +8320,8 @@ cordovaHelperApp.factory('mapLocationService', ['$rootScope', '$timeout', 'geolo
 
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelAsset.factory('Asset', ['computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -8738,10 +8738,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.model.asset', 'ag.sdk.model.legal-entity', 'ag.sdk.model.document', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.legal-entity', 'ag.sdk.model.document', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionPlan', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, inheritModel, LegalEntity, Liability, privateProperty, ProductionPlan, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionPlan', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionPlan, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
@@ -8806,19 +8806,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         if (underscore.isUndefined(statementAsset)) {
                             asset = Asset.new(asset);
 
+                            instance.data.monthlyStatement.push({
+                                uuid: asset.assetKey,
+                                legalEntityUuid: legalEntity.uuid,
+                                name: asset.title,
+                                description: (asset.type === 'improvement' ? asset.data.category : asset.description),
+                                type: 'asset',
+                                subtype: asset.type,
+                                source: 'legal entity',
+                                value: asset.data.assetValue || 0
+                            });
+
                             if (asset.liability.hasLiabilities) {
-                                var statement = {
-                                    uuid: asset.assetKey,
+                                instance.data.monthlyStatement.push({
                                     legalEntityUuid: legalEntity.uuid,
                                     name: asset.title,
                                     description: (asset.type === 'improvement' ? asset.data.category : asset.description),
-                                    type: asset.type,
+                                    type: 'liability',
+                                    subtype: asset.type,
                                     source: 'legal entity',
-                                    value: asset.data.assetValue || 0,
                                     liability: asset.liability.liabilityInRange(instance.startDate, instance.endDate)
-                                };
-
-                                instance.data.monthlyStatement.push(statement);
+                                });
                             }
                         }
                     });
@@ -8901,17 +8909,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                                         if (underscore.isUndefined(statementCategory)) {
                                             // Add new land use component
-                                            var statement = {
+                                            instance.data.monthlyStatement.push({
                                                 uuid: landUse + '-' + category.name,
                                                 legalEntityUuid: legalEntity.uuid,
                                                 name: landUse,
                                                 description: category.name,
-                                                type: 'land use',
+                                                type: 'asset',
+                                                subtype: 'land use',
                                                 source: 'farm valuation',
                                                 value: (category.area * category.valuePerHa)
-                                            };
-
-                                            instance.data.monthlyStatement.push(statement);
+                                            });
                                         } else {
                                             // Sum two components together
                                             statementCategory.value += (category.area * category.valuePerHa);
@@ -8925,7 +8932,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 // Loop through the valued improvements
                                 underscore.each(farmValuation.data.report.improvements, function (improvementItem) {
                                     var improvement = Asset.new(improvementItem),
-                                        statementImprovement = underscore.findWhere(instance.data.monthlyStatement, {uuid: improvement.assetKey}),
+                                        statementImprovement = underscore.findWhere(instance.data.monthlyStatement, {uuid: improvement.assetKey, type: 'asset'}),
                                         registerImprovement = underscore.findWhere(instance.data.assets.improvement, {assetKey: improvement.assetKey});
 
                                     if (underscore.isUndefined(statementImprovement)) {
@@ -8938,24 +8945,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                                     return entity.uuid === registerLegalEntity.uuid;
                                                 })) {
                                                 // Legal Entity for this improvement is an included Legal Entity
-                                                // improvement model has the valuation data, but registerImprovement has the financing, merge the two
-                                                improvement.data.financing = Liability.new(registerImprovement.data.financing);
 
-                                                // If the asset has ongoing leases or financing
-                                                if (improvement.liability.hasLiabilities) {
-                                                    var statement = {
-                                                        uuid: improvement.assetKey,
-                                                        legalEntityUuid: registerLegalEntity.uuid,
-                                                        name: improvement.title,
-                                                        description: improvement.data.category,
-                                                        type: 'improvement',
-                                                        source: 'farm valuation',
-                                                        value: improvement.data.assetValue || 0,
-                                                        liability: improvement.liability.liabilityInRange(instance.startDate, instance.endDate)
-                                                    };
-
-                                                    instance.data.monthlyStatement.push(statement);
-                                                }
+                                                // Add asset
+                                                instance.data.monthlyStatement.push({
+                                                    uuid: improvement.assetKey,
+                                                    legalEntityUuid: registerLegalEntity.uuid,
+                                                    name: improvement.title,
+                                                    description: improvement.description,
+                                                    type: 'asset',
+                                                    subtype: improvement.type,
+                                                    source: 'farm valuation',
+                                                    value: improvement.data.assetValue || 0
+                                                });
                                             }
                                         }
                                     } else {
@@ -8979,8 +8980,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             });
 
-            privateProperty(this, 'removeAsset', function (index) {
-                this.models.assets = this.models.assets.splice(index, 1);
+            privateProperty(this, 'removeAsset', function (uuid) {
+                this.models.assets = underscore.reject(this.models.assets, function (asset) {
+                    return asset.assetKey === uuid && asset.subtype === 'custom';
+                });
 
                 reEvaluateAssetsAndLiabilities(this);
             });
@@ -8993,8 +8996,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             });
 
-            privateProperty(this, 'removeLiability', function (index) {
-                this.models.liabilities = this.models.liabilities.splice(index, 1);
+            privateProperty(this, 'removeLiability', function (uuid) {
+                this.models.liabilities = underscore.reject(this.models.liabilities, function (liability) {
+                    return liability.uuid === uuid && liability.subtype === 'custom';
+                });
 
                 reEvaluateAssetsAndLiabilities(this);
             });
@@ -9016,22 +9021,33 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         })) {
 
                         // Add asset
-                        var statement = {
+                        instance.data.monthlyStatement.push({
                             uuid: asset.assetKey,
                             legalEntityUuid: registerLegalEntity.uuid,
                             name: asset.title,
                             description: asset.description,
-                            type: asset.type,
+                            type: 'asset',
+                            subtype: asset.type,
                             source: 'asset',
-                            value: asset.data.assetValue || 0,
-                            liability: asset.liability.liabilityInRange(instance.startDate, instance.endDate)
-                        };
+                            value: asset.data.assetValue || 0
+                        });
 
-                        instance.data.monthlyStatement.push(statement);
+                        if (asset.liability.hasLiabilities) {
+                            instance.data.monthlyStatement.push({
+                                uuid: asset.assetKey,
+                                legalEntityUuid: registerLegalEntity.uuid,
+                                name: asset.title,
+                                description: asset.description,
+                                type: 'liability',
+                                subtype: asset.type,
+                                source: 'asset',
+                                liability: asset.liability.liabilityInRange(instance.startDate, instance.endDate)
+                            });
+                        }
                     }
                 });
 
-                underscore.each(instance.models.liabilities, function (liability) {
+                underscore.each(instance.models.liabilities, function (liability, index) {
                     liability = Liability.new(liability);
 
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId});
@@ -9041,15 +9057,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             return entity.uuid === registerLegalEntity.uuid;
                         })) {
                         // Add asset
-                        var statement = {
+                        instance.data.monthlyStatement.push({
+                            uuid: index,
                             legalEntityUuid: registerLegalEntity.uuid,
                             name: liability.name || '',
                             description: liability.description || '',
+                            type: 'liability',
+                            subtype: 'custom',
                             source: 'liability',
                             liability: liability.liabilityInRange(instance.startDate, instance.endDate)
-                        };
-
-                        instance.data.monthlyStatement.push(statement);
+                        });
                     }
                 });
             }
