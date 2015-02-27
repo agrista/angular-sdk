@@ -2,15 +2,14 @@ var sdkModelValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.libr
 
 sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty', 'underscore', 'Validatable.Field',
     'Validator.dateRange',
-    'Validator.dateRange.after',
-    'Validator.dateRange.before',
     'Validator.equal',
     'Validator.format',
-    'Validator.format.date',
     'Validator.inclusion',
-    'Validator.length', 'Validator.length.min', 'Validator.length.min',
+    'Validator.length',
     'Validator.numeric',
+    'Validator.range',
     'Validator.required',
+    'Validator.requiredIf',
     function (computedProperty, privateProperty, underscore, Field) {
         function Validatable () {
             var _validations = {};
@@ -212,6 +211,7 @@ sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
 
             function addChildValidators (options) {
                 underscore.each(options, function (value, key) {
+
                     if (value.constructor.name === 'Validator') {
                         validator.childValidators[key] = value;
                     }
@@ -221,7 +221,7 @@ sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
             function configuredChildren (options) {
                 return underscore.chain(validator.childValidators)
                     .map(function (childValidator, name) {
-                        if (options[name]) {
+                        if (options[name] !== undefined) {
                             return childValidator.configure(options[name]);
                         }
                     })

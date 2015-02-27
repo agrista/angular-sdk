@@ -4040,31 +4040,29 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
-            if (_documentMap[item.docType]) {
-                var docMap = _documentMap[item.docType];
-                var map = {
-                    id: item.id || item.__id,
-                    title: (item.documentId ? item.documentId : ''),
-                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
-                    docType: item.docType,
-                    group: docMap.title
-                };
+            var docMap = _documentMap[item.docType];
+            var map = {
+                id: item.id || item.__id,
+                title: (item.documentId ? item.documentId : ''),
+                subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
+                docType: item.docType,
+                group: (docMap ? docMap.title : item.docType)
+            };
 
-                if (item.organization && item.organization.name) {
-                    map.title = item.organization.name;
-                    map.subtitle = (item.documentId ? item.documentId : '');
-                }
-
-                if (item.data && docMap && docMap.listServiceMap) {
-                    if (docMap.listServiceMap instanceof Array) {
-                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
-                    }
-
-                    docMap.listServiceMap(map, item);
-                }
-
-                return map;
+            if (item.organization && item.organization.name) {
+                map.title = item.organization.name;
+                map.subtitle = item.documentId || '';
             }
+
+            if (item.data && docMap && docMap.listServiceMap) {
+                if (docMap.listServiceMap instanceof Array) {
+                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                }
+
+                docMap.listServiceMap(map, item);
+            }
+
+            return map;
         };
 
         var _listServiceWithTaskMap = function (item) {
@@ -9453,14 +9451,91 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.model.asset', 'ag.sdk.model.legal-entity', 'ag.sdk.model.document', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Asset, computedProperty, Document, inheritModel, privateProperty, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'inheritModel', 'LegalEntity', 'privateProperty', 'ProductionPlan', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, inheritModel, LegalEntity, privateProperty, ProductionPlan, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
             this.docType = 'business plan';
+
+            this.data.includedModels = this.data.includedModels || {
+                farmValuations: [],
+                legalEntities: [],
+                productionPlans: []
+            };
+
+            /**
+             * Legal Entities handling
+             */
+            privateProperty(this, 'addLegalEntity', function (legalEntity) {
+                var dupLegalEntity = underscore.findWhere(this.models.legalEntities, {uuid: legalEntity.uuid});
+
+                if (underscore.isUndefined(dupLegalEntity) && LegalEntity.new(legalEntity).validate()) {
+                    this.models.legalEntities.push(legalEntity);
+
+                    // TODO: use legalEntities to get relevent data from valuations & plans
+                    reEvaluateFarmValuations(this);
+                }
+            });
+
+            privateProperty(this, 'removeLegalEntity', function (legalEntity) {
+                this.models.legalEntities = underscore.reject(this.models.legalEntities, function (entity) {
+                    return entity.id === legalEntity.id;
+                });
+
+                // TODO: use legalEntities to get relevent data from valuations & plans
+                reEvaluateFarmValuations(this);
+            });
+
+            /**
+             * Production Plans handling
+             */
+            privateProperty(this, 'addProductionPlan', function (productionPlan) {
+                var dupProductionPlan = underscore.findWhere(this.models.productionPlans, {documentId: productionPlan.documentId});
+
+                if (underscore.isUndefined(dupProductionPlan) && ProductionPlan.new(productionPlan).validate()) {
+                    this.models.productionPlans.push(productionPlan);
+
+                    // TODO: revalidate & recalculate
+                }
+            });
+
+            privateProperty(this, 'removeProductionPlan', function (productionPlan) {
+                this.models.productionPlans = underscore.reject(this.models.productionPlans, function (plan) {
+                    return plan.id === productionPlan.id;
+                });
+
+                // TODO: revalidate & recalculate
+            });
+
+            /**
+             * Farm Valuations handling
+             */
+            privateProperty(this, 'addFarmValuation', function (farmValuation) {
+                var dupFarmValuation = underscore.findWhere(this.models.farmValuations, {documentId: farmValuation.documentId});
+
+                if (underscore.isUndefined(dupFarmValuation) && FarmValuation.new(farmValuation).validate()) {
+                    this.models.farmValuations.push(farmValuation);
+
+                    // TODO: revalidate & recalculate
+                }
+            });
+
+            privateProperty(this, 'removeFarmValuation', function (farmValuation) {
+                this.models.farmValuations = underscore.reject(this.models.farmValuations, function (valuation) {
+                    return valuation.id === farmValuation.id;
+                });
+
+                // TODO: revalidate & recalculate
+            });
+
+            function reEvaluateFarmValuations (instance) {
+                underscore.each(instance.models.farmValuations, function (item) {
+                    var farmValuation = FarmValuation.new(item);
+                });
+            }
 
             // Add Assets & Liabilities
             privateProperty(this, 'addAsset', function (asset) {
@@ -9479,6 +9554,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             // View added Assets & Liabilities
             computedProperty(this, 'startDate', function () {
                 return this.data.startDate;
+            });
+
+            computedProperty(this, 'models', function () {
+                return this.data.includedModels;
             });
 
             computedProperty(this, 'plannedAssets', function () {
@@ -9530,26 +9609,50 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
 var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
-        function (inheritModel, Model, readOnlyProperty, underscore) {
-            function Document (attrs) {
+sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+            function Document (attrs, organization) {
                 Model.Base.apply(this, arguments);
 
                 if (arguments.length === 0) return;
 
-                this.id = attrs.id;
                 this.author = attrs.author;
                 this.docType = attrs.docType;
+                this.documentId = attrs.documentId;
+                this.id = attrs.id;
                 this.organizationId = attrs.organizationId;
                 this.title = attrs.title;
 
                 this.data = attrs.data || {};
+
+                privateProperty(this, 'updateRegister', function (organization) {
+                    this.data = underscore.extend(this.data, {
+                        farmer: underscore.omit(organization, ['farms', 'legalEntities', 'primaryContact', 'teams']),
+                        farms : organization.farms,
+                        legalEntities: underscore
+                            .map(organization.legalEntities, function (entity) {
+                                return underscore.omit(entity, ['assets', 'farms']);
+                            }),
+                        assets: underscore
+                            .chain(organization.legalEntities)
+                            .pluck('assets')
+                            .flatten()
+                            .compact()
+                            .value()
+                    });
+                });
             }
 
             inheritModel(Document, Model.Base);
 
             readOnlyProperty(Document, 'docTypes', {
-                'asset register': 'Asset Register'
+                'asset register': 'Asset Register',
+                'business plan': 'Business Plan',
+                'emergence report': 'Emergence Report',
+                'farm valuation': 'Farm Valuation',
+                'insurance policy': 'Insurance Policy',
+                'production plan': 'Production Plan',
+                'progress report': 'Progress Report'
             });
 
             Document.validates({
@@ -9574,6 +9677,205 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'readOnlyProperty
 
             return Document;
         }]);
+
+var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+
+sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
+    function (Asset, computedProperty, Document, inheritModel, privateProperty) {
+        function FarmValuation (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'farm valuation';
+        }
+
+        inheritModel(FarmValuation, Document);
+
+        FarmValuation.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'farm valuation'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return FarmValuation;
+    }]);
+
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, readOnlyProperty, underscore) {
+        function LegalEntity (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (arguments.length === 0) return;
+
+            this.addressCity = attrs.addressCity;
+            this.addressCode = attrs.addressCode;
+            this.addressDistrict = attrs.addressDistrict;
+            this.addressStreet = attrs.addressStreet;
+            this.email = attrs.email;
+            this.fax = attrs.fax;
+            this.id = attrs.id;
+            this.mobile = attrs.mobile;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+            this.registrationNumber = attrs.registrationNumber;
+            this.telephone = attrs.telephone;
+            this.type = attrs.type;
+            this.uuid = attrs.uuid;
+
+            this.data = attrs.data || {};
+        }
+
+        inheritModel(LegalEntity, Model.Base);
+
+        readOnlyProperty(LegalEntity, 'legalEntityTypes', [
+            'Individual',
+            'Sole Proprietary',
+            'Joint account',
+            'Partnership',
+            'Close Corporation',
+            'Private Company',
+            'Public Company',
+            'Trust',
+            'Non-Profitable companies',
+            'Cooperatives',
+            'In- Cooperatives',
+            'Other Financial Intermediaries']);
+
+        LegalEntity.validates({
+            addressCity: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            addressCode: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            addressDistrict: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            addressStreet: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            fax: {
+                format: {
+                    telephone: true
+                }
+            },
+            mobile: {
+                format: {
+                    telephone: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            registrationNumber: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            telephone: {
+                format: {
+                    telephone: true
+                }
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: LegalEntity.legalEntityTypes
+                }
+            },
+            uuid: {
+                format: {
+                    uuid: true
+                }
+            }
+        });
+
+        return LegalEntity;
+    }]);
+
+var sdkModelProductionPlanDocument = angular.module('ag.sdk.model.production-plan', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+
+sdkModelProductionPlanDocument.factory('ProductionPlan', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
+    function (Asset, computedProperty, Document, inheritModel, privateProperty) {
+        function ProductionPlan (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'production plan';
+        }
+
+        inheritModel(ProductionPlan, Document);
+
+        ProductionPlan.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'production plan'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            title: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return ProductionPlan;
+    }]);
 
 var sdkModelErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
 
@@ -9647,13 +9949,10 @@ var sdkModelValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.libr
 
 sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty', 'underscore', 'Validatable.Field',
     'Validator.dateRange',
-    'Validator.dateRange.after',
-    'Validator.dateRange.before',
     'Validator.equal',
     'Validator.format',
-    'Validator.format.date',
     'Validator.inclusion',
-    'Validator.length', 'Validator.length.min', 'Validator.length.min',
+    'Validator.length',
     'Validator.numeric',
     'Validator.required',
     function (computedProperty, privateProperty, underscore, Field) {
@@ -9990,8 +10289,8 @@ sdkModelValidators.factory('Validator.equal', ['underscore', 'Validatable.Valida
 /**
  * Format Validator
  */
-sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date',
-    function (underscore, Validator, date) {
+sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date', 'Validator.format.email', 'Validator.format.telephone', 'Validator.format.uuid',
+    function (underscore, Validator, date, email, telephone, uuid) {
         function format (value, instance, field) {}
 
         format.message = function () {
@@ -9999,7 +10298,10 @@ sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Valid
         };
 
         format.options = {
-            date: date
+            date: date,
+            email: email,
+            telephone: telephone,
+            uuid: uuid
         };
 
         return new Validator(format);
@@ -10020,6 +10322,63 @@ sdkModelValidators.factory('Validator.format.date', ['moment', 'underscore', 'Va
         };
 
         return new Validator(date);
+    }]);
+
+sdkModelValidators.factory('Validator.format.email', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$');
+
+        function email (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        email.message = function () {
+            return 'Must be a valid email address';
+        };
+
+        return new Validator(email);
+    }]);
+
+sdkModelValidators.factory('Validator.format.telephone', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$');
+
+        function telephone (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        telephone.message = function () {
+            return 'Must be a valid telephone number';
+        };
+
+        return new Validator(telephone);
+    }]);
+
+sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', 'i');
+
+        function uuid (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        uuid.message = function () {
+            return 'Must be a valid UUID';
+        };
+
+        return new Validator(uuid);
     }]);
 
 /**
@@ -10228,6 +10587,8 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
     'ag.sdk.model.document',
+    'ag.sdk.model.legal-entity',
+    'ag.sdk.model.production-plan',
     'ag.sdk.model.errors',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'

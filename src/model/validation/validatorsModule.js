@@ -76,8 +76,8 @@ sdkModelValidators.factory('Validator.equal', ['underscore', 'Validatable.Valida
 /**
  * Format Validator
  */
-sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date',
-    function (underscore, Validator, date) {
+sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date', 'Validator.format.email', 'Validator.format.telephone', 'Validator.format.uuid',
+    function (underscore, Validator, date, email, telephone, uuid) {
         function format (value, instance, field) {}
 
         format.message = function () {
@@ -85,7 +85,10 @@ sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Valid
         };
 
         format.options = {
-            date: date
+            date: date,
+            email: email,
+            telephone: telephone,
+            uuid: uuid
         };
 
         return new Validator(format);
@@ -106,6 +109,63 @@ sdkModelValidators.factory('Validator.format.date', ['moment', 'underscore', 'Va
         };
 
         return new Validator(date);
+    }]);
+
+sdkModelValidators.factory('Validator.format.email', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$');
+
+        function email (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        email.message = function () {
+            return 'Must be a valid email address';
+        };
+
+        return new Validator(email);
+    }]);
+
+sdkModelValidators.factory('Validator.format.telephone', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$');
+
+        function telephone (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        telephone.message = function () {
+            return 'Must be a valid telephone number';
+        };
+
+        return new Validator(telephone);
+    }]);
+
+sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', 'i');
+
+        function uuid (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        uuid.message = function () {
+            return 'Must be a valid UUID';
+        };
+
+        return new Validator(uuid);
     }]);
 
 /**
@@ -156,7 +216,7 @@ sdkModelValidators.factory('Validator.length', ['Validatable.Validator', 'Valida
 sdkModelValidators.factory('Validator.length.min', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function min (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
                 return true;
             }
 
@@ -173,7 +233,7 @@ sdkModelValidators.factory('Validator.length.min', ['underscore', 'Validatable.V
 sdkModelValidators.factory('Validator.length.max', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function max (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
                 return true;
             }
 
@@ -193,18 +253,71 @@ sdkModelValidators.factory('Validator.length.max', ['underscore', 'Validatable.V
 sdkModelValidators.factory('Validator.numeric', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function numeric (value, instance, field) {
-            if (this.ignore) {
-                value = value.replace(this.ignore, '');
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
             }
 
-            return underscore.isNumber(value);
+            return (typeof value == 'number' && underscore.isNumber(value));
         }
 
         numeric.message = function () {
-            return 'Must be a number. Can include ' + String(this.ignore);
+            return 'Must be a number';
         };
 
         return new Validator(numeric);
+    }]);
+
+/**
+ * Range Validators
+ */
+sdkModelValidators.factory('Validator.range', ['Validatable.Validator', 'Validator.range.from', 'Validator.range.to',
+    function (Validator, from, to) {
+        function range () {
+            return true;
+        }
+
+        range.message = 'Must be with the range requirement';
+
+        range.options = {
+            from: from,
+            to: to
+        };
+
+        return new Validator(range);
+    }]);
+
+sdkModelValidators.factory('Validator.range.from', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function from (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return value >= this.from;
+        }
+
+        from.message = function () {
+            return 'Must be at least ' + this.from;
+        };
+
+        return new Validator(from);
+    }]);
+
+sdkModelValidators.factory('Validator.range.to', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function to (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return value <= this.to;
+        }
+
+        to.message = function () {
+            return 'Must be no more than ' + this.to;
+        };
+
+        return new Validator(to);
     }]);
 
 /**
@@ -227,4 +340,30 @@ sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Val
         required.message = 'cannot be blank';
 
         return new Validator(required);
+    }]);
+
+/**
+ * Required If Validator
+ */
+sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function requiredIf (value, instance, field) {
+            if (!this(value, instance, field)) {
+                return true;
+            } else {
+                if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                    return false;
+                }
+
+                if (value.constructor.name == 'String') {
+                    return !!(value && value.length || typeof value == 'object');
+                }
+
+                return value !== undefined;
+            }
+        }
+
+        requiredIf.message = 'cannot be blank';
+
+        return new Validator(requiredIf);
     }]);

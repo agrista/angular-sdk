@@ -78,7 +78,7 @@ describe('ag.sdk.model.business-plan', function () {
         it('validates startDate as a date', function () {
             expect(businessPlan.validate()).toBe(true);
 
-            businessPlan.startDate = 'this is not a date';
+            businessPlan.data.startDate = 'this is not a date';
             expect(businessPlan.validate()).toBe(false);
         });
 
