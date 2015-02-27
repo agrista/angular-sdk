@@ -8908,13 +8908,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                                 description: category.name,
                                                 type: 'land use',
                                                 source: 'farm valuation',
-                                                value: category.totalValue
+                                                value: (category.area * category.valuePerHa)
                                             };
 
                                             instance.data.monthlyStatement.push(statement);
                                         } else {
                                             // Sum two components together
-                                            statementCategory.value += category.totalValue;
+                                            statementCategory.value += (category.area * category.valuePerHa);
                                         }
                                     });
                                 });
@@ -8950,7 +8950,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                                         description: improvement.data.category,
                                                         type: 'improvement',
                                                         source: 'farm valuation',
-                                                        value: improvement.data.assetValue,
+                                                        value: improvement.data.assetValue || 0,
                                                         liability: improvement.liability.liabilityInRange(instance.startDate, instance.endDate)
                                                     };
 

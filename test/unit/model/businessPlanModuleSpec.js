@@ -418,14 +418,17 @@ describe('ag.sdk.model.business-plan', function () {
                         landUseComponents: {
                             'Dry Land': [{
                                 name: 'Medium Potential',
-                                totalValue: 100000
+                                area: 100,
+                                valuePerHa: 1000
                             }, {
                                 name: 'High Potential',
-                                totalValue: 150000
+                                area: 100,
+                                valuePerHa: 1500
                             }],
                             'Grazing': [{
                                 name: 'Planted pastures',
-                                totalValue: 250000
+                                area: 100,
+                                valuePerHa: 2500
                             }]
                         },
                         improvements: [{
@@ -502,7 +505,8 @@ describe('ag.sdk.model.business-plan', function () {
                         landUseComponents: {
                             'Grazing': [{
                                 name: 'Planted pastures',
-                                totalValue: 250000
+                                area: 100,
+                                valuePerHa: 2500
                             }]
                         },
                         improvements: [{
@@ -536,7 +540,8 @@ describe('ag.sdk.model.business-plan', function () {
                         landUseComponents: {
                             'Grazing': [{
                                 name: 'Planted pastures',
-                                totalValue: 350000
+                                area: 100,
+                                valuePerHa: 3500
                             }]
                         },
                         improvements: []
