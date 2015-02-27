@@ -9,7 +9,7 @@ sdkModelAsset.factory('Asset', ['computedProperty', 'inheritModel', 'Liability',
 
             this.id = attrs.id;
             this.type = attrs.type;
-            this.organizationId = attrs.organizationId;
+            this.legalEntityId = attrs.legalEntityId;
 
             this.data = attrs.data || {};
 
@@ -33,7 +33,7 @@ sdkModelAsset.factory('Asset', ['computedProperty', 'inheritModel', 'Liability',
                     in: underscore.keys(Asset.assetTypes)
                 }
             },
-            organizationId: {
+            legalEntityId: {
                 required: true,
                 numeric: true
             },
@@ -171,6 +171,7 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
 
             this.installment = attrs.installment;
             this.interestRate = attrs.interestRate;
+            this.legalEntityId = attrs.legalEntityId;
             this.openingBalance = attrs.openingBalance;
             this.organizationName = attrs.organizationName;
             this.paymentFrequency = attrs.paymentFrequency;
@@ -212,6 +213,10 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
                     from: 0,
                     to: 100
                 }
+            },
+            legalEntityId: {
+                requiredIf: isFinancedOrLeased,
+                numeric: true
             },
             openingBalance: {
                 requiredIf: isFinanced,

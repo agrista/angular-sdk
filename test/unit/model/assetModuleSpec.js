@@ -15,7 +15,7 @@ describe('ag.sdk.model.asset', function () {
 
         beforeEach(function () {
             asset = Asset.new({
-                organizationId: 1,
+                legalEntityId: 1,
                 type: 'crop'
             });
         });
@@ -31,6 +31,7 @@ describe('ag.sdk.model.asset', function () {
 
             asset.data.financing.leased = true;
             asset.data.financing.installment = 1000;
+            asset.data.financing.legalEntityId = 0;
             asset.data.financing.paymentFrequency = 'Monthly';
             asset.data.financing.paymentStart = '2015-10-10T10:20:00';
             asset.data.financing.paymentEnd = '2016-10-10T10:20:00';
@@ -71,6 +72,7 @@ describe('ag.sdk.model.asset', function () {
             liability = Liability.new({
                 leased: true,
                 installment: 1000,
+                legalEntityId: 1,
                 paymentFrequency: 'Monthly',
                 paymentStart: '2015-10-10T10:20:00',
                 rentalOwner: 'John Vickers'
@@ -84,10 +86,18 @@ describe('ag.sdk.model.asset', function () {
         });
 
         it('validates installment', function () {
-            liability.paymentFrequency = '1000';
+            liability.installment = '1000';
             expect(liability.validate()).toBe(false);
 
-            liability.paymentFrequency = 'one thousand';
+            liability.installment = 'one thousand';
+            expect(liability.validate()).toBe(false);
+        });
+
+        it('validates legalEntityId', function () {
+            liability.legalEntityId = '1';
+            expect(liability.validate()).toBe(false);
+
+            liability.legalEntityId = undefined;
             expect(liability.validate()).toBe(false);
         });
 
@@ -129,6 +139,7 @@ describe('ag.sdk.model.asset', function () {
                 financed: true,
                 installment: 10000,
                 interestRate: 1,
+                legalEntityId: 2,
                 openingBalance: 100000,
                 organizationName: 'John Vickers',
                 paymentFrequency: 'Monthly',

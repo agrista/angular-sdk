@@ -95,7 +95,7 @@ describe('ag.sdk.model.business-plan', function () {
 
         it('adds a valid asset', function () {
             businessPlan.addAsset({
-                organizationId: 1,
+                legalEntityId: 1,
                 type: 'crop'
             });
             expect(businessPlan.plannedAssets.length).toBe(1);

@@ -1,15 +1,17 @@
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.model.asset', 'ag.sdk.model.legal-entity', 'ag.sdk.model.document', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'inheritModel', 'LegalEntity', 'privateProperty', 'ProductionPlan', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, inheritModel, LegalEntity, privateProperty, ProductionPlan, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionPlan', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, inheritModel, LegalEntity, Liability, privateProperty, ProductionPlan, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
             this.docType = 'business plan';
 
             this.data.includedModels = this.data.includedModels || {
+                assets: [],
                 farmValuations: [],
                 legalEntities: [],
+                liabilities: [],
                 productionPlans: []
             };
 
@@ -86,16 +88,15 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             // Add Assets & Liabilities
             privateProperty(this, 'addAsset', function (asset) {
-                this.data.plannedAssets = this.data.plannedAssets || [];
-
                 if (Asset.new(asset).validate()) {
-                    this.data.plannedAssets.push(asset);
+                    this.models.assets.push(asset);
                 }
             });
 
             privateProperty(this, 'addLiability', function (liability) {
-                this.data.plannedLiabilities = this.data.plannedLiabilities || [];
-                this.data.plannedLiabilities.push(liability);
+                if (Liability.new(liability).validate()) {
+                    this.models.liabilities.push(liability);
+                }
             });
 
             // View added Assets & Liabilities
@@ -105,14 +106,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             computedProperty(this, 'models', function () {
                 return this.data.includedModels;
-            });
-
-            computedProperty(this, 'plannedAssets', function () {
-                return this.data.plannedAssets;
-            });
-
-            computedProperty(this, 'plannedLiabilities', function () {
-                return this.data.plannedLiabilities;
             });
         }
 
