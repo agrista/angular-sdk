@@ -1190,7 +1190,7 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
 
             var src = underscore.chain(attachments)
                 .filter(function (attachment) {
-                    return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
+                    return (attachment.sizes && attachment.sizes[size]);
                 }).map(function (attachment) {
                     return attachment.sizes[size].src;
                 }).last().value();
