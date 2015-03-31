@@ -967,6 +967,13 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        listValuationStatus: function() {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/aggregation/report-valuation-summary', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
