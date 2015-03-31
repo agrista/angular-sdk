@@ -9437,16 +9437,19 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
                 if (this.financed) {
                     var startMonth = moment(this.paymentStart),
                         paymentMonths = this.paymentMonths,
-                        paymentsPerYear = _frequency[this.paymentFrequency],
-                        paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
+                        paymentsPerMonth = (_frequency[this.paymentFrequency] > 12 ? _frequency[this.paymentFrequency] / 12 : 1),
                         numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
 
                     for(var i = 0; i < numberOfMonths; i++) {
                         var month = moment(this.paymentStart).add(i, 'M');
 
-                        if (underscore.contains(paymentMonths, month.month()) && month >= startMonth) {
-                            for (var j = 0; j < paymentsPerMonth; j++) {
-                                balance -= Math.min(balance, (this.installment || 0) - ((((this.interestRate || 0) / 100) / paymentsPerYear) * balance));
+                        if (month >= startMonth) {
+                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
+
+                            if (underscore.contains(paymentMonths, month.month())) {
+                                for (var j = 0; j < paymentsPerMonth; j++) {
+                                    balance -= Math.min(balance, (this.installment || 0));
+                                }
                             }
                         }
                     }
@@ -9484,13 +9487,17 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
 
                 var liability = 0;
 
-                if (underscore.contains(this.paymentMonths, currentMonth.month()) && currentMonth >= startMonth && (this.paymentEnd === undefined || currentMonth <= endMonth)) {
-                    for (var i = 0; i < paymentsPerMonth; i++) {
-                        if (this.financed) {
-                            liability += Math.min(previousBalance, this.installment);
-                            previousBalance -= Math.min(previousBalance, (this.installment || 0) - ((((this.interestRate || 0) / 100) / paymentsPerYear) * previousBalance));
-                        } else if (this.leased) {
-                            liability += this.installment;
+                if (currentMonth >= startMonth && (this.paymentEnd === undefined || currentMonth <= endMonth)) {
+                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
+
+                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
+                        for (var i = 0; i < paymentsPerMonth; i++) {
+                            if (this.financed) {
+                                liability += Math.min(previousBalance, (this.installment || 0));
+                                previousBalance -= Math.min(previousBalance, (this.installment || 0));
+                            } else if (this.leased) {
+                                liability += (this.installment || 0);
+                            }
                         }
                     }
                 }
@@ -9515,14 +9522,18 @@ sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model',
                 for(var i = 0; i < numberOfMonths; i++) {
                     var month = moment(rangeStart).add(i, 'M');
 
-                    if (underscore.contains(paymentMonths, month.month()) && month >= startMonth && (this.paymentEnd === undefined || month <= endMonth)) {
-                        for (var j = 0; j < paymentsPerMonth; j++) {
-                            if (this.financed) {
-                                liability[i] += Math.min(previousBalance, this.installment);
-                                previousBalance -= Math.min(previousBalance, (this.installment || 0) - ((((this.interestRate || 0) / 100) / paymentsPerYear) * previousBalance));
+                    if (month >= startMonth && (this.paymentEnd === undefined || month <= endMonth)) {
+                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
 
-                            } else if (this.leased) {
-                                liability[i] += this.installment;
+                        if (underscore.contains(paymentMonths, month.month())) {
+                            for (var j = 0; j < paymentsPerMonth; j++) {
+                                if (this.financed) {
+                                    liability[i] += Math.min(previousBalance, (this.installment || 0));
+                                    previousBalance -= Math.min(previousBalance, (this.installment || 0));
+
+                                } else if (this.leased) {
+                                    liability[i] += (this.installment || 0);
+                                }
                             }
                         }
                     }

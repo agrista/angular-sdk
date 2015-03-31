@@ -267,7 +267,7 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'improvement',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             });
 
             expect(businessPlan.monthlyStatement[2]).toEqual({
@@ -344,7 +344,7 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'improvement',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             });
 
             expect(businessPlan.monthlyStatement[2]).toEqual({
@@ -417,7 +417,7 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'improvement',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 460.6307380880098, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             });
 
             expect(businessPlan.monthlyStatement[2]).toEqual({

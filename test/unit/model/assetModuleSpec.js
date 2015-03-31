@@ -276,7 +276,7 @@ describe('ag.sdk.model.asset', function () {
             expect(liability.liabilityInMonth('2017-04-04T10:20:00')).toEqual(10000);
             expect(liability.liabilityInMonth('2017-05-04T10:20:00')).toEqual(0);
             expect(liability.liabilityInMonth('2017-06-04T10:20:00')).toEqual(0);
-            expect(liability.liabilityInMonth('2017-07-04T10:20:00')).toEqual(1395.7804116356929);
+            expect(liability.liabilityInMonth('2017-07-04T10:20:00')).toEqual(1229.3589274423996);
             expect(liability.liabilityInMonth('2017-08-04T10:20:00')).toEqual(0);
             expect(liability.liabilityInMonth('2017-09-04T10:20:00')).toEqual(0);
             expect(liability.liabilityInMonth('2017-10-04T10:20:00')).toEqual(0);
@@ -293,7 +293,7 @@ describe('ag.sdk.model.asset', function () {
             expect(liability.liabilityInMonth('2015-08-04T10:20:00')).toEqual(10000);
             expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual(10000);
             expect(liability.liabilityInMonth('2015-10-04T10:20:00')).toEqual(10000);
-            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual(460.6307380880098);
+            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual(461.01459703640194);
             expect(liability.liabilityInMonth('2015-12-04T10:20:00')).toEqual(0);
         });
 
@@ -305,7 +305,7 @@ describe('ag.sdk.model.asset', function () {
             expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual(20000);
             expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual(20000);
             expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual(20000);
-            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual(229.74030003645203);
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual(250.76487335092048);
             expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual(0);
         });
 
@@ -318,7 +318,7 @@ describe('ag.sdk.model.asset', function () {
         it('computes property liabilityInRange Bi-Monthly payments', function () {
             liability.paymentFrequency = 'Bi-Monthly';
 
-            expect(liability.liabilityInRange('2014-12-04T10:20:00', '2015-07-04T10:20:00')).toEqual([0, 20000, 20000, 20000, 20000, 20000, 229.74030003645203, 0]);
+            expect(liability.liabilityInRange('2014-12-04T10:20:00', '2015-07-04T10:20:00')).toEqual([0, 20000, 20000, 20000, 20000, 20000, 250.76487335092048, 0]);
         });
     })
 });
