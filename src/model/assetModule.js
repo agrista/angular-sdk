@@ -1,7 +1,7 @@
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -14,10 +14,23 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
 
             this.data = attrs.data || {};
 
-            this.data.financing = Liability.new(this.data.financing);
-
-            computedProperty(this, 'liability', function () {
-                return this.data.financing;
+            privateProperty(this, 'generateKey', function (legalEntity, farm) {
+                this.assetKey = (legalEntity ? 'entity.' + legalEntity.uuid : '') +
+                (this.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (this.type === 'crop' && this.data.season ? '-s.' + this.data.season : '') +
+                (this.data.fieldName ? '-fi.' + this.data.fieldName : '') +
+                (this.data.crop ? '-c.' + this.data.crop : '') +
+                (this.type === 'cropland' && this.data.irrigated ? '-i.' + this.data.irrigation : '') +
+                (this.type === 'farmland' && this.data.sgKey ? '-' + this.data.sgKey : '') +
+                (this.type === 'improvement' || this.type === 'livestock' || this.type === 'vme' ?
+                (this.data.type ? '-t.' + this.data.type : '') +
+                (this.data.category ? '-c.' + this.data.category : '') +
+                (this.data.name ? '-n.' + this.data.name : '') +
+                (this.data.purpose ? '-p.' + this.data.purpose : '') +
+                (this.data.model ? '-m.' + this.data.model : '') +
+                (this.data.identificationNo ? '-in.' + this.data.identificationNo : '') : '') +
+                (this.data.waterSource ? '-ws.' + this.data.waterSource : '') +
+                (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
             });
 
             computedProperty(this, 'title', function () {
@@ -74,6 +87,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             'water right': 'Water Rights'
         });
 
+        readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
+            'other': 'Other'
+        }, Asset.assetTypes));
+
         Asset.validates({
             assetKey: {
                 required: true
@@ -81,247 +98,14 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             type: {
                 required: true,
                 inclusion: {
-                    in: underscore.keys(Asset.assetTypes)
+                    in: underscore.keys(Asset.assetTypesWithOther)
                 }
             },
             legalEntityId: {
                 required: true,
                 numeric: true
-            },
-            liability: {
-                validates: {
-                    validator: function (value) {
-                        return value.validate();
-                    },
-                    message: 'Must be valid'
-                }
-
             }
         });
 
         return Asset;
-    }]);
-
-sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
-        var _frequency = {
-            'Monthly': 12,
-            'Bi-Monthly': 24,
-            'Quarterly': 4,
-            'Bi-Yearly': 2,
-            'Yearly': 1
-        };
-
-        function Liability (attrs) {
-            Model.Base.apply(this, arguments);
-
-            computedProperty(this, 'currentBalance', function () {
-                return (this.financing ? this.liabilityInMonth(moment().startOf('month')) : 0);
-            });
-
-            privateProperty(this, 'balanceInMonth', function (month) {
-                var balance = this.openingBalance || 0;
-
-                if (this.financed) {
-                    var startMonth = moment(this.paymentStart),
-                        paymentMonths = this.paymentMonths,
-                        paymentsPerMonth = (_frequency[this.paymentFrequency] > 12 ? _frequency[this.paymentFrequency] / 12 : 1),
-                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
-
-                    for(var i = 0; i < numberOfMonths; i++) {
-                        var month = moment(this.paymentStart).add(i, 'M');
-
-                        if (month >= startMonth) {
-                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
-
-                            if (underscore.contains(paymentMonths, month.month())) {
-                                for (var j = 0; j < paymentsPerMonth; j++) {
-                                    balance -= Math.min(balance, (this.installment || 0));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return balance;
-            });
-
-            computedProperty(this, 'paymentMonths', function () {
-                var paymentsPerYear = _frequency[this.paymentFrequency],
-                    firstPaymentMonth = moment(this.paymentStart).month();
-
-                return underscore
-                    .range(firstPaymentMonth, firstPaymentMonth + 12, (paymentsPerYear < 12 ? 12 / paymentsPerYear : 1))
-                    .map(function (value) {
-                        return value % 12;
-                    })
-                    .sort(function (a, b) {
-                        return a - b;
-                    });
-            });
-
-            computedProperty(this, 'hasLiabilities', function () {
-                return this.leased === true || this.financed === true;
-            });
-
-            privateProperty(this, 'liabilityInMonth', function (month) {
-                var previousMonth = moment(month).subtract(1, 'M'),
-                    currentMonth = moment(month),
-                    startMonth = moment(this.paymentStart),
-                    endMonth = moment(this.paymentEnd),
-                    paymentsPerYear = _frequency[this.paymentFrequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth);
-
-                var liability = 0;
-
-                if (currentMonth >= startMonth && (this.paymentEnd === undefined || currentMonth <= endMonth)) {
-                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
-                        for (var i = 0; i < paymentsPerMonth; i++) {
-                            if (this.financed) {
-                                liability += Math.min(previousBalance, (this.installment || 0));
-                                previousBalance -= Math.min(previousBalance, (this.installment || 0));
-                            } else if (this.leased) {
-                                liability += (this.installment || 0);
-                            }
-                        }
-                    }
-                }
-
-                return liability;
-            });
-
-            privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var previousMonth = moment(rangeStart).subtract(1, 'M'),
-                    startMonth = moment(this.paymentStart),
-                    endMonth = moment(this.paymentEnd),
-                    paymentMonths = this.paymentMonths,
-                    paymentsPerYear = _frequency[this.paymentFrequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth),
-                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months') + 1;
-
-                var liability = underscore.range(numberOfMonths).map(function () {
-                    return 0;
-                });
-
-                for(var i = 0; i < numberOfMonths; i++) {
-                    var month = moment(rangeStart).add(i, 'M');
-
-                    if (month >= startMonth && (this.paymentEnd === undefined || month <= endMonth)) {
-                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                        if (underscore.contains(paymentMonths, month.month())) {
-                            for (var j = 0; j < paymentsPerMonth; j++) {
-                                if (this.financed) {
-                                    liability[i] += Math.min(previousBalance, (this.installment || 0));
-                                    previousBalance -= Math.min(previousBalance, (this.installment || 0));
-
-                                } else if (this.leased) {
-                                    liability[i] += (this.installment || 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return liability;
-            });
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.leased = attrs.leased;
-            this.financed = attrs.financed;
-
-            this.description = attrs.description;
-            this.installment = attrs.installment;
-            this.interestRate = attrs.interestRate;
-            this.legalEntityId = attrs.legalEntityId;
-            this.name = attrs.name;
-            this.openingBalance = attrs.openingBalance;
-            this.organizationName = attrs.organizationName;
-            this.paymentFrequency = attrs.paymentFrequency;
-            this.paymentStart = attrs.paymentStart;
-            this.paymentEnd = attrs.paymentEnd;
-            this.rentalOwner = attrs.rentalOwner;
-        }
-
-        inheritModel(Liability, Model.Base);
-
-        readOnlyProperty(Liability, 'paymentFrequencyTypes', [
-            'Bi-Monthly',
-            'Monthly',
-            'Quarterly',
-            'Bi-Yearly',
-            'Yearly']);
-
-        function isFinanced (value, instance, field) {
-            return instance.financed === true;
-        }
-
-        function isLeased (value, instance, field) {
-            return instance.leased === true;
-        }
-
-        function isFinancedOrLeased (value, instance, field) {
-            return instance.leased === true || instance.financed === true;
-        }
-
-        Liability.validates({
-            installment: {
-                requiredIf: isFinancedOrLeased,
-                numeric: true
-            },
-            interestRate: {
-                requiredIf: isFinanced,
-                numeric: true,
-                range: {
-                    from: 0,
-                    to: 100
-                }
-            },
-            legalEntityId: {
-                requiredIf: isFinancedOrLeased,
-                numeric: true
-            },
-            openingBalance: {
-                requiredIf: isFinanced,
-                numeric: true
-            },
-            organizationName: {
-                requiredIf: isFinanced,
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            },
-            paymentFrequency: {
-                requiredIf: isFinancedOrLeased,
-                inclusion: {
-                    in: Liability.paymentFrequencyTypes
-                }
-            },
-            paymentStart: {
-                requiredIf: isFinancedOrLeased,
-                format: {
-                    date: true
-                }
-            },
-            paymentEnd: {
-                format: {
-                    date: true
-                }
-            },
-            rentalOwner: {
-                requiredIf: isLeased,
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            }
-        });
-
-        return Liability;
     }]);

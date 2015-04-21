@@ -174,8 +174,8 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
 sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function inclusion (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
-                return true;
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return false;
             }
 
             if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {

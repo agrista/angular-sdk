@@ -993,6 +993,21 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
     };
 
+    var _liabilityFrequencies = {
+        'bi-monthly': 'Bi-Monthly',
+        'monthly': 'Monthly',
+        'quarterly': 'Quarterly',
+        'bi-yearly': 'Bi-Yearly',
+        'yearly': 'Yearly'
+    };
+
+    var _liabilityTypes = {
+        'rent': 'Rented',
+        'short-loan': 'Short Term Loan',
+        'medium-loan': 'Medium Term Loan',
+        'long-loan': 'Long Term Loan'
+    };
+
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -1024,6 +1039,12 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getCropsForLandUse: function (landUse) {
             return _landUseCropTypes[landUse] || [];
         },
+        getLiabilityFrequencyTitle: function (frequency) {
+            return _liabilityFrequencies[frequency] || '';
+        },
+        getLiabilityTitle: function (type) {
+            return _liabilityTypes[type] || '';
+        },
         getZoneTitle: function (zone) {
             return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
         },
@@ -1032,12 +1053,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         },
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
-        },
-        isFinanceable: function (type) {
-            return (['farmland', 'improvement', 'livestock', 'vme', 'water right'].indexOf(type) !== -1);
-        },
-        isRentable: function (type) {
-            return (['farmland', 'vme', 'water right'].indexOf(type) !== -1);
         },
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
@@ -8320,8 +8335,8 @@ cordovaHelperApp.factory('mapLocationService', ['$rootScope', '$timeout', 'geolo
 
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -8334,10 +8349,23 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
 
             this.data = attrs.data || {};
 
-            this.data.financing = Liability.new(this.data.financing);
-
-            computedProperty(this, 'liability', function () {
-                return this.data.financing;
+            privateProperty(this, 'generateKey', function (legalEntity, farm) {
+                this.assetKey = (legalEntity ? 'entity.' + legalEntity.uuid : '') +
+                (this.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (this.type === 'crop' && this.data.season ? '-s.' + this.data.season : '') +
+                (this.data.fieldName ? '-fi.' + this.data.fieldName : '') +
+                (this.data.crop ? '-c.' + this.data.crop : '') +
+                (this.type === 'cropland' && this.data.irrigated ? '-i.' + this.data.irrigation : '') +
+                (this.type === 'farmland' && this.data.sgKey ? '-' + this.data.sgKey : '') +
+                (this.type === 'improvement' || this.type === 'livestock' || this.type === 'vme' ?
+                (this.data.type ? '-t.' + this.data.type : '') +
+                (this.data.category ? '-c.' + this.data.category : '') +
+                (this.data.name ? '-n.' + this.data.name : '') +
+                (this.data.purpose ? '-p.' + this.data.purpose : '') +
+                (this.data.model ? '-m.' + this.data.model : '') +
+                (this.data.identificationNo ? '-in.' + this.data.identificationNo : '') : '') +
+                (this.data.waterSource ? '-ws.' + this.data.waterSource : '') +
+                (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
             });
 
             computedProperty(this, 'title', function () {
@@ -8394,6 +8422,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             'water right': 'Water Rights'
         });
 
+        readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
+            'other': 'Other'
+        }, Asset.assetTypes));
+
         Asset.validates({
             assetKey: {
                 required: true
@@ -8401,249 +8433,16 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             type: {
                 required: true,
                 inclusion: {
-                    in: underscore.keys(Asset.assetTypes)
+                    in: underscore.keys(Asset.assetTypesWithOther)
                 }
             },
             legalEntityId: {
                 required: true,
                 numeric: true
-            },
-            liability: {
-                validates: {
-                    validator: function (value) {
-                        return value.validate();
-                    },
-                    message: 'Must be valid'
-                }
-
             }
         });
 
         return Asset;
-    }]);
-
-sdkModelAsset.factory('Liability', ['computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
-        var _frequency = {
-            'Monthly': 12,
-            'Bi-Monthly': 24,
-            'Quarterly': 4,
-            'Bi-Yearly': 2,
-            'Yearly': 1
-        };
-
-        function Liability (attrs) {
-            Model.Base.apply(this, arguments);
-
-            computedProperty(this, 'currentBalance', function () {
-                return (this.financing ? this.liabilityInMonth(moment().startOf('month')) : 0);
-            });
-
-            privateProperty(this, 'balanceInMonth', function (month) {
-                var balance = this.openingBalance || 0;
-
-                if (this.financed) {
-                    var startMonth = moment(this.paymentStart),
-                        paymentMonths = this.paymentMonths,
-                        paymentsPerMonth = (_frequency[this.paymentFrequency] > 12 ? _frequency[this.paymentFrequency] / 12 : 1),
-                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
-
-                    for(var i = 0; i < numberOfMonths; i++) {
-                        var month = moment(this.paymentStart).add(i, 'M');
-
-                        if (month >= startMonth) {
-                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
-
-                            if (underscore.contains(paymentMonths, month.month())) {
-                                for (var j = 0; j < paymentsPerMonth; j++) {
-                                    balance -= Math.min(balance, (this.installment || 0));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return balance;
-            });
-
-            computedProperty(this, 'paymentMonths', function () {
-                var paymentsPerYear = _frequency[this.paymentFrequency],
-                    firstPaymentMonth = moment(this.paymentStart).month();
-
-                return underscore
-                    .range(firstPaymentMonth, firstPaymentMonth + 12, (paymentsPerYear < 12 ? 12 / paymentsPerYear : 1))
-                    .map(function (value) {
-                        return value % 12;
-                    })
-                    .sort(function (a, b) {
-                        return a - b;
-                    });
-            });
-
-            computedProperty(this, 'hasLiabilities', function () {
-                return this.leased === true || this.financed === true;
-            });
-
-            privateProperty(this, 'liabilityInMonth', function (month) {
-                var previousMonth = moment(month).subtract(1, 'M'),
-                    currentMonth = moment(month),
-                    startMonth = moment(this.paymentStart),
-                    endMonth = moment(this.paymentEnd),
-                    paymentsPerYear = _frequency[this.paymentFrequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth);
-
-                var liability = 0;
-
-                if (currentMonth >= startMonth && (this.paymentEnd === undefined || currentMonth <= endMonth)) {
-                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
-                        for (var i = 0; i < paymentsPerMonth; i++) {
-                            if (this.financed) {
-                                liability += Math.min(previousBalance, (this.installment || 0));
-                                previousBalance -= Math.min(previousBalance, (this.installment || 0));
-                            } else if (this.leased) {
-                                liability += (this.installment || 0);
-                            }
-                        }
-                    }
-                }
-
-                return liability;
-            });
-
-            privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var previousMonth = moment(rangeStart).subtract(1, 'M'),
-                    startMonth = moment(this.paymentStart),
-                    endMonth = moment(this.paymentEnd),
-                    paymentMonths = this.paymentMonths,
-                    paymentsPerYear = _frequency[this.paymentFrequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth),
-                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months') + 1;
-
-                var liability = underscore.range(numberOfMonths).map(function () {
-                    return 0;
-                });
-
-                for(var i = 0; i < numberOfMonths; i++) {
-                    var month = moment(rangeStart).add(i, 'M');
-
-                    if (month >= startMonth && (this.paymentEnd === undefined || month <= endMonth)) {
-                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                        if (underscore.contains(paymentMonths, month.month())) {
-                            for (var j = 0; j < paymentsPerMonth; j++) {
-                                if (this.financed) {
-                                    liability[i] += Math.min(previousBalance, (this.installment || 0));
-                                    previousBalance -= Math.min(previousBalance, (this.installment || 0));
-
-                                } else if (this.leased) {
-                                    liability[i] += (this.installment || 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return liability;
-            });
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.leased = attrs.leased;
-            this.financed = attrs.financed;
-
-            this.description = attrs.description;
-            this.installment = attrs.installment;
-            this.interestRate = attrs.interestRate;
-            this.legalEntityId = attrs.legalEntityId;
-            this.name = attrs.name;
-            this.openingBalance = attrs.openingBalance;
-            this.organizationName = attrs.organizationName;
-            this.paymentFrequency = attrs.paymentFrequency;
-            this.paymentStart = attrs.paymentStart;
-            this.paymentEnd = attrs.paymentEnd;
-            this.rentalOwner = attrs.rentalOwner;
-        }
-
-        inheritModel(Liability, Model.Base);
-
-        readOnlyProperty(Liability, 'paymentFrequencyTypes', [
-            'Bi-Monthly',
-            'Monthly',
-            'Quarterly',
-            'Bi-Yearly',
-            'Yearly']);
-
-        function isFinanced (value, instance, field) {
-            return instance.financed === true;
-        }
-
-        function isLeased (value, instance, field) {
-            return instance.leased === true;
-        }
-
-        function isFinancedOrLeased (value, instance, field) {
-            return instance.leased === true || instance.financed === true;
-        }
-
-        Liability.validates({
-            installment: {
-                requiredIf: isFinancedOrLeased,
-                numeric: true
-            },
-            interestRate: {
-                requiredIf: isFinanced,
-                numeric: true,
-                range: {
-                    from: 0,
-                    to: 100
-                }
-            },
-            legalEntityId: {
-                requiredIf: isFinancedOrLeased,
-                numeric: true
-            },
-            openingBalance: {
-                requiredIf: isFinanced,
-                numeric: true
-            },
-            organizationName: {
-                requiredIf: isFinanced,
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            },
-            paymentFrequency: {
-                requiredIf: isFinancedOrLeased,
-                inclusion: {
-                    in: Liability.paymentFrequencyTypes
-                }
-            },
-            paymentStart: {
-                requiredIf: isFinancedOrLeased,
-                format: {
-                    date: true
-                }
-            },
-            paymentEnd: {
-                format: {
-                    date: true
-                }
-            },
-            rentalOwner: {
-                requiredIf: isLeased,
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            }
-        });
-
-        return Liability;
     }]);
 
 angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors'])
@@ -8749,7 +8548,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.legal-entity', 'ag.sdk.model.document', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionPlan', 'underscore',
     function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionPlan, underscore) {
@@ -8809,6 +8608,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             .values()
                             .flatten()
                             .where({legalEntityId: legalEntity.id})
+                            .value(),
+                        registerLiabilities = underscore
+                            .chain(instance.data.liabilities)
+                            .where({legalEntityId: legalEntity.id})
                             .value();
 
                     underscore.each(registerAssets, function (asset) {
@@ -8827,20 +8630,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 source: 'legal entity',
                                 value: asset.data.assetValue || 0
                             });
-
-                            if (asset.liability.hasLiabilities) {
-                                instance.data.monthlyStatement.push({
-                                    legalEntityUuid: legalEntity.uuid,
-                                    name: asset.title,
-                                    description: (asset.type === 'improvement' ? asset.data.category : asset.description),
-                                    type: 'liability',
-                                    subtype: asset.type,
-                                    source: 'legal entity',
-                                    liability: asset.liability.liabilityInRange(instance.startDate, instance.endDate)
-                                });
-                            }
                         }
                     });
+
+                    underscore.each(registerLiabilities, function (liability) {
+                        var statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
+
+                        if (underscore.isUndefined(statementLiability)) {
+                            liability = Liability.new(liability);
+
+                            instance.data.monthlyStatement.push({
+                                uuid: liability.uuid,
+                                legalEntityUuid: legalEntity.uuid,
+                                name: Liability.getTypeTitle(liability.type),
+                                type: 'liability',
+                                subtype: liability.type,
+                                source: 'legal entity',
+                                liability: liability.liabilityInRange(instance.startDate, instance.endDate)
+                            });
+                        }
+                    });
+
                 });
             }
 
@@ -8984,16 +8794,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             // Add Assets & Liabilities
             privateProperty(this, 'addAsset', function (asset) {
-                if (asset.type === 'custom' || Asset.new(asset).validate()) {
+                if (Asset.new(asset).validate()) {
                     this.models.assets.push(asset);
 
                     reEvaluateAssetsAndLiabilities(this);
                 }
             });
 
-            privateProperty(this, 'removeAsset', function (uuid) {
+            privateProperty(this, 'removeAsset', function (assetKey) {
                 this.models.assets = underscore.reject(this.models.assets, function (asset) {
-                    return asset.assetKey === uuid && asset.subtype === 'custom';
+                    return asset.assetKey === assetKey;
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
@@ -9009,7 +8819,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             privateProperty(this, 'removeLiability', function (uuid) {
                 this.models.liabilities = underscore.reject(this.models.liabilities, function (liability) {
-                    return liability.uuid === uuid && liability.subtype === 'custom';
+                    return liability.uuid === uuid;
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
@@ -9042,23 +8852,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             source: 'asset',
                             value: asset.data.assetValue || 0
                         });
-
-                        if (asset.liability.hasLiabilities) {
-                            instance.data.monthlyStatement.push({
-                                uuid: asset.assetKey,
-                                legalEntityUuid: registerLegalEntity.uuid,
-                                name: asset.title,
-                                description: asset.description,
-                                type: 'liability',
-                                subtype: asset.type,
-                                source: 'asset',
-                                liability: asset.liability.liabilityInRange(instance.startDate, instance.endDate)
-                            });
-                        }
                     }
                 });
 
-                underscore.each(instance.models.liabilities, function (liability, index) {
+                underscore.each(instance.models.liabilities, function (liability) {
                     liability = Liability.new(liability);
 
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId});
@@ -9069,12 +8866,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         })) {
                         // Add asset
                         instance.data.monthlyStatement.push({
-                            uuid: index,
+                            uuid: liability.uuid,
                             legalEntityUuid: registerLegalEntity.uuid,
                             name: liability.name || '',
                             description: liability.description || '',
                             type: 'liability',
-                            subtype: 'custom',
+                            subtype: 'other',
                             source: 'liability',
                             liability: liability.liabilityInRange(instance.startDate, instance.endDate)
                         });
@@ -9165,6 +8962,12 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
                             .flatten()
                             .compact()
                             .groupBy('type')
+                            .value(),
+                        liabilities: underscore
+                            .chain(organization.legalEntities)
+                            .pluck('liabilities')
+                            .flatten()
+                            .compact()
                             .value()
                     });
                 });
@@ -9369,6 +9172,232 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
         });
 
         return LegalEntity;
+    }]);
+
+var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
+        var _frequency = {
+            'monthly': 12,
+            'bi-monthly': 24,
+            'quarterly': 4,
+            'bi-yearly': 2,
+            'yearly': 1
+        };
+
+        function Liability (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'currentBalance', function () {
+                return (this.type !== 'rent' ? this.liabilityInMonth(moment().startOf('month')) : 0);
+            });
+
+            privateProperty(this, 'balanceInMonth', function (month) {
+                var balance = this.amount || 0;
+
+                if (this.type !== 'rent') {
+                    var startMonth = moment(this.startDate),
+                        paymentMonths = this.paymentMonths,
+                        paymentsPerMonth = (_frequency[this.frequency] > 12 ? _frequency[this.frequency] / 12 : 1),
+                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
+
+                    for(var i = 0; i < numberOfMonths; i++) {
+                        var month = moment(this.startDate).add(i, 'M');
+
+                        if (month >= startMonth) {
+                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
+
+                            if (underscore.contains(paymentMonths, month.month())) {
+                                for (var j = 0; j < paymentsPerMonth; j++) {
+                                    balance -= Math.min(balance, (this.installmentPayment || 0));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return balance;
+            });
+
+            computedProperty(this, 'paymentMonths', function () {
+                var paymentsPerYear = _frequency[this.frequency],
+                    firstPaymentMonth = moment(this.startDate).month();
+
+                return underscore
+                    .range(firstPaymentMonth, firstPaymentMonth + 12, (paymentsPerYear < 12 ? 12 / paymentsPerYear : 1))
+                    .map(function (value) {
+                        return value % 12;
+                    })
+                    .sort(function (a, b) {
+                        return a - b;
+                    });
+            });
+
+            privateProperty(this, 'liabilityInMonth', function (month) {
+                var previousMonth = moment(month).subtract(1, 'M'),
+                    currentMonth = moment(month),
+                    startMonth = moment(this.startDate),
+                    endMonth = moment(this.endDate),
+                    paymentsPerYear = _frequency[this.frequency],
+                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
+                    previousBalance = this.balanceInMonth(previousMonth);
+
+                var liability = 0;
+
+                if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
+                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
+
+                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
+                        for (var i = 0; i < paymentsPerMonth; i++) {
+                            if (this.type !== 'rent') {
+                                liability += Math.min(previousBalance, (this.installmentPayment || 0));
+                                previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
+                            } else {
+                                liability += (this.installmentPayment || 0);
+                            }
+                        }
+                    }
+                }
+
+                return liability;
+            });
+
+            privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
+                var previousMonth = moment(rangeStart).subtract(1, 'M'),
+                    startMonth = moment(this.startDate),
+                    endMonth = moment(this.endDate),
+                    paymentMonths = this.paymentMonths,
+                    paymentsPerYear = _frequency[this.frequency],
+                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
+                    previousBalance = this.balanceInMonth(previousMonth),
+                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months') + 1;
+
+                var liability = underscore.range(numberOfMonths).map(function () {
+                    return 0;
+                });
+
+                for(var i = 0; i < numberOfMonths; i++) {
+                    var month = moment(rangeStart).add(i, 'M');
+
+                    if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
+                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
+
+                        if (underscore.contains(paymentMonths, month.month())) {
+                            for (var j = 0; j < paymentsPerMonth; j++) {
+                                if (this.type !== 'rent') {
+                                    liability[i] += Math.min(previousBalance, (this.installmentPayment || 0));
+                                    previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
+                                } else {
+                                    liability[i] += (this.installmentPayment || 0);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return liability;
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.uuid = attrs.uuid;
+            this.merchantUuid = attrs.merchantUuid;
+            this.legalEntityId = attrs.legalEntityId;
+            this.type = attrs.type;
+            this.installmentPayment = attrs.installmentPayment;
+            this.interestRate = attrs.interestRate;
+            this.amount = attrs.amount;
+            this.frequency = attrs.frequency;
+            this.startDate = attrs.startDate;
+            this.endDate = attrs.endDate;
+        }
+
+        inheritModel(Liability, Model.Base);
+
+        readOnlyProperty(Liability, 'frequencyTypes', {
+            'bi-monthly': 'Bi-Monthly',
+            'monthly': 'Monthly',
+            'quarterly': 'Quarterly',
+            'bi-yearly': 'Bi-Yearly',
+            'yearly': 'Yearly'});
+
+        readOnlyProperty(Liability, 'liabilityTypes', {
+            'short-loan': 'Short Term Loan',
+            'medium-loan': 'Medium Term Loan',
+            'long-loan': 'Long Term Loan',
+            'rent': 'Rented'});
+
+        privateProperty(Liability, 'getFrequencyTitle', function (type) {
+            return Liability.frequencyTypes[type] || '';
+        });
+
+        privateProperty(Liability, 'getTypeTitle', function (type) {
+            return Liability.liabilityTypes[type] || '';
+        });
+
+        function isLoaned (value, instance, field) {
+            return instance.type !== 'rent';
+        }
+
+        function isLeased (value, instance, field) {
+            return instance.leased === 'rent';
+        }
+
+        Liability.validates({
+            installmentPayment: {
+                required: true,
+                numeric: true
+            },
+            interestRate: {
+                requiredIf: isLoaned,
+                numeric: true,
+                range: {
+                    from: 0,
+                    to: 100
+                }
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            amount: {
+                requiredIf: isLoaned,
+                numeric: true
+            },
+            merchantUuid: {
+                required: true,
+                format: {
+                    uuid: true
+                }
+            },
+            frequency: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Liability.frequencyTypes)
+                }
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Liability.liabilityTypes)
+                }
+            },
+            startDate: {
+                required: true,
+                format: {
+                    date: true
+                }
+            },
+            endDate: {
+                requiredIf: isLeased,
+                format: {
+                    date: true
+                }
+            }
+        });
+
+        return Liability;
     }]);
 
 var sdkModelProductionPlanDocument = angular.module('ag.sdk.model.production-plan', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
@@ -12658,8 +12687,8 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
 sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function inclusion (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
-                return true;
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return false;
             }
 
             if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {
@@ -12882,6 +12911,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.document',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.legal-entity',
+    'ag.sdk.model.liability',
     'ag.sdk.model.production-plan',
     'ag.sdk.model.errors',
     'ag.sdk.model.validation',

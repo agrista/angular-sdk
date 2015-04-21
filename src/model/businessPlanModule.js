@@ -1,4 +1,4 @@
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.legal-entity', 'ag.sdk.model.document', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionPlan', 'underscore',
     function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionPlan, underscore) {
@@ -58,6 +58,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             .values()
                             .flatten()
                             .where({legalEntityId: legalEntity.id})
+                            .value(),
+                        registerLiabilities = underscore
+                            .chain(instance.data.liabilities)
+                            .where({legalEntityId: legalEntity.id})
                             .value();
 
                     underscore.each(registerAssets, function (asset) {
@@ -76,20 +80,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 source: 'legal entity',
                                 value: asset.data.assetValue || 0
                             });
-
-                            if (asset.liability.hasLiabilities) {
-                                instance.data.monthlyStatement.push({
-                                    legalEntityUuid: legalEntity.uuid,
-                                    name: asset.title,
-                                    description: (asset.type === 'improvement' ? asset.data.category : asset.description),
-                                    type: 'liability',
-                                    subtype: asset.type,
-                                    source: 'legal entity',
-                                    liability: asset.liability.liabilityInRange(instance.startDate, instance.endDate)
-                                });
-                            }
                         }
                     });
+
+                    underscore.each(registerLiabilities, function (liability) {
+                        var statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
+
+                        if (underscore.isUndefined(statementLiability)) {
+                            liability = Liability.new(liability);
+
+                            instance.data.monthlyStatement.push({
+                                uuid: liability.uuid,
+                                legalEntityUuid: legalEntity.uuid,
+                                name: Liability.getTypeTitle(liability.type),
+                                type: 'liability',
+                                subtype: liability.type,
+                                source: 'legal entity',
+                                liability: liability.liabilityInRange(instance.startDate, instance.endDate)
+                            });
+                        }
+                    });
+
                 });
             }
 
@@ -233,16 +244,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             // Add Assets & Liabilities
             privateProperty(this, 'addAsset', function (asset) {
-                if (asset.type === 'custom' || Asset.new(asset).validate()) {
+                if (Asset.new(asset).validate()) {
                     this.models.assets.push(asset);
 
                     reEvaluateAssetsAndLiabilities(this);
                 }
             });
 
-            privateProperty(this, 'removeAsset', function (uuid) {
+            privateProperty(this, 'removeAsset', function (assetKey) {
                 this.models.assets = underscore.reject(this.models.assets, function (asset) {
-                    return asset.assetKey === uuid && asset.subtype === 'custom';
+                    return asset.assetKey === assetKey;
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
@@ -258,7 +269,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             privateProperty(this, 'removeLiability', function (uuid) {
                 this.models.liabilities = underscore.reject(this.models.liabilities, function (liability) {
-                    return liability.uuid === uuid && liability.subtype === 'custom';
+                    return liability.uuid === uuid;
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
@@ -291,23 +302,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             source: 'asset',
                             value: asset.data.assetValue || 0
                         });
-
-                        if (asset.liability.hasLiabilities) {
-                            instance.data.monthlyStatement.push({
-                                uuid: asset.assetKey,
-                                legalEntityUuid: registerLegalEntity.uuid,
-                                name: asset.title,
-                                description: asset.description,
-                                type: 'liability',
-                                subtype: asset.type,
-                                source: 'asset',
-                                liability: asset.liability.liabilityInRange(instance.startDate, instance.endDate)
-                            });
-                        }
                     }
                 });
 
-                underscore.each(instance.models.liabilities, function (liability, index) {
+                underscore.each(instance.models.liabilities, function (liability) {
                     liability = Liability.new(liability);
 
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId});
@@ -318,12 +316,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         })) {
                         // Add asset
                         instance.data.monthlyStatement.push({
-                            uuid: index,
+                            uuid: liability.uuid,
                             legalEntityUuid: registerLegalEntity.uuid,
                             name: liability.name || '',
                             description: liability.description || '',
                             type: 'liability',
-                            subtype: 'custom',
+                            subtype: 'other',
                             source: 'liability',
                             liability: liability.liabilityInRange(instance.startDate, instance.endDate)
                         });

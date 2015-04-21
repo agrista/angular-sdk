@@ -205,6 +205,21 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
     };
 
+    var _liabilityFrequencies = {
+        'bi-monthly': 'Bi-Monthly',
+        'monthly': 'Monthly',
+        'quarterly': 'Quarterly',
+        'bi-yearly': 'Bi-Yearly',
+        'yearly': 'Yearly'
+    };
+
+    var _liabilityTypes = {
+        'rent': 'Rented',
+        'short-loan': 'Short Term Loan',
+        'medium-loan': 'Medium Term Loan',
+        'long-loan': 'Long Term Loan'
+    };
+
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -236,6 +251,12 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getCropsForLandUse: function (landUse) {
             return _landUseCropTypes[landUse] || [];
         },
+        getLiabilityFrequencyTitle: function (frequency) {
+            return _liabilityFrequencies[frequency] || '';
+        },
+        getLiabilityTitle: function (type) {
+            return _liabilityTypes[type] || '';
+        },
         getZoneTitle: function (zone) {
             return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
         },
@@ -244,12 +265,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         },
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
-        },
-        isFinanceable: function (type) {
-            return (['farmland', 'improvement', 'livestock', 'vme', 'water right'].indexOf(type) !== -1);
-        },
-        isRentable: function (type) {
-            return (['farmland', 'vme', 'water right'].indexOf(type) !== -1);
         },
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +

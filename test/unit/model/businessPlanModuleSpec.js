@@ -112,7 +112,17 @@ describe('ag.sdk.model.business-plan', function () {
         it('adds plannedLiabilities on the instance', function () {
             expect(businessPlan.models.liabilities).toEqual([]);
 
-            businessPlan.addLiability({});
+            businessPlan.addLiability({
+                uuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
+                type: 'short-loan',
+                installmentPayment: 10000,
+                interestRate: 1,
+                legalEntityId: 2,
+                amount: 500000,
+                merchantUuid: '1E109A6C-625B-4FE2-AD23-35D082754914',
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00'
+            });
             expect(businessPlan.models.liabilities.length).toBe(1);
         });
     });
@@ -136,6 +146,39 @@ describe('ag.sdk.model.business-plan', function () {
                 legalEntities: [{
                     id: 2,
                     uuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                    liabilities: [{
+                        id: 7,
+                        uuid: '75A91F7C-3F92-4A5E-A727-E74BD029364B',
+                        type: 'medium-loan',
+                        installmentPayment: 10000,
+                        interestRate: 1,
+                        legalEntityId: 2,
+                        amount: 100000,
+                        merchantUuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
+                        frequency: 'monthly',
+                        startDate: '2015-10-10T10:20:00'
+                    }, {
+                        id: 8,
+                        uuid: 'A2CDB65E-7D5C-4921-8F7E-02B879EDD6DB',
+                        type: 'long-loan',
+                        installmentPayment: 10000,
+                        interestRate: 1,
+                        legalEntityId: 2,
+                        amount: 500000,
+                        merchantUuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
+                        frequency: 'monthly',
+                        startDate: '2015-10-10T10:20:00'
+                    }, {
+                        id: 9,
+                        uuid: '9D3F3850-590C-46FC-A3E2-0F94997F06C8',
+                        type: 'rent',
+                        installmentPayment: 1000,
+                        legalEntityId: 2,
+                        merchantUuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
+                        frequency: 'quarterly',
+                        startDate: '2015-10-10T10:20:00',
+                        endDate: '2016-10-10T10:20:00'
+                    }],
                     assets: [{
                         id: 3,
                         legalEntityId: 2,
@@ -143,17 +186,7 @@ describe('ag.sdk.model.business-plan', function () {
                         type: 'improvement',
                         data: {
                             name: 'Barn',
-                            category: 'Farm Buildings',
-                            financing: {
-                                financed: true,
-                                installment: 10000,
-                                interestRate: 1,
-                                legalEntityId: 2,
-                                openingBalance: 100000,
-                                organizationName: 'John Vickers',
-                                paymentFrequency: 'Monthly',
-                                paymentStart: '2015-10-10T10:20:00'
-                            }
+                            category: 'Farm Buildings'
                         }
                     }, {
                         id: 4,
@@ -162,17 +195,7 @@ describe('ag.sdk.model.business-plan', function () {
                         type: 'improvement',
                         data: {
                             name: 'Office',
-                            category: 'Office Buildings',
-                            financing: {
-                                financed: true,
-                                installment: 10000,
-                                interestRate: 1,
-                                legalEntityId: 2,
-                                openingBalance: 500000,
-                                organizationName: 'John Vickers',
-                                paymentFrequency: 'Monthly',
-                                paymentStart: '2015-10-10T10:20:00'
-                            }
+                            category: 'Office Buildings'
                         }
                     }, {
                         id: 5,
@@ -188,15 +211,7 @@ describe('ag.sdk.model.business-plan', function () {
                         assetKey: 'A2F74C88-DAFE-4704-9A74-A5FB9309C2D4',
                         type: 'farmland',
                         data: {
-                            portionLabel: 'Portion 1 of farm',
-                            financing: {
-                                leased: true,
-                                installment: 1000,
-                                legalEntityId: 2,
-                                rentalOwner: 'John Vickers',
-                                paymentFrequency: 'Quarterly',
-                                paymentStart: '2015-10-10T10:20:00'
-                            }
+                            portionLabel: 'Portion 1 of farm'
                         }
                     }]
                 }]
@@ -261,16 +276,6 @@ describe('ag.sdk.model.business-plan', function () {
             });
 
             expect(businessPlan.monthlyStatement[1]).toEqual({
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Barn',
-                description: 'Farm Buildings',
-                type: 'liability',
-                subtype: 'improvement',
-                source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            });
-
-            expect(businessPlan.monthlyStatement[2]).toEqual({
                 uuid: '3D7C250A-A9D0-455B-97C0-F9499B7C079B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Office',
@@ -280,6 +285,17 @@ describe('ag.sdk.model.business-plan', function () {
                 source: 'legal entity',
                 value: 0
             });
+
+            expect(businessPlan.monthlyStatement[4]).toEqual({
+                uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
+                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                name: 'Medium Term Loan',
+                type: 'liability',
+                subtype: 'medium-loan',
+                source: 'legal entity',
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            });
+
 
             businessPlan.removeLegalEntity(legalEntity);
 
@@ -338,16 +354,6 @@ describe('ag.sdk.model.business-plan', function () {
             });
 
             expect(businessPlan.monthlyStatement[1]).toEqual({
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Barn',
-                description: 'Farm Buildings',
-                type: 'liability',
-                subtype: 'improvement',
-                source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            });
-
-            expect(businessPlan.monthlyStatement[2]).toEqual({
                 uuid: '3D7C250A-A9D0-455B-97C0-F9499B7C079B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Office',
@@ -357,6 +363,17 @@ describe('ag.sdk.model.business-plan', function () {
                 source: 'legal entity',
                 value: 0
             });
+
+            expect(businessPlan.monthlyStatement[4]).toEqual({
+                uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
+                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                name: 'Medium Term Loan',
+                type: 'liability',
+                subtype: 'medium-loan',
+                source: 'legal entity',
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            });
+
         });
 
         it('adds a farm valuation improvement, legal entity', function () {
@@ -411,16 +428,6 @@ describe('ag.sdk.model.business-plan', function () {
             });
 
             expect(businessPlan.monthlyStatement[1]).toEqual({
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Barn',
-                description: 'Farm Buildings',
-                type: 'liability',
-                subtype: 'improvement',
-                source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-            });
-
-            expect(businessPlan.monthlyStatement[2]).toEqual({
                 uuid: '3D7C250A-A9D0-455B-97C0-F9499B7C079B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
                 name: 'Office',
@@ -430,6 +437,17 @@ describe('ag.sdk.model.business-plan', function () {
                 source: 'legal entity',
                 value: 0
             });
+
+            expect(businessPlan.monthlyStatement[4]).toEqual({
+                uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
+                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
+                name: 'Medium Term Loan',
+                type: 'liability',
+                subtype: 'medium-loan',
+                source: 'legal entity',
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            });
+
         });
 
         it('adds a farm valuation improvement and land use, legal entity', function () {
@@ -624,19 +642,11 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'vme',
                 data: {
                     category: 'Vehicle',
-                    model: 'Toyota D',
-                    financing: {
-                        leased: true,
-                        installment: 1000,
-                        legalEntityId: 2,
-                        rentalOwner: 'John Vickers',
-                        paymentFrequency: 'Monthly',
-                        paymentStart: '2015-10-10T10:20:00'
-                    }
+                    model: 'Toyota D'
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(9);
+            expect(businessPlan.monthlyStatement.length).toBe(8);
 
             expect(businessPlan.monthlyStatement[7]).toEqual({
                 uuid: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
@@ -647,17 +657,6 @@ describe('ag.sdk.model.business-plan', function () {
                 subtype: 'vme',
                 source: 'asset',
                 value: 0
-            });
-
-            expect(businessPlan.monthlyStatement[8]).toEqual({
-                uuid: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Vehicle model Toyota D',
-                description: '',
-                type: 'liability',
-                subtype: 'vme',
-                source: 'asset',
-                liability: [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
             });
         });
 
@@ -676,7 +675,7 @@ describe('ag.sdk.model.business-plan', function () {
             businessPlan.addAsset({
                 legalEntityId: 2,
                 assetKey: 'A7C803F5-F2CB-4FE1-A6FC-BAAD50D4AAB4',
-                type: 'custom',
+                type: 'other',
                 data: {
                     name: 'Life Insurance',
                     description: 'Its for life',
@@ -692,7 +691,7 @@ describe('ag.sdk.model.business-plan', function () {
                 name: 'Life Insurance',
                 description: 'Its for life',
                 type: 'asset',
-                subtype: 'custom',
+                subtype: 'other',
                 source: 'asset',
                 value: 300000
             });
@@ -711,15 +710,15 @@ describe('ag.sdk.model.business-plan', function () {
             expect(businessPlan.monthlyStatement.length).toBe(7);
 
             businessPlan.addLiability({
-                financed: true,
-                name: 'Livestock Loan',
-                installment: 10000,
+                uuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
+                type: 'short-loan',
+                installmentPayment: 10000,
                 interestRate: 1,
                 legalEntityId: 2,
-                openingBalance: 500000,
-                organizationName: 'John Vickers',
-                paymentFrequency: 'Monthly',
-                paymentStart: '2015-10-10T10:20:00'
+                amount: 500000,
+                merchantUuid: '1E109A6C-625B-4FE2-AD23-35D082754914',
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00'
             });
 
             expect(businessPlan.monthlyStatement.length).toBe(8);

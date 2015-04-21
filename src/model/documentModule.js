@@ -21,6 +21,12 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
                             .flatten()
                             .compact()
                             .groupBy('type')
+                            .value(),
+                        liabilities: underscore
+                            .chain(organization.legalEntities)
+                            .pluck('liabilities')
+                            .flatten()
+                            .compact()
                             .value()
                     });
                 });
