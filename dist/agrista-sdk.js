@@ -998,6 +998,13 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        listValuationStatus: function() {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/aggregation/report-valuation-summary', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -2535,7 +2542,7 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
 
             var src = underscore.chain(attachments)
                 .filter(function (attachment) {
-                    return (attachment.sizes !== undefined && attachment.sizes[size] !== undefined);
+                    return (attachment.sizes && attachment.sizes[size]);
                 }).map(function (attachment) {
                     return attachment.sizes[size].src;
                 }).last().value();
