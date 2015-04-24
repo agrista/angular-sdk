@@ -622,6 +622,20 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                 }, promise.reject);
             });
         },
+        attachLiability: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/asset/' + id + '/liability', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachLiability: function (id, liabilityId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/asset/' + id + '/liability/' + liabilityId + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         deleteAsset: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/asset/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
@@ -635,6 +649,23 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                     promise.resolve(res.data);
                 }, promise.reject);
             })
+        }
+    };
+}]);
+
+/**
+ * Liability API
+ */
+sdkApiApp.factory('liabilityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        updateLiability: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/liability/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);

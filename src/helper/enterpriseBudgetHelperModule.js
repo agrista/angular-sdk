@@ -3,7 +3,7 @@ var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budg
 sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', function(underscore) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
             status: (item.published ? {text: 'published', label: 'label-success'} : false)

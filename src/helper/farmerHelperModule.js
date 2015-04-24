@@ -16,7 +16,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             .value();
 
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
@@ -84,7 +84,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
 sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.type
         };
@@ -198,7 +198,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
 sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
     var _listServiceMap = function(item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name
         };
     };

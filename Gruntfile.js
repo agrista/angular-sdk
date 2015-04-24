@@ -2,11 +2,11 @@ module.exports = function(grunt) {
     grunt.initConfig({
         concat: {
             sdk: {
-                src: ['src/core/*.js', 'src/helper/*.js', 'src/interface/*.js', 'src/test/*.js', 'src/sdk.js'],
+                src: ['src/core/*.js', 'src/helper/*.js', 'src/interface/*.js', 'src/model/**/*.js', 'src/test/*.js', 'src/sdk.js'],
                 dest: 'dist/agrista-sdk.js'
             },
             mobilesdk: {
-                src: ['src/*/*.js', '!src/core/apiModule.js', 'src/mobile/*/*.js', 'src/mobile-sdk.js'],
+                src: ['src/*/*.js', '!src/core/apiModule.js', 'src/mobile/**/*.js', 'src/model/**/*.js', 'src/mobile-sdk.js'],
                 dest: 'dist/agrista-mobile-sdk.js'
             }
         },
@@ -48,9 +48,9 @@ module.exports = function(grunt) {
             }
         },
         watch: {
-            karma: {
+            testbuild: {
                 files: ['src/**/*.js', 'test/unit/**/*.js'],
-                tasks: ['karma:unit:run']
+                tasks: ['karma:single', 'concat', 'uglify']
             }
         }
     });
@@ -61,6 +61,7 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-karma');
     grunt.loadNpmTasks('grunt-sloc');
 
-    grunt.registerTask('default', ['concat', 'uglify']);
+    grunt.registerTask('build', ['concat', 'uglify']);
+    grunt.registerTask('default', ['karma:single', 'build']);
     grunt.registerTask('unit-test', ['karma:single']);
 };
