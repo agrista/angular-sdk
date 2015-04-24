@@ -15,7 +15,7 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
             this.addressStreet = attrs.addressStreet;
             this.email = attrs.email;
             this.fax = attrs.fax;
-            this.id = attrs.id;
+            this.id = attrs.id || attrs.$id;
             this.mobile = attrs.mobile;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;

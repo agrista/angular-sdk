@@ -2120,7 +2120,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
     var _listServiceMap = function(item, metadata) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             type: item.type,
             updatedAt: item.updatedAt
         };
@@ -4095,7 +4095,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         var _listServiceMap = function (item) {
             var docMap = _documentMap[item.docType];
             var map = {
-                id: item.id || item.__id,
+                id: item.id || item.$id,
                 title: (item.documentId ? item.documentId : ''),
                 subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                 docType: item.docType,
@@ -4175,7 +4175,7 @@ var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budg
 sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', function(underscore) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
             status: (item.published ? {text: 'published', label: 'label-success'} : false)
@@ -5310,7 +5310,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             .value();
 
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
@@ -5378,7 +5378,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
 sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.type
         };
@@ -5492,7 +5492,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
 sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
     var _listServiceMap = function(item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name
         };
     };
@@ -5548,7 +5548,7 @@ var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk
 sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(documentHelper) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             date: item.date
         };
 
@@ -5659,7 +5659,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHelper', function (taskHelper, documentHelper) {
     var _listServiceMap = function(item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.sender,
             subtitle: item.message,
             state: _notificationState(item.notificationType, item.dataType)
@@ -5714,7 +5714,7 @@ var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.lib
 sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (underscore) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
@@ -5871,7 +5871,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
                 return {
-                    id: task.id || item.__id,
+                    id: task.id || item.$id,
                     title: item.organization.name,
                     subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,
@@ -6090,7 +6090,7 @@ var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 sdkHelperUserApp.factory('userHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.firstName + ' ' + item.lastName,
             subtitle: item.position,
             teams: item.teams
@@ -9374,7 +9374,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
 
             this.assetKey = attrs.assetKey;
             this.legalEntityId = attrs.legalEntityId;
-            this.id = attrs.id;
+            this.id = attrs.id || attrs.$id;
             this.type = attrs.type;
 
             this.data = attrs.data || {};
@@ -9457,6 +9457,13 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
         }, Asset.assetTypes));
 
         Asset.validates({
+            farmId: {
+                numeric: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
             assetKey: {
                 required: true
             },
@@ -9465,30 +9472,43 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                 inclusion: {
                     in: underscore.keys(Asset.assetTypesWithOther)
                 }
-            },
-            legalEntityId: {
-                required: true,
-                numeric: true
             }
         });
 
         return Asset;
     }]);
 
-angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors'])
+angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors', 'ag.sdk.model.store'])
     .factory('Model', ['Base', function (Base) {
         var Model = {};
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'underscore', 'Validatable', function (Errorable, underscore, Validatable) {
+    .factory('Base', ['Errorable', 'Storable', 'underscore', 'Validatable', function (Errorable, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
 
             _constructor.new = function (attrs) {
                 var inst = new _constructor(attrs);
+
+                if (typeof inst.storable == 'function') {
+                    inst.storable(attrs);
+                }
+
                 return inst;
+            };
+
+            _constructor.copy = function () {
+                var original = this,
+                    copy = {},
+                    propertyNames = Object.getOwnPropertyNames(original);
+
+                underscore.each(propertyNames, function (propertyName) {
+                    Object.defineProperty(copy, propertyName, Object.getOwnPropertyDescriptor(original, propertyName));
+                });
+
+                return copy;
             };
 
             _constructor.extend = function (Module) {
@@ -9511,7 +9531,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                     }),
                     oldConstructor = this.new;
 
+                console.log(instancePropertyNames);
+
                 this.new = function () {
+                    console.log(arguments);
                     var instance = oldConstructor.apply(this, arguments);
 
                     underscore.each(instancePropertyNames, function (instancePropertyName) {
@@ -9523,8 +9546,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.extend(Validatable);
+            _constructor.extend(Storable);
             _constructor.include(Validatable);
             _constructor.include(Errorable);
+            _constructor.include(Storable);
         }
 
         return Base;
@@ -10007,7 +10032,7 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
                 this.author = attrs.author;
                 this.docType = attrs.docType;
                 this.documentId = attrs.documentId;
-                this.id = attrs.id;
+                this.id = attrs.id || attrs.$id;
                 this.organizationId = attrs.organizationId;
                 this.title = attrs.title;
             }
@@ -10099,7 +10124,7 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
             this.addressStreet = attrs.addressStreet;
             this.email = attrs.email;
             this.fax = attrs.fax;
-            this.id = attrs.id;
+            this.id = attrs.id || attrs.$id;
             this.mobile = attrs.mobile;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
@@ -10331,6 +10356,7 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
             this.legalEntityId = attrs.legalEntityId;
@@ -10539,6 +10565,31 @@ sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
         }
 
         return Errorable;
+    }]);
+var sdkModelStore = angular.module('ag.sdk.model.store', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelStore.factory('Storable', ['computedProperty', 'privateProperty',
+    function (computedProperty, privateProperty) {
+        function Storable () {
+            var _storable = {};
+
+            privateProperty(_storable, 'set', function (inst, attrs) {
+                if (attrs) {
+                    inst.$complete = attrs.$complete;
+                    inst.$dirty = attrs.$dirty;
+                    inst.$id = attrs.$id;
+                    inst.$local = attrs.$local;
+                    inst.$saved = attrs.$saved;
+                    inst.$uri = attrs.$uri;
+                }
+            });
+
+            privateProperty(this, 'storable', function (attrs) {
+                _storable.set(this, attrs);
+            });
+        }
+
+        return Storable;
     }]);
 var sdkModelValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.validators']);
 
@@ -11269,6 +11320,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.liability',
     'ag.sdk.model.production-plan',
     'ag.sdk.model.errors',
+    'ag.sdk.model.store',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'
 ]);

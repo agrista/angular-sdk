@@ -125,6 +125,7 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
             this.legalEntityId = attrs.legalEntityId;

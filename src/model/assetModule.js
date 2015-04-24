@@ -9,7 +9,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
 
             this.assetKey = attrs.assetKey;
             this.legalEntityId = attrs.legalEntityId;
-            this.id = attrs.id;
+            this.id = attrs.id || attrs.$id;
             this.type = attrs.type;
 
             this.data = attrs.data || {};
@@ -92,6 +92,13 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
         }, Asset.assetTypes));
 
         Asset.validates({
+            farmId: {
+                numeric: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
             assetKey: {
                 required: true
             },
@@ -100,10 +107,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                 inclusion: {
                     in: underscore.keys(Asset.assetTypesWithOther)
                 }
-            },
-            legalEntityId: {
-                required: true,
-                numeric: true
             }
         });
 

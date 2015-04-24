@@ -14,6 +14,11 @@ describe('ag.sdk.model.asset', function () {
 
         beforeEach(function () {
             asset = Asset.new({
+                $id: 1,
+                $complete: true,
+                $local: true,
+                $saved: false,
+                $uri: 'assets',
                 assetKey: 'asset key',
                 legalEntityId: 1,
                 type: 'crop'

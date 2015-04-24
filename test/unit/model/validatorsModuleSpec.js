@@ -47,12 +47,12 @@ describe('ag.sdk.model.validators', function () {
 
         it('sets $valid as a property of the instance', function () {
             expect(farm.$valid).toBe(true);
-        })
+        });
 
         it('sets $invalid as a property of the instance', function () {
             expect(farm.$invalid).toBe(false);
             farm.name = '';
             expect(farm.$invalid).toBe(true);
-        })
+        });
     });
 });

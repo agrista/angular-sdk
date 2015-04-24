@@ -56,22 +56,22 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
         },
         injectMetadata: function (item) {
             return underscore.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
-                __id: item.id,
-                __uri: item.uri,
-                __complete: (item.complete == 1),
-                __dirty: (item.dirty == 1),
-                __local: (item.local == 1),
-                __saved: true
+                $id: item.id,
+                $uri: item.uri,
+                $complete: (item.complete == 1),
+                $dirty: (item.dirty == 1),
+                $local: (item.local == 1),
+                $saved: true
             });
         },
         extractMetadata: function (item) {
             return {
-                id: item.__id,
-                uri: item.__uri,
-                complete: item.__complete,
-                dirty: item.__dirty,
-                local: item.__local,
-                data: underscore.omit(item, ['__id', '__uri', '__complete', '__dirty', '__local', '__saved'])
+                id: item.$id,
+                uri: item.$uri,
+                complete: item.$complete,
+                dirty: item.$dirty,
+                local: item.$local,
+                data: underscore.omit(item, ['$id', '$uri', '$complete', '$dirty', '$local', '$saved'])
             };
         },
         transactionPromise: function(db) {
@@ -567,7 +567,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 });
 
                                                 if (item.local == true) {
-                                                    postedItem.id = postedItem.__id;
+                                                    postedItem.id = postedItem.$id;
 
                                                     return _deleteLocal(dataItem).then(function () {
                                                         return postedItem;
@@ -689,12 +689,12 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .chain(function (chain) {
                         angular.forEach(data, function (dataItem) {
                             chain.push(function () {
-                                if (dataItem.__complete === false && request.options.fallbackRemote === true &&
+                                if (dataItem.$complete === false && request.options.fallbackRemote === true &&
                                     (request.options.hydrateRemote === undefined || request.options.hydrateRemote === true)) {
-                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema));
+                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.$id}, request.schema));
 
                                     request.options.force = true;
-                                    request.options.forceUri = dataItem.__uri;
+                                    request.options.forceUri = dataItem.$uri;
 
                                     return _getRemote(uri, request).then(function (res) {
                                         return _updateLocal(res, request);
@@ -901,7 +901,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         return promiseService
                             .wrapAll(function (promises) {
                                 angular.forEach(request.data, function (item) {
-                                    if (item.__local === true) {
+                                    if (item.$local === true) {
                                         promises.push(_deleteLocal(item));
                                     } else {
                                         promises.push(_deleteRemote(item, request.template, request.schema));
@@ -930,7 +930,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                 _getLocal(_uri, request)
                                     .then(function (res) {
                                         var items = underscore.filter(res, function (item) {
-                                            return (item.__dirty == false || request.options.force == true);
+                                            return (item.$dirty == false || request.options.force == true);
                                         });
 
                                         return _deleteLocal(items);

@@ -31,7 +31,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         var _listServiceMap = function (item) {
             var docMap = _documentMap[item.docType];
             var map = {
-                id: item.id || item.__id,
+                id: item.id || item.$id,
                 title: (item.documentId ? item.documentId : ''),
                 subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                 docType: item.docType,

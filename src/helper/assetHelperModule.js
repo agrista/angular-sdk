@@ -40,7 +40,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
     var _listServiceMap = function(item, metadata) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             type: item.type,
             updatedAt: item.updatedAt
         };

@@ -1,17 +1,34 @@
-angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors'])
+angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors', 'ag.sdk.model.store'])
     .factory('Model', ['Base', function (Base) {
         var Model = {};
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'underscore', 'Validatable', function (Errorable, underscore, Validatable) {
+    .factory('Base', ['Errorable', 'Storable', 'underscore', 'Validatable', function (Errorable, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
 
             _constructor.new = function (attrs) {
                 var inst = new _constructor(attrs);
+
+                if (typeof inst.storable == 'function') {
+                    inst.storable(attrs);
+                }
+
                 return inst;
+            };
+
+            _constructor.copy = function () {
+                var original = this,
+                    copy = {},
+                    propertyNames = Object.getOwnPropertyNames(original);
+
+                underscore.each(propertyNames, function (propertyName) {
+                    Object.defineProperty(copy, propertyName, Object.getOwnPropertyDescriptor(original, propertyName));
+                });
+
+                return copy;
             };
 
             _constructor.extend = function (Module) {
@@ -34,7 +51,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                     }),
                     oldConstructor = this.new;
 
+                console.log(instancePropertyNames);
+
                 this.new = function () {
+                    console.log(arguments);
                     var instance = oldConstructor.apply(this, arguments);
 
                     underscore.each(instancePropertyNames, function (instancePropertyName) {
@@ -46,8 +66,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.extend(Validatable);
+            _constructor.extend(Storable);
             _constructor.include(Validatable);
             _constructor.include(Errorable);
+            _constructor.include(Storable);
         }
 
         return Base;

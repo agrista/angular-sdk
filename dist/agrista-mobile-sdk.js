@@ -828,7 +828,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
     var _listServiceMap = function(item, metadata) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             type: item.type,
             updatedAt: item.updatedAt
         };
@@ -2803,7 +2803,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
         var _listServiceMap = function (item) {
             var docMap = _documentMap[item.docType];
             var map = {
-                id: item.id || item.__id,
+                id: item.id || item.$id,
                 title: (item.documentId ? item.documentId : ''),
                 subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                 docType: item.docType,
@@ -2883,7 +2883,7 @@ var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budg
 sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', function(underscore) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
             status: (item.published ? {text: 'published', label: 'label-success'} : false)
@@ -4018,7 +4018,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             .value();
 
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
@@ -4086,7 +4086,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
 sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.type
         };
@@ -4200,7 +4200,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
 sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
     var _listServiceMap = function(item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name
         };
     };
@@ -4256,7 +4256,7 @@ var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk
 sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(documentHelper) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             date: item.date
         };
 
@@ -4367,7 +4367,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHelper', function (taskHelper, documentHelper) {
     var _listServiceMap = function(item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.sender,
             subtitle: item.message,
             state: _notificationState(item.notificationType, item.dataType)
@@ -4422,7 +4422,7 @@ var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.lib
 sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (underscore) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
@@ -4579,7 +4579,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
                 return {
-                    id: task.id || item.__id,
+                    id: task.id || item.$id,
                     title: item.organization.name,
                     subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,
@@ -4798,7 +4798,7 @@ var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 sdkHelperUserApp.factory('userHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.firstName + ' ' + item.lastName,
             subtitle: item.position,
             teams: item.teams
@@ -8344,7 +8344,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
 
             this.assetKey = attrs.assetKey;
             this.legalEntityId = attrs.legalEntityId;
-            this.id = attrs.id;
+            this.id = attrs.id || attrs.$id;
             this.type = attrs.type;
 
             this.data = attrs.data || {};
@@ -8427,6 +8427,13 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
         }, Asset.assetTypes));
 
         Asset.validates({
+            farmId: {
+                numeric: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
             assetKey: {
                 required: true
             },
@@ -8435,30 +8442,43 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                 inclusion: {
                     in: underscore.keys(Asset.assetTypesWithOther)
                 }
-            },
-            legalEntityId: {
-                required: true,
-                numeric: true
             }
         });
 
         return Asset;
     }]);
 
-angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors'])
+angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors', 'ag.sdk.model.store'])
     .factory('Model', ['Base', function (Base) {
         var Model = {};
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'underscore', 'Validatable', function (Errorable, underscore, Validatable) {
+    .factory('Base', ['Errorable', 'Storable', 'underscore', 'Validatable', function (Errorable, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
 
             _constructor.new = function (attrs) {
                 var inst = new _constructor(attrs);
+
+                if (typeof inst.storable == 'function') {
+                    inst.storable(attrs);
+                }
+
                 return inst;
+            };
+
+            _constructor.copy = function () {
+                var original = this,
+                    copy = {},
+                    propertyNames = Object.getOwnPropertyNames(original);
+
+                underscore.each(propertyNames, function (propertyName) {
+                    Object.defineProperty(copy, propertyName, Object.getOwnPropertyDescriptor(original, propertyName));
+                });
+
+                return copy;
             };
 
             _constructor.extend = function (Module) {
@@ -8481,7 +8501,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                     }),
                     oldConstructor = this.new;
 
+                console.log(instancePropertyNames);
+
                 this.new = function () {
+                    console.log(arguments);
                     var instance = oldConstructor.apply(this, arguments);
 
                     underscore.each(instancePropertyNames, function (instancePropertyName) {
@@ -8493,8 +8516,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.extend(Validatable);
+            _constructor.extend(Storable);
             _constructor.include(Validatable);
             _constructor.include(Errorable);
+            _constructor.include(Storable);
         }
 
         return Base;
@@ -8977,7 +9002,7 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
                 this.author = attrs.author;
                 this.docType = attrs.docType;
                 this.documentId = attrs.documentId;
-                this.id = attrs.id;
+                this.id = attrs.id || attrs.$id;
                 this.organizationId = attrs.organizationId;
                 this.title = attrs.title;
             }
@@ -9069,7 +9094,7 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
             this.addressStreet = attrs.addressStreet;
             this.email = attrs.email;
             this.fax = attrs.fax;
-            this.id = attrs.id;
+            this.id = attrs.id || attrs.$id;
             this.mobile = attrs.mobile;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
@@ -9301,6 +9326,7 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
             this.legalEntityId = attrs.legalEntityId;
@@ -10215,7 +10241,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
             function _postFarmer (farmer) {
                 return promiseService.chain(function (chain) {
-                    if (farmer.__dirty === true) {
+                    if (farmer.$dirty === true) {
                         chain.push(function () {
                             return farmerApi.postFarmer({data: farmer});
                         });
@@ -10233,7 +10259,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 return farmApi.getFarms({id: farmerId, options: _options.local}).then(function (farms) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(farms, function (farm) {
-                            if (farm.__dirty === true) {
+                            if (farm.$dirty === true) {
                                 chain.push(function () {
                                     return farmApi.postFarm({data: farm});
                                 });
@@ -10247,7 +10273,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 return legalEntityApi.getEntities({id: farmerId, options: _options.local}).then(function (entities) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(entities, function (entity) {
-                            if (entity.__dirty === true) {
+                            if (entity.$dirty === true) {
                                 chain.push(function () {
                                     return legalEntityApi.postEntity({data: entity});
                                 });
@@ -10265,7 +10291,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 return assetApi.getAssets({id: entityId, options: _options.local}).then(function (assets) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(assets, function (asset) {
-                            if (asset.__dirty === true) {
+                            if (asset.$dirty === true) {
                                 chain.push(function () {
                                     return assetApi.postAsset({data: asset});
                                 });
@@ -10279,7 +10305,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 return documentApi.getDocuments({options: _options.local}).then(function (documents) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(documents, function (document) {
-                            if (document.__dirty === true) {
+                            if (document.$dirty === true) {
                                 chain.push(function () {
                                     return documentApi.postDocument({data: document});
                                 });
@@ -10293,7 +10319,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 return expenseApi.getExpenses({options: _options.local}).then(function (expenses) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(expenses, function (expense) {
-                            if (expense.__dirty === true) {
+                            if (expense.$dirty === true) {
                                 chain.push(function () {
                                     return expenseApi.postExpense({data: expense});
                                 });
@@ -10313,14 +10339,14 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                                 chain.push(function () {
                                     return _postTasks(subtask);
                                 });
-                            } else if (subtask.__dirty === true) {
+                            } else if (subtask.$dirty === true) {
                                 chain.push(function () {
                                     return taskApi.postTask({data: subtask})
                                 });
                             }
                         });
 
-                        if (task && task.__dirty === true) {
+                        if (task && task.$dirty === true) {
                             chain.push(function () {
                                 return taskApi.postTask({data: task})
                             });
@@ -10475,7 +10501,17 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
         });
         
         var _stripProperties = function (data) {
-            return (options.strip ? underscore.omit(data, options.strip) : data);
+            if (typeof data.copy == 'function') {
+                var strippedData = data.copy();
+
+                angular.forEach(options.strip, function (prop) {
+                    delete strippedData[prop];
+                });
+
+                return strippedData;
+            } else {
+                return (options.strip ? underscore.omit(data, options.strip) : data);
+            }
         };
 
         return {
@@ -10491,21 +10527,21 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             getItems: function (req) {
-                req = (req ? angular.copy(req) : {});
-                req.options = underscore.defaults(req.options || {}, {one: false});
+                var request = req || {};
+                request.options = underscore.defaults((request.options ? angular.copy(request.options) : {}), {one: false});
 
                 return _itemStore.transaction().then(function (tx) {
-                    if (req.template) {
-                        return tx.getItems({template: req.template, schema: req.schema, options: req.options, params: req.params});
-                    } else if (req.search) {
-                        req.options.readLocal = false;
-                        req.options.readRemote = true;
+                    if (request.template) {
+                        return tx.getItems({template: request.template, schema: request.schema, options: request.options, params: request.params});
+                    } else if (request.search) {
+                        request.options.readLocal = false;
+                        request.options.readRemote = true;
 
-                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: req.search}, options: req.options, params: req.params});
-                    } else if (req.id) {
-                        return tx.getItems({template: options.plural + '/:id', schema: {id: req.id}, options: req.options, params: req.params});
+                        return tx.getItems({template: options.plural + '?search=:query', schema: {query: request.search}, options: request.options, params: request.params});
+                    } else if (request.id) {
+                        return tx.getItems({template: options.plural + '/:id', schema: {id: request.id}, options: request.options, params: request.params});
                     } else {
-                        return tx.getItems({template: options.plural, options: req.options, params: req.params});
+                        return tx.getItems({template: options.plural, options: request.options, params: request.params});
                     }
                 });
             },
@@ -10519,11 +10555,12 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             createItem: function (req) {
-                req = (req ? angular.copy(req) : {});
-
+                var request = req || {};
+                request.options = (request.options ? angular.copy(request.options) : {});
+                
                 return _itemStore.transaction().then(function (tx) {
-                    if (req.data) {
-                        return tx.createItems({template: req.template, schema: req.schema, data: req.data, options: req.options});
+                    if (request.data) {
+                        return tx.createItems({template: request.template, schema: request.schema, data: request.data, options: request.options});
                     } else {
                         promiseService.throwError(apiConstants.MissingParams);
                     }
@@ -10538,11 +10575,12 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             getItem: function (req) {
-                req = (req ? angular.copy(req) : {});
-
+                var request = req || {};
+                request.options = (request.options ? angular.copy(request.options) : {});
+                
                 return _itemStore.transaction().then(function (tx) {
-                    if (req.id) {
-                        return tx.getItems({template: req.template, schema: {id: req.id}, options: req.options});
+                    if (request.id) {
+                        return tx.getItems({template: request.template, schema: {id: request.id}, options: request.options});
                     } else {
                         promiseService.throwError(apiConstants.MissingParams);
                     }
@@ -10559,11 +10597,12 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             findItem: function (req) {
-                req = (req ? angular.copy(req) : {});
+                var request = req || {};
+                request.options = (request.options ? angular.copy(request.options) : {});
 
                 return _itemStore.transaction().then(function (tx) {
-                    if (req.key) {
-                        return tx.findItems({key: req.key, column: req.column, options: req.options});
+                    if (request.key) {
+                        return tx.findItems({key: request.key, column: request.column, options: request.options});
                     } else {
                         promiseService.throwError(apiConstants.MissingParams);
                     }
@@ -10577,11 +10616,12 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             updateItem: function (req) {
-                req = (req ? angular.copy(req) : {});
+                var request = req || {};
+                request.options = (request.options ? angular.copy(request.options) : {});
 
                 return _itemStore.transaction().then(function (tx) {
-                    if (req.data) {
-                        return tx.updateItems({data: _stripProperties(req.data), options: req.options});
+                    if (request.data) {
+                        return tx.updateItems({data: _stripProperties(request.data), options: request.options});
                     } else {
                         promiseService.throwError(apiConstants.MissingParams);
                     }
@@ -10597,11 +10637,12 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             postItem: function (req) {
-                req = (req ? angular.copy(req) : {});
+                var request = req || {};
+                request.options = (request.options ? angular.copy(request.options) : {});
 
                 return _itemStore.transaction().then(function (tx) {
-                    if (req.data) {
-                        return tx.postItems({template: req.template, schema: req.schema, data: _stripProperties(req.data), options: req.options});
+                    if (request.data) {
+                        return tx.postItems({template: request.template, schema: request.schema, data: _stripProperties(request.data), options: request.options});
                     } else {
                         promiseService.throwError(apiConstants.MissingParams);
                     }
@@ -10614,11 +10655,12 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             deleteItem: function (req) {
-                req = (req ? angular.copy(req) : {});
+                var request = req || {};
+                request.options = (request.options ? angular.copy(request.options) : {});
 
                 return _itemStore.transaction().then(function (tx) {
-                    if (req.data) {
-                        return tx.removeItems({template: options.singular + '/:id/delete', data: req.data});
+                    if (request.data) {
+                        return tx.removeItems({template: options.singular + '/:id/delete', data: request.data});
                     } else {
                         promiseService.throwError(apiConstants.MissingParams);
                     }
@@ -10633,10 +10675,11 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
              * @returns {Promise}
              */
             purgeItem: function (req) {
-                req = (req ? angular.copy(req) : {});
+                var request = req || {};
+                request.options = (request.options ? angular.copy(request.options) : {});
 
                 return _itemStore.transaction().then(function (tx) {
-                    return tx.purgeItems({template: req.template, schema: req.schema, options: req.options});
+                    return tx.purgeItems({template: request.template, schema: request.schema, options: request.options});
                 });
             }
         };
@@ -10694,19 +10737,19 @@ mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
 mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('subtasks', ['taskApi', function (taskApi) {
         return function (obj, type) {
-            return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.__id}});
+            return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.$id}});
         }
     }]);
 
     hydrationProvider.registerDehydrate('subtasks', ['taskApi', 'promiseService', function (taskApi, promiseService) {
         return function (obj, type) {
-            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
             return taskApi.purgeTask({template: 'tasks/:id', schema: {id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.subtasks, function (subtask) {
-                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -10772,7 +10815,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
                 if (obj.organization) {
                     obj.organization.id = obj.organization.id || obj.organizationId;
 
-                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}).then(promise.resolve, promise.reject);
+                    farmerApi.createFarmer({template: 'farmers', data: obj.organization, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}).then(promise.resolve, promise.reject);
                 } else {
                     promise.resolve(obj);
                 }
@@ -10818,13 +10861,13 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 
     hydrationProvider.registerHydrate('legalEntities', ['legalEntityApi', function (legalEntityApi) {
         return function (obj, type) {
-            return legalEntityApi.getEntities({id: obj.__id, options: {hydrate: true}});
+            return legalEntityApi.getEntities({id: obj.$id, options: {hydrate: true}});
         }
     }]);
 
     hydrationProvider.registerHydrate('primaryContact', ['legalEntityApi', 'underscore', function (legalEntityApi, underscore) {
         return function (obj, type) {
-            return legalEntityApi.getEntities({id: obj.__id})
+            return legalEntityApi.getEntities({id: obj.$id})
                 .then(function (entities) {
                     return underscore.findWhere(entities, {isPrimary: true});
                 });
@@ -10833,13 +10876,13 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 
     hydrationProvider.registerDehydrate('legalEntities', ['legalEntityApi', 'promiseService', function (legalEntityApi, promiseService) {
         return function (obj, type) {
-            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
             return legalEntityApi.purgeEntity({template: 'legalentities/:id', schema: {id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.legalEntities, function (entity) {
-                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                            promises.push(legalEntityApi.createEntity({template: 'legalentities/:id', schema: {id: objId}, data: entity, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -10884,19 +10927,19 @@ mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationPro
 
     hydrationProvider.registerHydrate('farms', ['farmApi', function (farmApi) {
         return function (obj, type) {
-            return farmApi.getFarms({id: obj.__id});
+            return farmApi.getFarms({id: obj.$id});
         }
     }]);
 
     hydrationProvider.registerDehydrate('farms', ['farmApi', 'promiseService', function (farmApi, promiseService) {
         return function (obj, type) {
-            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
             return farmApi.purgeFarm({template: 'farms/:id', schema: {id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.farms, function (farm) {
-                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -10925,19 +10968,19 @@ mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationPro
 mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('assets', ['assetApi', function (assetApi) {
         return function (obj, type) {
-            return assetApi.getAssets({id: obj.__id});
+            return assetApi.getAssets({id: obj.$id});
         }
     }]);
 
     hydrationProvider.registerDehydrate('assets', ['assetApi', 'promiseService', function (assetApi, promiseService) {
         return function (obj, type) {
-            var objId = (obj.__id !== undefined ? obj.__id : obj.id);
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
             return assetApi.purgeAsset({template: 'assets/:id', schema: {id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.assets, function (asset) {
-                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}}));
+                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -10981,7 +11024,7 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
 
     hydrationProvider.registerDehydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type) {
-            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: obj.__complete, complete: obj.__complete, dirty: false}});
+            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
         }
     }]);
 
@@ -11168,22 +11211,22 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
         },
         injectMetadata: function (item) {
             return underscore.extend((typeof item.data == 'object' ? item.data : JSON.parse(item.data)), {
-                __id: item.id,
-                __uri: item.uri,
-                __complete: (item.complete == 1),
-                __dirty: (item.dirty == 1),
-                __local: (item.local == 1),
-                __saved: true
+                $id: item.id,
+                $uri: item.uri,
+                $complete: (item.complete == 1),
+                $dirty: (item.dirty == 1),
+                $local: (item.local == 1),
+                $saved: true
             });
         },
         extractMetadata: function (item) {
             return {
-                id: item.__id,
-                uri: item.__uri,
-                complete: item.__complete,
-                dirty: item.__dirty,
-                local: item.__local,
-                data: underscore.omit(item, ['__id', '__uri', '__complete', '__dirty', '__local', '__saved'])
+                id: item.$id,
+                uri: item.$uri,
+                complete: item.$complete,
+                dirty: item.$dirty,
+                local: item.$local,
+                data: underscore.omit(item, ['$id', '$uri', '$complete', '$dirty', '$local', '$saved'])
             };
         },
         transactionPromise: function(db) {
@@ -11679,7 +11722,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 });
 
                                                 if (item.local == true) {
-                                                    postedItem.id = postedItem.__id;
+                                                    postedItem.id = postedItem.$id;
 
                                                     return _deleteLocal(dataItem).then(function () {
                                                         return postedItem;
@@ -11801,12 +11844,12 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                     .chain(function (chain) {
                         angular.forEach(data, function (dataItem) {
                             chain.push(function () {
-                                if (dataItem.__complete === false && request.options.fallbackRemote === true &&
+                                if (dataItem.$complete === false && request.options.fallbackRemote === true &&
                                     (request.options.hydrateRemote === undefined || request.options.hydrateRemote === true)) {
-                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.__id}, request.schema));
+                                    var uri = dataStoreUtilities.parseRequest(_config.apiTemplate, underscore.defaults({id: dataItem.$id}, request.schema));
 
                                     request.options.force = true;
-                                    request.options.forceUri = dataItem.__uri;
+                                    request.options.forceUri = dataItem.$uri;
 
                                     return _getRemote(uri, request).then(function (res) {
                                         return _updateLocal(res, request);
@@ -12013,7 +12056,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         return promiseService
                             .wrapAll(function (promises) {
                                 angular.forEach(request.data, function (item) {
-                                    if (item.__local === true) {
+                                    if (item.$local === true) {
                                         promises.push(_deleteLocal(item));
                                     } else {
                                         promises.push(_deleteRemote(item, request.template, request.schema));
@@ -12042,7 +12085,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                 _getLocal(_uri, request)
                                     .then(function (res) {
                                         var items = underscore.filter(res, function (item) {
-                                            return (item.__dirty == false || request.options.force == true);
+                                            return (item.$dirty == false || request.options.force == true);
                                         });
 
                                         return _deleteLocal(items);
@@ -12241,6 +12284,31 @@ sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
         }
 
         return Errorable;
+    }]);
+var sdkModelStore = angular.module('ag.sdk.model.store', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelStore.factory('Storable', ['computedProperty', 'privateProperty',
+    function (computedProperty, privateProperty) {
+        function Storable () {
+            var _storable = {};
+
+            privateProperty(_storable, 'set', function (inst, attrs) {
+                if (attrs) {
+                    inst.$complete = attrs.$complete;
+                    inst.$dirty = attrs.$dirty;
+                    inst.$id = attrs.$id;
+                    inst.$local = attrs.$local;
+                    inst.$saved = attrs.$saved;
+                    inst.$uri = attrs.$uri;
+                }
+            });
+
+            privateProperty(this, 'storable', function (attrs) {
+                _storable.set(this, attrs);
+            });
+        }
+
+        return Storable;
     }]);
 var sdkModelValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.validators']);
 
@@ -12914,6 +12982,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.liability',
     'ag.sdk.model.production-plan',
     'ag.sdk.model.errors',
+    'ag.sdk.model.store',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'
 ]);
