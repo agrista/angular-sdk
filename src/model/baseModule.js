@@ -19,6 +19,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 return inst;
             };
 
+            _constructor.asJSON = function () {
+                return JSON.parse(JSON.stringify(this));
+            };
+
             _constructor.copy = function () {
                 var original = this,
                     copy = {},
@@ -51,10 +55,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                     }),
                     oldConstructor = this.new;
 
-                console.log(instancePropertyNames);
-
                 this.new = function () {
-                    console.log(arguments);
                     var instance = oldConstructor.apply(this, arguments);
 
                     underscore.each(instancePropertyNames, function (instancePropertyName) {
