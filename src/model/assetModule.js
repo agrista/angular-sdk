@@ -1,17 +1,21 @@
-var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
-            this.assetKey = attrs.assetKey;
-            this.legalEntityId = attrs.legalEntityId;
             this.id = attrs.id || attrs.$id;
-            this.type = attrs.type;
+            this.assetKey = attrs.assetKey;
+            this.farmId = attrs.farmId;
+            this.legalEntityId = attrs.legalEntityId;
+            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
+                return Liability.new(liability);
+            });
 
+            this.type = attrs.type;
             this.data = attrs.data || {};
 
             privateProperty(this, 'generateKey', function (legalEntity, farm) {

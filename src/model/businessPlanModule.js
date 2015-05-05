@@ -29,10 +29,15 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              * Legal Entities handling
              */
             privateProperty(this, 'addLegalEntity', function (legalEntity) {
-                var dupLegalEntity = underscore.findWhere(this.models.legalEntities, {uuid: legalEntity.uuid});
+                var instance = this,
+                    dupLegalEntity = underscore.findWhere(this.models.legalEntities, {uuid: legalEntity.uuid});
 
                 if (underscore.isUndefined(dupLegalEntity) && LegalEntity.new(legalEntity).validate()) {
                     this.models.legalEntities.push(legalEntity);
+
+                    angular.forEach(legalEntity.assets, function(asset) {
+                        instance.addAsset(asset);
+                    });
 
                     reEvaluateBusinessPlan(this);
                 }
@@ -41,6 +46,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             privateProperty(this, 'removeLegalEntity', function (legalEntity) {
                 this.models.legalEntities = underscore.reject(this.models.legalEntities, function (entity) {
                     return entity.id === legalEntity.id;
+                });
+
+                this.models.assets = underscore.reject(this.models.assets, function (asset) {
+                    return asset.legalEntityId === legalEntity.id;
                 });
 
                 reEvaluateBusinessPlan(this);
@@ -245,15 +254,19 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             // Add Assets & Liabilities
             privateProperty(this, 'addAsset', function (asset) {
                 if (Asset.new(asset).validate()) {
-                    this.models.assets.push(asset);
+                    this.models.assets = underscore.reject(this.models.assets, function (item) {
+                        return item.assetKey === asset.assetKey;
+                    });
+
+                    this.models.assets.push(asset instanceof Asset ? asset.asJSON() : asset);
 
                     reEvaluateAssetsAndLiabilities(this);
                 }
             });
 
-            privateProperty(this, 'removeAsset', function (assetKey) {
-                this.models.assets = underscore.reject(this.models.assets, function (asset) {
-                    return asset.assetKey === assetKey;
+            privateProperty(this, 'removeAsset', function (asset) {
+                this.models.assets = underscore.reject(this.models.assets, function (item) {
+                    return item.assetKey === asset.assetKey;
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
@@ -261,15 +274,19 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             privateProperty(this, 'addLiability', function (liability) {
                 if (Liability.new(liability).validate()) {
-                    this.models.liabilities.push(liability);
+                    this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
+                        return item.uuid === liability.uuid;
+                    });
+
+                    this.models.liabilities.push(liability instanceof Liability ? liability.asJSON() : liability);
 
                     reEvaluateAssetsAndLiabilities(this);
                 }
             });
 
-            privateProperty(this, 'removeLiability', function (uuid) {
-                this.models.liabilities = underscore.reject(this.models.liabilities, function (liability) {
-                    return liability.uuid === uuid;
+            privateProperty(this, 'removeLiability', function (liability) {
+                this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
+                    return item.uuid === liability.uuid;
                 });
 
                 reEvaluateAssetsAndLiabilities(this);

@@ -1,7 +1,7 @@
 var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
         var _frequency = {
             'monthly': 12,
             'bi-monthly': 24,
@@ -20,7 +20,7 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
             privateProperty(this, 'balanceInMonth', function (month) {
                 var balance = this.amount || 0;
 
-                if (this.type !== 'rent') {
+                if (angular.isNumber(this.amount) && this.amount > 0) {
                     var startMonth = moment(this.startDate),
                         paymentMonths = this.paymentMonths,
                         paymentsPerMonth = (_frequency[this.frequency] > 12 ? _frequency[this.frequency] / 12 : 1),
@@ -29,7 +29,9 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
                     for(var i = 0; i < numberOfMonths; i++) {
                         var month = moment(this.startDate).add(i, 'M');
 
-                        if (month >= startMonth) {
+                        if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
+                            balance += this.amount;
+                        } else if (month >= startMonth) {
                             balance += (((this.interestRate || 0) / 100) / 12) * balance;
 
                             if (underscore.contains(paymentMonths, month.month())) {
@@ -58,6 +60,12 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
                     });
             });
 
+            computedProperty(this, 'title', function () {
+                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
+                    (this.name ? this.name : Liability.getTypeTitle(this.type));
+            });
+
             privateProperty(this, 'liabilityInMonth', function (month) {
                 var previousMonth = moment(month).subtract(1, 'M'),
                     currentMonth = moment(month),
@@ -69,12 +77,15 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
 
                 var liability = 0;
 
-                if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
+                if (this.frequency === 'once' && startMonth.month() === currentMonth.month() && startMonth.year() === currentMonth.year()) {
+                    liability += this.amount;
+                } else if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
                     previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
 
                     if (underscore.contains(this.paymentMonths, currentMonth.month())) {
                         for (var i = 0; i < paymentsPerMonth; i++) {
-                            if (this.type !== 'rent') {
+
+                            if (angular.isNumber(this.amount) && this.amount > 0) {
                                 liability += Math.min(previousBalance, (this.installmentPayment || 0));
                                 previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
                             } else {
@@ -104,12 +115,14 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
                 for(var i = 0; i < numberOfMonths; i++) {
                     var month = moment(rangeStart).add(i, 'M');
 
-                    if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
+                    if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
+                        liability[i] += this.amount;
+                    } else if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
                         previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
 
                         if (underscore.contains(paymentMonths, month.month())) {
                             for (var j = 0; j < paymentsPerMonth; j++) {
-                                if (this.type !== 'rent') {
+                                if (angular.isNumber(this.amount) && this.amount > 0) {
                                     liability[i] += Math.min(previousBalance, (this.installmentPayment || 0));
                                     previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
                                 } else {
@@ -123,12 +136,19 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
                 return liability;
             });
 
+            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
+                    return total - liability;
+                }, 0);
+            });
+
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
             this.legalEntityId = attrs.legalEntityId;
+            this.name = attrs.name;
             this.type = attrs.type;
             this.installmentPayment = attrs.installmentPayment;
             this.interestRate = attrs.interestRate;
@@ -141,6 +161,7 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
         inheritModel(Liability, Model.Base);
 
         readOnlyProperty(Liability, 'frequencyTypes', {
+            'once': 'One Time',
             'bi-monthly': 'Bi-Monthly',
             'monthly': 'Monthly',
             'quarterly': 'Quarterly',
@@ -152,6 +173,10 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
             'medium-loan': 'Medium Term Loan',
             'long-loan': 'Long Term Loan',
             'rent': 'Rented'});
+
+        readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
+            'other': 'Other'
+        }, Liability.liabilityTypes));
 
         privateProperty(Liability, 'getFrequencyTitle', function (type) {
             return Liability.frequencyTypes[type] || '';
@@ -169,14 +194,30 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
             return instance.leased === 'rent';
         }
 
+        function isOtherType (value, instance, field) {
+            return instance.type === 'other';
+        }
+
+        function isNotOtherType (value, instance, field) {
+            return instance.type !== 'other';
+        }
+
         Liability.validates({
             installmentPayment: {
-                required: true,
+                requiredIf: function (value, instance, field) {
+                    return isNotOtherType(value, instance, field) &&
+                        (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
+                        (angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
+                },
+                range: {
+                    from: 0
+                },
                 numeric: true
             },
             interestRate: {
-                requiredIf: isLoaned,
-                numeric: true,
+                requiredIf: function (value, instance, field) {
+                    return angular.isNumber(instance.installmentPayment) && instance.installmentPayment > 0;
+                },
                 range: {
                     from: 0,
                     to: 100
@@ -187,11 +228,17 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
                 numeric: true
             },
             amount: {
-                requiredIf: isLoaned,
+                requiredIf: function (value, instance, field) {
+                    return (isLoaned(value, instance, field) && isNotOtherType(value, instance, field)) ||
+                        (angular.isNumber(instance.installmentPayment) && instance.installmentPayment >= 0) === false;
+                },
+                range: {
+                    from: 0
+                },
                 numeric: true
             },
             merchantUuid: {
-                required: true,
+                requiredIf: isNotOtherType,
                 format: {
                     uuid: true
                 }
@@ -205,7 +252,14 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
             type: {
                 required: true,
                 inclusion: {
-                    in: underscore.keys(Liability.liabilityTypes)
+                    in: underscore.keys(Liability.liabilityTypesWithOther)
+                }
+            },
+            name: {
+                requiredIf: isOtherType,
+                length: {
+                    min: 1,
+                    max: 255
                 }
             },
             startDate: {
