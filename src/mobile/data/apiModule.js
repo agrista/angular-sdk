@@ -11,7 +11,7 @@ var _errors = {
  */
 mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (underscore) {
     var _options = {
-        models: ['budgets', 'documents', 'expenses', 'farmers', 'tasks', 'organizational-units'],
+        models: ['budgets', 'documents', 'expenses', 'farmers', 'tasks', 'organizational-units', 'merchants'],
         local: {
             readLocal: true,
             hydrate: false
@@ -29,8 +29,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
         _options = underscore.extend(_options, options);
     };
 
-    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'organizationalUnitApi', 'pagingService', 'promiseService', 'taskApi',
-        function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, organizationalUnitApi, pagingService, promiseService, taskApi) {
+    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'promiseService', 'taskApi',
+        function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, promiseService, taskApi) {
             function _getFarmers (getParams) {
                 getParams = getParams || {limit: 20, resulttype: 'simple'};
 
@@ -145,6 +145,10 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 });
             }
 
+            function _getMerchants() {
+                return merchantApi.getMerchants({options: _options.remote});
+            }
+
             function _postFarmers () {
                 return farmerApi.getFarmers({options: {readLocal: true, hydrate: ['primaryContact']}}).then(function (farmers) {
                     return promiseService.chain(function (chain) {
@@ -209,9 +213,31 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 return assetApi.getAssets({id: entityId, options: _options.local}).then(function (assets) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(assets, function (asset) {
-                            if (asset.$dirty === true) {
+                            chain.push(function () {
+                                if (asset.$dirty === true) {
+                                    return assetApi.postAsset({data: asset}).then(function (res) {
+                                        return _postLiabilities(asset.$id, res.id);
+                                    });
+                                } else {
+                                    return _postLiabilities(asset.$id, asset.$id);
+                                }
+                            });
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postLiabilities (localAssetId, remoteAssetId) {
+                return liabilityApi.getLiabilities({id: localAssetId, options: _options.local}).then(function (liabilities) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(liabilities, function (liability) {
+                            if (liability.$dirty === true) {
                                 chain.push(function () {
-                                    return assetApi.postAsset({data: asset});
+                                    return liabilityApi.postLiability({
+                                        template: (liability.$local ? 'asset/:aid/liability' : 'liability/:id'),
+                                        schema: {aid: remoteAssetId},
+                                        data: liability
+                                    });
                                 });
                             }
                         });
@@ -240,6 +266,21 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             if (expense.$dirty === true) {
                                 chain.push(function () {
                                     return expenseApi.postExpense({data: expense});
+                                });
+                            }
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+
+            function _postMerchants () {
+                return merchantApi.getMerchants({options: _options.local}).then(function (merchants) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(merchants, function (merchant) {
+                            if (merchant.$dirty === true) {
+                                chain.push(function () {
+                                    return merchantApi.postMerchant({data: merchant});
                                 });
                             }
                         });
@@ -322,6 +363,10 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                                     if (models.indexOf('expenses') !== -1) {
                                         chain.push(_postExpenses);
                                     }
+
+                                    if (models.indexOf('merchants') !== -1) {
+                                        chain.push(_postMerchants);
+                                    }
                                 })
                                 .then(function (res) {
                                     _busy = false;
@@ -376,6 +421,10 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
                                     if (models.indexOf('organizational-units') !== -1) {
                                         chain.push(_getOrganizationalUnits);
+                                    }
+
+                                    if (models.indexOf('merchants') !== -1) {
+                                        chain.push(_getMerchants);
                                     }
                                 })
                                 .then(function (res) {
@@ -704,7 +753,9 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }];
 }]);
 
-mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
+mobileSdkApiApp.factory('merchantApi', ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
+    var _host = configuration.getServer();
+
     var merchantApi = api({
         plural: 'merchants',
         singular: 'merchant'
@@ -716,7 +767,18 @@ mobileSdkApiApp.factory('merchantApi', ['api', function (api) {
         getMerchant: merchantApi.getItem,
         updateMerchant: merchantApi.updateItem,
         postMerchant: merchantApi.postItem,
-        deleteMerchant: merchantApi.deleteItem
+        deleteMerchant: merchantApi.deleteItem,
+        searchMerchants: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
     };
 }]);
 
@@ -886,7 +948,7 @@ mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationPro
 mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('assets', ['assetApi', function (assetApi) {
         return function (obj, type) {
-            return assetApi.getAssets({id: obj.$id});
+            return assetApi.getAssets({id: obj.$id, options: {hydrate: ['liabilities']}});
         }
     }]);
 
@@ -906,16 +968,17 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
+        var hydrateRelations = ['liabilities'];
         var assetApi = api({
             plural: 'assets',
             singular: 'asset',
-            strip: ['farm', 'legalEntity'],
+            strip: ['farm', 'legalEntity', 'liabilities'],
             hydrate: function (obj, options) {
-                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : []);
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
                 return hydration.hydrate(obj, 'asset', options);
             },
             dehydrate: function (obj, options) {
-                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : []);
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : hydrateRelations));
                 return hydration.dehydrate(obj, 'asset', options);
             }
         });
@@ -929,6 +992,57 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
             postAsset: assetApi.postItem,
             deleteAsset: assetApi.deleteItem,
             purgeAsset: assetApi.purgeItem
+        };
+    }];
+}]);
+
+mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('liabilities', ['liabilityApi', function (liabilityApi) {
+        return function (obj, type) {
+            return liabilityApi.getLiabilities({id: obj.$id});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('liabilities', ['liabilityApi', 'promiseService', function (liabilityApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
+
+            return liabilityApi.purgeLiability({template: 'liabilities/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.liabilities, function (liability) {
+                            promises.push(liabilityApi.createLiability({template: 'liabilities/:id', schema: {id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var defaultRelations = [];
+        var liabilityApi = api({
+            plural: 'liabilities',
+            singular: 'liability',
+            strip: defaultRelations,
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+                return hydration.hydrate(obj, 'liability', options);
+            },
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : defaultRelations));
+                return hydration.dehydrate(obj, 'liability', options);
+            }
+        });
+
+        return {
+            getLiabilities: liabilityApi.getItems,
+            createLiability: liabilityApi.createItem,
+            getLiability: liabilityApi.getItem,
+            findLiability: liabilityApi.findItem,
+            updateLiability: liabilityApi.updateItem,
+            postLiability: liabilityApi.postItem,
+            deleteLiability: liabilityApi.deleteItem,
+            purgeLiability: liabilityApi.purgeItem
         };
     }];
 }]);
