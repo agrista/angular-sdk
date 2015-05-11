@@ -106,7 +106,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     paymentsPerYear = _frequency[this.frequency],
                     paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
                     previousBalance = this.balanceInMonth(previousMonth),
-                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months') + 1;
+                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months');
 
                 var liability = underscore.range(numberOfMonths).map(function () {
                     return 0;
@@ -183,7 +183,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         });
 
         privateProperty(Liability, 'getTypeTitle', function (type) {
-            return Liability.liabilityTypes[type] || '';
+            return Liability.liabilityTypesWithOther[type] || '';
         });
 
         function isLoaned (value, instance, field) {

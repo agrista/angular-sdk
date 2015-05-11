@@ -292,21 +292,81 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateAssetsAndLiabilities(this);
             });
 
+            function initializeCategoryValues(instance, section, category, months) {
+                instance.data[section] = instance.data[section] || {};
+                instance.data[section][category] = instance.data[section][category] || underscore.range(months).map(function () {
+                    return 0;
+                });
+            }
+
             function reEvaluateAssetsAndLiabilities (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
                 instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
                     return underscore.contains(['asset', 'liability'], item.source);
                 });
 
+                instance.data.capitalIncome = {};
+                instance.data.capitalExpenditure = {};
+                instance.data.otherIncome = {};
+                instance.data.otherExpenditure = {};
+                instance.data.debtRedemption = {};
+
                 underscore.each(instance.models.assets, function (asset) {
                     asset = Asset.new(asset);
+
 
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
                         statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
 
-                    // Check asset is not already added and legal entity model is included
-                    if (underscore.isUndefined(statementAsset) && underscore.some(instance.models.legalEntities, function (entity) {
-                            return entity.uuid === registerLegalEntity.uuid;
-                        })) {
+                    // Check asset is not already added
+                    if (underscore.isUndefined(statementAsset)) {
+                        // VME
+                        if (asset.type === 'vme') {
+                            var acquisitionDate = moment(asset.data.acquisitionDate),
+                                soldDate = moment(asset.data.soldDate);
+
+                            if (asset.data.subtype === 'Vehicles') {
+                                initializeCategoryValues(instance, 'capitalIncome', 'Vehicle Purchases', numberOfMonths);
+                                initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicle Sales', numberOfMonths);
+
+                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    instance.data.capitalIncome['Vehicle Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
+                                }
+
+                                if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
+                                    instance.data.capitalExpenditure['Vehicle Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
+                                }
+                            } else {
+                                initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
+                                initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment Sales', numberOfMonths);
+
+                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'Machinery & Equipment Purchases')] += asset.data.assetValue;
+                                }
+
+                                if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
+                                    instance.data.capitalExpenditure['Machinery & Equipment Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
+                                }
+                            }
+                        } else if (asset.type === 'other') {
+                            initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
+                            initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
+                        }
+
+                        angular.forEach(asset.liabilities, function (liability) {
+                            var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
+                                typeTitle = Liability.getTypeTitle(liability.type),
+                                liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+
+                            initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                            instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
+                                return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
+                            });
+                        });
 
                         // Add asset
                         instance.data.monthlyStatement.push({
@@ -325,13 +385,22 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 underscore.each(instance.models.liabilities, function (liability) {
                     liability = Liability.new(liability);
 
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId});
+                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId}),
+                        statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
 
-                    // Check legal entity model is included
-                    if (underscore.some(instance.models.legalEntities, function (entity) {
-                            return entity.uuid === registerLegalEntity.uuid;
-                        })) {
-                        // Add asset
+                    // Check asset is not already added
+                    if (underscore.isUndefined(statementLiability)) {
+                        var section = (liability.type === 'rent' || liability.type === 'other' ? 'capitalExpenditure' : 'debtRedemption'),
+                            typeTitle = Liability.getTypeTitle(liability.type),
+                            liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+
+                        initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
+                            return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
+                        });
+
+                        // Add liability
                         instance.data.monthlyStatement.push({
                             uuid: liability.uuid,
                             legalEntityUuid: registerLegalEntity.uuid,
