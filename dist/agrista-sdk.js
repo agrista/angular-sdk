@@ -1290,6 +1290,46 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
     };
 }]);
 
+/**
+ * Production Schedule API
+ */
+sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductionSchedules: function (id) {
+            return pagingService.page(_host + 'api/production-schedules' + (id ? '/' + id : ''));
+        },
+        createProductionSchedule: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/production-schedule/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductionSchedule: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
@@ -9363,10 +9403,10 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
         }
     };
 }]);
-var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability']);
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -9376,10 +9416,15 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             this.assetKey = attrs.assetKey;
             this.farmId = attrs.farmId;
             this.legalEntityId = attrs.legalEntityId;
+
             this.liabilities = underscore.map(attrs.liabilities, function (liability) {
                 return Liability.new(liability);
             });
 
+            this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
+                return ProductionSchedule.new(schedule);
+            });
+            
             this.type = attrs.type;
             this.data = attrs.data || {};
 
@@ -9608,10 +9653,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionPlan', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionPlan, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
@@ -9631,7 +9676,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 // Re-evaluate all included models
                 reEvaluateLegalEntities(instance);
                 reEvaluateFarmValuations(instance);
-                reEvaluateProductionPlans(instance);
+                reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
             }
 
@@ -9724,34 +9769,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             /**
-             * Production Plans handling
+             * Production Schedule handling
              */
-            privateProperty(this, 'addProductionPlan', function (productionPlan) {
-                var dupProductionPlan = underscore.findWhere(this.models.productionPlans, {documentId: productionPlan.documentId});
+            function reEvaluateProductionSchedules (instance) {
 
-                if (underscore.isUndefined(dupProductionPlan) && ProductionPlan.new(productionPlan).validate()) {
-                    this.models.productionPlans.push(productionPlan);
-
-                    reEvaluateProductionPlans(this);
-                }
-            });
-
-            privateProperty(this, 'removeProductionPlan', function (productionPlan) {
-                this.models.productionPlans = underscore.reject(this.models.productionPlans, function (plan) {
-                    return plan.id === productionPlan.id;
-                });
-
-                reEvaluateProductionPlans(this);
-            });
-
-            function reEvaluateProductionPlans (instance) {
-                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
-                    return item.source === 'production plan';
-                });
-
-                underscore.each(instance.models.productionPlans, function (item) {
-                    var productionPlan = ProductionPlan.new(item);
-                });
             }
 
             /**
@@ -9927,12 +9948,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 underscore.each(instance.models.assets, function (asset) {
                     asset = Asset.new(asset);
 
-
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
                         statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
 
                     // Check asset is not already added
-                    if (underscore.isUndefined(statementAsset)) {
+                    if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
                         // VME
                         if (asset.type === 'vme') {
                             var acquisitionDate = moment(asset.data.acquisitionDate),
@@ -9964,11 +9984,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         } else if (asset.type === 'other') {
                             initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
                             initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
+
+                            // TODO: calculate purchase/sold date for asset
                         }
 
                         angular.forEach(asset.liabilities, function (liability) {
                             var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
-                                typeTitle = Liability.getTypeTitle(liability.type),
+                                typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                                 liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
                             initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
@@ -9999,9 +10021,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
 
                     // Check asset is not already added
-                    if (underscore.isUndefined(statementLiability)) {
+                    if (registerLegalEntity && underscore.isUndefined(statementLiability)) {
                         var section = (liability.type === 'rent' || liability.type === 'other' ? 'capitalExpenditure' : 'debtRedemption'),
-                            typeTitle = Liability.getTypeTitle(liability.type),
+                            typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                             liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
                         initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
@@ -10601,46 +10623,74 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         return Liability;
     }]);
 
-var sdkModelProductionPlanDocument = angular.module('ag.sdk.model.production-plan', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelProductionPlanDocument.factory('ProductionPlan', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
-    function (Asset, computedProperty, Document, inheritModel, privateProperty) {
-        function ProductionPlan (attrs) {
-            Document.apply(this, arguments);
+sdkModelProductionSchedule.factory('ProductionSchedule', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function ProductionSchedule (attrs) {
+            Model.Base.apply(this, arguments);
 
-            this.docType = 'production plan';
+            this.data = (attrs && attrs.data) || {};
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.assetId = attrs.assetId;
+            this.budgetUuid = attrs.budgetUuid;
+            this.type = attrs.type;
+            this.endDate = attrs.endDate;
+            this.id = attrs.id || attrs.$id;
+            this.organizationId = attrs.organizationId;
+            this.startDate = attrs.startDate;
+
+            this.asset = attrs.asset;
+            this.budget = attrs.budget;
+            this.organization = attrs.organization;
         }
 
-        inheritModel(ProductionPlan, Document);
+        inheritModel(ProductionSchedule, Model.Base);
 
-        ProductionPlan.validates({
-            author: {
+        readOnlyProperty(ProductionSchedule, 'productionScheduleTypes', {
+            crop: 'Crop',
+            horticulture: 'Horticulture',
+            livestock: 'Livestock'
+        });
+
+        readOnlyProperty(ProductionSchedule, 'allowedAssets', ['cropland', 'pasture', 'permanent crop']);
+
+        privateProperty(ProductionSchedule, 'getTypeTitle', function (type) {
+            return ProductionSchedule.productionScheduleTypes[type] || '';
+        });
+
+        ProductionSchedule.validates({
+            assetId: {
                 required: true,
-                length: {
-                    min: 1,
-                    max: 255
+                numeric: true
+            },
+            budgetUuid: {
+                required: true,
+                format: {
+                    uuid: true
                 }
             },
-            docType: {
+            endDate: {
                 required: true,
-                equal: {
-                    to: 'production plan'
+                format: {
+                    date: true
                 }
             },
             organizationId: {
                 required: true,
                 numeric: true
             },
-            title: {
+            startDate: {
                 required: true,
-                length: {
-                    min: 1,
-                    max: 255
+                format: {
+                    date: true
                 }
             }
         });
 
-        return ProductionPlan;
+        return ProductionSchedule;
     }]);
 
 var sdkModelErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
@@ -11463,7 +11513,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
-    'ag.sdk.model.production-plan',
+    'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.store',
     'ag.sdk.model.validation',

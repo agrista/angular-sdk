@@ -1289,3 +1289,44 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
         }
     };
 }]);
+
+/**
+ * Production Schedule API
+ */
+sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductionSchedules: function (id) {
+            return pagingService.page(_host + 'api/production-schedules' + (id ? '/' + id : ''));
+        },
+        createProductionSchedule: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/production-schedule/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductionSchedule: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);

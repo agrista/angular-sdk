@@ -1,7 +1,7 @@
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.production-plan', 'ag.sdk.model.farm-valuation']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionPlan', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionPlan, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
@@ -21,7 +21,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 // Re-evaluate all included models
                 reEvaluateLegalEntities(instance);
                 reEvaluateFarmValuations(instance);
-                reEvaluateProductionPlans(instance);
+                reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
             }
 
@@ -114,34 +114,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             /**
-             * Production Plans handling
+             * Production Schedule handling
              */
-            privateProperty(this, 'addProductionPlan', function (productionPlan) {
-                var dupProductionPlan = underscore.findWhere(this.models.productionPlans, {documentId: productionPlan.documentId});
+            function reEvaluateProductionSchedules (instance) {
 
-                if (underscore.isUndefined(dupProductionPlan) && ProductionPlan.new(productionPlan).validate()) {
-                    this.models.productionPlans.push(productionPlan);
-
-                    reEvaluateProductionPlans(this);
-                }
-            });
-
-            privateProperty(this, 'removeProductionPlan', function (productionPlan) {
-                this.models.productionPlans = underscore.reject(this.models.productionPlans, function (plan) {
-                    return plan.id === productionPlan.id;
-                });
-
-                reEvaluateProductionPlans(this);
-            });
-
-            function reEvaluateProductionPlans (instance) {
-                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
-                    return item.source === 'production plan';
-                });
-
-                underscore.each(instance.models.productionPlans, function (item) {
-                    var productionPlan = ProductionPlan.new(item);
-                });
             }
 
             /**
@@ -317,12 +293,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 underscore.each(instance.models.assets, function (asset) {
                     asset = Asset.new(asset);
 
-
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
                         statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
 
                     // Check asset is not already added
-                    if (underscore.isUndefined(statementAsset)) {
+                    if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
                         // VME
                         if (asset.type === 'vme') {
                             var acquisitionDate = moment(asset.data.acquisitionDate),
@@ -354,11 +329,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         } else if (asset.type === 'other') {
                             initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
                             initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
+
+                            // TODO: calculate purchase/sold date for asset
                         }
 
                         angular.forEach(asset.liabilities, function (liability) {
                             var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
-                                typeTitle = Liability.getTypeTitle(liability.type),
+                                typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                                 liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
                             initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
@@ -389,9 +366,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
 
                     // Check asset is not already added
-                    if (underscore.isUndefined(statementLiability)) {
+                    if (registerLegalEntity && underscore.isUndefined(statementLiability)) {
                         var section = (liability.type === 'rent' || liability.type === 'other' ? 'capitalExpenditure' : 'debtRedemption'),
-                            typeTitle = Liability.getTypeTitle(liability.type),
+                            typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                             liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
                         initializeCategoryValues(instance, section, typeTitle, numberOfMonths);

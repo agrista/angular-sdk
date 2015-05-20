@@ -644,13 +644,13 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         promiseService
                             .wrapAll(function (promises) {
                                 angular.forEach(dataItems, function (dataItem) {
-                                    if (dataItem.local === false) {
+                                    if (dataItem.$local === false) {
                                         var item = dataStoreUtilities.extractMetadata(dataItem);
                                         var uri = dataStoreUtilities.parseRequest(writeUri, underscore.defaults(writeSchema, {id: item.id}));
 
                                         promises.push($http.post(_hostApi + uri, {withCredentials: true})
                                             .then(function () {
-                                                return _deleteLocal(item);
+                                                return _deleteLocal(dataItem);
                                             }, promiseService.throwError));
                                     }
                                 });

@@ -18,7 +18,20 @@ describe('ag.sdk.model.business-plan', function () {
                 title: 'Business Time',
                 organizationId: 1,
                 data: {
-                    startDate: '2015-10-10T10:20:00'
+                    startDate: '2015-10-10T10:20:00',
+                    legalEntities: [{
+                        contactName: "Dave Steen",
+                        createdAt: "2015-01-16T09:53:23.520+0000",
+                        createdBy: "rsavage",
+                        email: "dave.steen@mailinator.com",
+                        id: 1,
+                        isActive: true,
+                        isPrimary: true,
+                        name: "Dave Steen",
+                        organizationId: 8605,
+                        type: "Individual",
+                        uuid: "952ba751-af48-4dbd-a373-67d99d8c3716"
+                    }]
                 }
             });
         });
@@ -293,7 +306,7 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'medium-loan',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             });
 
 
@@ -371,7 +384,7 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'medium-loan',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             });
 
         });
@@ -445,7 +458,7 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'medium-loan',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             });
 
         });

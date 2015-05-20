@@ -1,7 +1,7 @@
-var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability']);
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -11,10 +11,15 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             this.assetKey = attrs.assetKey;
             this.farmId = attrs.farmId;
             this.legalEntityId = attrs.legalEntityId;
+
             this.liabilities = underscore.map(attrs.liabilities, function (liability) {
                 return Liability.new(liability);
             });
 
+            this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
+                return ProductionSchedule.new(schedule);
+            });
+            
             this.type = attrs.type;
             this.data = attrs.data || {};
 
