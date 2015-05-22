@@ -1,7 +1,7 @@
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -20,6 +20,14 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['inheritModel', 'Model
             this.asset = attrs.asset;
             this.budget = attrs.budget;
             this.organization = attrs.organization;
+
+            computedProperty(this, 'income', function () {
+                return underscore.findWhere(this.data.sections, {code: 'INC'});
+            });
+
+            computedProperty(this, 'expenses', function () {
+                return underscore.findWhere(this.data.sections, {code: 'EXP'});
+            });
         }
 
         inheritModel(ProductionSchedule, Model.Base);

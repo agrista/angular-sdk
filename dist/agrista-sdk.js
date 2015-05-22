@@ -9424,7 +9424,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
                 return ProductionSchedule.new(schedule);
             });
-            
+
             this.type = attrs.type;
             this.data = attrs.data || {};
 
@@ -9482,6 +9482,28 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
 
             computedProperty(this, 'description', function () {
                 return this.data.description || '';
+            });
+
+            privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
+                var income = {};
+
+                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate).isBetween(rangeStart, rangeEnd)) {
+                    income['Sales'] = this.data.salePrice;
+                }
+
+                return income;
+            });
+
+            privateProperty(this, 'totalIncomeInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.incomeInRange(rangeStart, rangeEnd), function (total, value) {
+                    return total + (value || 0);
+                }, 0);
+            });
+
+            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.liabilities, function (total, liability) {
+                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
+                }, 0);
             });
         }
 
@@ -9653,10 +9675,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation', 'ag.sdk.model.production-schedule']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'enterpriseBudgetHelper', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'underscore',
+    function (Asset, computedProperty, Document, enterpriseBudgetHelper, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
@@ -9667,7 +9689,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 farmValuations: [],
                 legalEntities: [],
                 liabilities: [],
-                productionPlans: []
+                productionSchedules: []
             };
 
             this.data.monthlyStatement = this.data.monthlyStatement || [];
@@ -9771,8 +9793,68 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             /**
              * Production Schedule handling
              */
-            function reEvaluateProductionSchedules (instance) {
+            privateProperty(this, 'updateProductionSchedules', function (schedules) {
+                var startMonth = moment(this.startDate),
+                    endMonth = moment(this.endDate);
 
+                this.models.productionSchedules = [];
+
+                angular.forEach(schedules, function (schedule) {
+                    if (schedule && ProductionSchedule.new(schedule).validate() &&
+                        (startMonth.isBetween(schedule.startDate, schedule.endDate) ||
+                        (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
+                        // Add valid production schedule if between business plan dates
+                        this.models.productionSchedules.push(schedule);
+                    }
+                }, this);
+
+                reEvaluateProductionSchedules(this);
+            });
+
+            function initializeCategoryValues(instance, section, category, months) {
+                instance.data[section] = instance.data[section] || {};
+                instance.data[section][category] = instance.data[section][category] || underscore.range(months).map(function () {
+                    return 0;
+                });
+            }
+
+            function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
+                var section = underscore.findWhere(schedule.data.sections, {code: code}),
+                    scheduleStart = moment(schedule.startDate);
+
+                if (section) {
+                    var offset = startMonth.diff(scheduleStart, 'months');
+
+                    angular.forEach(section.productCategoryGroups, function (group) {
+                        angular.forEach(group.productCategories, function (category) {
+                            var categoryName = (schedule.type !== 'livestock' && type === 'productionIncome' ? schedule.data.details.commodity : category.name);
+
+                            instance.data[type][categoryName] = instance.data[type][categoryName] || underscore.range(numberOfMonths).map(function () {
+                                return 0;
+                            });
+
+                            for (var i = 0; i < numberOfMonths; i++) {
+                                instance.data[type][categoryName][i] += (category.valuePerMonth[i + offset] || 0);
+                            }
+                        });
+                    });
+                }
+            }
+
+            function reEvaluateProductionSchedules (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                instance.data.productionIncome = {};
+                instance.data.productionExpenditure = {};
+
+                angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
+                    var schedule = ProductionSchedule.new(productionSchedule);
+
+                    extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
+                    extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
+                });
             }
 
             /**
@@ -9923,13 +10005,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateAssetsAndLiabilities(this);
             });
 
-            function initializeCategoryValues(instance, section, category, months) {
-                instance.data[section] = instance.data[section] || {};
-                instance.data[section][category] = instance.data[section][category] || underscore.range(months).map(function () {
-                    return 0;
-                });
-            }
-
             function reEvaluateAssetsAndLiabilities (instance) {
                 var startMonth = moment(instance.startDate),
                     endMonth = moment(instance.endDate),
@@ -9959,25 +10034,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 soldDate = moment(asset.data.soldDate);
 
                             if (asset.data.subtype === 'Vehicles') {
-                                initializeCategoryValues(instance, 'capitalIncome', 'Vehicle Purchases', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicle Sales', numberOfMonths);
-
                                 if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicle Purchases', numberOfMonths);
+
                                     instance.data.capitalIncome['Vehicle Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
                                 }
 
                                 if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicle Sales', numberOfMonths);
+
                                     instance.data.capitalExpenditure['Vehicle Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
                             } else {
-                                initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment Sales', numberOfMonths);
-
                                 if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
+
                                     instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'Machinery & Equipment Purchases')] += asset.data.assetValue;
                                 }
 
                                 if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment Sales', numberOfMonths);
+
                                     instance.data.capitalExpenditure['Machinery & Equipment Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
                             }
@@ -10625,8 +10702,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -10645,6 +10722,14 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['inheritModel', 'Model
             this.asset = attrs.asset;
             this.budget = attrs.budget;
             this.organization = attrs.organization;
+
+            computedProperty(this, 'income', function () {
+                return underscore.findWhere(this.data.sections, {code: 'INC'});
+            });
+
+            computedProperty(this, 'expenses', function () {
+                return underscore.findWhere(this.data.sections, {code: 'EXP'});
+            });
         }
 
         inheritModel(ProductionSchedule, Model.Base);

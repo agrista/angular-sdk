@@ -19,7 +19,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
                 return ProductionSchedule.new(schedule);
             });
-            
+
             this.type = attrs.type;
             this.data = attrs.data || {};
 
@@ -77,6 +77,28 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
 
             computedProperty(this, 'description', function () {
                 return this.data.description || '';
+            });
+
+            privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
+                var income = {};
+
+                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate).isBetween(rangeStart, rangeEnd)) {
+                    income['Sales'] = this.data.salePrice;
+                }
+
+                return income;
+            });
+
+            privateProperty(this, 'totalIncomeInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.incomeInRange(rangeStart, rangeEnd), function (total, value) {
+                    return total + (value || 0);
+                }, 0);
+            });
+
+            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.liabilities, function (total, liability) {
+                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
+                }, 0);
             });
         }
 
