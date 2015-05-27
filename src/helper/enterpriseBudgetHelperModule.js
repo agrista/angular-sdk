@@ -769,6 +769,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             shortname: 'Dec'
         }];
 
+    var _scheduleTypes = ['Fertilise', 'Harvest', 'Plant/Seed', 'Plough', 'Spray'];
+
     var _productsMap = {
         'INC-PDS-MILK': {
             code: 'INC-PDS-MILK-M13',
@@ -827,6 +829,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         cycleMonths: function () {
             return _cycleMonths;
+        },
+        scheduleTypes: function() {
+            return _scheduleTypes;
         },
         getRepresentativeAnimal: function(commodityType) {
             return _representativeAnimal[getBaseAnimal(commodityType)];
