@@ -844,7 +844,7 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['farms', 'legalEntities', 'primaryContact'];
+        var defaultRelations = ['activities', 'farms', 'legalEntities', 'primaryContact'];
         var farmerApi = api({
             plural: 'farmers',
             singular: 'farmer',
@@ -1136,18 +1136,26 @@ mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydratio
     }];
 }]);
 
-mobileSdkApiApp.factory('activityApi', ['api', function (api) {
-    var activityApi = api({
-        plural: 'activities',
-        singular: 'activity'
-    });
+mobileSdkApiApp.provider('activityApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('activities', ['activityApi', 'connectionService', function (activityApi, connectionService) {
+        return function (obj, type) {
+            return activityApi.getActivities({template: 'activities/:id', schema: {id: obj.$id}, options: {fallbackRemote: connectionService.isOnline()}});
+        }
+    }]);
 
-    return {
-        getActivities: activityApi.getItems,
-        createActivity: activityApi.createItem,
-        getActivity: activityApi.getItem,
-        deleteActivity: activityApi.deleteItem
-    };
+    this.$get = ['api', function (api) {
+        var activityApi = api({
+            plural: 'activities',
+            singular: 'activity'
+        });
+
+        return {
+            getActivities: activityApi.getItems,
+            createActivity: activityApi.createItem,
+            getActivity: activityApi.getItem,
+            deleteActivity: activityApi.deleteItem
+        };
+    }];
 }]);
 
 mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (hydrationProvider) {
