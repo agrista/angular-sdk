@@ -4165,33 +4165,30 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                     }
                 })
                 .value();
+            var docMap = _documentMap[item.docType];
+            var map = {
+                id: item.id || item.$id,
+                title: (item.documentId ? item.documentId : ''),
+                subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
+                docType: item.docType,
+                group: (docMap ? docMap.title : item.docType),
+                flags: flagLabels
+            };
 
-            if (_documentMap[item.docType]) {
-                var docMap = _documentMap[item.docType];
-                var map = {
-                    id: item.id || item.__id,
-                    title: (item.documentId ? item.documentId : ''),
-                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
-                    docType: item.docType,
-                    group: docMap.title,
-                    flags: flagLabels
-                };
-
-                if (item.organization && item.organization.name) {
-                    map.title = item.organization.name;
-                    map.subtitle = (item.documentId ? item.documentId : '');
-                }
-
-                if (item.data && docMap && docMap.listServiceMap) {
-                    if (docMap.listServiceMap instanceof Array) {
-                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
-                    }
-
-                    docMap.listServiceMap(map, item);
-                }
-
-                return map;
+            if (item.organization && item.organization.name) {
+                map.title = item.organization.name;
+                map.subtitle = item.documentId || '';
             }
+
+            if (item.data && docMap && docMap.listServiceMap) {
+                if (docMap.listServiceMap instanceof Array) {
+                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                }
+
+                docMap.listServiceMap(map, item);
+            }
+
+            return map;
         };
 
         var _listServiceWithTaskMap = function (item) {
