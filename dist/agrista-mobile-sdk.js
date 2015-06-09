@@ -7158,7 +7158,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         L.geoJson(geojson.getJson(), {
             style: geojsonOptions.style,
             pointToLayer: function(feature, latlng) {
-                var marker = L.marker(latlng, geojsonOptions);
+                var marker;
+                // add points as circles
+                if(geojsonOptions.radius) {
+                    marker = L.circleMarker(latlng, geojsonOptions);
+                }
+                // add points as markers
+                else {
+                    marker = L.marker(latlng, geojsonOptions);
+                }
 
                 if (geojsonOptions.label) {
                     marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);

@@ -951,7 +951,7 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         },
         getCustomerFarmlands: function (northEastLat, northEastLng, southWestLat, southWestLng) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + southWestLat + '&x2=' + northEastLng + '&y2=' + northEastLat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -8490,7 +8490,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         L.geoJson(geojson.getJson(), {
             style: geojsonOptions.style,
             pointToLayer: function(feature, latlng) {
-                var marker = L.marker(latlng, geojsonOptions);
+                var marker;
+                // add points as circles
+                if(geojsonOptions.radius) {
+                    marker = L.circleMarker(latlng, geojsonOptions);
+                }
+                // add points as markers
+                else {
+                    marker = L.marker(latlng, geojsonOptions);
+                }
 
                 if (geojsonOptions.label) {
                     marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
