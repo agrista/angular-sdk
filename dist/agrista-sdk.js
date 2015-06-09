@@ -419,9 +419,18 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
         },
         searchFarmers: function (query) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
+                // search by name,
+                if(typeof query === 'string') {
+                    $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
+                // search by ids,
+                else if(query && typeof query === 'object' && query.ids) {
+                    $http.get(_host + 'api/farmers?ids=' + query.ids, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
             });
         },
         createFarmer: function (data) {
@@ -526,13 +535,20 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
 /**
  * Flag API
  */
-sdkApiApp.factory('flagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
-        setFlag: function (ids, flag, targetType) {
+        getActiveFlags: function (purpose) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/flag/set', {ids: ids, flag: flag, targetType: targetType}, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/active-flags' + (purpose ? '?purpose=' + purpose : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateActiveFlag: function(activeFlag) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/active-flag/' + activeFlag.id, activeFlag, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -4133,29 +4149,49 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
-            var docMap = _documentMap[item.docType];
-            var map = {
-                id: item.id || item.$id,
-                title: (item.documentId ? item.documentId : ''),
-                subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
-                docType: item.docType,
-                group: (docMap ? docMap.title : item.docType)
+            var typeColorMap = {
+                'error': 'label-danger',
+                'information': 'label-info',
+                'warning': 'label-warning'
             };
+            var flagLabels = _.chain(item.activeFlags)
+                .groupBy(function(activeFlag) {
+                    return activeFlag.flag.type;
+                })
+                .map(function (group, type) {
+                    return {
+                        label: typeColorMap[type],
+                        count: group.length
+                    }
+                })
+                .value();
 
-            if (item.organization && item.organization.name) {
-                map.title = item.organization.name;
-                map.subtitle = item.documentId || '';
-            }
+            if (_documentMap[item.docType]) {
+                var docMap = _documentMap[item.docType];
+                var map = {
+                    id: item.id || item.__id,
+                    title: (item.documentId ? item.documentId : ''),
+                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
+                    docType: item.docType,
+                    group: docMap.title,
+                    flags: flagLabels
+                };
 
-            if (item.data && docMap && docMap.listServiceMap) {
-                if (docMap.listServiceMap instanceof Array) {
-                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                if (item.organization && item.organization.name) {
+                    map.title = item.organization.name;
+                    map.subtitle = (item.documentId ? item.documentId : '');
                 }
 
-                docMap.listServiceMap(map, item);
-            }
+                if (item.data && docMap && docMap.listServiceMap) {
+                    if (docMap.listServiceMap instanceof Array) {
+                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+                    }
 
-            return map;
+                    docMap.listServiceMap(map, item);
+                }
+
+                return map;
+            }
         };
 
         var _listServiceWithTaskMap = function (item) {
@@ -5342,10 +5378,14 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
         typeColorMap = {
-            'common': 'label-danger'
+            'error': 'label-danger',
+            'information': 'label-info',
+            'warning': 'label-warning'
         };
-        var flagLabels = _.chain(item.flags)
-            .groupBy('type')
+        var flagLabels = _.chain(item.activeFlags)
+            .groupBy(function(activeFlag) {
+                return activeFlag.flag.type;
+            })
             .map(function (group, type) {
                 return {
                     label: typeColorMap[type],
@@ -5362,13 +5402,13 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             searchingIndex: searchingIndex(item),
             flags: flagLabels
         };
-        
+
         function searchingIndex(item) {
             var index = [];
 
             angular.forEach(item.legalEntities, function(entity) {
                 index.push(entity.name);
-                
+
                 if(entity.registrationNumber) {
                     index.push(entity.registrationNumber);
                 }

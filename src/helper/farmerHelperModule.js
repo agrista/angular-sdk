@@ -3,10 +3,14 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
     var _listServiceMap = function (item) {
         typeColorMap = {
-            'common': 'label-danger'
+            'error': 'label-danger',
+            'information': 'label-info',
+            'warning': 'label-warning'
         };
-        var flagLabels = _.chain(item.flags)
-            .groupBy('type')
+        var flagLabels = _.chain(item.activeFlags)
+            .groupBy(function(activeFlag) {
+                return activeFlag.flag.type;
+            })
             .map(function (group, type) {
                 return {
                     label: typeColorMap[type],
@@ -23,13 +27,13 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             searchingIndex: searchingIndex(item),
             flags: flagLabels
         };
-        
+
         function searchingIndex(item) {
             var index = [];
 
             angular.forEach(item.legalEntities, function(entity) {
                 index.push(entity.name);
-                
+
                 if(entity.registrationNumber) {
                     index.push(entity.registrationNumber);
                 }
