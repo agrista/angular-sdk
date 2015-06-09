@@ -9694,7 +9694,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 farmValuations: [],
                 legalEntities: [],
                 liabilities: [],
-                productionSchedules: []
+                productionSchedules: [],
+                income: [],
+                expenses: []
             };
 
             this.data.monthlyStatement = this.data.monthlyStatement || [];
@@ -9705,6 +9707,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateFarmValuations(instance);
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
+                reEvaluateIncomeAndExpenses(instance);
             }
 
             /**
@@ -9859,6 +9862,110 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                     extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
                     extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
+                });
+            }
+
+            /**
+             * Income & Expenses handling
+             */
+            privateProperty(this, 'addIncome', function (income) {
+                this.models.income = underscore.reject(this.models.income, function (item) {
+                    return item.uuid === income.uuid;
+                });
+
+                this.models.income.push(income);
+
+                reEvaluateIncomeAndExpenses(this);
+            });
+
+            privateProperty(this, 'removeIncome', function (income) {
+                this.models.income = underscore.reject(this.models.income, function (item) {
+                    return item.uuid === income.uuid;
+                });
+
+                reEvaluateIncomeAndExpenses(this);
+            });
+
+            privateProperty(this, 'addExpense', function (expense) {
+                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
+                    return item.uuid === expense.uuid;
+                });
+
+                this.models.expenses.push(expense);
+
+                reEvaluateIncomeAndExpenses(this);
+            });
+
+            privateProperty(this, 'removeExpense', function (expense) {
+                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
+                    return item.uuid === expense.uuid;
+                });
+
+                reEvaluateIncomeAndExpenses(this);
+            });
+
+            function reEvaluateIncomeAndExpenses (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                instance.data.otherIncome = {};
+                instance.data.otherExpenditure = {};
+
+                // Handle other assets
+                underscore.each(instance.models.assets, function (asset) {
+                    asset = Asset.new(asset);
+
+                    if (asset.type === 'other') {
+                        var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
+                            statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
+
+                        // Check asset is not already added
+                        if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
+                            var acquisitionDate = moment(asset.data.acquisitionDate),
+                                soldDate = moment(asset.data.soldDate);
+
+                            if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
+
+                                instance.data.otherIncome[asset.data.name][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
+                            }
+
+                            if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
+
+                                instance.data.otherExpenditure[asset.data.name][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
+                            }
+                        }
+                    }
+                });
+
+                underscore.each(instance.models.income, function (income) {
+                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: income.legalEntityId}),
+                        statementIncome = underscore.findWhere(instance.data.monthlyStatement, {uuid: income.uuid});
+
+                    // Check income is not already added
+                    if (registerLegalEntity && underscore.isUndefined(statementIncome)) {
+                        initializeCategoryValues(instance, 'otherIncome', income.name, numberOfMonths);
+
+                        instance.data.otherIncome[income.name] = underscore.map(income.months, function (monthValue, index) {
+                            return (monthValue || 0) + (instance.data.otherIncome[income.name][index] || 0);
+                        });
+                    }
+                });
+
+                underscore.each(instance.models.expenses, function (expense) {
+                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: expense.legalEntityId}),
+                        statementExpense = underscore.findWhere(instance.data.monthlyStatement, {uuid: expense.uuid});
+
+                    // Check expense is not already added
+                    if (registerLegalEntity && underscore.isUndefined(statementExpense)) {
+                        initializeCategoryValues(instance, 'otherExpenditure', expense.name, numberOfMonths);
+
+                        instance.data.otherExpenditure[expense.name] = underscore.map(expense.months, function (monthValue, index) {
+                            return (monthValue || 0) + (instance.data.otherExpenditure[expense.name][index] || 0);
+                        });
+                    }
                 });
             }
 
@@ -10021,8 +10128,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                 instance.data.capitalIncome = {};
                 instance.data.capitalExpenditure = {};
-                instance.data.otherIncome = {};
-                instance.data.otherExpenditure = {};
                 instance.data.debtRedemption = {};
 
                 underscore.each(instance.models.assets, function (asset) {
@@ -10032,7 +10137,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
 
                     // Check asset is not already added
-                    if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
+                    if (asset.type !== 'other' && registerLegalEntity && underscore.isUndefined(statementAsset)) {
                         // VME
                         if (asset.type === 'vme') {
                             var acquisitionDate = moment(asset.data.acquisitionDate),
@@ -10063,11 +10168,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                     instance.data.capitalExpenditure['Machinery & Equipment Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
                             }
-                        } else if (asset.type === 'other') {
-                            initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
-                            initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
-
-                            // TODO: calculate purchase/sold date for asset
                         }
 
                         angular.forEach(asset.liabilities, function (liability) {
@@ -10129,7 +10229,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
             }
 
-            // View added Assets & Liabilities
             computedProperty(this, 'startDate', function () {
                 return this.data.startDate;
             });
@@ -10564,7 +10663,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total - liability;
+                    return total + liability;
                 }, 0);
             });
 
