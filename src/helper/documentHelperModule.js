@@ -39,9 +39,16 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                     return activeFlag.flag.type;
                 })
                 .map(function (group, type) {
+                    var hasOpen = false;
+                    angular.forEach(group, function(activeFlag) {
+                        if(activeFlag.status == 'open') {
+                            hasOpen = true;
+                        }
+                    });
                     return {
                         label: typeColorMap[type],
-                        count: group.length
+                        count: group.length,
+                        hasOpen: hasOpen
                     }
                 })
                 .value();

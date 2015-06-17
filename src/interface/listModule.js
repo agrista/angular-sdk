@@ -292,6 +292,9 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         },
         getActiveItem: function() {
             return _getActiveItem();
+        },
+        updateLabel: function(item) {
+            $rootScope.$broadcast('list::labels__changed', item);
         }
     }
 }]);
