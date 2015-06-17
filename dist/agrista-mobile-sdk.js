@@ -2811,9 +2811,16 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                     return activeFlag.flag.type;
                 })
                 .map(function (group, type) {
+                    var hasOpen = false;
+                    angular.forEach(group, function(activeFlag) {
+                        if(activeFlag.status == 'open') {
+                            hasOpen = true;
+                        }
+                    });
                     return {
                         label: typeColorMap[type],
-                        count: group.length
+                        count: group.length,
+                        hasOpen: hasOpen
                     }
                 })
                 .value();
@@ -4036,9 +4043,16 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
                 return activeFlag.flag.type;
             })
             .map(function (group, type) {
+                var hasOpen = false;
+                angular.forEach(group, function(activeFlag) {
+                    if(activeFlag.status == 'open') {
+                        hasOpen = true;
+                    }
+                });
                 return {
                     label: typeColorMap[type],
-                    count: group.length
+                    count: group.length,
+                    hasOpen: hasOpen
                 }
             })
             .value();
@@ -5137,6 +5151,9 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         },
         getActiveItem: function() {
             return _getActiveItem();
+        },
+        updateLabel: function(item) {
+            $rootScope.$broadcast('list::labels__changed', item);
         }
     }
 }]);
