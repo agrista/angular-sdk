@@ -2806,7 +2806,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 'information': 'label-info',
                 'warning': 'label-warning'
             };
-            var flagLabels = _.chain(item.activeFlags)
+            var flagLabels = underscore.chain(item.activeFlags)
                 .groupBy(function(activeFlag) {
                     return activeFlag.flag.type;
                 })
@@ -4038,7 +4038,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             'information': 'label-info',
             'warning': 'label-warning'
         };
-        var flagLabels = _.chain(item.activeFlags)
+        var flagLabels = underscore.chain(item.activeFlags)
             .groupBy(function(activeFlag) {
                 return activeFlag.flag.type;
             })

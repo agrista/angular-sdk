@@ -426,7 +426,7 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     }, promise.reject);
                 }
                 // search by ids,
-                else if(query && typeof query === 'object' && query.ids) {
+                else if(typeof query === 'object' && query.ids) {
                     $http.get(_host + 'api/farmers?ids=' + query.ids, {withCredentials: true}).then(function (res) {
                         promise.resolve(res.data);
                     }, promise.reject);
@@ -4154,7 +4154,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
                 'information': 'label-info',
                 'warning': 'label-warning'
             };
-            var flagLabels = _.chain(item.activeFlags)
+            var flagLabels = underscore.chain(item.activeFlags)
                 .groupBy(function(activeFlag) {
                     return activeFlag.flag.type;
                 })
@@ -5386,7 +5386,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             'information': 'label-info',
             'warning': 'label-warning'
         };
-        var flagLabels = _.chain(item.activeFlags)
+        var flagLabels = underscore.chain(item.activeFlags)
             .groupBy(function(activeFlag) {
                 return activeFlag.flag.type;
             })
