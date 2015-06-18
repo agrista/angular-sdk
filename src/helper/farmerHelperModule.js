@@ -1,16 +1,27 @@
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
+sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
         typeColorMap = {
-            'common': 'label-danger'
+            'error': 'label-danger',
+            'information': 'label-info',
+            'warning': 'label-warning'
         };
-        var flagLabels = _.chain(item.flags)
-            .groupBy('type')
+        var flagLabels = underscore.chain(item.activeFlags)
+            .groupBy(function(activeFlag) {
+                return activeFlag.flag.type;
+            })
             .map(function (group, type) {
+                var hasOpen = false;
+                angular.forEach(group, function(activeFlag) {
+                    if(activeFlag.status == 'open') {
+                        hasOpen = true;
+                    }
+                });
                 return {
                     label: typeColorMap[type],
-                    count: group.length
+                    count: group.length,
+                    hasOpen: hasOpen
                 }
             })
             .value();
@@ -23,13 +34,13 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             searchingIndex: searchingIndex(item),
             flags: flagLabels
         };
-        
+
         function searchingIndex(item) {
             var index = [];
 
             angular.forEach(item.legalEntities, function(entity) {
                 index.push(entity.name);
-                
+
                 if(entity.registrationNumber) {
                     index.push(entity.registrationNumber);
                 }
