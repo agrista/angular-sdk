@@ -1409,7 +1409,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         role: _userRoles.open
     };
 
-    var _lastError = undefined;
+    var _lastError = undefined,
+        _sslFingerprints = [];
 
     // Intercept any HTTP responses that are not authorized
     $httpProvider.interceptors.push(['$q', '$injector', '$rootScope', function ($q, $injector, $rootScope) {
@@ -1430,7 +1431,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        $get: ['$rootScope', 'authorizationApi', 'localStore', 'promiseService', function ($rootScope, authorizationApi, localStore, promiseService) {
+        setFingerprints: function (fingerprints) {
+            _sslFingerprints = fingerprints;
+        },
+
+        $get: ['$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($rootScope, authorizationApi, configuration, localStore, promiseService) {
             var _user = _getUser();
 
             authorizationApi.getUser().then(function (res) {
@@ -1480,29 +1485,55 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     return (_accessLevels.user & _user.role) != 0;
                 },
                 login: function (email, password) {
-                    return promiseService.wrap(function(promise) {
-                        authorizationApi.login(email, password).then(function (res) {
-                            if (res.user !== null) {
-                                _lastError = undefined;
-                                _user = _setUser(res.user);
-                                promise.resolve(_user);
+                    return promiseService.wrap(function (promise) {
+                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprints.length > 0) {
+                            window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
+                                    if (err === "CONNECTION_NOT_SECURE") {
+                                        _lastError = {
+                                            type: 'error',
+                                            message: 'SSL Certificate Error: Please contact your administrator'
+                                        };
 
-                                $rootScope.$broadcast('authorization::login', _user);
-                            } else {
-                                _lastError = {
-                                    type: 'error',
-                                    message: 'The entered e-mail and/or password is incorrect. Please try again.'
-                                };
+                                        localStore.removeItem('user');
+                                        promise.reject({
+                                            data: _lastError
+                                        });
+                                    } else {
+                                        promise.resolve();
+                                    }
+                                },
+                                configuration.getServer(),
+                                _sslFingerprints);
+                        } else {
+                            promise.resolve();
+                        }
+                    }).then(function () {
+                        return promiseService.wrap(function(promise) {
+                            authorizationApi.login(email, password).then(function (res) {
+                                if (res.user !== null) {
+                                    _lastError = undefined;
+                                    _user = _setUser(res.user);
+                                    promise.resolve(_user);
 
+                                    $rootScope.$broadcast('authorization::login', _user);
+                                } else {
+                                    _lastError = {
+                                        type: 'error',
+                                        message: 'The entered e-mail and/or password is incorrect. Please try again.'
+                                    };
+
+                                    localStore.removeItem('user');
+                                    promise.reject({
+                                        data: _lastError
+                                    });
+                                }
+
+                            }, function (err) {
                                 localStore.removeItem('user');
-                                promise.reject();
-                            }
-
-                        }, function (err) {
-                            localStore.removeItem('user');
-                            promise.reject(err);
+                                promise.reject(err);
+                            });
                         });
-                    });
+                    }, promiseService.throwError);
                 },
                 requestResetPasswordEmail: authorizationApi.requestResetPasswordEmail,
                 resetPassword: authorizationApi.resetPassword,
