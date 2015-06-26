@@ -419,9 +419,18 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
         },
         searchFarmers: function (query) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
+                // search by name,
+                if(typeof query === 'string') {
+                    $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
+                // search by ids,
+                else if(typeof query === 'object' && query.ids) {
+                    $http.get(_host + 'api/farmers?ids=' + query.ids, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
             });
         },
         createFarmer: function (data) {
@@ -526,13 +535,20 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
 /**
  * Flag API
  */
-sdkApiApp.factory('flagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
-        setFlag: function (ids, flag, targetType) {
+        getActiveFlags: function (purpose) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/flag/set', {ids: ids, flag: flag, targetType: targetType}, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/active-flags' + (purpose ? '?purpose=' + purpose : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateActiveFlag: function(activeFlag) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/active-flag/' + activeFlag.id, activeFlag, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -4164,13 +4180,37 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
+            var typeColorMap = {
+                'error': 'label-danger',
+                'information': 'label-info',
+                'warning': 'label-warning'
+            };
+            var flagLabels = underscore.chain(item.activeFlags)
+                .groupBy(function(activeFlag) {
+                    return activeFlag.flag.type;
+                })
+                .map(function (group, type) {
+                    var hasOpen = false;
+                    angular.forEach(group, function(activeFlag) {
+                        if(activeFlag.status == 'open') {
+                            hasOpen = true;
+                        }
+                    });
+                    return {
+                        label: typeColorMap[type],
+                        count: group.length,
+                        hasOpen: hasOpen
+                    }
+                })
+                .value();
             var docMap = _documentMap[item.docType];
             var map = {
                 id: item.id || item.$id,
                 title: (item.documentId ? item.documentId : ''),
                 subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                 docType: item.docType,
-                group: (docMap ? docMap.title : item.docType)
+                group: (docMap ? docMap.title : item.docType),
+                flags: flagLabels
             };
 
             if (item.organization && item.organization.name) {
@@ -5370,17 +5410,28 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
 }]);
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
+sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
         typeColorMap = {
-            'common': 'label-danger'
+            'error': 'label-danger',
+            'information': 'label-info',
+            'warning': 'label-warning'
         };
-        var flagLabels = _.chain(item.flags)
-            .groupBy('type')
+        var flagLabels = underscore.chain(item.activeFlags)
+            .groupBy(function(activeFlag) {
+                return activeFlag.flag.type;
+            })
             .map(function (group, type) {
+                var hasOpen = false;
+                angular.forEach(group, function(activeFlag) {
+                    if(activeFlag.status == 'open') {
+                        hasOpen = true;
+                    }
+                });
                 return {
                     label: typeColorMap[type],
-                    count: group.length
+                    count: group.length,
+                    hasOpen: hasOpen
                 }
             })
             .value();
@@ -5393,13 +5444,13 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             searchingIndex: searchingIndex(item),
             flags: flagLabels
         };
-        
+
         function searchingIndex(item) {
             var index = [];
 
             angular.forEach(item.legalEntities, function(entity) {
                 index.push(entity.name);
-                
+
                 if(entity.registrationNumber) {
                     index.push(entity.registrationNumber);
                 }
@@ -6479,6 +6530,9 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         },
         getActiveItem: function() {
             return _getActiveItem();
+        },
+        updateLabel: function(item) {
+            $rootScope.$broadcast('list::labels__changed', item);
         }
     }
 }]);
@@ -9733,9 +9787,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 farmValuations: [],
                 legalEntities: [],
                 liabilities: [],
-                productionSchedules: [],
-                income: [],
-                expenses: []
+                productionSchedules: []
             };
 
             this.data.monthlyStatement = this.data.monthlyStatement || [];
@@ -9746,7 +9798,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateFarmValuations(instance);
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
-                reEvaluateIncomeAndExpenses(instance);
             }
 
             /**
@@ -9901,110 +9952,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                     extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
                     extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
-                });
-            }
-
-            /**
-             * Income & Expenses handling
-             */
-            privateProperty(this, 'addIncome', function (income) {
-                this.models.income = underscore.reject(this.models.income, function (item) {
-                    return item.uuid === income.uuid;
-                });
-
-                this.models.income.push(income);
-
-                reEvaluateIncomeAndExpenses(this);
-            });
-
-            privateProperty(this, 'removeIncome', function (income) {
-                this.models.income = underscore.reject(this.models.income, function (item) {
-                    return item.uuid === income.uuid;
-                });
-
-                reEvaluateIncomeAndExpenses(this);
-            });
-
-            privateProperty(this, 'addExpense', function (expense) {
-                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
-                    return item.uuid === expense.uuid;
-                });
-
-                this.models.expenses.push(expense);
-
-                reEvaluateIncomeAndExpenses(this);
-            });
-
-            privateProperty(this, 'removeExpense', function (expense) {
-                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
-                    return item.uuid === expense.uuid;
-                });
-
-                reEvaluateIncomeAndExpenses(this);
-            });
-
-            function reEvaluateIncomeAndExpenses (instance) {
-                var startMonth = moment(instance.startDate),
-                    endMonth = moment(instance.endDate),
-                    numberOfMonths = endMonth.diff(startMonth, 'months');
-
-                instance.data.otherIncome = {};
-                instance.data.otherExpenditure = {};
-
-                // Handle other assets
-                underscore.each(instance.models.assets, function (asset) {
-                    asset = Asset.new(asset);
-
-                    if (asset.type === 'other') {
-                        var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
-                            statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
-
-                        // Check asset is not already added
-                        if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
-                            var acquisitionDate = moment(asset.data.acquisitionDate),
-                                soldDate = moment(asset.data.soldDate);
-
-                            if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
-
-                                instance.data.otherIncome[asset.data.name][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
-                            }
-
-                            if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
-                                initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
-
-                                instance.data.otherExpenditure[asset.data.name][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
-                            }
-                        }
-                    }
-                });
-
-                underscore.each(instance.models.income, function (income) {
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: income.legalEntityId}),
-                        statementIncome = underscore.findWhere(instance.data.monthlyStatement, {uuid: income.uuid});
-
-                    // Check income is not already added
-                    if (registerLegalEntity && underscore.isUndefined(statementIncome)) {
-                        initializeCategoryValues(instance, 'otherIncome', income.name, numberOfMonths);
-
-                        instance.data.otherIncome[income.name] = underscore.map(income.months, function (monthValue, index) {
-                            return (monthValue || 0) + (instance.data.otherIncome[income.name][index] || 0);
-                        });
-                    }
-                });
-
-                underscore.each(instance.models.expenses, function (expense) {
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: expense.legalEntityId}),
-                        statementExpense = underscore.findWhere(instance.data.monthlyStatement, {uuid: expense.uuid});
-
-                    // Check expense is not already added
-                    if (registerLegalEntity && underscore.isUndefined(statementExpense)) {
-                        initializeCategoryValues(instance, 'otherExpenditure', expense.name, numberOfMonths);
-
-                        instance.data.otherExpenditure[expense.name] = underscore.map(expense.months, function (monthValue, index) {
-                            return (monthValue || 0) + (instance.data.otherExpenditure[expense.name][index] || 0);
-                        });
-                    }
                 });
             }
 
@@ -10167,6 +10114,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                 instance.data.capitalIncome = {};
                 instance.data.capitalExpenditure = {};
+                instance.data.otherIncome = {};
+                instance.data.otherExpenditure = {};
                 instance.data.debtRedemption = {};
 
                 underscore.each(instance.models.assets, function (asset) {
@@ -10176,7 +10125,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
 
                     // Check asset is not already added
-                    if (asset.type !== 'other' && registerLegalEntity && underscore.isUndefined(statementAsset)) {
+                    if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
                         // VME
                         if (asset.type === 'vme') {
                             var acquisitionDate = moment(asset.data.acquisitionDate),
@@ -10207,6 +10156,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                     instance.data.capitalExpenditure['Machinery & Equipment Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
                             }
+                        } else if (asset.type === 'other') {
+                            initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
+                            initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
+
+                            // TODO: calculate purchase/sold date for asset
                         }
 
                         angular.forEach(asset.liabilities, function (liability) {
@@ -10268,6 +10222,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
             }
 
+            // View added Assets & Liabilities
             computedProperty(this, 'startDate', function () {
                 return this.data.startDate;
             });
@@ -10702,7 +10657,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total + liability;
+                    return total - liability;
                 }, 0);
             });
 

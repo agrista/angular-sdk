@@ -29,13 +29,37 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
+            var typeColorMap = {
+                'error': 'label-danger',
+                'information': 'label-info',
+                'warning': 'label-warning'
+            };
+            var flagLabels = underscore.chain(item.activeFlags)
+                .groupBy(function(activeFlag) {
+                    return activeFlag.flag.type;
+                })
+                .map(function (group, type) {
+                    var hasOpen = false;
+                    angular.forEach(group, function(activeFlag) {
+                        if(activeFlag.status == 'open') {
+                            hasOpen = true;
+                        }
+                    });
+                    return {
+                        label: typeColorMap[type],
+                        count: group.length,
+                        hasOpen: hasOpen
+                    }
+                })
+                .value();
             var docMap = _documentMap[item.docType];
             var map = {
                 id: item.id || item.$id,
                 title: (item.documentId ? item.documentId : ''),
                 subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
                 docType: item.docType,
-                group: (docMap ? docMap.title : item.docType)
+                group: (docMap ? docMap.title : item.docType),
+                flags: flagLabels
             };
 
             if (item.organization && item.organization.name) {
