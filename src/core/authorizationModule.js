@@ -78,7 +78,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
     };
 
     var _lastError = undefined,
-        _sslFingerprints = [];
+        _sslFingerprint = '',
+        _sslFingerprintAlt = '';
 
     // Intercept any HTTP responses that are not authorized
     $httpProvider.interceptors.push(['$q', '$injector', '$rootScope', function ($q, $injector, $rootScope) {
@@ -99,8 +100,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        setFingerprints: function (fingerprints) {
-            _sslFingerprints = fingerprints;
+        setFingerprints: function (fingerprint, fingerprintAlt) {
+            _sslFingerprint = fingerprint;
+            _sslFingerprintAlt = fingerprintAlt;
         },
 
         $get: ['$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($rootScope, authorizationApi, configuration, localStore, promiseService) {
@@ -154,7 +156,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
-                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprints.length > 0) {
+                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
                                     if (err === "CONNECTION_NOT_SECURE") {
                                         _lastError = {
@@ -171,7 +173,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                     }
                                 },
                                 configuration.getServer(),
-                                _sslFingerprints);
+                                _sslFingerprint, _sslFingerprintAlt);
                         } else {
                             promise.resolve();
                         }
