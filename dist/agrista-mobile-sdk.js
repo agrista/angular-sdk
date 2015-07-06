@@ -2835,9 +2835,9 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             var typeColorMap = {
-                'error': 'label-danger',
-                'information': 'label-info',
-                'warning': 'label-warning'
+                'error': 'danger',
+                'information': 'info',
+                'warning': 'warning'
             };
             var flagLabels = underscore.chain(item.activeFlags)
                 .groupBy(function(activeFlag) {
@@ -4067,9 +4067,9 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
         typeColorMap = {
-            'error': 'label-danger',
-            'information': 'label-info',
-            'warning': 'label-warning'
+            'error': 'danger',
+            'information': 'info',
+            'warning': 'warning'
         };
         var flagLabels = underscore.chain(item.activeFlags)
             .groupBy(function(activeFlag) {
