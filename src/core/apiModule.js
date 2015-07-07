@@ -1021,6 +1021,21 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        listFarmersWithData: function (id, params) {
+            console.log('=====');
+            if (typeof id === 'object') {
+                params = id;
+                id = undefined;
+            }
+            return pagingService.page(_host + 'api/aggregation/farmers-with-data', params);
+        },
+        hasOutstandingRequest: function(ids) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/aggregation/farmers-with-open-request?ids=' + ids, {withCredentials: true}).then(function(res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
