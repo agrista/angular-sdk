@@ -2835,9 +2835,9 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
             var typeColorMap = {
-                'error': 'label-danger',
-                'information': 'label-info',
-                'warning': 'label-warning'
+                'error': 'danger',
+                'information': 'info',
+                'warning': 'warning'
             };
             var flagLabels = underscore.chain(item.activeFlags)
                 .groupBy(function(activeFlag) {
@@ -4067,9 +4067,9 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interfa
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
         typeColorMap = {
-            'error': 'label-danger',
-            'information': 'label-info',
-            'warning': 'label-warning'
+            'error': 'danger',
+            'information': 'info',
+            'warning': 'warning'
         };
         var flagLabels = underscore.chain(item.activeFlags)
             .groupBy(function(activeFlag) {
@@ -6355,7 +6355,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
             },
             defineServiceAreaOff: function() {
-                this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
+                this.enqueueRequest('mapbox-' + this._id + '::define-service-area-off');
             },
             defineFieldGroupOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::define-field-group-off');
@@ -6403,7 +6403,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, objectId, underscore) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'mapStyleHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, mapStyleHelper, objectId, underscore) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -7512,8 +7512,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             $http.get(host + 'api/geo/district-polygon' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
+                        var districtOptions = mapStyleHelper.getStyle('background', 'district');
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, districtOptions, {featureId: district.sgKey});
 
                         _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
@@ -7532,7 +7533,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             $http.get(host + 'api/geo/district-polygon' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
-                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
+                        var districtOptions = mapStyleHelper.getStyle('background', 'district');
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, districtOptions, {featureId: district.sgKey, districtName: district.name});
 
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
