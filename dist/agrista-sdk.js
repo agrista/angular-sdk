@@ -884,7 +884,10 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
     return {
         getAttachmentUri: function (key) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/file-attachment/' + key.replace('/attachments/', '') + '/url', {withCredentials: true}).then(function (res) {
+                // To remove the leading 'attachments/' substring
+                var _slashPosition = key.lastIndexOf('/');
+
+                $http.get(_host + 'api/file-attachment/' + (_slashPosition !== -1 ? key.substr(_slashPosition + 1) : key) + '/url', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
