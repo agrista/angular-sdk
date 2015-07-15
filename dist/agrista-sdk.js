@@ -5518,6 +5518,9 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             }
 
             return null;
+        },
+        isFarmerActive: function(farmer) {
+            return (farmer && farmer.status == 'active');
         }
     }
 }]);
