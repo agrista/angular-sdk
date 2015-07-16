@@ -92,7 +92,7 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
             });
 
             ngModel.$parsers.push(function (value) {
-                var isNan = isNaN(value);
+                var isNan = isNaN(value) || isNaN(parseFloat(value));
 
                 ngModel.$setValidity('number', isNan === false);
 
@@ -102,7 +102,7 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
                     ngModel.$setValidity('range', (_min === false || float >= _min) && (_max === false || float <= _max));
                     return float;
                 } else {
-                    return value;
+                    return undefined;
                 }
             });
         }

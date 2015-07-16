@@ -419,9 +419,18 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
         },
         searchFarmers: function (query) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
+                // search by name,
+                if(typeof query === 'string') {
+                    $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
+                // search by ids,
+                else if(typeof query === 'object' && query.ids) {
+                    $http.get(_host + 'api/farmers?ids=' + query.ids, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
             });
         },
         createFarmer: function (data) {
@@ -512,8 +521,39 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getDuplicateEntity: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/legalentity/duplicates', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
+}]);
+
+/**
+ * Flag API
+ */
+sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getActiveFlags: function (purpose) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/active-flags' + (purpose ? '?purpose=' + purpose : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateActiveFlag: function(activeFlag) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/active-flag/' + activeFlag.id, activeFlag, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);
 
 /**
@@ -598,6 +638,20 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                 }, promise.reject);
             });
         },
+        attachLiability: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/asset/' + id + '/liability', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachLiability: function (id, liabilityId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/asset/' + id + '/liability/' + liabilityId + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         deleteAsset: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/asset/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
@@ -616,9 +670,26 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
 }]);
 
 /**
+ * Liability API
+ */
+sdkApiApp.factory('liabilityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        updateLiability: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/liability/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Document API
  */
-sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($cookieStore, $http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -681,45 +752,16 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
         },
         getDocumentPdf: function (data) {
             return promiseService.wrap(function (promise) {
-                var m = encodeURIComponent(data).match(/%[89ABab]/g);
-                var options = {responseType: "blob",
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Content-Length': data.length + (m ? m.length : 0),
-                        Connection: 'keep-alive',
-                        'Transfer-Encoding': 'chunked',
-                        'Accept': 'application/pdf'
-                    }
-                };
-                $http.post(_host + 'api/document/pdf/get', data, options)
-                    .success(function (res, status) {
-                        var blob = new Blob([res], {type: "application/pdf"});
-                        var objectUrl = URL.createObjectURL(blob);
-                        promise.resolve({status: status, url: objectUrl});
-                    })
-                    .error(function (res, status) {
-                        promise.reject({status: status});
-                    });
+                $http.post(_host + 'api/document/pdf/get', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
             });
         },
         saveDocumentPdf: function (data) {
             return promiseService.wrap(function (promise) {
-                var m = encodeURIComponent(data).match(/%[89ABab]/g);
-                var options = {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Content-Length': data.length + (m ? m.length : 0),
-                        Connection: 'keep-alive',
-                        'Transfer-Encoding': 'chunked'
-                    }
-                };
-                $http.post(_host + 'api/document/pdf/save', data, options)
-                    .success(function (res, status) {
-                        promise.resolve(res);
-                    })
-                    .error(function (res, status) {
-                        promise.reject({status: status});
-                    });
+                $http.post(_host + 'api/document/pdf/save', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
             });
         }
     };
@@ -813,7 +855,10 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
     return {
         getAttachmentUri: function (key) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/file-attachment/' + key.replace('/attachments/', '') + '/url', {withCredentials: true}).then(function (res) {
+                // To remove the leading 'attachments/' substring
+                var _slashPosition = key.lastIndexOf('/');
+
+                $http.get(_host + 'api/file-attachment/' + (_slashPosition !== -1 ? key.substr(_slashPosition + 1) : key) + '/url', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -896,7 +941,7 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         },
         getCustomerFarmlands: function (northEastLat, northEastLng, southWestLat, southWestLng) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + southWestLat + '&x2=' + northEastLng + '&y2=' + northEastLat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -947,6 +992,21 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         listValuationStatus: function() {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/report-valuation-summary', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        listFarmersWithData: function (id, params) {
+            console.log('=====');
+            if (typeof id === 'object') {
+                params = id;
+                id = undefined;
+            }
+            return pagingService.page(_host + 'api/aggregation/farmers-with-data', params);
+        },
+        hasOutstandingRequest: function(ids) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/aggregation/farmers-with-open-request?ids=' + ids, {withCredentials: true}).then(function(res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1228,6 +1288,47 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
         importData: function(data) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/data-import', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Production Schedule API
+ */
+sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductionSchedules: function (id) {
+            return pagingService.page(_host + 'api/production-schedules' + (id ? '/' + id : ''));
+        },
+        createProductionSchedule: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/production-schedule/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductionSchedule: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

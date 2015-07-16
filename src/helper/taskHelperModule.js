@@ -9,7 +9,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
                 return {
-                    id: task.id || item.__id,
+                    id: task.id || item.$id,
                     title: item.organization.name,
                     subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,

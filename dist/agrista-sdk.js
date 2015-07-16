@@ -419,9 +419,18 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
         },
         searchFarmers: function (query) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
+                // search by name,
+                if(typeof query === 'string') {
+                    $http.get(_host + 'api/farmers?search=' + query, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
+                // search by ids,
+                else if(typeof query === 'object' && query.ids) {
+                    $http.get(_host + 'api/farmers?ids=' + query.ids, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                }
             });
         },
         createFarmer: function (data) {
@@ -512,8 +521,39 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getDuplicateEntity: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/legalentity/duplicates', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
+}]);
+
+/**
+ * Flag API
+ */
+sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getActiveFlags: function (purpose) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/active-flags' + (purpose ? '?purpose=' + purpose : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateActiveFlag: function(activeFlag) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/active-flag/' + activeFlag.id, activeFlag, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
 }]);
 
 /**
@@ -598,6 +638,20 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                 }, promise.reject);
             });
         },
+        attachLiability: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/asset/' + id + '/liability', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachLiability: function (id, liabilityId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/asset/' + id + '/liability/' + liabilityId + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         deleteAsset: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/asset/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
@@ -616,9 +670,26 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
 }]);
 
 /**
+ * Liability API
+ */
+sdkApiApp.factory('liabilityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        updateLiability: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/liability/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Document API
  */
-sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($cookieStore, $http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -681,45 +752,16 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
         },
         getDocumentPdf: function (data) {
             return promiseService.wrap(function (promise) {
-                var m = encodeURIComponent(data).match(/%[89ABab]/g);
-                var options = {responseType: "blob",
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Content-Length': data.length + (m ? m.length : 0),
-                        Connection: 'keep-alive',
-                        'Transfer-Encoding': 'chunked',
-                        'Accept': 'application/pdf'
-                    }
-                };
-                $http.post(_host + 'api/document/pdf/get', data, options)
-                    .success(function (res, status) {
-                        var blob = new Blob([res], {type: "application/pdf"});
-                        var objectUrl = URL.createObjectURL(blob);
-                        promise.resolve({status: status, url: objectUrl});
-                    })
-                    .error(function (res, status) {
-                        promise.reject({status: status});
-                    });
+                $http.post(_host + 'api/document/pdf/get', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
             });
         },
         saveDocumentPdf: function (data) {
             return promiseService.wrap(function (promise) {
-                var m = encodeURIComponent(data).match(/%[89ABab]/g);
-                var options = {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Content-Length': data.length + (m ? m.length : 0),
-                        Connection: 'keep-alive',
-                        'Transfer-Encoding': 'chunked'
-                    }
-                };
-                $http.post(_host + 'api/document/pdf/save', data, options)
-                    .success(function (res, status) {
-                        promise.resolve(res);
-                    })
-                    .error(function (res, status) {
-                        promise.reject({status: status});
-                    });
+                $http.post(_host + 'api/document/pdf/save', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
             });
         }
     };
@@ -813,7 +855,10 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
     return {
         getAttachmentUri: function (key) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/file-attachment/' + key.replace('/attachments/', '') + '/url', {withCredentials: true}).then(function (res) {
+                // To remove the leading 'attachments/' substring
+                var _slashPosition = key.lastIndexOf('/');
+
+                $http.get(_host + 'api/file-attachment/' + (_slashPosition !== -1 ? key.substr(_slashPosition + 1) : key) + '/url', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -896,7 +941,7 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         },
         getCustomerFarmlands: function (northEastLat, northEastLng, southWestLat, southWestLng) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + southWestLat + '&x2=' + northEastLng + '&y2=' + northEastLat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -947,6 +992,21 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         listValuationStatus: function() {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/report-valuation-summary', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        listFarmersWithData: function (id, params) {
+            console.log('=====');
+            if (typeof id === 'object') {
+                params = id;
+                id = undefined;
+            }
+            return pagingService.page(_host + 'api/aggregation/farmers-with-data', params);
+        },
+        hasOutstandingRequest: function(ids) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/aggregation/farmers-with-open-request?ids=' + ids, {withCredentials: true}).then(function(res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1235,6 +1295,46 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
     };
 }]);
 
+/**
+ * Production Schedule API
+ */
+sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getProductionSchedules: function (id) {
+            return pagingService.page(_host + 'api/production-schedules' + (id ? '/' + id : ''));
+        },
+        createProductionSchedule: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/production-schedule/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateProductionSchedule: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProductionSchedule: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/production-schedule/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
@@ -1314,7 +1414,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         role: _userRoles.open
     };
 
-    var _lastError = undefined;
+    var _lastError = undefined,
+        _sslFingerprint = '',
+        _sslFingerprintAlt = '';
 
     // Intercept any HTTP responses that are not authorized
     $httpProvider.interceptors.push(['$q', '$injector', '$rootScope', function ($q, $injector, $rootScope) {
@@ -1335,7 +1437,12 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        $get: ['$rootScope', 'authorizationApi', 'localStore', 'promiseService', function ($rootScope, authorizationApi, localStore, promiseService) {
+        setFingerprints: function (fingerprint, fingerprintAlt) {
+            _sslFingerprint = fingerprint;
+            _sslFingerprintAlt = fingerprintAlt;
+        },
+
+        $get: ['$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($rootScope, authorizationApi, configuration, localStore, promiseService) {
             var _user = _getUser();
 
             authorizationApi.getUser().then(function (res) {
@@ -1385,29 +1492,55 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     return (_accessLevels.user & _user.role) != 0;
                 },
                 login: function (email, password) {
-                    return promiseService.wrap(function(promise) {
-                        authorizationApi.login(email, password).then(function (res) {
-                            if (res.user !== null) {
-                                _lastError = undefined;
-                                _user = _setUser(res.user);
-                                promise.resolve(_user);
+                    return promiseService.wrap(function (promise) {
+                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
+                            window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
+                                    if (err === "CONNECTION_NOT_SECURE") {
+                                        _lastError = {
+                                            type: 'error',
+                                            message: 'SSL Certificate Error: Please contact your administrator'
+                                        };
 
-                                $rootScope.$broadcast('authorization::login', _user);
-                            } else {
-                                _lastError = {
-                                    type: 'error',
-                                    message: 'The entered e-mail and/or password is incorrect. Please try again.'
-                                };
+                                        localStore.removeItem('user');
+                                        promise.reject({
+                                            data: _lastError
+                                        });
+                                    } else {
+                                        promise.resolve();
+                                    }
+                                },
+                                configuration.getServer(),
+                                _sslFingerprint, _sslFingerprintAlt);
+                        } else {
+                            promise.resolve();
+                        }
+                    }).then(function () {
+                        return promiseService.wrap(function(promise) {
+                            authorizationApi.login(email, password).then(function (res) {
+                                if (res.user !== null) {
+                                    _lastError = undefined;
+                                    _user = _setUser(res.user);
+                                    promise.resolve(_user);
 
+                                    $rootScope.$broadcast('authorization::login', _user);
+                                } else {
+                                    _lastError = {
+                                        type: 'error',
+                                        message: 'The entered e-mail and/or password is incorrect. Please try again.'
+                                    };
+
+                                    localStore.removeItem('user');
+                                    promise.reject({
+                                        data: _lastError
+                                    });
+                                }
+
+                            }, function (err) {
                                 localStore.removeItem('user');
-                                promise.reject();
-                            }
-
-                        }, function (err) {
-                            localStore.removeItem('user');
-                            promise.reject(err);
+                                promise.reject(err);
+                            });
                         });
-                    });
+                    }, promiseService.throwError);
                 },
                 requestResetPasswordEmail: authorizationApi.requestResetPasswordEmail,
                 resetPassword: authorizationApi.resetPassword,
@@ -1668,6 +1801,8 @@ var sdkLibraryApp = angular.module('ag.sdk.library', []);
  * This module includes other required third party libraries
  */
 sdkLibraryApp.constant('underscore', window._);
+
+sdkLibraryApp.constant('moment', window.moment);
 
 sdkLibraryApp.constant('geojsonUtils', window.gju);
 
@@ -2063,7 +2198,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
     var _listServiceMap = function(item, metadata) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             type: item.type,
             updatedAt: item.updatedAt
         };
@@ -2228,6 +2363,21 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'Planted Pastures': ['Birdsfoot Trefoil', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium']
     };
 
+    var _liabilityFrequencies = {
+        'bi-monthly': 'Bi-Monthly',
+        'monthly': 'Monthly',
+        'quarterly': 'Quarterly',
+        'bi-yearly': 'Bi-Yearly',
+        'yearly': 'Yearly'
+    };
+
+    var _liabilityTypes = {
+        'rent': 'Rented',
+        'short-loan': 'Short Term Loan',
+        'medium-loan': 'Medium Term Loan',
+        'long-loan': 'Long Term Loan'
+    };
+
     return {
         assetTypes: function() {
             return _assetTypes;
@@ -2259,6 +2409,12 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         getCropsForLandUse: function (landUse) {
             return _landUseCropTypes[landUse] || [];
         },
+        getLiabilityFrequencyTitle: function (frequency) {
+            return _liabilityFrequencies[frequency] || '';
+        },
+        getLiabilityTitle: function (type) {
+            return _liabilityTypes[type] || '';
+        },
         getZoneTitle: function (zone) {
             return $filter('number')(zone.size, 2) + 'Ha at Stage ' + zone.growthStage + ' (' + zone.cultivar + ')';
         },
@@ -2267,12 +2423,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         },
         isFieldApplicable: function (type, field) {
             return (_assetLandUse[type] && _assetLandUse[type].indexOf(field.landUse) !== -1);
-        },
-        isFinanceable: function (type) {
-            return (['farmland', 'improvement', 'livestock', 'vme', 'water right'].indexOf(type) !== -1);
-        },
-        isRentable: function (type) {
-            return (['farmland', 'vme', 'water right'].indexOf(type) !== -1);
         },
         generateAssetKey: function (asset, legalEntity, farm) {
             asset.assetKey = 'entity.' + legalEntity.uuid +
@@ -4021,31 +4171,53 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
-            if (_documentMap[item.docType]) {
-                var docMap = _documentMap[item.docType];
-                var map = {
-                    id: item.id || item.__id,
-                    title: (item.documentId ? item.documentId : ''),
-                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
-                    docType: item.docType,
-                    group: docMap.title
-                };
-
-                if (item.organization && item.organization.name) {
-                    map.title = item.organization.name;
-                    map.subtitle = (item.documentId ? item.documentId : '');
-                }
-
-                if (item.data && docMap && docMap.listServiceMap) {
-                    if (docMap.listServiceMap instanceof Array) {
-                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+            var typeColorMap = {
+                'error': 'danger',
+                'information': 'info',
+                'warning': 'warning'
+            };
+            var flagLabels = underscore.chain(item.activeFlags)
+                .groupBy(function(activeFlag) {
+                    return activeFlag.flag.type;
+                })
+                .map(function (group, type) {
+                    var hasOpen = false;
+                    angular.forEach(group, function(activeFlag) {
+                        if(activeFlag.status == 'open') {
+                            hasOpen = true;
+                        }
+                    });
+                    return {
+                        label: typeColorMap[type],
+                        count: group.length,
+                        hasOpen: hasOpen
                     }
+                })
+                .value();
+            var docMap = _documentMap[item.docType];
+            var map = {
+                id: item.id || item.$id,
+                title: (item.documentId ? item.documentId : ''),
+                subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
+                docType: item.docType,
+                group: (docMap ? docMap.title : item.docType),
+                flags: flagLabels
+            };
 
-                    docMap.listServiceMap(map, item);
+            if (item.organization && item.organization.name) {
+                map.title = item.organization.name;
+                map.subtitle = item.documentId || '';
+            }
+
+            if (item.data && docMap && docMap.listServiceMap) {
+                if (docMap.listServiceMap instanceof Array) {
+                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
                 }
 
-                return map;
+                docMap.listServiceMap(map, item);
             }
+
+            return map;
         };
 
         var _listServiceWithTaskMap = function (item) {
@@ -4105,7 +4277,7 @@ var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budg
 sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', function(underscore) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
             status: (item.published ? {text: 'published', label: 'label-success'} : false)
@@ -4871,6 +5043,8 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             shortname: 'Dec'
         }];
 
+    var _scheduleTypes = ['Fertilise', 'Harvest', 'Plant/Seed', 'Plough', 'Spray'];
+
     var _productsMap = {
         'INC-PDS-MILK': {
             code: 'INC-PDS-MILK-M13',
@@ -4929,6 +5103,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         cycleMonths: function () {
             return _cycleMonths;
+        },
+        scheduleTypes: function() {
+            return _scheduleTypes;
         },
         getRepresentativeAnimal: function(commodityType) {
             return _representativeAnimal[getBaseAnimal(commodityType)];
@@ -5224,22 +5401,47 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
 }]);
 var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
-sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', function(attachmentHelper, geoJSONHelper) {
+sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
+        typeColorMap = {
+            'error': 'danger',
+            'information': 'info',
+            'warning': 'warning'
+        };
+        var flagLabels = underscore.chain(item.activeFlags)
+            .groupBy(function(activeFlag) {
+                return activeFlag.flag.type;
+            })
+            .map(function (group, type) {
+                var hasOpen = false;
+                angular.forEach(group, function(activeFlag) {
+                    if(activeFlag.status == 'open') {
+                        hasOpen = true;
+                    }
+                });
+                return {
+                    label: typeColorMap[type],
+                    count: group.length,
+                    hasOpen: hasOpen
+                }
+            })
+            .value();
+
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.operationType,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
-            searchingIndex: searchingIndex(item)
+            searchingIndex: searchingIndex(item),
+            flags: flagLabels
         };
-        
+
         function searchingIndex(item) {
             var index = [];
 
             angular.forEach(item.legalEntities, function(entity) {
                 index.push(entity.name);
-                
+
                 if(entity.registrationNumber) {
                     index.push(entity.registrationNumber);
                 }
@@ -5294,7 +5496,7 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
 sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: item.type
         };
@@ -5408,7 +5610,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
 sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
     var _listServiceMap = function(item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name
         };
     };
@@ -5464,7 +5666,7 @@ var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk
 sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(documentHelper) {
     var _listServiceMap = function(item) {
         var map = {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             date: item.date
         };
 
@@ -5575,7 +5777,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
 sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHelper', function (taskHelper, documentHelper) {
     var _listServiceMap = function(item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.sender,
             subtitle: item.message,
             state: _notificationState(item.notificationType, item.dataType)
@@ -5630,7 +5832,7 @@ var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.lib
 sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (underscore) {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.name,
             subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
@@ -5787,7 +5989,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
             return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
         }).map(function (task) {
                 return {
-                    id: task.id || item.__id,
+                    id: task.id || item.$id,
                     title: item.organization.name,
                     subtitle: _getTaskTitle(task.todo, task),
                     todo: task.todo,
@@ -6006,7 +6208,7 @@ var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 sdkHelperUserApp.factory('userHelper', [function() {
     var _listServiceMap = function (item) {
         return {
-            id: item.id || item.__id,
+            id: item.id || item.$id,
             title: item.firstName + ' ' + item.lastName,
             subtitle: item.position,
             teams: item.teams
@@ -6319,6 +6521,9 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         },
         getActiveItem: function() {
             return _getActiveItem();
+        },
+        updateLabel: function(item) {
+            $rootScope.$broadcast('list::labels__changed', item);
         }
     }
 }]);
@@ -7487,7 +7692,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
             },
             defineServiceAreaOff: function() {
-                this.enqueueRequest('mapbox-' + this._id + '::define-farm-off');
+                this.enqueueRequest('mapbox-' + this._id + '::define-service-area-off');
             },
             defineFieldGroupOff: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::define-field-group-off');
@@ -7535,7 +7740,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, objectId, underscore) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'mapStyleHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, mapStyleHelper, objectId, underscore) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -8361,7 +8566,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         L.geoJson(geojson.getJson(), {
             style: geojsonOptions.style,
             pointToLayer: function(feature, latlng) {
-                var marker = L.marker(latlng, geojsonOptions);
+                var marker;
+                // add points as circles
+                if(geojsonOptions.radius) {
+                    marker = L.circleMarker(latlng, geojsonOptions);
+                }
+                // add points as markers
+                else {
+                    marker = L.marker(latlng, geojsonOptions);
+                }
 
                 if (geojsonOptions.label) {
                     marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
@@ -8636,8 +8849,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             $http.get(host + 'api/geo/district-polygon' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
+                        var districtOptions = mapStyleHelper.getStyle('background', 'district');
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
-                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey});
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, districtOptions, {featureId: district.sgKey});
 
                         _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::district-added', district);
                     }
@@ -8656,7 +8870,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             $http.get(host + 'api/geo/district-polygon' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
-                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, _this._optionSchema, {featureId: district.sgKey, districtName: district.name});
+                        var districtOptions = mapStyleHelper.getStyle('background', 'district');
+                        _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, district.position, districtOptions, {featureId: district.sgKey, districtName: district.name});
 
                         _this.makeEditable(_this._editableLayer, _this._draw.addLayer, false);
                         _this.updateDrawControls();
@@ -9263,7 +9478,7 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
             });
 
             ngModel.$parsers.push(function (value) {
-                var isNan = isNaN(value);
+                var isNan = isNaN(value) || isNaN(parseFloat(value));
 
                 ngModel.$setValidity('number', isNan === false);
 
@@ -9273,12 +9488,2118 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
                     ngModel.$setValidity('range', (_min === false || float >= _min) && (_max === false || float <= _max));
                     return float;
                 } else {
-                    return value;
+                    return undefined;
                 }
             });
         }
     };
 }]);
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+
+sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Liability, Model, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+        function Asset (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.assetKey = attrs.assetKey;
+            this.farmId = attrs.farmId;
+            this.legalEntityId = attrs.legalEntityId;
+
+            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
+                return Liability.new(liability);
+            });
+
+            this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
+                return ProductionSchedule.new(schedule);
+            });
+
+            this.type = attrs.type;
+            this.data = attrs.data || {};
+
+            privateProperty(this, 'generateKey', function (legalEntity, farm) {
+                this.assetKey = (legalEntity ? 'entity.' + legalEntity.uuid : '') +
+                (this.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (this.type === 'crop' && this.data.season ? '-s.' + this.data.season : '') +
+                (this.data.fieldName ? '-fi.' + this.data.fieldName : '') +
+                (this.data.crop ? '-c.' + this.data.crop : '') +
+                (this.type === 'cropland' && this.data.irrigated ? '-i.' + this.data.irrigation : '') +
+                (this.type === 'farmland' && this.data.sgKey ? '-' + this.data.sgKey : '') +
+                (this.type === 'improvement' || this.type === 'livestock' || this.type === 'vme' ?
+                (this.data.type ? '-t.' + this.data.type : '') +
+                (this.data.category ? '-c.' + this.data.category : '') +
+                (this.data.name ? '-n.' + this.data.name : '') +
+                (this.data.purpose ? '-p.' + this.data.purpose : '') +
+                (this.data.model ? '-m.' + this.data.model : '') +
+                (this.data.identificationNo ? '-in.' + this.data.identificationNo : '') : '') +
+                (this.data.waterSource ? '-ws.' + this.data.waterSource : '') +
+                (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
+            });
+
+            computedProperty(this, 'title', function () {
+                switch (this.type) {
+                    case 'crop':
+                    case 'permanent crop':
+                    case 'plantation':
+                        return (this.data.plantedArea ? $filter('number')(this.data.plantedArea, 2) + 'Ha' : '') +
+                            (this.data.plantedArea && this.data.crop ? ' of ' : '') +
+                            (this.data.crop ? this.data.crop : '') +
+                            (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    case 'farmland':
+                        return (this.data.portionLabel ? this.data.portionLabel :
+                            (this.data.portionNumber ? 'Portion ' + this.data.portionNumber : 'Remainder of farm'));
+                    case 'cropland':
+                        return (this.data.equipped ? 'Irrigated ' + this.type + ' (' + (this.data.irrigation ? this.data.irrigation + ' irrigation from ' : '')
+                            + this.data.waterSource + ')' : (this.data.irrigated ? 'Irrigable, unequipped ' : 'Non irrigable ') + this.type)
+                            + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    case 'livestock':
+                        return this.data.type + (this.data.category ? ' - ' + this.data.category : '');
+                    case 'pasture':
+                        return (this.data.intensified ? (this.data.crop || 'Intensified pasture') : 'Natural grazing') +
+                            (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    case 'vme':
+                        return this.data.category + (this.data.model ? ' model ' + this.data.model : '');
+                    case 'wasteland':
+                        return 'Wasteland';
+                    case 'water source':
+                    case 'water right':
+                        return this.data.waterSource + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                    default:
+                        return this.data.name || this.assetTypes[this.type];
+                }
+            });
+
+            computedProperty(this, 'description', function () {
+                return this.data.description || '';
+            });
+
+            privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
+                var income = {};
+
+                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate).isBetween(rangeStart, rangeEnd)) {
+                    income['Sales'] = this.data.salePrice;
+                }
+
+                return income;
+            });
+
+            privateProperty(this, 'totalIncomeInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.incomeInRange(rangeStart, rangeEnd), function (total, value) {
+                    return total + (value || 0);
+                }, 0);
+            });
+
+            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.liabilities, function (total, liability) {
+                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
+                }, 0);
+            });
+        }
+
+        inheritModel(Asset, Model.Base);
+
+        readOnlyProperty(Asset, 'assetTypes', {
+            'crop': 'Crops',
+            'farmland': 'Farmlands',
+            'improvement': 'Fixed Improvements',
+            'cropland': 'Cropland',
+            'livestock': 'Livestock',
+            'pasture': 'Pastures',
+            'permanent crop': 'Permanent Crops',
+            'plantation': 'Plantations',
+            'vme': 'Vehicles, Machinery & Equipment',
+            'wasteland': 'Wasteland',
+            'water right': 'Water Rights'
+        });
+
+        readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
+            'other': 'Other'
+        }, Asset.assetTypes));
+
+        Asset.validates({
+            farmId: {
+                numeric: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            assetKey: {
+                required: true
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Asset.assetTypesWithOther)
+                }
+            }
+        });
+
+        return Asset;
+    }]);
+
+angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors', 'ag.sdk.model.store'])
+    .factory('Model', ['Base', function (Base) {
+        var Model = {};
+        Model.Base = Base;
+        return Model;
+    }])
+    .factory('Base', ['Errorable', 'Storable', 'underscore', 'Validatable', function (Errorable, Storable, underscore, Validatable) {
+        function Base () {
+            var _constructor = this;
+            var _prototype = _constructor.prototype;
+
+            _constructor.new = function (attrs) {
+                var inst = new _constructor(attrs);
+
+                if (typeof inst.storable == 'function') {
+                    inst.storable(attrs);
+                }
+
+                return inst;
+            };
+
+            _constructor.asJSON = function () {
+                return JSON.parse(JSON.stringify(this));
+            };
+
+            _constructor.copy = function () {
+                var original = this,
+                    copy = {},
+                    propertyNames = Object.getOwnPropertyNames(original);
+
+                underscore.each(propertyNames, function (propertyName) {
+                    Object.defineProperty(copy, propertyName, Object.getOwnPropertyDescriptor(original, propertyName));
+                });
+
+                return copy;
+            };
+
+            _constructor.extend = function (Module) {
+                var properties = new Module(),
+                    propertyNames = Object.getOwnPropertyNames(properties),
+                    classPropertyNames = underscore.filter(propertyNames, function (propertyName) {
+                        return propertyName.slice(0, 2) !== '__';
+                    });
+
+                underscore.each(classPropertyNames, function (classPropertyName) {
+                    Object.defineProperty(this, classPropertyName, Object.getOwnPropertyDescriptor(properties, classPropertyName));
+                }, this);
+            };
+
+            _constructor.include = function (Module) {
+                var methods = new Module(),
+                    propertyNames = Object.getOwnPropertyNames(methods),
+                    instancePropertyNames = underscore.filter(propertyNames, function (propertyName) {
+                        return propertyName.slice(0, 2) == '__';
+                    }),
+                    oldConstructor = this.new;
+
+                this.new = function () {
+                    var instance = oldConstructor.apply(this, arguments);
+
+                    underscore.each(instancePropertyNames, function (instancePropertyName) {
+                        Object.defineProperty(instance, instancePropertyName.slice(2), Object.getOwnPropertyDescriptor(methods, instancePropertyName));
+                    });
+
+                    return instance;
+                };
+            };
+
+            _constructor.extend(Validatable);
+            _constructor.extend(Storable);
+            _constructor.include(Validatable);
+            _constructor.include(Errorable);
+            _constructor.include(Storable);
+        }
+
+        return Base;
+    }])
+    .factory('computedProperty', [function () {
+        return function (object, name, value) {
+            Object.defineProperty(object, name, {
+                get: value
+            });
+        }
+    }])
+    .factory('readOnlyProperty', [function () {
+        return function (object, name, value) {
+            Object.defineProperty(object, name, {
+                writable: false,
+                value: value
+            });
+        }
+    }])
+    .factory('inheritModel', ['underscore', function (underscore) {
+        return function (object, base) {
+            base.apply(object);
+
+            // Apply defined properties to extended object
+            underscore.each(Object.getOwnPropertyNames(base), function (name) {
+                var descriptor = Object.getOwnPropertyDescriptor(base, name);
+
+                if (underscore.isUndefined(object[name]) && descriptor) {
+                    Object.defineProperty(object, name, descriptor);
+                }
+            });
+        }
+    }])
+    .factory('privateProperty', [function () {
+        return function (object, name, value) {
+            var val;
+
+            Object.defineProperty(object, name, {
+                enumerable: false,
+                configurable: false,
+                get: function () {
+                    return val;
+                },
+                set: function (newVal) {
+                    val = newVal;
+                }
+            });
+
+            if (value !== undefined) {
+                object[name] = value;
+            }
+        }
+    }]);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation', 'ag.sdk.model.production-schedule']);
+
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'enterpriseBudgetHelper', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'underscore',
+    function (Asset, computedProperty, Document, enterpriseBudgetHelper, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, underscore) {
+        function BusinessPlan (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'business plan';
+
+            this.data.models = this.data.models || {
+                assets: [],
+                farmValuations: [],
+                legalEntities: [],
+                liabilities: [],
+                productionSchedules: []
+            };
+
+            this.data.monthlyStatement = this.data.monthlyStatement || [];
+
+            function reEvaluateBusinessPlan (instance) {
+                // Re-evaluate all included models
+                reEvaluateLegalEntities(instance);
+                reEvaluateFarmValuations(instance);
+                reEvaluateProductionSchedules(instance);
+                reEvaluateAssetsAndLiabilities(instance);
+            }
+
+            /**
+             * Legal Entities handling
+             */
+            privateProperty(this, 'addLegalEntity', function (legalEntity) {
+                var instance = this,
+                    dupLegalEntity = underscore.findWhere(this.models.legalEntities, {uuid: legalEntity.uuid});
+
+                if (underscore.isUndefined(dupLegalEntity) && LegalEntity.new(legalEntity).validate()) {
+                    this.models.legalEntities.push(legalEntity);
+
+                    angular.forEach(legalEntity.assets, function(asset) {
+                        instance.addAsset(asset);
+                    });
+
+                    reEvaluateBusinessPlan(this);
+                }
+            });
+
+            privateProperty(this, 'removeLegalEntity', function (legalEntity) {
+                this.models.legalEntities = underscore.reject(this.models.legalEntities, function (entity) {
+                    return entity.id === legalEntity.id;
+                });
+
+                this.models.assets = underscore.reject(this.models.assets, function (asset) {
+                    return asset.legalEntityId === legalEntity.id;
+                });
+
+                reEvaluateBusinessPlan(this);
+            });
+
+            function reEvaluateLegalEntities (instance) {
+                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
+                    return item.source === 'legal entity';
+                });
+
+                underscore.each(instance.models.legalEntities, function (item) {
+                    var legalEntity = LegalEntity.new(item),
+                        registerAssets = underscore
+                            .chain(instance.data.assets)
+                            .values()
+                            .flatten()
+                            .where({legalEntityId: legalEntity.id})
+                            .value(),
+                        registerLiabilities = underscore
+                            .chain(instance.data.liabilities)
+                            .where({legalEntityId: legalEntity.id})
+                            .value();
+
+                    underscore.each(registerAssets, function (asset) {
+                        var statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
+
+                        if (underscore.isUndefined(statementAsset)) {
+                            asset = Asset.new(asset);
+
+                            instance.data.monthlyStatement.push({
+                                uuid: asset.assetKey,
+                                legalEntityUuid: legalEntity.uuid,
+                                name: asset.title,
+                                description: (asset.type === 'improvement' ? asset.data.category : asset.description),
+                                type: 'asset',
+                                subtype: asset.type,
+                                source: 'legal entity',
+                                value: asset.data.assetValue || 0
+                            });
+                        }
+                    });
+
+                    underscore.each(registerLiabilities, function (liability) {
+                        var statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
+
+                        if (underscore.isUndefined(statementLiability)) {
+                            liability = Liability.new(liability);
+
+                            instance.data.monthlyStatement.push({
+                                uuid: liability.uuid,
+                                legalEntityUuid: legalEntity.uuid,
+                                name: Liability.getTypeTitle(liability.type),
+                                type: 'liability',
+                                subtype: liability.type,
+                                source: 'legal entity',
+                                liability: liability.liabilityInRange(instance.startDate, instance.endDate)
+                            });
+                        }
+                    });
+
+                });
+            }
+
+            /**
+             * Production Schedule handling
+             */
+            privateProperty(this, 'updateProductionSchedules', function (schedules) {
+                var startMonth = moment(this.startDate),
+                    endMonth = moment(this.endDate);
+
+                this.models.productionSchedules = [];
+
+                angular.forEach(schedules, function (schedule) {
+                    if (schedule && ProductionSchedule.new(schedule).validate() &&
+                        (startMonth.isBetween(schedule.startDate, schedule.endDate) ||
+                        (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
+                        // Add valid production schedule if between business plan dates
+                        this.models.productionSchedules.push(schedule);
+                    }
+                }, this);
+
+                reEvaluateProductionSchedules(this);
+            });
+
+            function initializeCategoryValues(instance, section, category, months) {
+                instance.data[section] = instance.data[section] || {};
+                instance.data[section][category] = instance.data[section][category] || underscore.range(months).map(function () {
+                    return 0;
+                });
+            }
+
+            function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
+                var section = underscore.findWhere(schedule.data.sections, {code: code}),
+                    scheduleStart = moment(schedule.startDate);
+
+                if (section) {
+                    var offset = startMonth.diff(scheduleStart, 'months');
+
+                    angular.forEach(section.productCategoryGroups, function (group) {
+                        angular.forEach(group.productCategories, function (category) {
+                            var categoryName = (schedule.type !== 'livestock' && type === 'productionIncome' ? schedule.data.details.commodity : category.name);
+
+                            instance.data[type][categoryName] = instance.data[type][categoryName] || underscore.range(numberOfMonths).map(function () {
+                                return 0;
+                            });
+
+                            for (var i = 0; i < numberOfMonths; i++) {
+                                instance.data[type][categoryName][i] += (category.valuePerMonth[i + offset] || 0);
+                            }
+                        });
+                    });
+                }
+            }
+
+            function reEvaluateProductionSchedules (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                instance.data.productionIncome = {};
+                instance.data.productionExpenditure = {};
+
+                angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
+                    var schedule = ProductionSchedule.new(productionSchedule);
+
+                    extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
+                    extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
+                });
+            }
+
+            /**
+             * Farm Valuations handling
+             */
+            privateProperty(this, 'addFarmValuation', function (farmValuation) {
+                var dupFarmValuation = underscore.findWhere(this.models.farmValuations, {documentId: farmValuation.documentId});
+
+                if (underscore.isUndefined(dupFarmValuation) && FarmValuation.new(farmValuation).validate()) {
+                    this.models.farmValuations.push(farmValuation);
+
+                    reEvaluateFarmValuations(this);
+                }
+            });
+
+            privateProperty(this, 'removeFarmValuation', function (farmValuation) {
+                this.models.farmValuations = underscore.reject(this.models.farmValuations, function (valuation) {
+                    return valuation.id === farmValuation.id;
+                });
+
+                reEvaluateFarmValuations(this);
+            });
+
+            function reEvaluateFarmValuations (instance) {
+                // Remove all statements from farm valuation source
+                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
+                    return item.source === 'farm valuation';
+                });
+
+                underscore.each(instance.models.farmValuations, function (valuationItem) {
+                    var farmValuation = FarmValuation.new(valuationItem);
+
+                    if (farmValuation.data.request && farmValuation.data.report) {
+                        var legalEntity = farmValuation.data.request.legalEntity;
+
+                        // Check legal entity model for farm valuation is included
+                        if (underscore.some(instance.models.legalEntities, function (entity) {
+                                return entity.uuid === legalEntity.uuid;
+                            })) {
+                            // Farm valuation contains a completed report landUseComponents
+                            if (farmValuation.data.report.landUseComponents) {
+                                underscore.each(farmValuation.data.report.landUseComponents, function (landUseComponent, landUse) {
+                                    underscore.each(landUseComponent, function (category) {
+                                        var statementCategory = underscore.findWhere(instance.data.monthlyStatement, {uuid: landUse + '-' + category.name})
+
+                                        if (underscore.isUndefined(statementCategory)) {
+                                            // Add new land use component
+                                            instance.data.monthlyStatement.push({
+                                                uuid: landUse + '-' + category.name,
+                                                legalEntityUuid: legalEntity.uuid,
+                                                name: landUse,
+                                                description: category.name,
+                                                type: 'asset',
+                                                subtype: 'land use',
+                                                source: 'farm valuation',
+                                                value: (category.area * category.valuePerHa)
+                                            });
+                                        } else {
+                                            // Sum two components together
+                                            statementCategory.value += (category.area * category.valuePerHa);
+                                        }
+                                    });
+                                });
+                            }
+
+                            // Farm valuation contains a completed report improvements
+                            if (farmValuation.data.report.improvements) {
+                                // Loop through the valued improvements
+                                underscore.each(farmValuation.data.report.improvements, function (improvementItem) {
+                                    var improvement = Asset.new(improvementItem),
+                                        statementImprovement = underscore.findWhere(instance.data.monthlyStatement, {uuid: improvement.assetKey, type: 'asset'}),
+                                        registerImprovement = underscore.findWhere(instance.data.assets.improvement, {assetKey: improvement.assetKey});
+
+                                    if (underscore.isUndefined(statementImprovement)) {
+                                        // Improvement is still valid
+                                        if (registerImprovement && improvement.validate()) {
+                                            // Find asset in document's asset register
+                                            var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: registerImprovement.legalEntityId});
+
+                                            if (underscore.some(instance.models.legalEntities, function (entity) {
+                                                    return entity.uuid === registerLegalEntity.uuid;
+                                                })) {
+                                                // Legal Entity for this improvement is an included Legal Entity
+
+                                                // Add asset
+                                                instance.data.monthlyStatement.push({
+                                                    uuid: improvement.assetKey,
+                                                    legalEntityUuid: registerLegalEntity.uuid,
+                                                    name: improvement.title,
+                                                    description: improvement.description,
+                                                    type: 'asset',
+                                                    subtype: improvement.type,
+                                                    source: 'farm valuation',
+                                                    value: improvement.data.assetValue || 0
+                                                });
+                                            }
+                                        }
+                                    } else {
+                                        // Add valuation to improvement
+                                        statementImprovement.source = 'farm valuation';
+                                        statementImprovement.value = improvement.data.assetValue;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Add Assets & Liabilities
+            privateProperty(this, 'addAsset', function (asset) {
+                if (Asset.new(asset).validate()) {
+                    this.models.assets = underscore.reject(this.models.assets, function (item) {
+                        return item.assetKey === asset.assetKey;
+                    });
+
+                    this.models.assets.push(asset instanceof Asset ? asset.asJSON() : asset);
+
+                    reEvaluateAssetsAndLiabilities(this);
+                }
+            });
+
+            privateProperty(this, 'removeAsset', function (asset) {
+                this.models.assets = underscore.reject(this.models.assets, function (item) {
+                    return item.assetKey === asset.assetKey;
+                });
+
+                reEvaluateAssetsAndLiabilities(this);
+            });
+
+            privateProperty(this, 'addLiability', function (liability) {
+                if (Liability.new(liability).validate()) {
+                    this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
+                        return item.uuid === liability.uuid;
+                    });
+
+                    this.models.liabilities.push(liability instanceof Liability ? liability.asJSON() : liability);
+
+                    reEvaluateAssetsAndLiabilities(this);
+                }
+            });
+
+            privateProperty(this, 'removeLiability', function (liability) {
+                this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
+                    return item.uuid === liability.uuid;
+                });
+
+                reEvaluateAssetsAndLiabilities(this);
+            });
+
+            function reEvaluateAssetsAndLiabilities (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
+                    return underscore.contains(['asset', 'liability'], item.source);
+                });
+
+                instance.data.capitalIncome = {};
+                instance.data.capitalExpenditure = {};
+                instance.data.otherIncome = {};
+                instance.data.otherExpenditure = {};
+                instance.data.debtRedemption = {};
+
+                underscore.each(instance.models.assets, function (asset) {
+                    asset = Asset.new(asset);
+
+                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
+                        statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
+
+                    // Check asset is not already added
+                    if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
+                        // VME
+                        if (asset.type === 'vme') {
+                            var acquisitionDate = moment(asset.data.acquisitionDate),
+                                soldDate = moment(asset.data.soldDate);
+
+                            if (asset.data.subtype === 'Vehicles') {
+                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicle Purchases', numberOfMonths);
+
+                                    instance.data.capitalIncome['Vehicle Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
+                                }
+
+                                if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicle Sales', numberOfMonths);
+
+                                    instance.data.capitalExpenditure['Vehicle Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
+                                }
+                            } else {
+                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
+
+                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'Machinery & Equipment Purchases')] += asset.data.assetValue;
+                                }
+
+                                if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment Sales', numberOfMonths);
+
+                                    instance.data.capitalExpenditure['Machinery & Equipment Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
+                                }
+                            }
+                        } else if (asset.type === 'other') {
+                            initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
+                            initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
+
+                            // TODO: calculate purchase/sold date for asset
+                        }
+
+                        angular.forEach(asset.liabilities, function (liability) {
+                            var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
+                                typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
+                                liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+
+                            initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                            instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
+                                return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
+                            });
+                        });
+
+                        // Add asset
+                        instance.data.monthlyStatement.push({
+                            uuid: asset.assetKey,
+                            legalEntityUuid: registerLegalEntity.uuid,
+                            name: asset.title,
+                            description: asset.description,
+                            type: 'asset',
+                            subtype: asset.type,
+                            source: 'asset',
+                            value: asset.data.assetValue || 0
+                        });
+                    }
+                });
+
+                underscore.each(instance.models.liabilities, function (liability) {
+                    liability = Liability.new(liability);
+
+                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId}),
+                        statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
+
+                    // Check asset is not already added
+                    if (registerLegalEntity && underscore.isUndefined(statementLiability)) {
+                        var section = (liability.type === 'rent' || liability.type === 'other' ? 'capitalExpenditure' : 'debtRedemption'),
+                            typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
+                            liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+
+                        initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
+                            return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
+                        });
+
+                        // Add liability
+                        instance.data.monthlyStatement.push({
+                            uuid: liability.uuid,
+                            legalEntityUuid: registerLegalEntity.uuid,
+                            name: liability.name || '',
+                            description: liability.description || '',
+                            type: 'liability',
+                            subtype: 'other',
+                            source: 'liability',
+                            liability: liability.liabilityInRange(instance.startDate, instance.endDate)
+                        });
+                    }
+                });
+            }
+
+            // View added Assets & Liabilities
+            computedProperty(this, 'startDate', function () {
+                return this.data.startDate;
+            });
+
+            computedProperty(this, 'endDate', function () {
+                this.data.endDate = (this.data.startDate ?
+                    moment(this.data.startDate).add(2, 'y').format() :
+                    this.data.endDate);
+
+                return this.data.endDate;
+            });
+
+            computedProperty(this, 'models', function () {
+                return this.data.models;
+            });
+
+            computedProperty(this, 'monthlyStatement', function () {
+                return this.data.monthlyStatement;
+            });
+        }
+
+        inheritModel(BusinessPlan, Document);
+
+        BusinessPlan.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'business plan'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            startDate: {
+                required: true,
+                format: {
+                    date: true
+                }
+            },
+            title: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return BusinessPlan;
+    }]);
+
+var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+            function Document (attrs, organization) {
+                Model.Base.apply(this, arguments);
+
+                this.data = (attrs && attrs.data) || {};
+
+                privateProperty(this, 'updateRegister', function (organization) {
+                    this.data = underscore.extend(this.data, {
+                        farmer: underscore.omit(organization, ['farms', 'legalEntities', 'primaryContact', 'teams']),
+                        farms : organization.farms,
+                        legalEntities: underscore
+                            .map(organization.legalEntities, function (entity) {
+                                return underscore.omit(entity, ['assets', 'farms']);
+                            }),
+                        assets: underscore
+                            .chain(organization.legalEntities)
+                            .pluck('assets')
+                            .flatten()
+                            .compact()
+                            .groupBy('type')
+                            .value(),
+                        liabilities: underscore
+                            .chain(organization.legalEntities)
+                            .pluck('liabilities')
+                            .flatten()
+                            .compact()
+                            .value()
+                    });
+                });
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.author = attrs.author;
+                this.docType = attrs.docType;
+                this.documentId = attrs.documentId;
+                this.id = attrs.id || attrs.$id;
+                this.organizationId = attrs.organizationId;
+                this.title = attrs.title;
+            }
+
+            inheritModel(Document, Model.Base);
+
+            readOnlyProperty(Document, 'docTypes', {
+                'asset register': 'Asset Register',
+                'business plan': 'Business Plan',
+                'emergence report': 'Emergence Report',
+                'farm valuation': 'Farm Valuation',
+                'insurance policy': 'Insurance Policy',
+                'production plan': 'Production Plan',
+                'progress report': 'Progress Report'
+            });
+
+            Document.validates({
+                author: {
+                    required: true,
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                docType: {
+                    required: true,
+                    inclusion: {
+                        in: underscore.keys(Document.docTypes)
+                    }
+                },
+                organizationId: {
+                    required: true,
+                    numeric: true
+                }
+            });
+
+            return Document;
+        }]);
+
+var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+
+sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
+    function (Asset, computedProperty, Document, inheritModel, privateProperty) {
+        function FarmValuation (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'farm valuation';
+        }
+
+        inheritModel(FarmValuation, Document);
+
+        FarmValuation.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'farm valuation'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return FarmValuation;
+    }]);
+
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, readOnlyProperty, underscore) {
+        function LegalEntity (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.addressCity = attrs.addressCity;
+            this.addressCode = attrs.addressCode;
+            this.addressDistrict = attrs.addressDistrict;
+            this.addressStreet = attrs.addressStreet;
+            this.email = attrs.email;
+            this.fax = attrs.fax;
+            this.id = attrs.id || attrs.$id;
+            this.mobile = attrs.mobile;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+            this.registrationNumber = attrs.registrationNumber;
+            this.telephone = attrs.telephone;
+            this.type = attrs.type;
+            this.uuid = attrs.uuid;
+        }
+
+        inheritModel(LegalEntity, Model.Base);
+
+        readOnlyProperty(LegalEntity, 'legalEntityTypes', [
+            'Individual',
+            'Sole Proprietary',
+            'Joint account',
+            'Partnership',
+            'Close Corporation',
+            'Private Company',
+            'Public Company',
+            'Trust',
+            'Non-Profitable companies',
+            'Cooperatives',
+            'In- Cooperatives',
+            'Other Financial Intermediaries']);
+
+        LegalEntity.validates({
+            addressCity: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            addressCode: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            addressDistrict: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            addressStreet: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            fax: {
+                format: {
+                    telephone: true
+                }
+            },
+            mobile: {
+                format: {
+                    telephone: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            registrationNumber: {
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            telephone: {
+                format: {
+                    telephone: true
+                }
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: LegalEntity.legalEntityTypes
+                }
+            },
+            uuid: {
+                format: {
+                    uuid: true
+                }
+            }
+        });
+
+        return LegalEntity;
+    }]);
+
+var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
+        var _frequency = {
+            'monthly': 12,
+            'bi-monthly': 24,
+            'quarterly': 4,
+            'bi-yearly': 2,
+            'yearly': 1
+        };
+
+        function Liability (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'currentBalance', function () {
+                return (this.type !== 'rent' ? this.liabilityInMonth(moment().startOf('month')) : 0);
+            });
+
+            privateProperty(this, 'balanceInMonth', function (month) {
+                var balance = this.amount || 0;
+
+                if (angular.isNumber(this.amount) && this.amount > 0) {
+                    var startMonth = moment(this.startDate),
+                        paymentMonths = this.paymentMonths,
+                        paymentsPerMonth = (_frequency[this.frequency] > 12 ? _frequency[this.frequency] / 12 : 1),
+                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
+
+                    for(var i = 0; i < numberOfMonths; i++) {
+                        var month = moment(this.startDate).add(i, 'M');
+
+                        if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
+                            balance += this.amount;
+                        } else if (month >= startMonth) {
+                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
+
+                            if (underscore.contains(paymentMonths, month.month())) {
+                                for (var j = 0; j < paymentsPerMonth; j++) {
+                                    balance -= Math.min(balance, (this.installmentPayment || 0));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return balance;
+            });
+
+            computedProperty(this, 'paymentMonths', function () {
+                var paymentsPerYear = _frequency[this.frequency],
+                    firstPaymentMonth = moment(this.startDate).month();
+
+                return underscore
+                    .range(firstPaymentMonth, firstPaymentMonth + 12, (paymentsPerYear < 12 ? 12 / paymentsPerYear : 1))
+                    .map(function (value) {
+                        return value % 12;
+                    })
+                    .sort(function (a, b) {
+                        return a - b;
+                    });
+            });
+
+            computedProperty(this, 'title', function () {
+                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
+                    (this.name ? this.name : Liability.getTypeTitle(this.type));
+            });
+
+            privateProperty(this, 'liabilityInMonth', function (month) {
+                var previousMonth = moment(month).subtract(1, 'M'),
+                    currentMonth = moment(month),
+                    startMonth = moment(this.startDate),
+                    endMonth = moment(this.endDate),
+                    paymentsPerYear = _frequency[this.frequency],
+                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
+                    previousBalance = this.balanceInMonth(previousMonth);
+
+                var liability = 0;
+
+                if (this.frequency === 'once' && startMonth.month() === currentMonth.month() && startMonth.year() === currentMonth.year()) {
+                    liability += this.amount;
+                } else if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
+                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
+
+                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
+                        for (var i = 0; i < paymentsPerMonth; i++) {
+
+                            if (angular.isNumber(this.amount) && this.amount > 0) {
+                                liability += Math.min(previousBalance, (this.installmentPayment || 0));
+                                previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
+                            } else {
+                                liability += (this.installmentPayment || 0);
+                            }
+                        }
+                    }
+                }
+
+                return liability;
+            });
+
+            privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
+                var previousMonth = moment(rangeStart).subtract(1, 'M'),
+                    startMonth = moment(this.startDate),
+                    endMonth = moment(this.endDate),
+                    paymentMonths = this.paymentMonths,
+                    paymentsPerYear = _frequency[this.frequency],
+                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
+                    previousBalance = this.balanceInMonth(previousMonth),
+                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months');
+
+                var liability = underscore.range(numberOfMonths).map(function () {
+                    return 0;
+                });
+
+                for(var i = 0; i < numberOfMonths; i++) {
+                    var month = moment(rangeStart).add(i, 'M');
+
+                    if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
+                        liability[i] += this.amount;
+                    } else if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
+                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
+
+                        if (underscore.contains(paymentMonths, month.month())) {
+                            for (var j = 0; j < paymentsPerMonth; j++) {
+                                if (angular.isNumber(this.amount) && this.amount > 0) {
+                                    liability[i] += Math.min(previousBalance, (this.installmentPayment || 0));
+                                    previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
+                                } else {
+                                    liability[i] += (this.installmentPayment || 0);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return liability;
+            });
+
+            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
+                    return total - liability;
+                }, 0);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid;
+            this.merchantUuid = attrs.merchantUuid;
+            this.legalEntityId = attrs.legalEntityId;
+            this.name = attrs.name;
+            this.type = attrs.type;
+            this.installmentPayment = attrs.installmentPayment;
+            this.interestRate = attrs.interestRate;
+            this.amount = attrs.amount;
+            this.frequency = attrs.frequency;
+            this.startDate = attrs.startDate;
+            this.endDate = attrs.endDate;
+        }
+
+        inheritModel(Liability, Model.Base);
+
+        readOnlyProperty(Liability, 'frequencyTypes', {
+            'once': 'One Time',
+            'bi-monthly': 'Bi-Monthly',
+            'monthly': 'Monthly',
+            'quarterly': 'Quarterly',
+            'bi-yearly': 'Bi-Yearly',
+            'yearly': 'Yearly'});
+
+        readOnlyProperty(Liability, 'liabilityTypes', {
+            'short-loan': 'Short Term Loan',
+            'medium-loan': 'Medium Term Loan',
+            'long-loan': 'Long Term Loan',
+            'rent': 'Rented'});
+
+        readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
+            'other': 'Other'
+        }, Liability.liabilityTypes));
+
+        privateProperty(Liability, 'getFrequencyTitle', function (type) {
+            return Liability.frequencyTypes[type] || '';
+        });
+
+        privateProperty(Liability, 'getTypeTitle', function (type) {
+            return Liability.liabilityTypesWithOther[type] || '';
+        });
+
+        function isLoaned (value, instance, field) {
+            return instance.type !== 'rent';
+        }
+
+        function isLeased (value, instance, field) {
+            return instance.leased === 'rent';
+        }
+
+        function isOtherType (value, instance, field) {
+            return instance.type === 'other';
+        }
+
+        function isNotOtherType (value, instance, field) {
+            return instance.type !== 'other';
+        }
+
+        Liability.validates({
+            installmentPayment: {
+                requiredIf: function (value, instance, field) {
+                    return isNotOtherType(value, instance, field) &&
+                        (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
+                        (angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
+                },
+                range: {
+                    from: 0
+                },
+                numeric: true
+            },
+            interestRate: {
+                requiredIf: function (value, instance, field) {
+                    return angular.isNumber(instance.installmentPayment) && instance.installmentPayment > 0;
+                },
+                range: {
+                    from: 0,
+                    to: 100
+                }
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            amount: {
+                requiredIf: function (value, instance, field) {
+                    return (isLoaned(value, instance, field) && isNotOtherType(value, instance, field)) ||
+                        (angular.isNumber(instance.installmentPayment) && instance.installmentPayment >= 0) === false;
+                },
+                range: {
+                    from: 0
+                },
+                numeric: true
+            },
+            merchantUuid: {
+                requiredIf: isNotOtherType,
+                format: {
+                    uuid: true
+                }
+            },
+            frequency: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Liability.frequencyTypes)
+                }
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Liability.liabilityTypesWithOther)
+                }
+            },
+            name: {
+                requiredIf: isOtherType,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            startDate: {
+                required: true,
+                format: {
+                    date: true
+                }
+            },
+            endDate: {
+                requiredIf: isLeased,
+                format: {
+                    date: true
+                }
+            }
+        });
+
+        return Liability;
+    }]);
+
+var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function ProductionSchedule (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.assetId = attrs.assetId;
+            this.budgetUuid = attrs.budgetUuid;
+            this.type = attrs.type;
+            this.endDate = attrs.endDate;
+            this.id = attrs.id || attrs.$id;
+            this.organizationId = attrs.organizationId;
+            this.startDate = attrs.startDate;
+
+            this.asset = attrs.asset;
+            this.budget = attrs.budget;
+            this.organization = attrs.organization;
+
+            computedProperty(this, 'income', function () {
+                return underscore.findWhere(this.data.sections, {code: 'INC'});
+            });
+
+            computedProperty(this, 'expenses', function () {
+                return underscore.findWhere(this.data.sections, {code: 'EXP'});
+            });
+        }
+
+        inheritModel(ProductionSchedule, Model.Base);
+
+        readOnlyProperty(ProductionSchedule, 'productionScheduleTypes', {
+            crop: 'Crop',
+            horticulture: 'Horticulture',
+            livestock: 'Livestock'
+        });
+
+        readOnlyProperty(ProductionSchedule, 'allowedAssets', ['cropland', 'pasture', 'permanent crop']);
+
+        privateProperty(ProductionSchedule, 'getTypeTitle', function (type) {
+            return ProductionSchedule.productionScheduleTypes[type] || '';
+        });
+
+        ProductionSchedule.validates({
+            assetId: {
+                required: true,
+                numeric: true
+            },
+            budgetUuid: {
+                required: true,
+                format: {
+                    uuid: true
+                }
+            },
+            endDate: {
+                required: true,
+                format: {
+                    date: true
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            startDate: {
+                required: true,
+                format: {
+                    date: true
+                }
+            }
+        });
+
+        return ProductionSchedule;
+    }]);
+
+var sdkModelErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
+    function (privateProperty, underscore) {
+        function Errorable () {
+            var _$errors = {};
+
+            privateProperty(_$errors, 'count', 0);
+
+            privateProperty(_$errors, 'countFor', function (fieldName) {
+                if (underscore.isUndefined(fieldName)) {
+                    return _$errors.count;
+                }
+
+                return (_$errors[fieldName] ? _$errors[fieldName].length : 0);
+            });
+
+            privateProperty(_$errors, 'add', function (fieldName, errorMessage) {
+                if (underscore.isUndefined(_$errors[fieldName])) {
+                    _$errors[fieldName] = [];
+                }
+
+                if (underscore.contains(_$errors[fieldName], errorMessage) === false) {
+                    _$errors[fieldName].push(errorMessage);
+                    _$errors.count++;
+                }
+            });
+
+            privateProperty(_$errors, 'clear', function (fieldName, errorMessage) {
+                if (underscore.isUndefined(errorMessage) === false) {
+                    if (underscore.contains(_$errors[fieldName], errorMessage)) {
+                        _$errors[fieldName] = underscore.without(_$errors[fieldName], errorMessage);
+                        _$errors.count--;
+
+                        if(_$errors[fieldName].length === 0) {
+                            delete _$errors[fieldName];
+                        }
+                    }
+                } else {
+                    var toClear = [];
+
+                    if (underscore.isArray(fieldName)) {
+                        toClear = fieldName;
+                    }
+
+                    if (underscore.isString(fieldName)) {
+                        toClear.push(fieldName);
+                    }
+
+                    if (underscore.isUndefined(fieldName)) {
+                        toClear = underscore.keys(_$errors);
+                    }
+
+                    underscore.each(toClear, function (fieldName) {
+                        if (underscore.isUndefined(_$errors[fieldName]) === false) {
+                            var count = _$errors[fieldName].length;
+                            delete _$errors[fieldName];
+                            _$errors.count -= count;
+                        }
+                    });
+                }
+            });
+
+            privateProperty(this, '__$errors', _$errors);
+        }
+
+        return Errorable;
+    }]);
+var sdkModelStore = angular.module('ag.sdk.model.store', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelStore.factory('Storable', ['computedProperty', 'privateProperty',
+    function (computedProperty, privateProperty) {
+        function Storable () {
+            var _storable = {};
+
+            privateProperty(_storable, 'set', function (inst, attrs) {
+                if (attrs) {
+                    inst.$complete = attrs.$complete;
+                    inst.$dirty = attrs.$dirty;
+                    inst.$id = attrs.$id;
+                    inst.$local = attrs.$local;
+                    inst.$saved = attrs.$saved;
+                    inst.$uri = attrs.$uri;
+                }
+            });
+
+            privateProperty(this, 'storable', function (attrs) {
+                _storable.set(this, attrs);
+            });
+        }
+
+        return Storable;
+    }]);
+var sdkModelValidation = angular.module('ag.sdk.model.validation', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.validators']);
+
+sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty', 'underscore', 'Validatable.Field',
+    'Validator.dateRange',
+    'Validator.equal',
+    'Validator.format',
+    'Validator.inclusion',
+    'Validator.length',
+    'Validator.numeric',
+    'Validator.range',
+    'Validator.required',
+    'Validator.requiredIf',
+    function (computedProperty, privateProperty, underscore, Field) {
+        function Validatable () {
+            var _validations = {};
+
+            privateProperty(_validations, 'add', function (validationSpec) {
+                underscore.each(validationSpec, function (validationSet, fieldName) {
+                    if (_validations[fieldName]) {
+                        _validations[fieldName].addValidators(validationSet);
+                    } else {
+                        _validations[fieldName] = new Field(fieldName, validationSet);
+                    }
+                });
+            });
+
+            privateProperty(_validations, 'validate', function (instance, fieldName) {
+                var toValidate = getFieldsToValidate(fieldName);
+
+                underscore.each(toValidate, function (validation) {
+                    validateField(instance, validation);
+                });
+
+                return instance.$errors.countFor(fieldName) === 0;
+            });
+
+            function validateField (instance, validation) {
+                if (validation.validate(instance) === false) {
+                    instance.$errors.add(validation.field, validation.message);
+                } else {
+                    instance.$errors.clear(validation.field, validation.message);
+                }
+            }
+
+            function getFieldsToValidate (fieldName) {
+                if (fieldName && _validations[fieldName]) {
+                    return _validations[fieldName];
+                }
+
+                return underscore.chain(_validations)
+                    .map(function (validations) {
+                        return validations;
+                    })
+                    .flatten()
+                    .value();
+            }
+
+            privateProperty(this, 'validations', _validations);
+            privateProperty(this, 'validates', _validations.add);
+
+            privateProperty(this, '__validate', function (fieldName) {
+                return this.constructor.validations.validate(this, fieldName);
+            });
+
+            computedProperty(this, '__$valid', function () {
+                return this.constructor.validations.validate(this);
+            });
+
+            computedProperty(this, '__$invalid', function () {
+                return !this.constructor.validations.validate(this);
+            });
+        }
+
+        return Validatable;
+    }]);
+
+sdkModelValidation.factory('Validatable.DuplicateValidatorError', [function () {
+    function DuplicateValidatorError(name) {
+        this.name = 'DuplicateValidatorError';
+        this.message = 'A validator by the name ' + name + ' is already registered';
+    }
+
+    DuplicateValidatorError.prototype = Error.prototype;
+
+    return DuplicateValidatorError;
+}]);
+
+sdkModelValidation.factory('Validatable.ValidationMessageNotFoundError', [function() {
+    function ValidationMessageNotFoundError(validatorName, fieldName) {
+        this.name    = 'ValidationMessageNotFound';
+        this.message = 'Validation message not found for validator ' + validatorName + ' on the field ' + fieldName + '. Validation messages must be added to validators in order to provide your users with useful error messages.';
+    }
+
+    ValidationMessageNotFoundError.prototype = Error.prototype;
+
+    return ValidationMessageNotFoundError;
+}]);
+
+sdkModelValidation.factory('Validatable.Field', ['privateProperty', 'underscore', 'Validatable.Validation', 'Validatable.ValidationMessageNotFoundError', 'Validatable.Validator', 'Validatable.validators',
+    function (privateProperty, underscore, Validation, ValidationMessageNotFoundError, Validator, validators) {
+        function Field (name, validationSet) {
+            var field = [];
+
+            privateProperty(field, 'addValidator', function (options, validationName) {
+                var validator = validators.find(validationName) || new Validator(options, validationName),
+                    configuredFunctions = underscore.flatten([validator.configure(options)]);
+
+                if (underscore.isUndefined(validator.message)) {
+                    throw new ValidationMessageNotFoundError(validationName, name);
+                }
+
+                underscore.each(configuredFunctions, function (configuredFunction) {
+                    field.push(new Validation(name, configuredFunction));
+                })
+            });
+
+            privateProperty(field, 'addValidators', function (validationSet) {
+                underscore.each(validationSet, field.addValidator);
+            });
+
+            field.addValidators(validationSet);
+
+            return field;
+        }
+
+        return Field;
+    }]);
+
+sdkModelValidation.factory('Validatable.Validation', ['privateProperty', function (privateProperty) {
+    function Validation (field, validationFunction) {
+        privateProperty(this, 'field', field);
+        privateProperty(this, 'message', validationFunction.message);
+        privateProperty(this, 'validate', function (instance) {
+            return validationFunction(instance[field], instance, field);
+        });
+    }
+
+    return Validation;
+}]);
+
+sdkModelValidation.factory('Validatable.ValidationFunction', ['underscore', function (underscore) {
+    function ValidationFunction (validationFunction, options) {
+        var boundFunction = underscore.bind(validationFunction, options);
+        boundFunction.message = configureMessage();
+
+        function configureMessage () {
+            if (underscore.isString(options.message)) {
+                return options.message;
+            }
+
+            if (underscore.isFunction(options.message)) {
+                return options.message.apply(options);
+            }
+        }
+
+        return boundFunction;
+    }
+
+    return ValidationFunction;
+}]);
+
+sdkModelValidation.factory('Validatable.ValidatorNotFoundError', [function() {
+    function ValidatorNotFoundError(name) {
+        this.name    = 'ValidatorNotFoundError';
+        this.message = 'No validator found by the name of ' + name + '. Custom validators must define a validator key containing the custom validation function';
+    }
+
+    ValidatorNotFoundError.prototype = Error.prototype;
+
+    return ValidatorNotFoundError;
+}]);
+
+sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'underscore', 'Validatable.ValidationFunction', 'Validatable.ValidatorNotFoundError', 'Validatable.validators',
+    function (privateProperty, underscore, ValidationFunction, ValidatorNotFoundError, validators) {
+        function AnonymousValidator(options, name) {
+            if (underscore.isFunction(options.validator)) {
+                if (options.message) {
+                    options.validator.message = options.message;
+                }
+
+                return new Validator(options.validator, name);
+            }
+        }
+
+        function Validator (validationFunction, name) {
+            if (validationFunction.validator) {
+                return new AnonymousValidator(validationFunction, name);
+            }
+
+            if (underscore.isFunction(validationFunction) === false) {
+                throw new ValidatorNotFoundError(name);
+            }
+
+            var validator = this;
+
+            privateProperty(validator, 'name', validationFunction.name);
+            privateProperty(validator, 'message', validationFunction.message);
+            privateProperty(validator, 'childValidators', {});
+            privateProperty(validator, 'configure', function (options) {
+                options = defaultOptions(options);
+
+                if (underscore.size(validator.childValidators) > 0) {
+                    return configuredChildren(options);
+                }
+
+                return new ValidationFunction(validationFunction, underscore.defaults(options, this));
+            });
+
+            addChildValidators(validationFunction.options);
+            validators.register(validator);
+
+            function addChildValidators (options) {
+                underscore.each(options, function (value, key) {
+
+                    if (value.constructor.name === 'Validator') {
+                        validator.childValidators[key] = value;
+                    }
+                });
+            }
+
+            function configuredChildren (options) {
+                return underscore.chain(validator.childValidators)
+                    .map(function (childValidator, name) {
+                        if (options[name] !== undefined) {
+                            return childValidator.configure(options[name]);
+                        }
+                    })
+                    .compact()
+                    .value();
+            }
+
+            function defaultOptions (options) {
+                if (underscore.isObject(options) === false) {
+                    options = {
+                        value: options,
+                        message: validator.message
+                    };
+                }
+
+                if (underscore.isUndefined(validationFunction.name) == false) {
+                    options[validationFunction.name] = options.value;
+                }
+
+                return options;
+            }
+        }
+
+        return Validator;
+    }]);
+
+sdkModelValidation.factory('Validatable.validators', ['Validatable.DuplicateValidatorError', 'privateProperty', 'underscore',
+    function (DuplicateValidatorError, privateProperty, underscore) {
+        var validators = {};
+
+        privateProperty(validators, 'register', function (validator) {
+            if (underscore.isUndefined(validators[validator.name])) {
+                validators[validator.name] = validator;
+            } else {
+                throw new DuplicateValidatorError(validator.name);
+            }
+        });
+
+        privateProperty(validators, 'find', function (validatorName) {
+            return validators[validatorName];
+        });
+
+        return validators;
+    }]);
+
+var sdkModelValidators = angular.module('ag.sdk.model.validators', ['ag.sdk.library', 'ag.sdk.model.validation']);
+
+/**
+ * Date Validator
+ */
+sdkModelValidators.factory('Validator.dateRange', ['moment', 'underscore', 'Validatable.Validator', 'Validator.dateRange.after', 'Validator.dateRange.before',
+    function (moment, underscore, Validator, after, before) {
+        function dateRange (value, instance, field) {}
+
+        dateRange.message = function () {
+            return 'Is not a valid date';
+        };
+
+        dateRange.options = {
+            after: after,
+            before: before
+        };
+
+        return new Validator(dateRange);
+    }]);
+
+sdkModelValidators.factory('Validator.dateRange.after', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function after (value, instance, field) {
+            if (underscore.isUndefined(this.after) || underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return moment(value) >= moment(this.after);
+        }
+
+        after.message = function () {
+            return 'Must be at least ' + moment(this.after).format("dddd, MMMM Do YYYY, h:mm:ss a");
+        };
+
+        return new Validator(after);
+    }]);
+
+sdkModelValidators.factory('Validator.dateRange.before', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function before (value, instance, field) {
+            if (underscore.isUndefined(this.before) || underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return moment(value) <= moment(this.before);
+        }
+
+        before.message = function () {
+            return 'Must be no more than ' + moment(this.before).format("dddd, MMMM Do YYYY, h:mm:ss a");
+        };
+
+        return new Validator(before);
+    }]);
+
+/**
+ * Equals Validator
+ */
+sdkModelValidators.factory('Validator.equal', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function equal (value, instance, field) {
+            if (underscore.isUndefined(this.to)) {
+                throw 'Equal validator must specify an \'to\' attribute';
+            }
+
+            return value === this.to;
+        }
+
+        equal.message = function () {
+            return 'Must be equal to \'' + this.to + '\'';
+        };
+
+        return new Validator(equal);
+    }]);
+
+/**
+ * Format Validator
+ */
+sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date', 'Validator.format.email', 'Validator.format.telephone', 'Validator.format.uuid',
+    function (underscore, Validator, date, email, telephone, uuid) {
+        function format (value, instance, field) {}
+
+        format.message = function () {
+            return 'Must be the correct format';
+        };
+
+        format.options = {
+            date: date,
+            email: email,
+            telephone: telephone,
+            uuid: uuid
+        };
+
+        return new Validator(format);
+    }]);
+
+sdkModelValidators.factory('Validator.format.date', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function date (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return moment(value).isValid();
+        }
+
+        date.message = function () {
+            return 'Must be a valid date';
+        };
+
+        return new Validator(date);
+    }]);
+
+sdkModelValidators.factory('Validator.format.email', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$');
+
+        function email (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        email.message = function () {
+            return 'Must be a valid email address';
+        };
+
+        return new Validator(email);
+    }]);
+
+sdkModelValidators.factory('Validator.format.telephone', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$');
+
+        function telephone (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        telephone.message = function () {
+            return 'Must be a valid telephone number';
+        };
+
+        return new Validator(telephone);
+    }]);
+
+sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$', 'i');
+
+        function uuid (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        uuid.message = function () {
+            return 'Must be a valid UUID';
+        };
+
+        return new Validator(uuid);
+    }]);
+
+/**
+ * Inclusion Validator
+ */
+sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function inclusion (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return false;
+            }
+
+            if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {
+                throw 'Inclusion validator must specify an \'in\' attribute';
+            }
+
+            return underscore.some(this.in, function (item) {
+                return value === item;
+            })
+        }
+
+        inclusion.message = function () {
+            return 'Must be one of \''+ this.in.join(', ') + '\'';
+        };
+
+        return new Validator(inclusion);
+    }]);
+
+/**
+ * Length Validators
+ */
+sdkModelValidators.factory('Validator.length', ['Validatable.Validator', 'Validator.length.min', 'Validator.length.max',
+    function (Validator, min, max) {
+        function length () {
+            return true;
+        }
+
+        length.message = 'does not meet the length requirement';
+
+        length.options = {
+            min: min,
+            max: max
+        };
+
+        return new Validator(length);
+    }]);
+
+sdkModelValidators.factory('Validator.length.min', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function min (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return value.length >= this.min;
+        }
+
+        min.message = function () {
+            return 'Must be at least ' + this.min + ' characters';
+        };
+
+        return new Validator(min);
+    }]);
+
+sdkModelValidators.factory('Validator.length.max', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function max (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return value.length <= this.max;
+        }
+
+        max.message = function () {
+            return 'Must be no more than ' + this.max + ' characters';
+        };
+
+        return new Validator(max);
+    }]);
+
+/**
+ * Numeric Validator
+ */
+sdkModelValidators.factory('Validator.numeric', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function numeric (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (typeof value == 'number' && underscore.isNumber(value));
+        }
+
+        numeric.message = function () {
+            return 'Must be a number';
+        };
+
+        return new Validator(numeric);
+    }]);
+
+/**
+ * Range Validators
+ */
+sdkModelValidators.factory('Validator.range', ['Validatable.Validator', 'Validator.range.from', 'Validator.range.to',
+    function (Validator, from, to) {
+        function range () {
+            return true;
+        }
+
+        range.message = 'Must be with the range requirement';
+
+        range.options = {
+            from: from,
+            to: to
+        };
+
+        return new Validator(range);
+    }]);
+
+sdkModelValidators.factory('Validator.range.from', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function from (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return value >= this.from;
+        }
+
+        from.message = function () {
+            return 'Must be at least ' + this.from;
+        };
+
+        return new Validator(from);
+    }]);
+
+sdkModelValidators.factory('Validator.range.to', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function to (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return value <= this.to;
+        }
+
+        to.message = function () {
+            return 'Must be no more than ' + this.to;
+        };
+
+        return new Validator(to);
+    }]);
+
+/**
+ * Required Validator
+ */
+sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function required (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return false;
+            }
+
+            if (value.constructor.name === 'String') {
+                return !!(value && value.length || typeof value == 'object');
+            }
+
+            return value !== undefined;
+        }
+
+        required.message = 'cannot be blank';
+
+        return new Validator(required);
+    }]);
+
+/**
+ * Required If Validator
+ */
+sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function requiredIf (value, instance, field) {
+            if (!this(value, instance, field)) {
+                return true;
+            } else {
+                if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                    return false;
+                }
+
+                if (value.constructor.name == 'String') {
+                    return !!(value && value.length || typeof value == 'object');
+                }
+
+                return value !== undefined;
+            }
+        }
+
+        requiredIf.message = 'cannot be blank';
+
+        return new Validator(requiredIf);
+    }]);
 var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
 sdkTestDataApp.provider('mockDataService', ['underscore', function (underscore) {
@@ -9360,6 +11681,21 @@ angular.module('ag.sdk.interface', [
     'ag.sdk.interface.navigation'
 ]);
 
+angular.module('ag.sdk.model', [
+    'ag.sdk.model.asset',
+    'ag.sdk.model.base',
+    'ag.sdk.model.business-plan',
+    'ag.sdk.model.document',
+    'ag.sdk.model.farm-valuation',
+    'ag.sdk.model.legal-entity',
+    'ag.sdk.model.liability',
+    'ag.sdk.model.production-schedule',
+    'ag.sdk.model.errors',
+    'ag.sdk.model.store',
+    'ag.sdk.model.validation',
+    'ag.sdk.model.validators'
+]);
+
 angular.module('ag.sdk.test', [
     'ag.sdk.test.data'
 ]);
@@ -9368,6 +11704,7 @@ angular.module('ag.sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
     'ag.sdk.utilities',
+    'ag.sdk.model',
     'ag.sdk.api',
     'ag.sdk.helper',
     'ag.sdk.library',

@@ -29,31 +29,53 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
     this.$get = ['$filter', '$injector', 'taskHelper', 'underscore', function ($filter, $injector, taskHelper, underscore) {
         var _listServiceMap = function (item) {
-            if (_documentMap[item.docType]) {
-                var docMap = _documentMap[item.docType];
-                var map = {
-                    id: item.id || item.__id,
-                    title: (item.documentId ? item.documentId : ''),
-                    subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
-                    docType: item.docType,
-                    group: docMap.title
-                };
-
-                if (item.organization && item.organization.name) {
-                    map.title = item.organization.name;
-                    map.subtitle = (item.documentId ? item.documentId : '');
-                }
-
-                if (item.data && docMap && docMap.listServiceMap) {
-                    if (docMap.listServiceMap instanceof Array) {
-                        docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
+            var typeColorMap = {
+                'error': 'danger',
+                'information': 'info',
+                'warning': 'warning'
+            };
+            var flagLabels = underscore.chain(item.activeFlags)
+                .groupBy(function(activeFlag) {
+                    return activeFlag.flag.type;
+                })
+                .map(function (group, type) {
+                    var hasOpen = false;
+                    angular.forEach(group, function(activeFlag) {
+                        if(activeFlag.status == 'open') {
+                            hasOpen = true;
+                        }
+                    });
+                    return {
+                        label: typeColorMap[type],
+                        count: group.length,
+                        hasOpen: hasOpen
                     }
+                })
+                .value();
+            var docMap = _documentMap[item.docType];
+            var map = {
+                id: item.id || item.$id,
+                title: (item.documentId ? item.documentId : ''),
+                subtitle: (item.author ? 'By ' + item.author + ' on ': 'On ') + $filter('date')(item.createdAt),
+                docType: item.docType,
+                group: (docMap ? docMap.title : item.docType),
+                flags: flagLabels
+            };
 
-                    docMap.listServiceMap(map, item);
+            if (item.organization && item.organization.name) {
+                map.title = item.organization.name;
+                map.subtitle = item.documentId || '';
+            }
+
+            if (item.data && docMap && docMap.listServiceMap) {
+                if (docMap.listServiceMap instanceof Array) {
+                    docMap.listServiceMap = $injector.invoke(docMap.listServiceMap);
                 }
 
-                return map;
+                docMap.listServiceMap(map, item);
             }
+
+            return map;
         };
 
         var _listServiceWithTaskMap = function (item) {
