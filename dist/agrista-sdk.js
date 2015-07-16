@@ -7107,7 +7107,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     type: 'mapbox'
                 },
                 'Production Regions': {
-                    tiles: 'agrista.4f1abe5e',
+                    tiles: 'agrista.87ceb2ab',
                     type: 'mapbox'
                 }
             },
