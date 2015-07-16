@@ -1324,6 +1324,40 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseSe
         }
     };
 }]);
+
+/**
+ * Farmland Value API
+ */
+sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration', 'underscore',
+    function ($http, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        getFarmlandValue: function(id, query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/farmland-value/' + id + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFarmlandValues: function(query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/farmland-values' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
