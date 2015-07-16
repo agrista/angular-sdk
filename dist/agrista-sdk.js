@@ -696,7 +696,7 @@ sdkApiApp.factory('liabilityApi', ['$http', 'pagingService', 'promiseService', '
 /**
  * Document API
  */
-sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($cookieStore, $http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -759,45 +759,16 @@ sdkApiApp.factory('documentApi', ['$http', 'pagingService', 'promiseService', 'c
         },
         getDocumentPdf: function (data) {
             return promiseService.wrap(function (promise) {
-                var m = encodeURIComponent(data).match(/%[89ABab]/g);
-                var options = {responseType: "blob",
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Content-Length': data.length + (m ? m.length : 0),
-                        Connection: 'keep-alive',
-                        'Transfer-Encoding': 'chunked',
-                        'Accept': 'application/pdf'
-                    }
-                };
-                $http.post(_host + 'api/document/pdf/get', data, options)
-                    .success(function (res, status) {
-                        var blob = new Blob([res], {type: "application/pdf"});
-                        var objectUrl = URL.createObjectURL(blob);
-                        promise.resolve({status: status, url: objectUrl});
-                    })
-                    .error(function (res, status) {
-                        promise.reject({status: status});
-                    });
+                $http.post(_host + 'api/document/pdf/get', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
             });
         },
         saveDocumentPdf: function (data) {
             return promiseService.wrap(function (promise) {
-                var m = encodeURIComponent(data).match(/%[89ABab]/g);
-                var options = {
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Content-Length': data.length + (m ? m.length : 0),
-                        Connection: 'keep-alive',
-                        'Transfer-Encoding': 'chunked'
-                    }
-                };
-                $http.post(_host + 'api/document/pdf/save', data, options)
-                    .success(function (res, status) {
-                        promise.resolve(res);
-                    })
-                    .error(function (res, status) {
-                        promise.reject({status: status});
-                    });
+                $http.post(_host + 'api/document/pdf/save', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
             });
         }
     };
