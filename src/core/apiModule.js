@@ -1224,7 +1224,7 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
     var _host = configuration.getServer();
 
     return {
-        searchEnterpriseBudgets: function (query) {
+        searchComparables: function (query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
             }).join('&');
