@@ -1224,6 +1224,13 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
     var _host = configuration.getServer();
 
     return {
+        createComparable: function (comparable) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable', comparable, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         searchComparables: function (query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
