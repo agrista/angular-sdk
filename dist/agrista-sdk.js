@@ -1241,6 +1241,13 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparable/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
