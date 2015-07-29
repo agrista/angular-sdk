@@ -351,6 +351,13 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
+        getMerchantWithOpenRequestByFarmerId: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/merchant/' + id + '/with-open-request', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getMerchantActivities: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/merchant/' + id + '/activities', {withCredentials: true}).then(function (res) {
