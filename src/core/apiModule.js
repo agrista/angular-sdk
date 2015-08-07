@@ -1251,7 +1251,21 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
         },
         updateComparable: function (id, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id , data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ id, {action: 'modify', data: data}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        useComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id, {action: 'use'}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
