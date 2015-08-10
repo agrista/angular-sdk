@@ -617,6 +617,29 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                     " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
                     "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
             }
+        },
+        generateAssetName: function(asset, categoryLabel, currentAssetList) {
+            if (asset.type == 'improvement') {
+                var assetCount = underscore.chain(currentAssetList)
+                    .filter(function(asset) {
+                        return asset.type == 'improvement'
+                    }).reduce(function(currentAssetCount, asset) {
+                        var index = asset.data.name.search(/\s+[0-9]+$/);
+                        var name = asset.data.name;
+                        var number;
+                        if (index != -1) {
+                            name = name.substr(0, index);
+                            number = parseInt(asset.data.name.substring(index).trim());
+                        }
+                        if (categoryLabel && name == categoryLabel && (!number || number > currentAssetCount)) {
+                            currentAssetCount = number || 1;
+                        }
+                        return currentAssetCount;
+                    }, -1)
+                    .value();
+
+                asset.data.name = categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
+            }
         }
     }
 }]);
