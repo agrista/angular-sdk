@@ -62,6 +62,6 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-sloc');
 
     grunt.registerTask('build', ['concat', 'uglify']);
-    grunt.registerTask('default', ['karma:single', 'build']);
+    grunt.registerTask('default', ['karma:single','build']);
     grunt.registerTask('unit-test', ['karma:single']);
 };
