@@ -351,13 +351,6 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
-        getMerchantWithOpenRequestByFarmerId: function(id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/merchant/' + id + '/with-open-request', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
         getMerchantActivities: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/merchant/' + id + '/activities', {withCredentials: true}).then(function (res) {
@@ -479,6 +472,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
         hasOutstandingRequest: function(ids) {
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/farmers/with-open-request?ids=' + ids, {withCredentials: true}).then(function(res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getAssignedMerchant: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/farmer/' + id + '/assigned-merchant', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
