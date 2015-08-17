@@ -1225,6 +1225,62 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 }]);
 
 /**
+ * Comparable API
+ */
+sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        createComparable: function (comparable) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable', comparable, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchComparables: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparables/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparable/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateComparable: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        useComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id + '/use', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Market Assumptions API
  */
 sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
