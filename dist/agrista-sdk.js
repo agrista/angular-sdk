@@ -553,8 +553,8 @@ sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
-        getActiveFlagsByPage: function (purpose, params) {
-            return pagingService.page(_host + 'api/active-flags' + (purpose ? '&purpose=' + purpose : ''), params);
+        getActiveFlagsByPage: function (params) {
+            return pagingService.page(_host + 'api/active-flags', params);
         },
         updateActiveFlag: function(activeFlag) {
             return promiseService.wrap(function(promise) {
