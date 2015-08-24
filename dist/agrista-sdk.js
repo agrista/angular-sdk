@@ -1684,8 +1684,8 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _modules = [];
     var _servers = {
         local: '',
-        testing: 'https://enterprise-uat.agrista.com/',
-        staging: 'https://enterprise-staging.agrista.com/',
+        testing: 'https://dev-enterprise.agrista.com/',
+        staging: 'https://staging-enterprise.agrista.com/',
         production: 'https://enterprise.agrista.com/'
     };
 
