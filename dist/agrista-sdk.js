@@ -1572,21 +1572,21 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
+                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0));
+
                         if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
-                                    if (err === "CONNECTION_NOT_SECURE") {
-                                        _lastError = {
-                                            type: 'error',
-                                            message: 'SSL Certificate Error: Please contact your administrator'
-                                        };
+                                    console.log('ERROR: ' + err);
 
-                                        localStore.removeItem('user');
-                                        promise.reject({
-                                            data: _lastError
-                                        });
-                                    } else {
-                                        promise.resolve();
-                                    }
+                                    _lastError = {
+                                        type: 'error',
+                                        message: 'SSL Certificate Error: Please contact your administrator'
+                                    };
+
+                                    localStore.removeItem('user');
+                                    promise.reject({
+                                        data: _lastError
+                                    });
                                 },
                                 configuration.getServer(),
                                 _sslFingerprint, _sslFingerprintAlt);
