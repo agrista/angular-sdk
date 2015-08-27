@@ -475,6 +475,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getAssignedMerchant: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/farmer/' + id + '/assigned-merchant', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);

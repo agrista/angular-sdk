@@ -475,6 +475,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getAssignedMerchant: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/farmer/' + id + '/assigned-merchant', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -1575,21 +1582,21 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
+                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0));
+
                         if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
-                                    if (err === "CONNECTION_NOT_SECURE") {
-                                        _lastError = {
-                                            type: 'error',
-                                            message: 'SSL Certificate Error: Please contact your administrator'
-                                        };
+                                    console.log('ERROR: ' + err);
 
-                                        localStore.removeItem('user');
-                                        promise.reject({
-                                            data: _lastError
-                                        });
-                                    } else {
-                                        promise.resolve();
-                                    }
+                                    _lastError = {
+                                        type: 'error',
+                                        message: 'SSL Certificate Error: Please contact your administrator'
+                                    };
+
+                                    localStore.removeItem('user');
+                                    promise.reject({
+                                        data: _lastError
+                                    });
                                 },
                                 configuration.getServer(),
                                 _sslFingerprint, _sslFingerprintAlt);
@@ -1687,8 +1694,8 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _modules = [];
     var _servers = {
         local: '',
-        testing: 'https://enterprise-uat.agrista.com/',
-        staging: 'https://enterprise-staging.agrista.com/',
+        testing: 'https://dev-enterprise.agrista.com/',
+        staging: 'https://staging-enterprise.agrista.com/',
         production: 'https://enterprise.agrista.com/'
     };
 
@@ -6664,7 +6671,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
 
             return bounds;
         },
-        getCenter: function (bounds) {
+        getBoundingBox: function (bounds) {
             bounds = bounds || this.getBounds();
 
             var lat1 = 0, lat2 = 0,
@@ -6682,11 +6689,14 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 }
             });
 
-            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
+            return [[lat1, lng1], [lat2, lng2]];
+        },
+        getCenter: function (bounds) {
+            var boundingBox = this.getBoundingBox(bounds);
+
+            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
-            bounds = bounds || this.getBounds();
-
             return {
                 coordinates: this.getCenter(bounds).reverse(),
                 type: 'Point'
