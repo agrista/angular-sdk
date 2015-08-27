@@ -376,6 +376,23 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
 }]);
 
 /**
+ * Workload API
+ */
+sdkApiApp.factory('workloadApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        updateWorkload: function (workload) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/workload/' + workload.id, workload, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
+/**
  * Service API
  */
 sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
