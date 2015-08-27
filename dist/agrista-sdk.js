@@ -560,6 +560,9 @@ sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
+        getActiveFlagsByPage: function (params) {
+            return pagingService.page(_host + 'api/active-flags', params);
+        },
         updateActiveFlag: function(activeFlag) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/active-flag/' + activeFlag.id, activeFlag, {withCredentials: true}).then(function (res) {
@@ -1000,12 +1003,8 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                 }, promise.reject);
             });
         },
-        listValuationStatus: function() {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/aggregation/report-valuation-summary', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        listValuationStatus: function(params) {
+            return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
         }
     };
 }]);
