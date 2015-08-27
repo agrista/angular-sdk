@@ -996,11 +996,7 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                 }, promise.reject);
             });
         },
-        listValuationStatus: function(id, params) {
-            if (typeof id === 'object') {
-                params = id;
-                id = undefined;
-            }
+        listValuationStatus: function(params) {
             return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
         }
     };
