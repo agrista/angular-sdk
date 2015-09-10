@@ -376,6 +376,23 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
 }]);
 
 /**
+ * Workload API
+ */
+sdkApiApp.factory('workloadApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        updateWorkload: function (workload) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/workload/' + workload.id, workload, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
+/**
  * Service API
  */
 sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
@@ -475,6 +492,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getAssignedMerchant: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/farmer/' + id + '/assigned-merchant', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -552,6 +576,9 @@ sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getActiveFlagsByPage: function (params) {
+            return pagingService.page(_host + 'api/active-flags', params);
         },
         updateActiveFlag: function(activeFlag) {
             return promiseService.wrap(function(promise) {
@@ -993,12 +1020,8 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                 }, promise.reject);
             });
         },
-        listValuationStatus: function() {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/aggregation/report-valuation-summary', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        listValuationStatus: function(params) {
+            return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
         }
     };
 }]);
@@ -1214,6 +1237,62 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             })
         }
 
+    };
+}]);
+
+/**
+ * Comparable API
+ */
+sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        createComparable: function (comparable) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable', comparable, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchComparables: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparables/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparable/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateComparable: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        useComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id + '/use', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
     };
 }]);
 
@@ -1516,21 +1595,21 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
+                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0));
+
                         if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
-                                    if (err === "CONNECTION_NOT_SECURE") {
-                                        _lastError = {
-                                            type: 'error',
-                                            message: 'SSL Certificate Error: Please contact your administrator'
-                                        };
+                                    console.log('ERROR: ' + err);
 
-                                        localStore.removeItem('user');
-                                        promise.reject({
-                                            data: _lastError
-                                        });
-                                    } else {
-                                        promise.resolve();
-                                    }
+                                    _lastError = {
+                                        type: 'error',
+                                        message: 'SSL Certificate Error: Please contact your administrator'
+                                    };
+
+                                    localStore.removeItem('user');
+                                    promise.reject({
+                                        data: _lastError
+                                    });
                                 },
                                 configuration.getServer(),
                                 _sslFingerprint, _sslFingerprintAlt);
@@ -1628,8 +1707,8 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
     var _modules = [];
     var _servers = {
         local: '',
-        testing: 'https://enterprise-uat.agrista.com/',
-        staging: 'https://enterprise-staging.agrista.com/',
+        testing: 'https://dev-enterprise.agrista.com/',
+        staging: 'https://staging-enterprise.agrista.com/',
         production: 'https://enterprise.agrista.com/'
     };
 
@@ -6892,7 +6971,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
 
             return bounds;
         },
-        getCenter: function (bounds) {
+        getBoundingBox: function (bounds) {
             bounds = bounds || this.getBounds();
 
             var lat1 = 0, lat2 = 0,
@@ -6910,11 +6989,14 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 }
             });
 
-            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
+            return [[lat1, lng1], [lat2, lng2]];
+        },
+        getCenter: function (bounds) {
+            var boundingBox = this.getBoundingBox(bounds);
+
+            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
-            bounds = bounds || this.getBounds();
-
             return {
                 coordinates: this.getCenter(bounds).reverse(),
                 type: 'Point'

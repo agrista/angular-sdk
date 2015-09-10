@@ -49,7 +49,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
 
             return bounds;
         },
-        getCenter: function (bounds) {
+        getBoundingBox: function (bounds) {
             bounds = bounds || this.getBounds();
 
             var lat1 = 0, lat2 = 0,
@@ -67,11 +67,14 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 }
             });
 
-            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
+            return [[lat1, lng1], [lat2, lng2]];
+        },
+        getCenter: function (bounds) {
+            var boundingBox = this.getBoundingBox(bounds);
+
+            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
-            bounds = bounds || this.getBounds();
-
             return {
                 coordinates: this.getCenter(bounds).reverse(),
                 type: 'Point'

@@ -376,6 +376,23 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
 }]);
 
 /**
+ * Workload API
+ */
+sdkApiApp.factory('workloadApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        updateWorkload: function (workload) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/workload/' + workload.id, workload, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
+/**
  * Service API
  */
 sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
@@ -475,6 +492,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getAssignedMerchant: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/farmer/' + id + '/assigned-merchant', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -552,6 +576,9 @@ sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        getActiveFlagsByPage: function (params) {
+            return pagingService.page(_host + 'api/active-flags', params);
         },
         updateActiveFlag: function(activeFlag) {
             return promiseService.wrap(function(promise) {
@@ -993,12 +1020,8 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                 }, promise.reject);
             });
         },
-        listValuationStatus: function() {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/aggregation/report-valuation-summary', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        listValuationStatus: function(params) {
+            return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
         }
     };
 }]);
@@ -1214,6 +1237,62 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             })
         }
 
+    };
+}]);
+
+/**
+ * Comparable API
+ */
+sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        createComparable: function (comparable) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable', comparable, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchComparables: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparables/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparable/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateComparable: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        useComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id + '/use', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteComparable: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
     };
 }]);
 
