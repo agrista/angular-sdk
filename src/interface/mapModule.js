@@ -49,7 +49,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
 
             return bounds;
         },
-        getCenter: function (bounds) {
+        getBoundingBox: function (bounds) {
             bounds = bounds || this.getBounds();
 
             var lat1 = 0, lat2 = 0,
@@ -67,11 +67,14 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                 }
             });
 
-            return [lat1 + ((lat2 - lat1) / 2), lng1 + ((lng2 - lng1) / 2)];
+            return [[lat1, lng1], [lat2, lng2]];
+        },
+        getCenter: function (bounds) {
+            var boundingBox = this.getBoundingBox(bounds);
+
+            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
-            bounds = bounds || this.getBounds();
-
             return {
                 coordinates: this.getCenter(bounds).reverse(),
                 type: 'Point'
@@ -532,87 +535,23 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             baseTile: 'Agriculture',
             baseLayers: {
                 'Agriculture': {
-                    type: 'mapbox',
-                    tiles: {
-                        'autoscale': true,
-                        'bounds': [-180, -85, 180, 85],
-                        'cache': {
-                            'maxzoom': 16,
-                            'minzoom': 5
-                        },
-                        'center': [24.631347656249993, -28.97931203672245, 6],
-                        'data': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/markers.geojsonp'],
-                        'geocoder': 'https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/geocode/{query}.jsonp',
-                        'id': 'agrista.map-65ftbmpi',
-                        'maxzoom': 19,
-                        'minzoom': 0,
-                        'name': 'SA Agri Backdrop',
-                        'private': true,
-                        'scheme': 'xyz',
-                        'tilejson': '2.0.0',
-                        'tiles': ['https://a.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png', 'https://b.tiles.mapbox.com/v3/agrista.map-65ftbmpi/{z}/{x}/{y}.png'],
-                        'vector_layers': [
-                            {
-                                'fields': {},
-                                'id': 'mapbox_streets'
-                            },
-                            {
-                                'description': '',
-                                'fields': {},
-                                'id': 'agrista_agri_backdrop'
-                            }
-                        ]
-                    }
+                    tiles: 'agrista.f9f5628d',
+                    type: 'mapbox'
                 },
                 'Satellite': {
-                    type: 'mapbox',
-                    tiles: {
-                        'autoscale': true,
-                        'bounds': [-180, -85, 180, 85],
-                        'cache': {
-                            'maxzoom': 16,
-                            'minzoom': 15
-                        },
-                        'center': [23.843663473727442, -29.652475838000733, 7],
-                        'data': ['https://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/markers.geojsonp'],
-                        'geocoder': 'https://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/geocode/{query}.jsonp',
-                        'id': 'agrista.map-tlsadyhb',
-                        'maxzoom': 22,
-                        'minzoom': 0,
-                        'name': 'Satellite backdrop',
-                        'private': true,
-                        'scheme': 'xyz',
-                        'tilejson': '2.0.0',
-                        'tiles': [
-                            'https://a.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png',
-                            'https://b.tiles.mapbox.com/v3/agrista.map-tlsadyhb/{z}/{x}/{y}.png'
-                        ],
-                        'vector_layers': [
-                            {
-                                'fields': {},
-                                'id': 'mapbox_satellite_full'
-                            },
-                            {
-                                'fields': {},
-                                'id': 'mapbox_satellite_plus'
-                            },
-                            {
-                                'fields': {},
-                                'id': 'mapbox_satellite_open'
-                            },
-                            {
-                                'fields': {},
-                                'id': 'mapbox_satellite_watermask'
-                            },
-                            {
-                                'fields': {},
-                                'id': 'mapbox_streets'
-                            }
-                        ]
-                    }
+                    tiles: 'agrista.a7235891',
+                    type: 'mapbox'
                 },
                 'Hybrid': {
-                    tiles: 'agrista.h13nehk2',
+                    tiles: 'agrista.01e3fb18',
+                    type: 'mapbox'
+                },
+                'Light': {
+                    tiles: 'agrista.e7367e07',
+                    type: 'mapbox'
+                },
+                'Production Regions': {
+                    tiles: 'agrista.87ceb2ab',
                     type: 'mapbox'
                 }
             },
