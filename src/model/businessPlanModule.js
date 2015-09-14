@@ -23,6 +23,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateFarmValuations(instance);
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
+
+                // Re-calculate summary & ratio data
+                recalculateSummary(instance);
+                recalculateRatios(instance);
             }
 
             /**
@@ -445,6 +449,17 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         });
                     }
                 });
+            }
+
+            /**
+             * Recalculate summary & ratio data
+             */
+            function recalculateSummary (instance) {
+
+            }
+
+            function recalculateRatios (instance) {
+
             }
 
             // View added Assets & Liabilities
