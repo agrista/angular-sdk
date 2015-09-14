@@ -24,6 +24,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
 
+                recalulate(instance);
+            }
+
+            function recalulate (instance) {
                 // Re-calculate summary & ratio data
                 recalculateSummary(instance);
                 recalculateRatios(instance);
@@ -136,11 +140,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }, this);
 
                 reEvaluateProductionSchedules(this);
+                recalulate(this);
             });
 
             function initializeCategoryValues(instance, section, category, months) {
                 instance.data[section] = instance.data[section] || {};
                 instance.data[section][category] = instance.data[section][category] || underscore.range(months).map(function () {
+                    return 0;
+                });
+            }
+
+            function initializeArray(length) {
+                return underscore.range(length).map(function () {
                     return 0;
                 });
             }
@@ -194,6 +205,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.farmValuations.push(farmValuation);
 
                     reEvaluateFarmValuations(this);
+                    recalulate(this);
                 }
             });
 
@@ -203,6 +215,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateFarmValuations(this);
+                recalulate(this);
             });
 
             function reEvaluateFarmValuations (instance) {
@@ -301,6 +314,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.assets.push(asset instanceof Asset ? asset.asJSON() : asset);
 
                     reEvaluateAssetsAndLiabilities(this);
+                    recalulate(this);
                 }
             });
 
@@ -310,6 +324,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
+                recalulate(this);
             });
 
             privateProperty(this, 'addLiability', function (liability) {
@@ -321,6 +336,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.liabilities.push(liability instanceof Liability ? liability.asJSON() : liability);
 
                     reEvaluateAssetsAndLiabilities(this);
+                    recalulate(this);
                 }
             });
 
@@ -330,6 +346,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
+                recalulate(this);
             });
 
             function reEvaluateAssetsAndLiabilities (instance) {
@@ -454,12 +471,58 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             /**
              * Recalculate summary & ratio data
              */
-            function recalculateSummary (instance) {
+            function calculateYearlyTotal (monthlyTotals, year) {
+                return underscore.reduce(monthlyTotals.slice((year - 1) * 12, year * 12), function (total, value) {
+                    return total + (value || 0);
+                }, 0);
+            }
 
+            function calculateMonthlyCategoriesTotal (categories, results) {
+                underscore.reduce(categories, function (currentTotals, category) {
+                    underscore.each(category, function (month, index) {
+                        currentTotals[index] += month;
+                    });
+                }, results);
+
+                return results;
+            }
+
+            function calculateMonthlySectionsTotal (sections, results) {
+                return underscore.reduce(sections, function (sectionTotals, section) {
+                    return calculateMonthlyCategoriesTotal(section, sectionTotals);
+                }, results);
+            }
+
+            function recalculateSummary (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                // Summary of year 1 & year 2 for each category
+                instance.data.summary = {};
+                instance.data.summary.monthly = {
+                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], initializeArray(numberOfMonths)),
+                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], initializeArray(numberOfMonths)),
+                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
+                    debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
+                    assets: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    liabilities: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.debtRedemption], initializeArray(numberOfMonths))
+                };
+
+                instance.data.summary.yearly = {
+                    capitalIncome: [calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 2)],
+                    capitalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 2)],
+                    otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
+                    otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
+                    debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
+                    assets: [calculateYearlyTotal(instance.data.summary.monthly.assets, 1), calculateYearlyTotal(instance.data.summary.monthly.assets, 2)],
+                    liabilities: [calculateYearlyTotal(instance.data.summary.monthly.liabilities, 1), calculateYearlyTotal(instance.data.summary.monthly.liabilities, 2)]
+                };
             }
 
             function recalculateRatios (instance) {
-
+                instance.data.ratios = {};
             }
 
             // View added Assets & Liabilities
