@@ -4649,7 +4649,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             },
 
             getDocumentTitle: function (docType) {
-                return (_documentMap[docType] ? _documentMap[docType].title : undefined);
+                return (_documentMap[docType] ? _documentMap[docType].title : '');
             },
             getDocumentState: function (docType) {
                 return (_documentMap[docType] ? _documentMap[docType].state : undefined);
