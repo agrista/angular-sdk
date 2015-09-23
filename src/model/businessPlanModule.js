@@ -34,6 +34,19 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             /**
+             * Helper functions
+             */
+            function initializeArray(length) {
+                return underscore.range(length).map(function () {
+                    return 0;
+                });
+            }
+
+            function infinityToZero(value) {
+                return (isFinite(value) ? value : 0);
+            }
+
+            /**
              * Legal Entities handling
              */
             privateProperty(this, 'addLegalEntity', function (legalEntity) {
@@ -146,12 +159,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function initializeCategoryValues(instance, section, category, months) {
                 instance.data[section] = instance.data[section] || {};
                 instance.data[section][category] = instance.data[section][category] || underscore.range(months).map(function () {
-                    return 0;
-                });
-            }
-
-            function initializeArray(length) {
-                return underscore.range(length).map(function () {
                     return 0;
                 });
             }
@@ -523,6 +530,19 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             function recalculateRatios (instance) {
                 instance.data.ratios = {};
+                instance.data.ratios.monthly = {
+                    debt: underscore.map(instance.data.summary.monthly.liabilities, function (liability, index) {
+                        return infinityToZero(liability / instance.data.summary.monthly.assets[index]);
+                    })
+                };
+
+                instance.data.ratios.yearly = {
+                    debt: underscore.map(instance.data.summary.yearly.liabilities, function (liability, index) {
+                        return infinityToZero(liability / instance.data.summary.yearly.assets[index]);
+                    })
+                };
+
+                console.log(instance.data.ratios.yearly);
             }
 
             // View added Assets & Liabilities
