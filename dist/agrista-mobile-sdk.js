@@ -11578,7 +11578,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
         return function (obj, type, options) {
-            return farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}});
+            return (angular.isNumber(obj.farmId) ? farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}}) : null);
         }
     }]);
 
