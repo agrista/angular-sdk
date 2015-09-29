@@ -558,20 +558,68 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function recalculateRatios (instance) {
-                instance.data.ratios = {};
-                instance.data.ratios.monthly = {
-                    debt: underscore.map(instance.data.summary.monthly.liabilities, function (liability, index) {
-                        return infinityToZero(liability / instance.data.summary.monthly.assets[index]);
-                    })
+                instance.data.ratios = {
+                    productionCost: calculateRatio(instance, 'totalExpenditure', 'totalIncome'),
+                    netCapital: calculateRatio(instance, 'assets', 'liabilities'),
+                    gearing: calculateRatio(instance, 'liabilities', ['assets', '-liabilities']),
+                    debt: calculateRatio(instance, 'liabilities', 'assets')
                 };
+            }
 
-                instance.data.ratios.yearly = {
-                    debt: underscore.map(instance.data.summary.yearly.liabilities, function (liability, index) {
-                        return infinityToZero(liability / instance.data.summary.yearly.assets[index]);
-                    })
-                };
+            function calculateRatio(instance, numeratorProperties, denominatorProperties) {
+                if (!underscore.isArray(numeratorProperties)) {
+                    numeratorProperties = [numeratorProperties];
+                }
+                if (!underscore.isArray(denominatorProperties)) {
+                    denominatorProperties = [denominatorProperties];
+                }
 
-                console.log(instance.data.ratios.yearly);
+                function fetchPropertiesForInterval (propertyList, interval) {
+                    if (!instance.data.summary[interval]) {
+                        return [];
+                    }
+
+                    return underscore.map(propertyList, function(propertyName) {
+                        if (underscore.startsWith(propertyName, '-')) {
+                            propertyName = underscore.ltrim(propertyName, '-');
+                            return negateArrayValues(instance.data.summary[interval][propertyName]);
+                        }
+                        return instance.data.summary[interval][propertyName];
+                    });
+                }
+
+                return {
+                    monthly: divideArrayValues(addArrayValues(fetchPropertiesForInterval(numeratorProperties, 'monthly')), addArrayValues(fetchPropertiesForInterval(denominatorProperties, 'monthly'))),
+                    yearly: divideArrayValues(addArrayValues(fetchPropertiesForInterval(numeratorProperties, 'yearly')), addArrayValues(fetchPropertiesForInterval(denominatorProperties, 'yearly')))
+                }
+            }
+
+            function divideArrayValues (numeratorValues, denominatorValues) {
+                if (numeratorValues.length != denominatorValues.length) {
+                    return [];
+                }
+
+                return underscore.reduce(denominatorValues, function(result, value, index) {
+                    result[index] = infinityToZero(result[index] / value);
+                    return result;
+                }, numeratorValues);
+            }
+
+            function addArrayValues (array1, array2) {
+                if (!array1 || !array2 || array1.length != array2.length) {
+                    return [];
+                }
+
+                return underscore.reduce(array1, function(result, value, index) {
+                    result[index] += value;
+                    return result;
+                }, array2);
+            }
+
+            function negateArrayValues (array) {
+                return underscore.map(array, function(value) {
+                    return value * -1;
+                });
             }
 
             // View added Assets & Liabilities
