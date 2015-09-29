@@ -186,6 +186,33 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             }
 
+            function calculateIncomeComposition(instance, schedule) {
+                var section = underscore.findWhere(schedule.data.sections, {code: 'INC'});
+
+                if (section) {
+                    angular.forEach(section.productCategoryGroups, function (group) {
+                        angular.forEach(group.productCategories, function (category) {
+                            var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name);
+
+                            var compositionCategory = instance.data.productionIncomeComposition[categoryName] ||
+                            {
+                                unit: category.unit,
+                                pricePerUnit: 0,
+                                quantity: 0,
+                                value: 0
+                            };
+
+                            compositionCategory.quantity += category.quantity;
+                            compositionCategory.value += category.value;
+                            compositionCategory.pricePerUnit = ((!compositionCategory.pricePerUnit && category.pricePerUnit) ||
+                                !category.quantity ? category.pricePerUnit : category.value / category.quantity);
+
+                            instance.data.productionIncomeComposition[categoryName] = compositionCategory;
+                        });
+                    });
+                }
+            }
+
             function reEvaluateProductionSchedules (instance) {
                 var startMonth = moment(instance.startDate),
                     endMonth = moment(instance.endDate),
@@ -193,12 +220,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                 instance.data.productionIncome = {};
                 instance.data.productionExpenditure = {};
+                instance.data.productionIncomeComposition = {};
 
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
                     extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
                     extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
+                    calculateIncomeComposition(instance, schedule);
                 });
             }
 
@@ -400,7 +429,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
                                     initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
 
-                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'Machinery & Equipment Purchases')] += asset.data.assetValue;
+                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
                                 }
 
                                 if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
@@ -513,8 +542,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
                     otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
                     debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
-                    assets: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
-                    liabilities: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.debtRedemption], initializeArray(numberOfMonths))
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.debtRedemption], initializeArray(numberOfMonths))
                 };
 
                 instance.data.summary.yearly = {
@@ -523,8 +552,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
                     otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
                     debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
-                    assets: [calculateYearlyTotal(instance.data.summary.monthly.assets, 1), calculateYearlyTotal(instance.data.summary.monthly.assets, 2)],
-                    liabilities: [calculateYearlyTotal(instance.data.summary.monthly.liabilities, 1), calculateYearlyTotal(instance.data.summary.monthly.liabilities, 2)]
+                    totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
+                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)]
                 };
             }
 
