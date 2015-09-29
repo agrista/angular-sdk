@@ -33,7 +33,7 @@ describe('ag.sdk.model.liability', function () {
         });
 
         it('validates', function () {
-            expect(liability.validate()).toBe(true);
+            expect(liability.validate('subtype')).toBe(true);
         });
 
         it('validates type', function () {
@@ -90,6 +90,49 @@ describe('ag.sdk.model.liability', function () {
             expect(liability.validate()).toBe(false);
         });
     });
+
+
+    describe('Liability for production credit', function () {
+        var liability;
+
+        beforeEach(function () {
+            liability = Liability.new({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'production-credit',
+                amount: 1000000,
+                interestRate: 1,
+                legalEntityId: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                data: {
+                    subtype: 'off-taker'
+                }
+            });
+        });
+
+        it('validates', function () {
+            expect(liability.validate()).toBe(true);
+        });
+
+        it('validates subtype', function () {
+            expect(liability.validate()).toBe(true);
+
+            liability.data.subtype = 'not valid subtype';
+            expect(liability.validate()).toBe(false);
+
+            liability.type = 'medium-loan';
+            liability.installmentPayment = 1000;
+            expect(liability.validate()).toBe(true);
+
+            liability.type = 'production-credit';
+            expect(liability.validate()).toBe(false);
+
+            liability.data.subtype = 'input-supplier';
+            expect(liability.validate()).toBe(true);
+        });
+    });
+
 /*
     describe('Liability financing', function () {
         var liability;

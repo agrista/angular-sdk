@@ -10,8 +10,28 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'yearly': 1
         };
 
+        var _types = {
+            'short-loan': 'Short Term Loan',
+            'medium-loan': 'Medium Term Loan',
+            'long-loan': 'Long Term Loan',
+            'production-credit': 'Production Credit',
+            'rent': 'Rented'
+        };
+
+        var _typesWithInstallmentPayments = ['short-loan', 'medium-loan', 'long-loan', 'rent'];
+
+        var _subtypes = {
+            'production-credit': {
+                'off-taker': 'Off Taker',
+                'input-supplier': 'Input Supplier',
+                'input-financing': 'Input Financing'
+            }
+        };
+
         function Liability (attrs) {
             Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
 
             computedProperty(this, 'currentBalance', function () {
                 return (this.type !== 'rent' ? this.liabilityInMonth(moment().startOf('month')) : 0);
@@ -64,6 +84,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
                     (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
                     (this.name ? this.name : Liability.getTypeTitle(this.type));
+            });
+
+            computedProperty(this, 'subtype', function () {
+                return this.data.subtype;
             });
 
             privateProperty(this, 'liabilityInMonth', function (month) {
@@ -166,13 +190,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'monthly': 'Monthly',
             'quarterly': 'Quarterly',
             'bi-yearly': 'Bi-Yearly',
-            'yearly': 'Yearly'});
+            'yearly': 'Yearly'
+        });
 
-        readOnlyProperty(Liability, 'liabilityTypes', {
-            'short-loan': 'Short Term Loan',
-            'medium-loan': 'Medium Term Loan',
-            'long-loan': 'Long Term Loan',
-            'rent': 'Rented'});
+        readOnlyProperty(Liability, 'liabilityTypes', _types);
 
         readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
             'other': 'Other'
@@ -202,12 +223,16 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             return instance.type !== 'other';
         }
 
+        function hasSubtype (value, instance, field) {
+            return !!(_subtypes[instance.type] && underscore.keys(_subtypes[instance.type]).length > 0);
+        }
+
         Liability.validates({
             installmentPayment: {
                 requiredIf: function (value, instance, field) {
-                    return isNotOtherType(value, instance, field) &&
+                    return underscore.contains(_typesWithInstallmentPayments, instance.type) &&
                         (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
-                        (angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
+                        (instance.type !== 'production-credit' && angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
                 },
                 range: {
                     from: 0
@@ -254,6 +279,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 inclusion: {
                     in: underscore.keys(Liability.liabilityTypesWithOther)
                 }
+            },
+            subtype: {
+                requiredIf: hasSubtype,
+                inclusion: {
+                    in: function (value, instance, field) {
+                        return _subtypes[instance.type] && underscore.keys(_subtypes[instance.type]) || [];
+                    }
+                }
+            },
+            data: {
+                required: true,
+                object: true
             },
             name: {
                 requiredIf: isOtherType,
