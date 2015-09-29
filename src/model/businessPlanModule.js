@@ -580,8 +580,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     }
 
                     return underscore.map(propertyList, function(propertyName) {
-                        if (underscore.startsWith(propertyName, '-')) {
-                            propertyName = underscore.ltrim(propertyName, '-');
+                        if (propertyName.charAt(0) === '-') {
+                            propertyName = propertyName.substr(1);
                             return negateArrayValues(instance.data.summary[interval][propertyName]);
                         }
                         return instance.data.summary[interval][propertyName];
