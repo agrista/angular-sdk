@@ -195,17 +195,17 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name);
 
                             var compositionCategory = instance.data.productionIncomeComposition[categoryName] ||
-                            {
-                                unit: category.unit,
-                                pricePerUnit: 0,
-                                quantity: 0,
-                                value: 0
-                            };
+                                {
+                                    unit: category.unit,
+                                    pricePerUnit: 0,
+                                    quantity: 0,
+                                    value: 0
+                                };
 
                             compositionCategory.quantity += category.quantity;
                             compositionCategory.value += category.value;
                             compositionCategory.pricePerUnit = ((!compositionCategory.pricePerUnit && category.pricePerUnit) ||
-                                !category.quantity ? category.pricePerUnit : category.value / category.quantity);
+                                !category.quantity ? category.pricePerUnit : infinityToZero(category.value / category.quantity));
 
                             instance.data.productionIncomeComposition[categoryName] = compositionCategory;
                         });
