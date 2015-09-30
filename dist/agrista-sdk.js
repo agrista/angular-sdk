@@ -10122,6 +10122,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateFarmValuations(instance);
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
+
+                recalulate(instance);
+            }
+
+            function recalulate (instance) {
+                // Re-calculate summary & ratio data
+                recalculateSummary(instance);
+                recalculateRatios(instance);
+            }
+
+            /**
+             * Helper functions
+             */
+            function initializeArray(length) {
+                return underscore.range(length).map(function () {
+                    return 0;
+                });
+            }
+
+            function infinityToZero(value) {
+                return (isFinite(value) ? value : 0);
             }
 
             /**
@@ -10231,6 +10252,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }, this);
 
                 reEvaluateProductionSchedules(this);
+                recalulate(this);
             });
 
             function initializeCategoryValues(instance, section, category, months) {
@@ -10263,6 +10285,33 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             }
 
+            function calculateIncomeComposition(instance, schedule) {
+                var section = underscore.findWhere(schedule.data.sections, {code: 'INC'});
+
+                if (section) {
+                    angular.forEach(section.productCategoryGroups, function (group) {
+                        angular.forEach(group.productCategories, function (category) {
+                            var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name);
+
+                            var compositionCategory = instance.data.productionIncomeComposition[categoryName] ||
+                                {
+                                    unit: category.unit,
+                                    pricePerUnit: 0,
+                                    quantity: 0,
+                                    value: 0
+                                };
+
+                            compositionCategory.quantity += category.quantity;
+                            compositionCategory.value += category.value;
+                            compositionCategory.pricePerUnit = ((!compositionCategory.pricePerUnit && category.pricePerUnit) ||
+                                !category.quantity ? category.pricePerUnit : infinityToZero(category.value / category.quantity));
+
+                            instance.data.productionIncomeComposition[categoryName] = compositionCategory;
+                        });
+                    });
+                }
+            }
+
             function reEvaluateProductionSchedules (instance) {
                 var startMonth = moment(instance.startDate),
                     endMonth = moment(instance.endDate),
@@ -10270,12 +10319,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                 instance.data.productionIncome = {};
                 instance.data.productionExpenditure = {};
+                instance.data.productionIncomeComposition = {};
 
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
                     extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
                     extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
+                    calculateIncomeComposition(instance, schedule);
                 });
             }
 
@@ -10289,6 +10340,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.farmValuations.push(farmValuation);
 
                     reEvaluateFarmValuations(this);
+                    recalulate(this);
                 }
             });
 
@@ -10298,6 +10350,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateFarmValuations(this);
+                recalulate(this);
             });
 
             function reEvaluateFarmValuations (instance) {
@@ -10396,6 +10449,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.assets.push(asset instanceof Asset ? asset.asJSON() : asset);
 
                     reEvaluateAssetsAndLiabilities(this);
+                    recalulate(this);
                 }
             });
 
@@ -10405,6 +10459,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
+                recalulate(this);
             });
 
             privateProperty(this, 'addLiability', function (liability) {
@@ -10416,6 +10471,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.liabilities.push(liability instanceof Liability ? liability.asJSON() : liability);
 
                     reEvaluateAssetsAndLiabilities(this);
+                    recalulate(this);
                 }
             });
 
@@ -10425,6 +10481,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
+                recalulate(this);
             });
 
             function reEvaluateAssetsAndLiabilities (instance) {
@@ -10471,7 +10528,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
                                     initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
 
-                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'Machinery & Equipment Purchases')] += asset.data.assetValue;
+                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
                                 }
 
                                 if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
@@ -10543,6 +10600,124 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             liability: liability.liabilityInRange(instance.startDate, instance.endDate)
                         });
                     }
+                });
+            }
+
+            /**
+             * Recalculate summary & ratio data
+             */
+            function calculateYearlyTotal (monthlyTotals, year) {
+                return underscore.reduce(monthlyTotals.slice((year - 1) * 12, year * 12), function (total, value) {
+                    return total + (value || 0);
+                }, 0);
+            }
+
+            function calculateMonthlyCategoriesTotal (categories, results) {
+                underscore.reduce(categories, function (currentTotals, category) {
+                    underscore.each(category, function (month, index) {
+                        currentTotals[index] += month;
+                    });
+                }, results);
+
+                return results;
+            }
+
+            function calculateMonthlySectionsTotal (sections, results) {
+                return underscore.reduce(sections, function (sectionTotals, section) {
+                    return calculateMonthlyCategoriesTotal(section, sectionTotals);
+                }, results);
+            }
+
+            function recalculateSummary (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                // Summary of year 1 & year 2 for each category
+                instance.data.summary = {};
+                instance.data.summary.monthly = {
+                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], initializeArray(numberOfMonths)),
+                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], initializeArray(numberOfMonths)),
+                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
+                    debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.debtRedemption], initializeArray(numberOfMonths))
+                };
+
+                instance.data.summary.yearly = {
+                    capitalIncome: [calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 2)],
+                    capitalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 2)],
+                    otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
+                    otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
+                    debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
+                    totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
+                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)]
+                };
+            }
+
+            function recalculateRatios (instance) {
+                instance.data.ratios = {
+                    productionCost: calculateRatio(instance, 'totalExpenditure', 'totalIncome'),
+                    netCapital: calculateRatio(instance, 'assets', 'liabilities'),
+                    gearing: calculateRatio(instance, 'liabilities', ['assets', '-liabilities']),
+                    debt: calculateRatio(instance, 'liabilities', 'assets')
+                };
+            }
+
+            function calculateRatio(instance, numeratorProperties, denominatorProperties) {
+                if (!underscore.isArray(numeratorProperties)) {
+                    numeratorProperties = [numeratorProperties];
+                }
+                if (!underscore.isArray(denominatorProperties)) {
+                    denominatorProperties = [denominatorProperties];
+                }
+
+                function fetchPropertiesForInterval (propertyList, interval) {
+                    if (!instance.data.summary[interval]) {
+                        return [];
+                    }
+
+                    return underscore.map(propertyList, function(propertyName) {
+                        if (propertyName.charAt(0) === '-') {
+                            propertyName = propertyName.substr(1);
+                            return negateArrayValues(instance.data.summary[interval][propertyName]);
+                        }
+                        return instance.data.summary[interval][propertyName];
+                    });
+                }
+
+                return {
+                    monthly: divideArrayValues(addArrayValues(fetchPropertiesForInterval(numeratorProperties, 'monthly')), addArrayValues(fetchPropertiesForInterval(denominatorProperties, 'monthly'))),
+                    yearly: divideArrayValues(addArrayValues(fetchPropertiesForInterval(numeratorProperties, 'yearly')), addArrayValues(fetchPropertiesForInterval(denominatorProperties, 'yearly')))
+                }
+            }
+
+            function divideArrayValues (numeratorValues, denominatorValues) {
+                if (numeratorValues.length != denominatorValues.length) {
+                    return [];
+                }
+
+                return underscore.reduce(denominatorValues, function(result, value, index) {
+                    result[index] = infinityToZero(result[index] / value);
+                    return result;
+                }, numeratorValues);
+            }
+
+            function addArrayValues (array1, array2) {
+                if (!array1 || !array2 || array1.length != array2.length) {
+                    return [];
+                }
+
+                return underscore.reduce(array1, function(result, value, index) {
+                    result[index] += value;
+                    return result;
+                }, array2);
+            }
+
+            function negateArrayValues (array) {
+                return underscore.map(array, function(value) {
+                    return value * -1;
                 });
             }
 
