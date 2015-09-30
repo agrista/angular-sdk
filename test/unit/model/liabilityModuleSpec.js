@@ -91,7 +91,6 @@ describe('ag.sdk.model.liability', function () {
         });
     });
 
-
     describe('Liability for production credit', function () {
         var liability;
 
@@ -128,6 +127,43 @@ describe('ag.sdk.model.liability', function () {
             liability.type = 'production-credit';
             expect(liability.validate()).toBe(false);
 
+            liability.data.subtype = 'input-supplier';
+            expect(liability.validate()).toBe(true);
+        });
+    });
+
+    describe('Liability for production credit input financing', function () {
+        var liability;
+
+        beforeEach(function () {
+            liability = Liability.new({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'production-credit',
+                amount: 1000000,
+                interestRate: 1,
+                legalEntityId: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                data: {
+                    subtype: 'input-financing'
+                }
+            });
+        });
+
+        it('validates', function () {
+            expect(liability.validate()).toBe(false);
+
+            liability.limit = 10000;
+            expect(liability.validate()).toBe(true);
+
+            liability.limit = -10000;
+            expect(liability.validate()).toBe(false);
+
+            liability.limit = '10000';
+            expect(liability.validate()).toBe(false);
+
+            liability.limit = null;
             liability.data.subtype = 'input-supplier';
             expect(liability.validate()).toBe(true);
         });

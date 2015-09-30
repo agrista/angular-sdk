@@ -262,6 +262,15 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 },
                 numeric: true
             },
+            limit: {
+                requiredIf: function (value, instance, field) {
+                    return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing');
+                },
+                range: {
+                    from: 0
+                },
+                numeric: true
+            },
             merchantUuid: {
                 requiredIf: isNotOtherType,
                 format: {
