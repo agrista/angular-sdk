@@ -10304,8 +10304,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 if (section) {
                     var numberOfYears = Math.ceil(numberOfMonths / 12);
 
-                    for (var year = 0; year < numberOfYears; y++) {
-                        var monthsInYear = Math.min(12, numberOfMonths - (y * 12));
+                    for (var year = 0; year < numberOfYears; year++) {
+                        var monthsInYear = Math.min(12, numberOfMonths - (year * 12));
                         var offset = scheduleStart.diff(startMonth.add(year, 'years'), 'months');
 
                         instance.data.productionIncomeComposition[year] = {};
