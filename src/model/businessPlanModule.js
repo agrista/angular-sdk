@@ -163,9 +163,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
             }
 
+            function getLowerIndexBound (scheduleArray, offset) {
+                return (scheduleArray ? Math.min(scheduleArray.length, Math.abs(Math.min(0, offset))) : 0);
+            }
+
+            function getUpperIndexBound (scheduleArray, offset, numberOfMonths) {
+                return (scheduleArray ? Math.min(numberOfMonths, offset + scheduleArray.length) - offset : 0);
+            }
+
             function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
-                    scheduleStart = moment(schedule.startDate);
+                // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
+                    scheduleStart = moment(schedule.startDate).add(1, 'day');
 
                 if (section) {
                     var offset = scheduleStart.diff(startMonth, 'months');
@@ -178,7 +187,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 return 0;
                             });
 
-                            for (var i = Math.max(0, offset); i < Math.min(numberOfMonths, offset + category.valuePerMonth.length) - offset; i++) {
+                            var minIndex = getLowerIndexBound(category.valuePerMonth, offset);
+                            var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+                            for (var i = minIndex; i < maxIndex; i++) {
                                 instance.data[type][categoryName][i + offset] += (category.valuePerMonth[i] || 0);
                             }
                         });
@@ -186,15 +197,25 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             }
 
-            function calculateIncomeComposition(instance, schedule) {
-                var section = underscore.findWhere(schedule.data.sections, {code: 'INC'});
+            function calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths) {
+                var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
+                // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
+                    scheduleStart = moment(schedule.startDate).add(1, 'day');
 
                 if (section) {
-                    angular.forEach(section.productCategoryGroups, function (group) {
-                        angular.forEach(group.productCategories, function (category) {
-                            var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name);
+                    var numberOfYears = Math.ceil(numberOfMonths / 12);
 
-                            var compositionCategory = instance.data.productionIncomeComposition[categoryName] ||
+                    for (var year = 0; year < numberOfYears; y++) {
+                        var monthsInYear = Math.min(12, numberOfMonths - (y * 12));
+                        var offset = scheduleStart.diff(startMonth.add(year, 'years'), 'months');
+
+                        instance.data.productionIncomeComposition[year] = {};
+
+                        angular.forEach(section.productCategoryGroups, function (group) {
+                            angular.forEach(group.productCategories, function (category) {
+                                var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name);
+
+                                var compositionCategory = instance.data.productionIncomeComposition[year][categoryName] ||
                                 {
                                     unit: category.unit,
                                     pricePerUnit: 0,
@@ -202,14 +223,25 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                     value: 0
                                 };
 
-                            compositionCategory.quantity += category.quantity;
-                            compositionCategory.value += category.value;
-                            compositionCategory.pricePerUnit = ((!compositionCategory.pricePerUnit && category.pricePerUnit) ||
-                                !category.quantity ? category.pricePerUnit : infinityToZero(category.value / category.quantity));
+                                var minIndex = getLowerIndexBound(category.valuePerMonth, offset);
+                                var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+                                for (var i = minIndex; i < maxIndex; i++) {
+                                    compositionCategory.value += category.valuePerMonth[i];
+                                }
 
-                            instance.data.productionIncomeComposition[categoryName] = compositionCategory;
+                                minIndex = getLowerIndexBound(category.quantityPerMonth, offset);
+                                maxIndex = getUpperIndexBound(category.quantityPerMonth, offset, monthsInYear);
+                                for (i = minIndex; i < maxIndex; i++) {
+                                    compositionCategory.quantity += category.quantityPerMonth[i];
+                                }
+
+                                compositionCategory.pricePerUnit = ((!compositionCategory.pricePerUnit && category.pricePerUnit) ?
+                                    category.pricePerUnit : infinityToZero(compositionCategory.value / compositionCategory.quantity));
+
+                                instance.data.productionIncomeComposition[year][categoryName] = compositionCategory;
+                            });
                         });
-                    });
+                    }
                 }
             }
 
@@ -220,14 +252,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                 instance.data.productionIncome = {};
                 instance.data.productionExpenditure = {};
-                instance.data.productionIncomeComposition = {};
+                instance.data.productionIncomeComposition = [];
 
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
                     extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
                     extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
-                    calculateIncomeComposition(instance, schedule);
+                    calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths);
                 });
             }
 
@@ -642,6 +674,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             computedProperty(this, 'monthlyStatement', function () {
                 return this.data.monthlyStatement;
             });
+
+            privateProperty(this, 'recalculateModel', function() {
+                reEvaluateBusinessPlan(this);
+            })
         }
 
         inheritModel(BusinessPlan, Document);
