@@ -168,7 +168,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     scheduleStart = moment(schedule.startDate);
 
                 if (section) {
-                    var offset = startMonth.diff(scheduleStart, 'months');
+                    var offset = scheduleStart.diff(startMonth, 'months');
 
                     angular.forEach(section.productCategoryGroups, function (group) {
                         angular.forEach(group.productCategories, function (category) {
@@ -178,8 +178,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 return 0;
                             });
 
-                            for (var i = 0; i < numberOfMonths; i++) {
-                                instance.data[type][categoryName][i] += (category.valuePerMonth[i + offset] || 0);
+                            for (var i = Math.max(0, offset); i < Math.min(numberOfMonths, offset + category.valuePerMonth.length) - offset; i++) {
+                                instance.data[type][categoryName][i + offset] += (category.valuePerMonth[i] || 0);
                             }
                         });
                     });
