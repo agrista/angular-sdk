@@ -205,11 +205,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 if (section) {
                     var numberOfYears = Math.ceil(numberOfMonths / 12);
 
+                    while (instance.data.productionIncomeComposition.length < numberOfYears) {
+                        instance.data.productionIncomeComposition.push({});
+                    }
+
                     for (var year = 0; year < numberOfYears; year++) {
                         var monthsInYear = Math.min(12, numberOfMonths - (year * 12));
                         var offset = scheduleStart.diff(moment(startMonth).add(year, 'years'), 'months');
-
-                        instance.data.productionIncomeComposition[year] = {};
 
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
@@ -224,7 +226,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 };
 
                                 var minIndex = getLowerIndexBound(category.valuePerMonth, offset);
-                                var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+                                var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, monthsInYear);
                                 for (var i = minIndex; i < maxIndex; i++) {
                                     compositionCategory.value += category.valuePerMonth[i];
                                 }
