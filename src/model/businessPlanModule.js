@@ -243,6 +243,20 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 instance.data.productionIncomeComposition[year][categoryName] = compositionCategory;
                             });
                         });
+
+                        var totalValue = underscore.chain(instance.data.productionIncomeComposition[year])
+                            .values()
+                            .pluck('value')
+                            .reduce(function(total, value) { return total + value; }, 0)
+                            .value();
+
+                        for (var categoryName in instance.data.productionIncomeComposition[year]) {
+                            if (instance.data.productionIncomeComposition[year].hasOwnProperty(categoryName) && categoryName != 'total') {
+                                instance.data.productionIncomeComposition[year][categoryName].contributionPercent =
+                                    infinityToZero(instance.data.productionIncomeComposition[year][categoryName].value / totalValue) * 100;
+                            }
+                        }
+                        instance.data.productionIncomeComposition[year].total = {value: totalValue};
                     }
                 }
             }
