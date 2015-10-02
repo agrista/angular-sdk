@@ -174,7 +174,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'day');
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
 
                 if (section) {
                     var offset = scheduleStart.diff(startMonth, 'months');
@@ -200,14 +200,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'day');
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
 
                 if (section) {
                     var numberOfYears = Math.ceil(numberOfMonths / 12);
 
                     for (var year = 0; year < numberOfYears; year++) {
                         var monthsInYear = Math.min(12, numberOfMonths - (year * 12));
-                        var offset = scheduleStart.diff(startMonth.add(year, 'years'), 'months');
+                        var offset = scheduleStart.diff(moment(startMonth).add(year, 'years'), 'months');
 
                         instance.data.productionIncomeComposition[year] = {};
 
