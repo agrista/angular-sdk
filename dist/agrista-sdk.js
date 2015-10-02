@@ -10273,7 +10273,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'day');
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
 
                 if (section) {
                     var offset = scheduleStart.diff(startMonth, 'months');
@@ -10299,16 +10299,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'day');
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
 
                 if (section) {
                     var numberOfYears = Math.ceil(numberOfMonths / 12);
 
+                    while (instance.data.productionIncomeComposition.length < numberOfYears) {
+                        instance.data.productionIncomeComposition.push({});
+                    }
+
                     for (var year = 0; year < numberOfYears; year++) {
                         var monthsInYear = Math.min(12, numberOfMonths - (year * 12));
-                        var offset = scheduleStart.diff(startMonth.add(year, 'years'), 'months');
-
-                        instance.data.productionIncomeComposition[year] = {};
+                        var offset = scheduleStart.diff(moment(startMonth).add(year, 'years'), 'months');
 
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
@@ -10323,7 +10325,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 };
 
                                 var minIndex = getLowerIndexBound(category.valuePerMonth, offset);
-                                var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+                                var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, monthsInYear);
                                 for (var i = minIndex; i < maxIndex; i++) {
                                     compositionCategory.value += category.valuePerMonth[i];
                                 }
@@ -10340,6 +10342,20 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 instance.data.productionIncomeComposition[year][categoryName] = compositionCategory;
                             });
                         });
+
+                        var totalValue = underscore.chain(instance.data.productionIncomeComposition[year])
+                            .values()
+                            .pluck('value')
+                            .reduce(function(total, value) { return total + value; }, 0)
+                            .value();
+
+                        for (var categoryName in instance.data.productionIncomeComposition[year]) {
+                            if (instance.data.productionIncomeComposition[year].hasOwnProperty(categoryName) && categoryName != 'total') {
+                                instance.data.productionIncomeComposition[year][categoryName].contributionPercent =
+                                    infinityToZero(instance.data.productionIncomeComposition[year][categoryName].value / totalValue) * 100;
+                            }
+                        }
+                        instance.data.productionIncomeComposition[year].total = {value: totalValue};
                     }
                 }
             }
