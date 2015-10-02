@@ -139,7 +139,6 @@ describe('ag.sdk.model.liability', function () {
             liability = Liability.new({
                 uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
                 type: 'production-credit',
-                amount: 1000000,
                 interestRate: 1,
                 legalEntityId: 1,
                 frequency: 'monthly',
@@ -154,35 +153,35 @@ describe('ag.sdk.model.liability', function () {
         it('validates', function () {
             expect(liability.validate()).toBe(false);
 
-            liability.limit = 10000;
+            liability.amount = 10000;
             expect(liability.validate()).toBe(true);
 
-            liability.limit = -10000;
+            liability.amount = -10000;
             expect(liability.validate()).toBe(false);
 
-            liability.limit = '10000';
+            liability.amount = '10000';
             expect(liability.validate()).toBe(false);
 
-            liability.limit = null;
+            liability.amount = null;
             liability.data.subtype = 'input-supplier';
             expect(liability.validate()).toBe(true);
         });
     });
 
-/*
     describe('Liability financing', function () {
         var liability;
 
         beforeEach(function () {
             liability = Liability.new({
-                financed: true,
-                installment: 10000,
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'short-loan',
                 interestRate: 1,
-                legalEntityId: 2,
-                openingBalance: 100000,
-                organizationName: 'John Vickers',
-                paymentFrequency: 'Monthly',
-                paymentStart: '2015-01-04T10:20:00'
+                legalEntityId: 1,
+                frequency: 'monthly',
+                startDate: '2015-01-04T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                installmentPayment: 10000,
+                amount: 100000
             });
         });
 
@@ -190,15 +189,11 @@ describe('ag.sdk.model.liability', function () {
             expect(liability.validate()).toBe(true);
         });
 
-        it('computes property hasLiabilities', function () {
-            expect(liability.hasLiabilities).toBe(true);
-        });
-
-        it('validates installment', function () {
-            liability.paymentFrequency = '1000';
+        it('validates installmentPayment', function () {
+            liability.installmentPayment = '1000';
             expect(liability.validate()).toBe(false);
 
-            liability.paymentFrequency = 'one thousand';
+            liability.installmentPayment = 'one thousand';
             expect(liability.validate()).toBe(false);
         });
 
@@ -219,56 +214,48 @@ describe('ag.sdk.model.liability', function () {
             expect(liability.validate()).toBe(false);
         });
 
-        it('validates openingBalance', function () {
-            liability.openingBalance = '1000000';
+        it('validates amount', function () {
+            liability.amount = '1000000';
             expect(liability.validate()).toBe(false);
 
-            liability.openingBalance = 'one million';
-            expect(liability.validate()).toBe(false);
-        });
-
-        it('validates organizationName', function () {
-            liability.organizationName = '';
-            expect(liability.validate()).toBe(false);
-
-            liability.organizationName = 'Lorem ipsum dolor sit amet, consectetur adiepiscing elit. Vivamus sit amet sollicitudin tellus. Nulla facilisi. Vestibulum erat urna, euismod at posuere ullamcorper, ultrices in lacus. Aenean molestie odio ac vestibulum molestie. Quisque id fringilla amet.';
+            liability.amount = 'one million';
             expect(liability.validate()).toBe(false);
         });
 
-        it('validates paymentFrequency', function () {
-            liability.paymentFrequency = 'Whenever';
+        it('validates frequency', function () {
+            liability.frequency = 'Whenever';
             expect(liability.validate()).toBe(false);
         });
 
-        it('validates paymentStart', function () {
-            liability.paymentStart = '2015-10-10T99:99:99';
+        it('validates startDate', function () {
+            liability.startDate = '2015-10-10T99:99:99';
             expect(liability.validate()).toBe(false);
 
-            liability.paymentStart = 'not a date';
+            liability.startDate = 'not a date';
             expect(liability.validate()).toBe(false);
         });
 
-        it('validates paymentEnd', function () {
-            liability.paymentEnd = '2015-10-10T99:99:99';
+        it('validates endDate', function () {
+            liability.endDate = '2015-10-10T99:99:99';
             expect(liability.validate()).toBe(false);
 
-            liability.paymentEnd = 'not a date';
+            liability.endDate = 'not a date';
             expect(liability.validate()).toBe(false);
         });
 
         it('computes property paymentMonths', function () {
             expect(liability.paymentMonths).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 
-            liability.paymentFrequency = 'Bi-Monthly';
+            liability.frequency = 'bi-monthly';
             expect(liability.paymentMonths).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 
-            liability.paymentFrequency = 'Quarterly';
+            liability.frequency = 'quarterly';
             expect(liability.paymentMonths).toEqual([0, 3, 6, 9]);
 
-            liability.paymentFrequency = 'Bi-Yearly';
+            liability.frequency = 'bi-yearly';
             expect(liability.paymentMonths).toEqual([0, 6]);
 
-            liability.paymentFrequency = 'Yearly';
+            liability.frequency = 'yearly';
             expect(liability.paymentMonths).toEqual([0]);
         });
 
@@ -277,7 +264,7 @@ describe('ag.sdk.model.liability', function () {
         });
 
         it('computes property liabilityInMonth for Quarterly payments', function () {
-            liability.paymentFrequency = 'Quarterly';
+            liability.frequency = 'quarterly';
             expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual(10000);
             expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual(0);
             expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual(0);
@@ -330,7 +317,7 @@ describe('ag.sdk.model.liability', function () {
         });
 
         it('computes property liabilityInMonth Bi-Monthly payments', function () {
-            liability.paymentFrequency = 'Bi-Monthly';
+            liability.frequency = 'bi-monthly';
             expect(liability.liabilityInMonth('2014-12-04T10:20:00')).toEqual(0);
             expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual(20000);
             expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual(20000);
@@ -342,16 +329,171 @@ describe('ag.sdk.model.liability', function () {
         });
 
         it('computes property liabilityInRange Quarterly payments', function () {
-            liability.paymentFrequency = 'Quarterly';
+            liability.frequency = 'quarterly';
 
-            expect(liability.liabilityInRange('2015-01-04T10:20:00', '2016-01-04T10:20:00')).toEqual([10000, 0, 0, 10000, 0, 0, 10000, 0, 0, 10000, 0, 0, 10000]);
+            expect(liability.liabilityInRange('2015-01-04T10:20:00', '2016-01-04T10:20:00')).toEqual([10000, 0, 0, 10000, 0, 0, 10000, 0, 0, 10000, 0, 0]);
         });
 
         it('computes property liabilityInRange Bi-Monthly payments', function () {
-            liability.paymentFrequency = 'Bi-Monthly';
+            liability.frequency = 'bi-monthly';
 
-            expect(liability.liabilityInRange('2014-12-04T10:20:00', '2015-07-04T10:20:00')).toEqual([0, 20000, 20000, 20000, 20000, 20000, 250.76487335092048, 0]);
+            expect(liability.liabilityInRange('2014-12-04T10:20:00', '2015-07-04T10:20:00')).toEqual([0, 20000, 20000, 20000, 20000, 20000, 250.76487335092048]);
         });
     });
-    */
-});
+
+
+    describe('Liability financing with opening balance', function () {
+        var liability;
+
+        beforeEach(function () {
+            liability = Liability.new({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'short-loan',
+                interestRate: 1,
+                legalEntityId: 1,
+                frequency: 'monthly',
+                startDate: '2015-01-04T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                installmentPayment: 10000,
+                amount: 100000,
+                openingBalance: 50000
+            });
+        });
+
+        it('validates if financing', function () {
+            expect(liability.validate()).toBe(true);
+        });
+
+        it('computes property liabilityInMonth for Monthly payments', function () {
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual(10000);
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual(10000);
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual(10000);
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual(10000);
+            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual(10000);
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual(125.38243667546024);
+            expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual(0);
+            expect(liability.liabilityInMonth('2015-08-04T10:20:00')).toEqual(0);
+            expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual(0);
+            expect(liability.liabilityInMonth('2015-10-04T10:20:00')).toEqual(0);
+            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual(0);
+            expect(liability.liabilityInMonth('2015-12-04T10:20:00')).toEqual(0);
+        });
+    });
+
+    describe('Liability custom', function () {
+        var liability;
+
+        beforeEach(function () {
+            liability = Liability.new({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'production-credit',
+                interestRate: 1,
+                legalEntityId: 1,
+                frequency: 'custom',
+                startDate: '2015-01-04T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                amount: 50000,
+                openingBalance: 1000,
+                data: {
+                    subtype: 'off-taker'
+                }
+            });
+        });
+
+        it('validates', function () {
+            expect(liability.validate()).toBe(true);
+        });
+
+        it('computes opening months totals', function () {
+            expect(liability.setWithdrawalInMonth(2000, '2015-01-04T10:20:00')).toBe(0);
+            expect(liability.setWithdrawalInMonth(10000, '2015-02-04T10:20:00')).toBe(0);
+
+            expect(liability.data.monthly.length).toBe(2);
+
+            expect(liability.data.monthly[0]).toEqual({
+                opening: 1000,
+                withdrawal: 2000,
+                repayment: 0,
+                balance: 3000,
+                interest: 2.5,
+                closing: 3002.5
+            });
+
+            expect(liability.data.monthly[1]).toEqual({
+                opening: 3002.5,
+                withdrawal: 10000,
+                repayment: 0,
+                balance: 13002.5,
+                interest: 10.835416666666667,
+                closing: 13013.335416666667
+            });
+
+            expect(liability.setWithdrawalInMonth(50000, '2015-05-04T10:20:00')).toBe(13035.033346066266);
+
+            expect(liability.data.monthly.length).toBe(5);
+
+            expect(liability.data.monthly[2]).toEqual({
+                opening: 13013.335416666667,
+                withdrawal: 0,
+                repayment: 0,
+                balance: 13013.335416666667,
+                interest: 10.844446180555556,
+                closing: 13024.179862847222
+            });
+
+            expect(liability.data.monthly[3]).toEqual({
+                opening: 13024.179862847222,
+                withdrawal: 0,
+                repayment: 0,
+                balance: 13024.179862847222,
+                interest: 10.853483219039353,
+                closing: 13035.033346066262
+            });
+
+            expect(liability.data.monthly[4]).toEqual({
+                opening: 13035.033346066262,
+                withdrawal: 36964.966653933734,
+                repayment: 0,
+                balance: 50000,
+                interest: 41.66666666666667,
+                closing: 50041.666666666666664
+            });
+
+            expect(liability.setRepaymentInMonth(25000, '2015-07-04T10:20:00')).toBe(0);
+
+            expect(liability.data.monthly.length).toBe(7);
+
+            expect(liability.data.monthly[5]).toEqual({
+                opening: 50041.666666666666664,
+                withdrawal: 0,
+                repayment: 0,
+                balance: 50041.666666666666664,
+                interest: 41.70138888888889,
+                closing: 50083.368055555555
+            });
+
+            expect(liability.data.monthly[6]).toEqual({
+                opening: 50083.368055555555,
+                withdrawal: 0,
+                repayment: 25000,
+                balance: 25083.368055555555,
+                interest: 20.902806712962963,
+                closing: 25104.270862268517
+            });
+
+            expect(liability.setRepaymentInMonth(30000, '2015-08-04T10:20:00')).toBe(4895.729137731483);
+
+            expect(liability.data.monthly.length).toBe(8);
+
+            expect(liability.data.monthly[7]).toEqual({
+                opening: 25104.270862268517,
+                withdrawal: 0,
+                repayment: 25104.270862268517,
+                balance: 0,
+                interest: 0,
+                closing: 0
+            });
+
+            console.log(JSON.stringify(liability));
+        });
+    });});

@@ -19,6 +19,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         };
 
         var _typesWithInstallmentPayments = ['short-loan', 'medium-loan', 'long-loan', 'rent'];
+        var _typesWithAmount = ['short-loan', 'medium-loan', 'long-loan'];
 
         var _subtypes = {
             'production-credit': {
@@ -38,7 +39,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'balanceInMonth', function (month) {
-                var balance = this.amount || 0;
+                var balance = (this.amount - this.openingBalance) || this.openingBalance;
 
                 if (angular.isNumber(this.amount) && this.amount > 0) {
                     var startMonth = moment(this.startDate),
@@ -88,6 +89,67 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             computedProperty(this, 'subtype', function () {
                 return this.data.subtype;
+            });
+
+            function initializeMonthlyTotals (instance, upToMonth) {
+                instance.data.monthly = instance.data.monthly || [];
+
+                while (instance.data.monthly.length <= upToMonth) {
+                    instance.data.monthly.push({
+                        opening: 0,
+                        withdrawal: 0,
+                        repayment: 0,
+                        balance: 0,
+                        interest: 0,
+                        closing: 0
+                    });
+                }
+
+                recalculateMonthlyTotals(instance);
+            }
+
+            function recalculateMonthlyTotals (instance) {
+                underscore.each(instance.data.monthly, function (monthTotals, index) {
+                    monthTotals.opening = (index === 0 ? instance.openingBalance : instance.data.monthly[index - 1].closing);
+                    monthTotals.balance = monthTotals.opening - monthTotals.repayment + monthTotals.withdrawal;
+                    monthTotals.interest = ((instance.interestRate / 100) / 12) * monthTotals.balance;
+                    monthTotals.closing = monthTotals.balance + monthTotals.interest;
+                });
+            }
+
+            privateProperty(this, 'setRepaymentInMonth', function (repayment, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                initializeMonthlyTotals(this, appliedMonth);
+
+                var openingInterest = ((this.interestRate / 100) / 12) * this.data.monthly[appliedMonth].opening,
+                    limitedRepayment = (this.data.monthly[appliedMonth].opening + openingInterest < repayment ? this.data.monthly[appliedMonth].opening : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
+
+                this.data.monthly[appliedMonth].repayment = limitedRepayment;
+
+                recalculateMonthlyTotals(this);
+
+                return repaymentRemainder;
+            });
+
+            privateProperty(this, 'setWithdrawalInMonth', function (withdrawal, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                initializeMonthlyTotals(this, appliedMonth);
+
+                var limitedWithdrawal = (this.amount > 0 ? Math.min(this.amount - this.data.monthly[appliedMonth].opening, withdrawal) : withdrawal),
+                    withdrawalRemainder = withdrawal - limitedWithdrawal;
+
+                this.data.monthly[appliedMonth].withdrawal = limitedWithdrawal;
+
+                recalculateMonthlyTotals(this);
+
+                return withdrawalRemainder;
             });
 
             privateProperty(this, 'liabilityInMonth', function (month) {
@@ -174,8 +236,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.legalEntityId = attrs.legalEntityId;
             this.name = attrs.name;
             this.type = attrs.type;
+            this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
-            this.interestRate = attrs.interestRate;
+            this.interestRate = attrs.interestRate || 0;
             this.amount = attrs.amount;
             this.frequency = attrs.frequency;
             this.startDate = attrs.startDate;
@@ -193,6 +256,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'yearly': 'Yearly'
         });
 
+        readOnlyProperty(Liability, 'frequencyTypesWithCustom', underscore.extend({
+            'custom': 'Custom'
+        }, Liability.frequencyTypes));
+
         readOnlyProperty(Liability, 'liabilityTypes', _types);
 
         readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
@@ -207,20 +274,12 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             return Liability.liabilityTypesWithOther[type] || '';
         });
 
-        function isLoaned (value, instance, field) {
-            return instance.type !== 'rent';
-        }
-
         function isLeased (value, instance, field) {
-            return instance.leased === 'rent';
+            return instance.type === 'rent';
         }
 
         function isOtherType (value, instance, field) {
             return instance.type === 'other';
-        }
-
-        function isNotOtherType (value, instance, field) {
-            return instance.type !== 'other';
         }
 
         function hasSubtype (value, instance, field) {
@@ -228,11 +287,15 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         }
 
         Liability.validates({
+            openingBalance: {
+                required: true,
+                numeric: true
+            },
             installmentPayment: {
                 requiredIf: function (value, instance, field) {
                     return underscore.contains(_typesWithInstallmentPayments, instance.type) &&
                         (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
-                        (instance.type !== 'production-credit' && angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.interestRate));
                 },
                 range: {
                     from: 0
@@ -240,13 +303,12 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             interestRate: {
-                requiredIf: function (value, instance, field) {
-                    return angular.isNumber(instance.installmentPayment) && instance.installmentPayment > 0;
-                },
+                required: true,
                 range: {
                     from: 0,
                     to: 100
-                }
+                },
+                numeric: true
             },
             legalEntityId: {
                 required: true,
@@ -254,17 +316,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             },
             amount: {
                 requiredIf: function (value, instance, field) {
-                    return (isLoaned(value, instance, field) && isNotOtherType(value, instance, field)) ||
-                        (angular.isNumber(instance.installmentPayment) && instance.installmentPayment >= 0) === false;
-                },
-                range: {
-                    from: 0
-                },
-                numeric: true
-            },
-            limit: {
-                requiredIf: function (value, instance, field) {
-                    return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing');
+                    return underscore.contains(_typesWithAmount, instance.type) ||
+                        (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));
                 },
                 range: {
                     from: 0
@@ -272,7 +326,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             merchantUuid: {
-                requiredIf: isNotOtherType,
+                requiredIf: function (value, instance, field) {
+                    return !isOtherType(value, instance, field);
+                },
                 format: {
                     uuid: true
                 }
@@ -280,7 +336,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             frequency: {
                 required: true,
                 inclusion: {
-                    in: underscore.keys(Liability.frequencyTypes)
+                    in: underscore.keys(Liability.frequencyTypesWithCustom)
                 }
             },
             type: {
@@ -315,7 +371,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }
             },
             endDate: {
-                requiredIf: isLeased,
+                requiredIf: function (value, instance, field) {
+                    return isLeased(value, instance, field) || instance.type === 'custom';
+                },
                 format: {
                     date: true
                 }
