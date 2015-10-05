@@ -7,6 +7,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             this.docType = 'business plan';
 
+            this.data.account = this.data.account || {
+                monthly: [],
+                yearly: []
+            };
+
             this.data.models = this.data.models || {
                 assets: [],
                 farmValuations: [],
@@ -561,6 +566,36 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }, 0);
             }
 
+            function calculateYearlyInterest (instance, liabilityTypes, startMonth, endMonth, year) {
+                return underscore.chain(instance.models.liabilities)
+                    .filter(function(liability) {
+                        if (!liabilityTypes || liabilityTypes.length == 0) return true;
+
+                        return liabilityTypes.indexOf(liability.type) != -1;
+                    })
+                    .reduce(function(total, liability) {
+                        return total + (underscore.chain(liability.liabilityInRange(startMonth, endMonth).slice((year - 1) * 12, year * 12))
+                            .pluck('interest')
+                            .reduce(function(total, monthlyInterest) { return total + monthlyInterest; }, 0)
+                            .value() || 0);
+                    }, 0)
+                    .value()
+            }
+
+            function calculateYearlyLiabilitiesTotal(instance, liabilityTypes, startMonth, endMonth, year) {
+                return underscore.chain(instance.models.liabilities)
+                    .filter(function(liability) {
+                        if (!liabilityTypes || liabilityTypes.length == 0) return true;
+
+                        return liabilityTypes.indexOf(liability.type) != -1;
+                    })
+                    .reduce(function(total, l) {
+                        var liability = l.liabilityInRange(startMonth, endMonth).slice((year - 1) * 12, year * 12);
+                        return total + (liability.length ? liability[liability.length - 1].closing || 0 : 0);
+                    }, 0)
+                    .value()
+            }
+
             function calculateMonthlyCategoriesTotal (categories, results) {
                 underscore.reduce(categories, function (currentTotals, category) {
                     underscore.each(category, function (month, index) {
@@ -590,8 +625,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
                     otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
                     debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
-                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
-                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.debtRedemption], initializeArray(numberOfMonths))
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.productionExpenditure, instance.data.debtRedemption], initializeArray(numberOfMonths))
                 };
 
                 instance.data.summary.yearly = {
@@ -601,16 +636,29 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
                     debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
                     totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
-                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)]
+                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
+                    shortTermInterest: [calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 2)],
+                    mediumTermInterest: [calculateYearlyInterest(instance, ['medium-loan'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['medium-loan'], startMonth, endMonth, 2)],
+                    longTermInterest: [calculateYearlyInterest(instance, ['long-loan'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['long-loan'], startMonth, endMonth, 2)],
+                    totalInterest: [calculateYearlyInterest(instance, [], startMonth, endMonth, 1), calculateYearlyInterest(instance, [], startMonth, endMonth, 2)],
+                    //TODO:
+                    currentAssets: null,
+                    movableAssets: null,
+                    fixedAssets: null,
+                    totalAssets: null,
+                    currentLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 2)],
+                    mediumLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['medium-loan'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['medium-loan'], startMonth, endMonth, 2)],
+                    longLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['long-loan'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['long-loan'], startMonth, endMonth, 2)],
+                    totalLiabilities: [calculateYearlyLiabilitiesTotal(instance, [], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, [], startMonth, endMonth, 2)]
                 };
             }
 
             function recalculateRatios (instance) {
                 instance.data.ratios = {
                     productionCost: calculateRatio(instance, 'totalExpenditure', 'totalIncome'),
-                    netCapital: calculateRatio(instance, 'assets', 'liabilities'),
-                    gearing: calculateRatio(instance, 'liabilities', ['assets', '-liabilities']),
-                    debt: calculateRatio(instance, 'liabilities', 'assets')
+                    netCapital: calculateRatio(instance, 'totalAssets', 'totalLiabilities'),
+                    gearing: calculateRatio(instance, 'totalLiabilities', ['totalAssets', '-totalLiabilities']),
+                    debt: calculateRatio(instance, 'totalLiabilities', 'totalAssets')
                 };
             }
 
@@ -681,6 +729,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.data.endDate);
 
                 return this.data.endDate;
+            });
+
+            computedProperty(this, 'account', function () {
+                return this.data.account;
             });
 
             computedProperty(this, 'models', function () {
