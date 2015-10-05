@@ -10853,40 +10853,82 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'yearly': 1
         };
 
+        var _types = {
+            'short-loan': 'Short Term Loan',
+            'medium-loan': 'Medium Term Loan',
+            'long-loan': 'Long Term Loan',
+            'production-credit': 'Production Credit',
+            'rent': 'Rented'
+        };
+
+        var _typesWithInstallmentPayments = ['short-loan', 'medium-loan', 'long-loan', 'rent'];
+        var _typesWithAmount = ['short-loan', 'medium-loan', 'long-loan'];
+
+        var _subtypes = {
+            'production-credit': {
+                'off-taker': 'Off Taker',
+                'input-supplier': 'Input Supplier',
+                'input-financing': 'Input Financing'
+            }
+        };
+
+        function defaultMonth () {
+            return {
+                opening: 0,
+                repayment: 0,
+                withdrawal: 0,
+                balance: 0,
+                interest: 0,
+                closing: 0
+            }
+        }
+
+        function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
+            while (monthlyData.length <= upToIndex) {
+                monthlyData.push(defaultMonth());
+            }
+
+            recalculateMonthlyTotals(instance, monthlyData);
+        }
+
+        function recalculateMonthlyTotals (instance, monthlyData) {
+            var startMonth = moment(instance.startDate).month(),
+                paymentMonths = instance.paymentMonths,
+                paymentsPerMonth = (_frequency[instance.frequency] > 12 ? _frequency[instance.frequency] / 12 : 1);
+
+            underscore.each(monthlyData, function (month, index) {
+                var currentMonth = (index + startMonth) % 12;
+
+                month.opening = (index === 0 ? instance.openingBalance : monthlyData[index - 1].closing);
+
+                if (this.frequency === 'once' && index === 0) {
+                    month.repayment = month.opening;
+                } else if (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth)) {
+                    var openingInterest = ((instance.interestRate / 12) * month.opening) / 100,
+                        installmentPayment = instance.installmentPayment * paymentsPerMonth;
+
+                    month.repayment = (month.opening + openingInterest < installmentPayment ? month.opening + openingInterest : installmentPayment);
+                }
+
+                month.balance = (month.opening - month.repayment + month.withdrawal <= 0 ? 0 : month.opening - month.repayment + month.withdrawal);
+                month.interest = ((instance.interestRate / 12) * month.opening) / 100;
+                month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
+            });
+        }
+
         function Liability (attrs) {
             Model.Base.apply(this, arguments);
 
-            computedProperty(this, 'currentBalance', function () {
-                return (this.type !== 'rent' ? this.liabilityInMonth(moment().startOf('month')) : 0);
+            this.data = (attrs && attrs.data) || {};
+
+            computedProperty(this, 'title', function () {
+                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
+                    (this.name ? this.name : Liability.getTypeTitle(this.type));
             });
 
-            privateProperty(this, 'balanceInMonth', function (month) {
-                var balance = this.amount || 0;
-
-                if (angular.isNumber(this.amount) && this.amount > 0) {
-                    var startMonth = moment(this.startDate),
-                        paymentMonths = this.paymentMonths,
-                        paymentsPerMonth = (_frequency[this.frequency] > 12 ? _frequency[this.frequency] / 12 : 1),
-                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
-
-                    for(var i = 0; i < numberOfMonths; i++) {
-                        var month = moment(this.startDate).add(i, 'M');
-
-                        if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                            balance += this.amount;
-                        } else if (month >= startMonth) {
-                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
-
-                            if (underscore.contains(paymentMonths, month.month())) {
-                                for (var j = 0; j < paymentsPerMonth; j++) {
-                                    balance -= Math.min(balance, (this.installmentPayment || 0));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return balance;
+            computedProperty(this, 'subtype', function () {
+                return this.data.subtype;
             });
 
             computedProperty(this, 'paymentMonths', function () {
@@ -10903,85 +10945,82 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     });
             });
 
-            computedProperty(this, 'title', function () {
-                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
-                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
-                    (this.name ? this.name : Liability.getTypeTitle(this.type));
-            });
 
             privateProperty(this, 'liabilityInMonth', function (month) {
-                var previousMonth = moment(month).subtract(1, 'M'),
+                var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth);
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
 
-                var liability = 0;
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedMonth);
 
-                if (this.frequency === 'once' && startMonth.month() === currentMonth.month() && startMonth.year() === currentMonth.year()) {
-                    liability += this.amount;
-                } else if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
-                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
+                return monthlyData[appliedMonth] || defaultMonth();
+            });
 
-                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
-                        for (var i = 0; i < paymentsPerMonth; i++) {
+            privateProperty(this, 'balanceInMonth', function (month) {
+                return this.liabilityInMonth(month).closing || 0;
+            });
 
-                            if (angular.isNumber(this.amount) && this.amount > 0) {
-                                liability += Math.min(previousBalance, (this.installmentPayment || 0));
-                                previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                            } else {
-                                liability += (this.installmentPayment || 0);
-                            }
-                        }
-                    }
-                }
+            computedProperty(this, 'currentBalance', function () {
+                return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
+            });
 
-                return liability;
+            privateProperty(this, 'setRepaymentInMonth', function (repayment, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var openingInterest = ((this.interestRate / 12) * this.data.monthly[appliedMonth].opening) / 100,
+                    limitedRepayment = (this.data.monthly[appliedMonth].opening + openingInterest < repayment ? this.data.monthly[appliedMonth].opening : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
+
+                this.data.monthly[appliedMonth].repayment = limitedRepayment;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return repaymentRemainder;
+            });
+
+            privateProperty(this, 'setWithdrawalInMonth', function (withdrawal, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - this.data.monthly[appliedMonth].opening, withdrawal) : withdrawal),
+                    withdrawalRemainder = withdrawal - limitedWithdrawal;
+
+                this.data.monthly[appliedMonth].withdrawal = limitedWithdrawal;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return withdrawalRemainder;
             });
 
             privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var previousMonth = moment(rangeStart).subtract(1, 'M'),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentMonths = this.paymentMonths,
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth),
-                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months');
+                var startMonth = moment(this.startDate),
+                    rangeStartMonth = moment(rangeStart),
+                    rangeEndMonth = moment(rangeEnd),
+                    appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
+                    appliedEndMonth = rangeEndMonth.diff(startMonth, 'months'),
+                    paddedOffset = (appliedStartMonth < 0 ? 0 - appliedStartMonth : 0);
 
-                var liability = underscore.range(numberOfMonths).map(function () {
-                    return 0;
-                });
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedEndMonth);
 
-                for(var i = 0; i < numberOfMonths; i++) {
-                    var month = moment(rangeStart).add(i, 'M');
-
-                    if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                        liability[i] += this.amount;
-                    } else if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
-                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                        if (underscore.contains(paymentMonths, month.month())) {
-                            for (var j = 0; j < paymentsPerMonth; j++) {
-                                if (angular.isNumber(this.amount) && this.amount > 0) {
-                                    liability[i] += Math.min(previousBalance, (this.installmentPayment || 0));
-                                    previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                                } else {
-                                    liability[i] += (this.installmentPayment || 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return liability;
+                return underscore.range(paddedOffset)
+                    .map(defaultMonth)
+                    .concat(monthlyData.slice(appliedStartMonth - appliedStartMonth, appliedEndMonth - appliedStartMonth - paddedOffset));
             });
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total - liability;
+                    return total - liability.repayment;
                 }, 0);
             });
 
@@ -10993,9 +11032,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.legalEntityId = attrs.legalEntityId;
             this.name = attrs.name;
             this.type = attrs.type;
+            this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
-            this.interestRate = attrs.interestRate;
-            this.amount = attrs.amount;
+            this.interestRate = attrs.interestRate || 0;
+            this.limit = attrs.limit;
             this.frequency = attrs.frequency;
             this.startDate = attrs.startDate;
             this.endDate = attrs.endDate;
@@ -11009,13 +11049,14 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'monthly': 'Monthly',
             'quarterly': 'Quarterly',
             'bi-yearly': 'Bi-Yearly',
-            'yearly': 'Yearly'});
+            'yearly': 'Yearly'
+        });
 
-        readOnlyProperty(Liability, 'liabilityTypes', {
-            'short-loan': 'Short Term Loan',
-            'medium-loan': 'Medium Term Loan',
-            'long-loan': 'Long Term Loan',
-            'rent': 'Rented'});
+        readOnlyProperty(Liability, 'frequencyTypesWithCustom', underscore.extend({
+            'custom': 'Custom'
+        }, Liability.frequencyTypes));
+
+        readOnlyProperty(Liability, 'liabilityTypes', _types);
 
         readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
             'other': 'Other'
@@ -11029,28 +11070,27 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             return Liability.liabilityTypesWithOther[type] || '';
         });
 
-        function isLoaned (value, instance, field) {
-            return instance.type !== 'rent';
-        }
-
         function isLeased (value, instance, field) {
-            return instance.leased === 'rent';
+            return instance.type === 'rent';
         }
 
         function isOtherType (value, instance, field) {
             return instance.type === 'other';
         }
 
-        function isNotOtherType (value, instance, field) {
-            return instance.type !== 'other';
+        function hasSubtype (value, instance, field) {
+            return !!(_subtypes[instance.type] && underscore.keys(_subtypes[instance.type]).length > 0);
         }
 
         Liability.validates({
+            openingBalance: {
+                required: true,
+                numeric: true
+            },
             installmentPayment: {
                 requiredIf: function (value, instance, field) {
-                    return isNotOtherType(value, instance, field) &&
-                        (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
-                        (angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
+                    return underscore.contains(_typesWithInstallmentPayments, instance.type) &&
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.interestRate));
                 },
                 range: {
                     from: 0
@@ -11058,22 +11098,21 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             interestRate: {
-                requiredIf: function (value, instance, field) {
-                    return angular.isNumber(instance.installmentPayment) && instance.installmentPayment > 0;
-                },
+                required: true,
                 range: {
                     from: 0,
                     to: 100
-                }
+                },
+                numeric: true
             },
             legalEntityId: {
                 required: true,
                 numeric: true
             },
-            amount: {
+            limit: {
                 requiredIf: function (value, instance, field) {
-                    return (isLoaned(value, instance, field) && isNotOtherType(value, instance, field)) ||
-                        (angular.isNumber(instance.installmentPayment) && instance.installmentPayment >= 0) === false;
+                    return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));
                 },
                 range: {
                     from: 0
@@ -11081,7 +11120,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             merchantUuid: {
-                requiredIf: isNotOtherType,
+                requiredIf: function (value, instance, field) {
+                    return !isOtherType(value, instance, field);
+                },
                 format: {
                     uuid: true
                 }
@@ -11089,7 +11130,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             frequency: {
                 required: true,
                 inclusion: {
-                    in: underscore.keys(Liability.frequencyTypes)
+                    in: underscore.keys(Liability.frequencyTypesWithCustom)
                 }
             },
             type: {
@@ -11097,6 +11138,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 inclusion: {
                     in: underscore.keys(Liability.liabilityTypesWithOther)
                 }
+            },
+            subtype: {
+                requiredIf: hasSubtype,
+                inclusion: {
+                    in: function (value, instance, field) {
+                        return _subtypes[instance.type] && underscore.keys(_subtypes[instance.type]) || [];
+                    }
+                }
+            },
+            data: {
+                required: true,
+                object: true
             },
             name: {
                 requiredIf: isOtherType,
@@ -11112,7 +11165,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }
             },
             endDate: {
-                requiredIf: isLeased,
+                requiredIf: function (value, instance, field) {
+                    return isLeased(value, instance, field) || instance.type === 'custom';
+                },
                 format: {
                     date: true
                 }
@@ -11300,7 +11355,9 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
     'Validator.equal',
     'Validator.format',
     'Validator.inclusion',
+    'Validator.inclusion.in',
     'Validator.length',
+    'Validator.object',
     'Validator.numeric',
     'Validator.range',
     'Validator.required',
@@ -11326,11 +11383,13 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     validateField(instance, validation);
                 });
 
+
                 return instance.$errors.countFor(fieldName) === 0;
             });
 
             function validateField (instance, validation) {
                 if (validation.validate(instance) === false) {
+
                     instance.$errors.add(validation.field, validation.message);
                 } else {
                     instance.$errors.clear(validation.field, validation.message);
@@ -11439,13 +11498,11 @@ sdkModelValidation.factory('Validatable.ValidationFunction', ['underscore', func
         boundFunction.message = configureMessage();
 
         function configureMessage () {
-            if (underscore.isString(options.message)) {
-                return options.message;
-            }
-
             if (underscore.isFunction(options.message)) {
                 return options.message.apply(options);
             }
+
+            return options.message;
         }
 
         return boundFunction;
@@ -11525,7 +11582,7 @@ sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
             }
 
             function defaultOptions (options) {
-                if (underscore.isObject(options) === false) {
+                if (typeof options != 'object' || underscore.isArray(options)) {
                     options = {
                         value: options,
                         message: validator.message
@@ -11735,27 +11792,40 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
 /**
  * Inclusion Validator
  */
-sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
-    function (underscore, Validator) {
-        function inclusion (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value)) {
-                return false;
-            }
-
-            if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {
-                throw 'Inclusion validator must specify an \'in\' attribute';
-            }
-
-            return underscore.some(this.in, function (item) {
-                return value === item;
-            })
-        }
+sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator', 'Validator.inclusion.in',
+    function (underscore, Validator, inclusionIn) {
+        function inclusion (value, instance, field) {}
 
         inclusion.message = function () {
-            return 'Must be one of \''+ this.in.join(', ') + '\'';
+            return 'Must have an included value';
+        };
+
+        inclusion.options = {
+            in: inclusionIn
         };
 
         return new Validator(inclusion);
+    }]);
+
+sdkModelValidators.factory('Validator.inclusion.in', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function inclusionIn (value, instance, field) {
+            var _in = (typeof this.value == 'function' ? this.value(value, instance, field) : this.value);
+
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (_in.length == 0 ? true : underscore.some(_in, function (item) {
+                return value === item;
+            }));
+        }
+
+        inclusionIn.message = function () {
+            return 'Must be in array of values';
+        };
+
+        return new Validator(inclusionIn);
     }]);
 
 /**
@@ -11829,6 +11899,23 @@ sdkModelValidators.factory('Validator.numeric', ['underscore', 'Validatable.Vali
         };
 
         return new Validator(numeric);
+    }]);
+
+sdkModelValidators.factory('Validator.object', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function object (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (typeof value == 'object');
+        }
+
+        object.message = function () {
+            return 'Must be an object';
+        };
+
+        return new Validator(object);
     }]);
 
 /**
@@ -11912,7 +11999,7 @@ sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Val
 sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function requiredIf (value, instance, field) {
-            if (!this(value, instance, field)) {
+            if (!this.value(value, instance, field)) {
                 return true;
             } else {
                 if (underscore.isUndefined(value) || underscore.isNull(value)) {
@@ -11927,7 +12014,7 @@ sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.V
             }
         }
 
-        requiredIf.message = 'cannot be blank';
+        requiredIf.message = 'Is a required field';
 
         return new Validator(requiredIf);
     }]);
