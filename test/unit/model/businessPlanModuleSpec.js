@@ -166,7 +166,7 @@ describe('ag.sdk.model.business-plan', function () {
                         installmentPayment: 10000,
                         interestRate: 1,
                         legalEntityId: 2,
-                        amount: 100000,
+                        openingBalance: 100000,
                         merchantUuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
                         frequency: 'monthly',
                         startDate: '2015-10-10T10:20:00'
@@ -177,7 +177,7 @@ describe('ag.sdk.model.business-plan', function () {
                         installmentPayment: 10000,
                         interestRate: 1,
                         legalEntityId: 2,
-                        amount: 500000,
+                        openingBalance: 500000,
                         merchantUuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
                         frequency: 'monthly',
                         startDate: '2015-10-10T10:20:00'
@@ -306,7 +306,32 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'medium-loan',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [
+                    { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 83.33333333333331, closing : 90083.33333333333 },
+                    { opening : 90083.33333333333, repayment : 10000, withdrawal : 0, balance : 80083.33333333333, interest : 75.06944444444443, closing : 80158.40277777777 },
+                    { opening : 80158.40277777777, repayment : 10000, withdrawal : 0, balance : 70158.40277777777, interest : 66.79866898148147, closing : 70225.20144675925 },
+                    { opening : 70225.20144675925, repayment : 10000, withdrawal : 0, balance : 60225.20144675925, interest : 58.52100120563271, closing : 60283.72244796489 },
+                    { opening : 60283.72244796489, repayment : 10000, withdrawal : 0, balance : 50283.72244796489, interest : 50.23643537330407, closing : 50333.95888333819 },
+                    { opening : 50333.95888333819, repayment : 10000, withdrawal : 0, balance : 40333.95888333819, interest : 41.94496573611516, closing : 40375.90384907431 },
+                    { opening : 40375.90384907431, repayment : 10000, withdrawal : 0, balance : 30375.90384907431, interest : 33.64658654089526, closing : 30409.550435615205 },
+                    { opening : 30409.550435615205, repayment : 10000, withdrawal : 0, balance : 20409.550435615205, interest : 25.341292029679334, closing : 20434.891727644885 },
+                    { opening : 20434.891727644885, repayment : 10000, withdrawal : 0, balance : 10434.891727644885, interest : 17.02907643970407, closing : 10451.920804084588 },
+                    { opening : 10451.920804084588, repayment : 10000, withdrawal : 0, balance : 451.92080408458787, interest : 8.709934003403824, closing : 460.6307380879917 },
+                    { opening : 460.6307380879917, repayment : 461.01459703639836, withdrawal : 0, balance : 0, interest : 0.3838589484066597, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
+                ]
             });
 
 
@@ -384,7 +409,32 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'medium-loan',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [
+                    { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 83.33333333333331, closing : 90083.33333333333 },
+                    { opening : 90083.33333333333, repayment : 10000, withdrawal : 0, balance : 80083.33333333333, interest : 75.06944444444443, closing : 80158.40277777777 },
+                    { opening : 80158.40277777777, repayment : 10000, withdrawal : 0, balance : 70158.40277777777, interest : 66.79866898148147, closing : 70225.20144675925 },
+                    { opening : 70225.20144675925, repayment : 10000, withdrawal : 0, balance : 60225.20144675925, interest : 58.52100120563271, closing : 60283.72244796489 },
+                    { opening : 60283.72244796489, repayment : 10000, withdrawal : 0, balance : 50283.72244796489, interest : 50.23643537330407, closing : 50333.95888333819 },
+                    { opening : 50333.95888333819, repayment : 10000, withdrawal : 0, balance : 40333.95888333819, interest : 41.94496573611516, closing : 40375.90384907431 },
+                    { opening : 40375.90384907431, repayment : 10000, withdrawal : 0, balance : 30375.90384907431, interest : 33.64658654089526, closing : 30409.550435615205 },
+                    { opening : 30409.550435615205, repayment : 10000, withdrawal : 0, balance : 20409.550435615205, interest : 25.341292029679334, closing : 20434.891727644885 },
+                    { opening : 20434.891727644885, repayment : 10000, withdrawal : 0, balance : 10434.891727644885, interest : 17.02907643970407, closing : 10451.920804084588 },
+                    { opening : 10451.920804084588, repayment : 10000, withdrawal : 0, balance : 451.92080408458787, interest : 8.709934003403824, closing : 460.6307380879917 },
+                    { opening : 460.6307380879917, repayment : 461.01459703639836, withdrawal : 0, balance : 0, interest : 0.3838589484066597, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
+                ]
             });
 
         });
@@ -458,7 +508,32 @@ describe('ag.sdk.model.business-plan', function () {
                 type: 'liability',
                 subtype: 'medium-loan',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [
+                    { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 83.33333333333331, closing : 90083.33333333333 },
+                    { opening : 90083.33333333333, repayment : 10000, withdrawal : 0, balance : 80083.33333333333, interest : 75.06944444444443, closing : 80158.40277777777 },
+                    { opening : 80158.40277777777, repayment : 10000, withdrawal : 0, balance : 70158.40277777777, interest : 66.79866898148147, closing : 70225.20144675925 },
+                    { opening : 70225.20144675925, repayment : 10000, withdrawal : 0, balance : 60225.20144675925, interest : 58.52100120563271, closing : 60283.72244796489 },
+                    { opening : 60283.72244796489, repayment : 10000, withdrawal : 0, balance : 50283.72244796489, interest : 50.23643537330407, closing : 50333.95888333819 },
+                    { opening : 50333.95888333819, repayment : 10000, withdrawal : 0, balance : 40333.95888333819, interest : 41.94496573611516, closing : 40375.90384907431 },
+                    { opening : 40375.90384907431, repayment : 10000, withdrawal : 0, balance : 30375.90384907431, interest : 33.64658654089526, closing : 30409.550435615205 },
+                    { opening : 30409.550435615205, repayment : 10000, withdrawal : 0, balance : 20409.550435615205, interest : 25.341292029679334, closing : 20434.891727644885 },
+                    { opening : 20434.891727644885, repayment : 10000, withdrawal : 0, balance : 10434.891727644885, interest : 17.02907643970407, closing : 10451.920804084588 },
+                    { opening : 10451.920804084588, repayment : 10000, withdrawal : 0, balance : 451.92080408458787, interest : 8.709934003403824, closing : 460.6307380879917 },
+                    { opening : 460.6307380879917, repayment : 461.01459703639836, withdrawal : 0, balance : 0, interest : 0.3838589484066597, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
+                ]
             });
 
         });

@@ -29,42 +29,63 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             }
         };
 
+        function defaultMonth () {
+            return {
+                opening: 0,
+                repayment: 0,
+                withdrawal: 0,
+                balance: 0,
+                interest: 0,
+                closing: 0
+            }
+        }
+
+        function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
+            while (monthlyData.length <= upToIndex) {
+                monthlyData.push(defaultMonth());
+            }
+
+            recalculateMonthlyTotals(instance, monthlyData);
+        }
+
+        function recalculateMonthlyTotals (instance, monthlyData) {
+            var startMonth = moment(instance.startDate).month(),
+                paymentMonths = instance.paymentMonths,
+                paymentsPerMonth = (_frequency[instance.frequency] > 12 ? _frequency[instance.frequency] / 12 : 1);
+
+            underscore.each(monthlyData, function (month, index) {
+                var currentMonth = (index + startMonth) % 12;
+
+                month.opening = (index === 0 ? instance.openingBalance : monthlyData[index - 1].closing);
+
+                if (this.frequency === 'once' && index === 0) {
+                    month.repayment = month.opening;
+                } else if (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth)) {
+                    var openingInterest = ((instance.interestRate / 12) * month.opening) / 100,
+                        installmentPayment = instance.installmentPayment * paymentsPerMonth;
+
+                    month.repayment = (month.opening + openingInterest < installmentPayment ? month.opening + openingInterest : installmentPayment);
+                }
+
+                month.balance = (month.opening - month.repayment + month.withdrawal <= 0 ? 0 : month.opening - month.repayment + month.withdrawal);
+                month.interest = ((instance.interestRate / 12) * month.opening) / 100;
+                month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
+            });
+        }
+
         function Liability (attrs) {
             Model.Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data) || {};
 
-            computedProperty(this, 'currentBalance', function () {
-                return (this.type !== 'rent' ? this.liabilityInMonth(moment().startOf('month')) : 0);
+            computedProperty(this, 'title', function () {
+                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
+                    (this.name ? this.name : Liability.getTypeTitle(this.type));
             });
 
-            privateProperty(this, 'balanceInMonth', function (month) {
-                var balance = (this.amount - this.openingBalance) || this.openingBalance;
-
-                if (angular.isNumber(this.amount) && this.amount > 0) {
-                    var startMonth = moment(this.startDate),
-                        paymentMonths = this.paymentMonths,
-                        paymentsPerMonth = (_frequency[this.frequency] > 12 ? _frequency[this.frequency] / 12 : 1),
-                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
-
-                    for(var i = 0; i < numberOfMonths; i++) {
-                        var month = moment(this.startDate).add(i, 'M');
-
-                        if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                            balance += this.amount;
-                        } else if (month >= startMonth) {
-                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
-
-                            if (underscore.contains(paymentMonths, month.month())) {
-                                for (var j = 0; j < paymentsPerMonth; j++) {
-                                    balance -= Math.min(balance, (this.installmentPayment || 0));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return balance;
+            computedProperty(this, 'subtype', function () {
+                return this.data.subtype;
             });
 
             computedProperty(this, 'paymentMonths', function () {
@@ -81,56 +102,41 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     });
             });
 
-            computedProperty(this, 'title', function () {
-                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
-                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
-                    (this.name ? this.name : Liability.getTypeTitle(this.type));
+
+            privateProperty(this, 'liabilityInMonth', function (month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedMonth);
+
+                return monthlyData[appliedMonth] || defaultMonth();
             });
 
-            computedProperty(this, 'subtype', function () {
-                return this.data.subtype;
+            privateProperty(this, 'balanceInMonth', function (month) {
+                return this.liabilityInMonth(month).closing || 0;
             });
 
-            function initializeMonthlyTotals (instance, upToMonth) {
-                instance.data.monthly = instance.data.monthly || [];
-
-                while (instance.data.monthly.length <= upToMonth) {
-                    instance.data.monthly.push({
-                        opening: 0,
-                        withdrawal: 0,
-                        repayment: 0,
-                        balance: 0,
-                        interest: 0,
-                        closing: 0
-                    });
-                }
-
-                recalculateMonthlyTotals(instance);
-            }
-
-            function recalculateMonthlyTotals (instance) {
-                underscore.each(instance.data.monthly, function (monthTotals, index) {
-                    monthTotals.opening = (index === 0 ? instance.openingBalance : instance.data.monthly[index - 1].closing);
-                    monthTotals.balance = monthTotals.opening - monthTotals.repayment + monthTotals.withdrawal;
-                    monthTotals.interest = ((instance.interestRate / 100) / 12) * monthTotals.balance;
-                    monthTotals.closing = monthTotals.balance + monthTotals.interest;
-                });
-            }
+            computedProperty(this, 'currentBalance', function () {
+                return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
+            });
 
             privateProperty(this, 'setRepaymentInMonth', function (repayment, month) {
                 var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
-                initializeMonthlyTotals(this, appliedMonth);
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
-                var openingInterest = ((this.interestRate / 100) / 12) * this.data.monthly[appliedMonth].opening,
+                var openingInterest = ((this.interestRate / 12) * this.data.monthly[appliedMonth].opening) / 100,
                     limitedRepayment = (this.data.monthly[appliedMonth].opening + openingInterest < repayment ? this.data.monthly[appliedMonth].opening : repayment),
                     repaymentRemainder = repayment - limitedRepayment;
 
                 this.data.monthly[appliedMonth].repayment = limitedRepayment;
 
-                recalculateMonthlyTotals(this);
+                recalculateMonthlyTotals(this, this.data.monthly);
 
                 return repaymentRemainder;
             });
@@ -140,91 +146,38 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     currentMonth = moment(month),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
-                initializeMonthlyTotals(this, appliedMonth);
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
-                var limitedWithdrawal = (this.amount > 0 ? Math.min(this.amount - this.data.monthly[appliedMonth].opening, withdrawal) : withdrawal),
+                var limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - this.data.monthly[appliedMonth].opening, withdrawal) : withdrawal),
                     withdrawalRemainder = withdrawal - limitedWithdrawal;
 
                 this.data.monthly[appliedMonth].withdrawal = limitedWithdrawal;
 
-                recalculateMonthlyTotals(this);
+                recalculateMonthlyTotals(this, this.data.monthly);
 
                 return withdrawalRemainder;
             });
 
-            privateProperty(this, 'liabilityInMonth', function (month) {
-                var previousMonth = moment(month).subtract(1, 'M'),
-                    currentMonth = moment(month),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth);
-
-                var liability = 0;
-
-                if (this.frequency === 'once' && startMonth.month() === currentMonth.month() && startMonth.year() === currentMonth.year()) {
-                    liability += this.amount;
-                } else if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
-                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
-                        for (var i = 0; i < paymentsPerMonth; i++) {
-
-                            if (angular.isNumber(this.amount) && this.amount > 0) {
-                                liability += Math.min(previousBalance, (this.installmentPayment || 0));
-                                previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                            } else {
-                                liability += (this.installmentPayment || 0);
-                            }
-                        }
-                    }
-                }
-
-                return liability;
-            });
-
             privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var previousMonth = moment(rangeStart).subtract(1, 'M'),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentMonths = this.paymentMonths,
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth),
-                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months');
+                var startMonth = moment(this.startDate),
+                    rangeStartMonth = moment(rangeStart),
+                    rangeEndMonth = moment(rangeEnd),
+                    appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
+                    appliedEndMonth = rangeEndMonth.diff(startMonth, 'months'),
+                    paddedOffset = (appliedStartMonth < 0 ? 0 - appliedStartMonth : 0);
 
-                var liability = underscore.range(numberOfMonths).map(function () {
-                    return 0;
-                });
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedEndMonth);
 
-                for(var i = 0; i < numberOfMonths; i++) {
-                    var month = moment(rangeStart).add(i, 'M');
-
-                    if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                        liability[i] += this.amount;
-                    } else if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
-                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                        if (underscore.contains(paymentMonths, month.month())) {
-                            for (var j = 0; j < paymentsPerMonth; j++) {
-                                if (angular.isNumber(this.amount) && this.amount > 0) {
-                                    liability[i] += Math.min(previousBalance, (this.installmentPayment || 0));
-                                    previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                                } else {
-                                    liability[i] += (this.installmentPayment || 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return liability;
+                return underscore.range(paddedOffset)
+                    .map(defaultMonth)
+                    .concat(monthlyData.slice(appliedStartMonth - appliedStartMonth, appliedEndMonth - appliedStartMonth - paddedOffset));
             });
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total - liability;
+                    return total - liability.repayment;
                 }, 0);
             });
 
@@ -239,7 +192,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
             this.interestRate = attrs.interestRate || 0;
-            this.amount = attrs.amount;
+            this.limit = attrs.limit;
             this.frequency = attrs.frequency;
             this.startDate = attrs.startDate;
             this.endDate = attrs.endDate;
@@ -294,7 +247,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             installmentPayment: {
                 requiredIf: function (value, instance, field) {
                     return underscore.contains(_typesWithInstallmentPayments, instance.type) &&
-                        (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
                         (instance.type !== 'production-credit' && !angular.isNumber(instance.interestRate));
                 },
                 range: {
@@ -314,10 +266,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 required: true,
                 numeric: true
             },
-            amount: {
+            limit: {
                 requiredIf: function (value, instance, field) {
-                    return underscore.contains(_typesWithAmount, instance.type) ||
-                        (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
+                    return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
                         (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));
                 },
                 range: {
