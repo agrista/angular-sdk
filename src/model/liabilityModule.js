@@ -40,6 +40,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             }
         }
 
+        function fixPrecisionError (number) {
+            return Math.round(number * 100) / 100;
+        }
+
         function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
             while (monthlyData.length <= upToIndex) {
                 monthlyData.push(defaultMonth());
@@ -58,17 +62,14 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 month.opening = (index === 0 ? instance.openingBalance : monthlyData[index - 1].closing);
 
-                if (this.frequency === 'once' && index === 0) {
-                    month.repayment = month.opening;
-                } else if (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth)) {
-                    var openingInterest = ((instance.interestRate / 12) * month.opening) / 100,
-                        installmentPayment = instance.installmentPayment * paymentsPerMonth;
+                if ((this.frequency === 'once' && index === 0) || (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth))) {
+                    var installmentPayment = (this.frequency === 'once' ? month.opening : instance.installmentPayment * paymentsPerMonth);
 
-                    month.repayment = (month.opening + openingInterest < installmentPayment ? month.opening + openingInterest : installmentPayment);
+                    month.repayment = (month.opening <= installmentPayment ? month.opening : installmentPayment);
                 }
 
                 month.balance = (month.opening - month.repayment + month.withdrawal <= 0 ? 0 : month.opening - month.repayment + month.withdrawal);
-                month.interest = ((instance.interestRate / 12) * month.opening) / 100;
+                month.interest = ((instance.interestRate / 12) * month.balance) / 100;
                 month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
             });
         }
@@ -103,6 +104,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
 
+            /**
+             * Get liability/balance in month
+             */
             privateProperty(this, 'liabilityInMonth', function (month) {
                 var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
@@ -122,6 +126,29 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
             });
 
+            /**
+             * Set/add repayment/withdrawal in month
+             */
+            privateProperty(this, 'addRepaymentInMonth', function (repayment, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    summedRepayment = repayment + monthLiability.repayment,
+                    limitedRepayment = (monthLiability.opening <= summedRepayment ? monthLiability.opening : summedRepayment),
+                    repaymentRemainder = fixPrecisionError(summedRepayment - limitedRepayment);
+
+                monthLiability.repayment = limitedRepayment;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return repaymentRemainder;
+            });
+
             privateProperty(this, 'setRepaymentInMonth', function (repayment, month) {
                 var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
@@ -130,15 +157,35 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 this.data.monthly = this.data.monthly || [];
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
-                var openingInterest = ((this.interestRate / 12) * this.data.monthly[appliedMonth].opening) / 100,
-                    limitedRepayment = (this.data.monthly[appliedMonth].opening + openingInterest < repayment ? this.data.monthly[appliedMonth].opening : repayment),
-                    repaymentRemainder = repayment - limitedRepayment;
+                var monthLiability = this.data.monthly[appliedMonth],
+                    limitedRepayment = (monthLiability.opening <= repayment ? monthLiability.opening : repayment),
+                    repaymentRemainder = fixPrecisionError(repayment - limitedRepayment);
 
-                this.data.monthly[appliedMonth].repayment = limitedRepayment;
+                monthLiability.repayment = limitedRepayment;
 
                 recalculateMonthlyTotals(this, this.data.monthly);
 
                 return repaymentRemainder;
+            });
+
+            privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    summedWithdrawal = withdrawal + monthLiability.withdrawal,
+                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, summedWithdrawal) : summedWithdrawal),
+                    withdrawalRemainder = fixPrecisionError(summedWithdrawal - limitedWithdrawal);
+
+                monthLiability.withdrawal = limitedWithdrawal;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return withdrawalRemainder;
             });
 
             privateProperty(this, 'setWithdrawalInMonth', function (withdrawal, month) {
@@ -149,16 +196,20 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 this.data.monthly = this.data.monthly || [];
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
-                var limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - this.data.monthly[appliedMonth].opening, withdrawal) : withdrawal),
-                    withdrawalRemainder = withdrawal - limitedWithdrawal;
+                var monthLiability = this.data.monthly[appliedMonth],
+                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, withdrawal) : withdrawal),
+                    withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
 
-                this.data.monthly[appliedMonth].withdrawal = limitedWithdrawal;
+                monthLiability.withdrawal = limitedWithdrawal;
 
                 recalculateMonthlyTotals(this, this.data.monthly);
 
                 return withdrawalRemainder;
             });
 
+            /**
+             * Ranges of liability
+             */
             privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
                 var startMonth = moment(this.startDate),
                     rangeStartMonth = moment(rangeStart),

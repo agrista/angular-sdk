@@ -259,71 +259,71 @@ describe('ag.sdk.model.liability', function () {
         });
 
         it('computes property balanceInMonth', function () {
-            expect(liability.balanceInMonth('2015-01-04T10:20:00')).toEqual(90083.33333333333);
+            expect(liability.balanceInMonth('2015-01-04T10:20:00')).toEqual(90075);
         });
 
         it('computes property liabilityInMonth for Quarterly payments', function () {
             liability.frequency = 'quarterly';
-            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 83.33333333333331, closing : 90083.33333333333 });
-            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 90083.33333333333, repayment : 0, withdrawal : 0, balance : 90083.33333333333, interest : 75.06944444444443, closing : 90158.40277777777 });
-            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 90158.40277777777, repayment : 0, withdrawal : 0, balance : 90158.40277777777, interest : 75.1320023148148, closing : 90233.53478009258 });
-            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 90233.53478009258, repayment : 10000, withdrawal : 0, balance : 80233.53478009258, interest : 75.19461231674381, closing : 80308.72939240932 });
-            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 80308.72939240932, repayment : 0, withdrawal : 0, balance : 80308.72939240932, interest : 66.9239411603411, closing : 80375.65333356966 });
-            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 80375.65333356966, repayment : 0, withdrawal : 0, balance : 80375.65333356966, interest : 66.97971111130805, closing : 80442.63304468097 });
-            expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual({ opening : 80442.63304468097, repayment : 10000, withdrawal : 0, balance : 70442.63304468097, interest : 67.03552753723415, closing : 70509.6685722182 });
-            expect(liability.liabilityInMonth('2015-08-04T10:20:00')).toEqual({ opening : 70509.6685722182, repayment : 0, withdrawal : 0, balance : 70509.6685722182, interest : 58.75805714351516, closing : 70568.42662936171 });
-            expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual({ opening : 70568.42662936171, repayment : 0, withdrawal : 0, balance : 70568.42662936171, interest : 58.807022191134756, closing : 70627.23365155284 });
-            expect(liability.liabilityInMonth('2015-10-04T10:20:00')).toEqual({ opening : 70627.23365155284, repayment : 10000, withdrawal : 0, balance : 60627.233651552844, interest : 58.856028042960695, closing : 60686.0896795958 });
-            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual({ opening : 60686.0896795958, repayment : 0, withdrawal : 0, balance : 60686.0896795958, interest : 50.57174139966317, closing : 60736.661420995464 });
-            expect(liability.liabilityInMonth('2015-12-04T10:20:00')).toEqual({ opening : 60736.661420995464, repayment : 0, withdrawal : 0, balance : 60736.661420995464, interest : 50.61388451749622, closing : 60787.27530551296 });
-            expect(liability.liabilityInMonth('2016-01-04T10:20:00')).toEqual({ opening : 60787.27530551296, repayment : 10000, withdrawal : 0, balance : 50787.27530551296, interest : 50.65606275459413, closing : 50837.93136826755 });
-            expect(liability.liabilityInMonth('2016-02-04T10:20:00')).toEqual({ opening : 50837.93136826755, repayment : 0, withdrawal : 0, balance : 50837.93136826755, interest : 42.36494280688962, closing : 50880.29631107444 });
-            expect(liability.liabilityInMonth('2016-03-04T10:20:00')).toEqual({ opening : 50880.29631107444, repayment : 0, withdrawal : 0, balance : 50880.29631107444, interest : 42.40024692589536, closing : 50922.69655800033 });
-            expect(liability.liabilityInMonth('2016-04-04T10:20:00')).toEqual({ opening : 50922.69655800033, repayment : 10000, withdrawal : 0, balance : 40922.69655800033, interest : 42.43558046500028, closing : 40965.13213846533 });
-            expect(liability.liabilityInMonth('2016-05-04T10:20:00')).toEqual({ opening : 40965.13213846533, repayment : 0, withdrawal : 0, balance : 40965.13213846533, interest : 34.13761011538777, closing : 40999.269748580715 });
-            expect(liability.liabilityInMonth('2016-06-04T10:20:00')).toEqual({ opening : 40999.269748580715, repayment : 0, withdrawal : 0, balance : 40999.269748580715, interest : 34.16605812381726, closing : 41033.43580670453 });
-            expect(liability.liabilityInMonth('2016-07-04T10:20:00')).toEqual({ opening : 41033.43580670453, repayment : 10000, withdrawal : 0, balance : 31033.435806704532, interest : 34.194529838920445, closing : 31067.630336543454 });
-            expect(liability.liabilityInMonth('2016-08-04T10:20:00')).toEqual({ opening : 31067.630336543454, repayment : 0, withdrawal : 0, balance : 31067.630336543454, interest : 25.889691947119545, closing : 31093.520028490573 });
-            expect(liability.liabilityInMonth('2016-09-04T10:20:00')).toEqual({ opening : 31093.520028490573, repayment : 0, withdrawal : 0, balance : 31093.520028490573, interest : 25.911266690408812, closing : 31119.43129518098 });
-            expect(liability.liabilityInMonth('2016-10-04T10:20:00')).toEqual({ opening : 31119.43129518098, repayment : 10000, withdrawal : 0, balance : 21119.43129518098, interest : 25.932859412650814, closing : 21145.36415459363 });
-            expect(liability.liabilityInMonth('2016-11-04T10:20:00')).toEqual({ opening : 21145.36415459363, repayment : 0, withdrawal : 0, balance : 21145.36415459363, interest : 17.62113679549469, closing : 21162.985291389123 });
-            expect(liability.liabilityInMonth('2016-12-04T10:20:00')).toEqual({ opening : 21162.985291389123, repayment : 0, withdrawal : 0, balance : 21162.985291389123, interest : 17.6358210761576, closing : 21180.62111246528 });
-            expect(liability.liabilityInMonth('2017-01-04T10:20:00')).toEqual({ opening : 21180.62111246528, repayment : 10000, withdrawal : 0, balance : 11180.62111246528, interest : 17.650517593721066, closing : 11198.271630059002 });
-            expect(liability.liabilityInMonth('2017-02-04T10:20:00')).toEqual({ opening : 11198.271630059002, repayment : 0, withdrawal : 0, balance : 11198.271630059002, interest : 9.331893025049167, closing : 11207.603523084052 });
-            expect(liability.liabilityInMonth('2017-03-04T10:20:00')).toEqual({ opening : 11207.603523084052, repayment : 0, withdrawal : 0, balance : 11207.603523084052, interest : 9.339669602570043, closing : 11216.943192686622 });
-            expect(liability.liabilityInMonth('2017-04-04T10:20:00')).toEqual({ opening : 11216.943192686622, repayment : 10000, withdrawal : 0, balance : 1216.9431926866218, interest : 9.347452660572184, closing : 1226.290645347194 });
-            expect(liability.liabilityInMonth('2017-05-04T10:20:00')).toEqual({ opening : 1226.290645347194, repayment : 0, withdrawal : 0, balance : 1226.290645347194, interest : 1.0219088711226616, closing : 1227.3125542183166 });
-            expect(liability.liabilityInMonth('2017-06-04T10:20:00')).toEqual({ opening : 1227.3125542183166, repayment : 0, withdrawal : 0, balance : 1227.3125542183166, interest : 1.022760461848597, closing : 1228.335314680165 });
-            expect(liability.liabilityInMonth('2017-07-04T10:20:00')).toEqual({ opening : 1228.335314680165, repayment : 1229.3589274423985, withdrawal : 0, balance : 0, interest : 1.023612762233471, closing : 0 });
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 });
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 90075, repayment : 0, withdrawal : 0, balance : 90075, interest : 75.0625, closing : 90150.0625 });
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 90150.0625, repayment : 0, withdrawal : 0, balance : 90150.0625, interest : 75.12505208333333, closing : 90225.18755208333 });
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 90225.18755208333, repayment : 10000, withdrawal : 0, balance : 80225.18755208333, interest : 66.85432296006944, closing : 80292.0418750434 });
+            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 80292.0418750434, repayment : 0, withdrawal : 0, balance : 80292.0418750434, interest : 66.9100348958695, closing : 80358.95190993928 });
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 80358.95190993928, repayment : 0, withdrawal : 0, balance : 80358.95190993928, interest : 66.96579325828273, closing : 80425.91770319756 });
+            expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual({ opening : 80425.91770319756, repayment : 10000, withdrawal : 0, balance : 70425.91770319756, interest : 58.68826475266463, closing : 70484.60596795022 });
+            expect(liability.liabilityInMonth('2015-08-04T10:20:00')).toEqual({ opening : 70484.60596795022, repayment : 0, withdrawal : 0, balance : 70484.60596795022, interest : 58.73717163995852, closing : 70543.34313959019 });
+            expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual({ opening : 70543.34313959019, repayment : 0, withdrawal : 0, balance : 70543.34313959019, interest : 58.78611928299182, closing : 70602.12925887317 });
+            expect(liability.liabilityInMonth('2015-10-04T10:20:00')).toEqual({ opening : 70602.12925887317, repayment : 10000, withdrawal : 0, balance : 60602.129258873174, interest : 50.5017743823943, closing : 60652.631033255566 });
+            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual({ opening : 60652.631033255566, repayment : 0, withdrawal : 0, balance : 60652.631033255566, interest : 50.543859194379635, closing : 60703.17489244995 });
+            expect(liability.liabilityInMonth('2015-12-04T10:20:00')).toEqual({ opening : 60703.17489244995, repayment : 0, withdrawal : 0, balance : 60703.17489244995, interest : 50.58597907704162, closing : 60753.76087152699 });
+            expect(liability.liabilityInMonth('2016-01-04T10:20:00')).toEqual({ opening : 60753.76087152699, repayment : 10000, withdrawal : 0, balance : 50753.76087152699, interest : 42.294800726272484, closing : 50796.055672253264 });
+            expect(liability.liabilityInMonth('2016-02-04T10:20:00')).toEqual({ opening : 50796.055672253264, repayment : 0, withdrawal : 0, balance : 50796.055672253264, interest : 42.33004639354438, closing : 50838.38571864681 });
+            expect(liability.liabilityInMonth('2016-03-04T10:20:00')).toEqual({ opening : 50838.38571864681, repayment : 0, withdrawal : 0, balance : 50838.38571864681, interest : 42.365321432205675, closing : 50880.75104007901 });
+            expect(liability.liabilityInMonth('2016-04-04T10:20:00')).toEqual({ opening : 50880.75104007901, repayment : 10000, withdrawal : 0, balance : 40880.75104007901, interest : 34.067292533399176, closing : 40914.81833261241 });
+            expect(liability.liabilityInMonth('2016-05-04T10:20:00')).toEqual({ opening : 40914.81833261241, repayment : 0, withdrawal : 0, balance : 40914.81833261241, interest : 34.09568194384367, closing : 40948.914014556256 });
+            expect(liability.liabilityInMonth('2016-06-04T10:20:00')).toEqual({ opening : 40948.914014556256, repayment : 0, withdrawal : 0, balance : 40948.914014556256, interest : 34.12409501213021, closing : 40983.038109568384 });
+            expect(liability.liabilityInMonth('2016-07-04T10:20:00')).toEqual({ opening : 40983.038109568384, repayment : 10000, withdrawal : 0, balance : 30983.038109568384, interest : 25.819198424640316, closing : 31008.857307993025 });
+            expect(liability.liabilityInMonth('2016-08-04T10:20:00')).toEqual({ opening : 31008.857307993025, repayment : 0, withdrawal : 0, balance : 31008.857307993025, interest : 25.84071442332752, closing : 31034.698022416353 });
+            expect(liability.liabilityInMonth('2016-09-04T10:20:00')).toEqual({ opening : 31034.698022416353, repayment : 0, withdrawal : 0, balance : 31034.698022416353, interest : 25.862248352013626, closing : 31060.560270768365 });
+            expect(liability.liabilityInMonth('2016-10-04T10:20:00')).toEqual({ opening : 31060.560270768365, repayment : 10000, withdrawal : 0, balance : 21060.560270768365, interest : 17.55046689230697, closing : 21078.11073766067 });
+            expect(liability.liabilityInMonth('2016-11-04T10:20:00')).toEqual({ opening : 21078.11073766067, repayment : 0, withdrawal : 0, balance : 21078.11073766067, interest : 17.56509228138389, closing : 21095.675829942054 });
+            expect(liability.liabilityInMonth('2016-12-04T10:20:00')).toEqual({ opening : 21095.675829942054, repayment : 0, withdrawal : 0, balance : 21095.675829942054, interest : 17.579729858285045, closing : 21113.25555980034 });
+            expect(liability.liabilityInMonth('2017-01-04T10:20:00')).toEqual({ opening : 21113.25555980034, repayment : 10000, withdrawal : 0, balance : 11113.255559800338, interest : 9.261046299833616, closing : 11122.516606100171 });
+            expect(liability.liabilityInMonth('2017-02-04T10:20:00')).toEqual({ opening : 11122.516606100171, repayment : 0, withdrawal : 0, balance : 11122.516606100171, interest : 9.26876383841681, closing : 11131.785369938587 });
+            expect(liability.liabilityInMonth('2017-03-04T10:20:00')).toEqual({ opening : 11131.785369938587, repayment : 0, withdrawal : 0, balance : 11131.785369938587, interest : 9.276487808282155, closing : 11141.061857746869 });
+            expect(liability.liabilityInMonth('2017-04-04T10:20:00')).toEqual({ opening : 11141.061857746869, repayment : 10000, withdrawal : 0, balance : 1141.0618577468686, interest : 0.9508848814557237, closing : 1142.0127426283243 });
+            expect(liability.liabilityInMonth('2017-05-04T10:20:00')).toEqual({ opening : 1142.0127426283243, repayment : 0, withdrawal : 0, balance : 1142.0127426283243, interest : 0.9516772855236035, closing : 1142.964419913848 });
+            expect(liability.liabilityInMonth('2017-06-04T10:20:00')).toEqual({ opening : 1142.964419913848, repayment : 0, withdrawal : 0, balance : 1142.964419913848, interest : 0.9524703499282066, closing : 1143.9168902637762 });
+            expect(liability.liabilityInMonth('2017-07-04T10:20:00')).toEqual({ opening : 1143.9168902637762, repayment : 1143.9168902637762, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2017-08-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2017-09-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2017-10-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
         });
 
         it('computes property liabilityInMonth for Monthly payments', function () {
-            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 83.33333333333331, closing : 90083.33333333333 });
-            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 90083.33333333333, repayment : 10000, withdrawal : 0, balance : 80083.33333333333, interest : 75.06944444444443, closing : 80158.40277777777 });
-            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 80158.40277777777, repayment : 10000, withdrawal : 0, balance : 70158.40277777777, interest : 66.79866898148147, closing : 70225.20144675925 });
-            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 70225.20144675925, repayment : 10000, withdrawal : 0, balance : 60225.20144675925, interest : 58.52100120563271, closing : 60283.72244796489 });
-            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 60283.72244796489, repayment : 10000, withdrawal : 0, balance : 50283.72244796489, interest : 50.23643537330407, closing : 50333.95888333819 });
-            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 50333.95888333819, repayment : 10000, withdrawal : 0, balance : 40333.95888333819, interest : 41.94496573611516, closing : 40375.90384907431 });
-            expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual({ opening : 40375.90384907431, repayment : 10000, withdrawal : 0, balance : 30375.90384907431, interest : 33.64658654089526, closing : 30409.550435615205 });
-            expect(liability.liabilityInMonth('2015-08-04T10:20:00')).toEqual({ opening : 30409.550435615205, repayment : 10000, withdrawal : 0, balance : 20409.550435615205, interest : 25.341292029679334, closing : 20434.891727644885 });
-            expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual({ opening : 20434.891727644885, repayment : 10000, withdrawal : 0, balance : 10434.891727644885, interest : 17.02907643970407, closing : 10451.920804084588 });
-            expect(liability.liabilityInMonth('2015-10-04T10:20:00')).toEqual({ opening : 10451.920804084588, repayment : 10000, withdrawal : 0, balance : 451.92080408458787, interest : 8.709934003403824, closing : 460.6307380879917 });
-            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual({ opening : 460.6307380879917, repayment : 461.01459703639836, withdrawal : 0, balance : 0, interest : 0.3838589484066597, closing : 0 });
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 });
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 90075, repayment : 10000, withdrawal : 0, balance : 80075, interest : 66.72916666666666, closing : 80141.72916666667 });
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 80141.72916666667, repayment : 10000, withdrawal : 0, balance : 70141.72916666667, interest : 58.45144097222223, closing : 70200.18060763889 });
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 70200.18060763889, repayment : 10000, withdrawal : 0, balance : 60200.18060763889, interest : 50.166817173032406, closing : 60250.347424811924 });
+            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 60250.347424811924, repayment : 10000, withdrawal : 0, balance : 50250.347424811924, interest : 41.875289520676596, closing : 50292.2227143326 });
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 50292.2227143326, repayment : 10000, withdrawal : 0, balance : 40292.2227143326, interest : 33.576852261943834, closing : 40325.79956659455 });
+            expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual({ opening : 40325.79956659455, repayment : 10000, withdrawal : 0, balance : 30325.79956659455, interest : 25.27149963882879, closing : 30351.071066233377 });
+            expect(liability.liabilityInMonth('2015-08-04T10:20:00')).toEqual({ opening : 30351.071066233377, repayment : 10000, withdrawal : 0, balance : 20351.071066233377, interest : 16.95922588852781, closing : 20368.030292121904 });
+            expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual({ opening : 20368.030292121904, repayment : 10000, withdrawal : 0, balance : 10368.030292121904, interest : 8.64002524343492, closing : 10376.670317365339 });
+            expect(liability.liabilityInMonth('2015-10-04T10:20:00')).toEqual({ opening : 10376.670317365339, repayment : 10000, withdrawal : 0, balance : 376.67031736533863, interest : 0.3138919311377822, closing : 376.9842092964764 });
+            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual({ opening : 376.9842092964764, repayment : 376.9842092964764, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2015-12-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
         });
 
         it('computes property liabilityInMonth Bi-Monthly payments', function () {
             liability.frequency = 'bi-monthly';
             expect(liability.liabilityInMonth('2014-12-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
-            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 100000, repayment : 20000, withdrawal : 0, balance : 80000, interest : 83.33333333333331, closing : 80083.33333333333 });
-            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 80083.33333333333, repayment : 20000, withdrawal : 0, balance : 60083.33333333333, interest : 66.7361111111111, closing : 60150.06944444444 });
-            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 60150.06944444444, repayment : 20000, withdrawal : 0, balance : 40150.06944444444, interest : 50.12505787037036, closing : 40200.19450231481 });
-            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 40200.19450231481, repayment : 20000, withdrawal : 0, balance : 20200.194502314807, interest : 33.50016208526234, closing : 20233.69466440007 });
-            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 20233.69466440007, repayment : 20000, withdrawal : 0, balance : 233.6946644000709, interest : 16.861412220333392, closing : 250.5560766204043 });
-            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 250.5560766204043, repayment : 250.7648733509213, withdrawal : 0, balance : 0, interest : 0.2087967305170036, closing : 0 });
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 100000, repayment : 20000, withdrawal : 0, balance : 80000, interest : 66.66666666666666, closing : 80066.66666666667 });
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 80066.66666666667, repayment : 20000, withdrawal : 0, balance : 60066.66666666667, interest : 50.05555555555556, closing : 60116.722222222226 });
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 60116.722222222226, repayment : 20000, withdrawal : 0, balance : 40116.722222222226, interest : 33.430601851851854, closing : 40150.15282407408 });
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 40150.15282407408, repayment : 20000, withdrawal : 0, balance : 20150.15282407408, interest : 16.791794020061733, closing : 20166.94461809414 });
+            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 20166.94461809414, repayment : 20000, withdrawal : 0, balance : 166.94461809414133, interest : 0.1391205150784511, closing : 167.08373860921978 });
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 167.08373860921978, repayment : 167.08373860921978, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
         });
 
@@ -332,18 +332,18 @@ describe('ag.sdk.model.liability', function () {
 
             expect(liability.liabilityInRange('2014-12-04T10:20:00', '2016-01-04T10:20:00')).toEqual([
                 { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
-                { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 83.33333333333331, closing : 90083.33333333333 },
-                { opening : 90083.33333333333, repayment : 0, withdrawal : 0, balance : 90083.33333333333, interest : 75.06944444444443, closing : 90158.40277777777 },
-                { opening : 90158.40277777777, repayment : 0, withdrawal : 0, balance : 90158.40277777777, interest : 75.1320023148148, closing : 90233.53478009258 },
-                { opening : 90233.53478009258, repayment : 10000, withdrawal : 0, balance : 80233.53478009258, interest : 75.19461231674381, closing : 80308.72939240932 },
-                { opening : 80308.72939240932, repayment : 0, withdrawal : 0, balance : 80308.72939240932, interest : 66.9239411603411, closing : 80375.65333356966 },
-                { opening : 80375.65333356966, repayment : 0, withdrawal : 0, balance : 80375.65333356966, interest : 66.97971111130805, closing : 80442.63304468097 },
-                { opening : 80442.63304468097, repayment : 10000, withdrawal : 0, balance : 70442.63304468097, interest : 67.03552753723415, closing : 70509.6685722182 },
-                { opening : 70509.6685722182, repayment : 0, withdrawal : 0, balance : 70509.6685722182, interest : 58.75805714351516, closing : 70568.42662936171 },
-                { opening : 70568.42662936171, repayment : 0, withdrawal : 0, balance : 70568.42662936171, interest : 58.807022191134756, closing : 70627.23365155284 },
-                { opening : 70627.23365155284, repayment : 10000, withdrawal : 0, balance : 60627.233651552844, interest : 58.856028042960695, closing : 60686.0896795958 },
-                { opening : 60686.0896795958, repayment : 0, withdrawal : 0, balance : 60686.0896795958, interest : 50.57174139966317, closing : 60736.661420995464 },
-                { opening : 60736.661420995464, repayment : 0, withdrawal : 0, balance : 60736.661420995464, interest : 50.61388451749622, closing : 60787.27530551296 }
+                { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 },
+                { opening : 90075, repayment : 0, withdrawal : 0, balance : 90075, interest : 75.0625, closing : 90150.0625 },
+                { opening : 90150.0625, repayment : 0, withdrawal : 0, balance : 90150.0625, interest : 75.12505208333333, closing : 90225.18755208333 },
+                { opening : 90225.18755208333, repayment : 10000, withdrawal : 0, balance : 80225.18755208333, interest : 66.85432296006944, closing : 80292.0418750434 },
+                { opening : 80292.0418750434, repayment : 0, withdrawal : 0, balance : 80292.0418750434, interest : 66.9100348958695, closing : 80358.95190993928 },
+                { opening : 80358.95190993928, repayment : 0, withdrawal : 0, balance : 80358.95190993928, interest : 66.96579325828273, closing : 80425.91770319756 },
+                { opening : 80425.91770319756, repayment : 10000, withdrawal : 0, balance : 70425.91770319756, interest : 58.68826475266463, closing : 70484.60596795022 },
+                { opening : 70484.60596795022, repayment : 0, withdrawal : 0, balance : 70484.60596795022, interest : 58.73717163995852, closing : 70543.34313959019 },
+                { opening : 70543.34313959019, repayment : 0, withdrawal : 0, balance : 70543.34313959019, interest : 58.78611928299182, closing : 70602.12925887317 },
+                { opening : 70602.12925887317, repayment : 10000, withdrawal : 0, balance : 60602.129258873174, interest : 50.5017743823943, closing : 60652.631033255566 },
+                { opening : 60652.631033255566, repayment : 0, withdrawal : 0, balance : 60652.631033255566, interest : 50.543859194379635, closing : 60703.17489244995 },
+                { opening : 60703.17489244995, repayment : 0, withdrawal : 0, balance : 60703.17489244995, interest : 50.58597907704162, closing : 60753.76087152699 }
             ]);
         });
 
@@ -352,12 +352,12 @@ describe('ag.sdk.model.liability', function () {
 
             expect(liability.liabilityInRange('2014-12-04T10:20:00', '2015-07-04T10:20:00')).toEqual([
                 { opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
-                { opening : 100000, repayment : 20000, withdrawal : 0, balance : 80000, interest : 83.33333333333331, closing : 80083.33333333333 },
-                { opening : 80083.33333333333, repayment : 20000, withdrawal : 0, balance : 60083.33333333333, interest : 66.7361111111111, closing : 60150.06944444444 },
-                { opening : 60150.06944444444, repayment : 20000, withdrawal : 0, balance : 40150.06944444444, interest : 50.12505787037036, closing : 40200.19450231481 },
-                { opening : 40200.19450231481, repayment : 20000, withdrawal : 0, balance : 20200.194502314807, interest : 33.50016208526234, closing : 20233.69466440007 },
-                { opening : 20233.69466440007, repayment : 20000, withdrawal : 0, balance : 233.6946644000709, interest : 16.861412220333392, closing : 250.5560766204043 },
-                { opening : 250.5560766204043, repayment : 250.7648733509213, withdrawal : 0, balance : 0, interest : 0.2087967305170036, closing : 0 }
+                { opening : 100000, repayment : 20000, withdrawal : 0, balance : 80000, interest : 66.66666666666666, closing : 80066.66666666667 },
+                { opening : 80066.66666666667, repayment : 20000, withdrawal : 0, balance : 60066.66666666667, interest : 50.05555555555556, closing : 60116.722222222226 },
+                { opening : 60116.722222222226, repayment : 20000, withdrawal : 0, balance : 40116.722222222226, interest : 33.430601851851854, closing : 40150.15282407408 },
+                { opening : 40150.15282407408, repayment : 20000, withdrawal : 0, balance : 20150.15282407408, interest : 16.791794020061733, closing : 20166.94461809414 },
+                { opening : 20166.94461809414, repayment : 20000, withdrawal : 0, balance : 166.94461809414133, interest : 0.1391205150784511, closing : 167.08373860921978 },
+                { opening : 167.08373860921978, repayment : 167.08373860921978, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
             ]);
         });
     });
@@ -385,12 +385,12 @@ describe('ag.sdk.model.liability', function () {
         });
 
         it('computes property liabilityInMonth for Monthly payments', function () {
-            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 50000, repayment : 10000, withdrawal : 0, balance : 40000, interest : 41.66666666666666, closing : 40041.666666666664 });
-            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 40041.666666666664, repayment : 10000, withdrawal : 0, balance : 30041.666666666664, interest : 33.36805555555555, closing : 30075.03472222222 });
-            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 30075.03472222222, repayment : 10000, withdrawal : 0, balance : 20075.03472222222, interest : 25.06252893518518, closing : 20100.097251157404 });
-            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 20100.097251157404, repayment : 10000, withdrawal : 0, balance : 10100.097251157404, interest : 16.75008104263117, closing : 10116.847332200035 });
-            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 10116.847332200035, repayment : 10000, withdrawal : 0, balance : 116.84733220003545, interest : 8.430706110166696, closing : 125.27803831020215 });
-            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 125.27803831020215, repayment : 125.38243667546065, withdrawal : 0, balance : 0, interest : 0.1043983652585018, closing : 0 });
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 50000, repayment : 10000, withdrawal : 0, balance : 40000, interest : 33.33333333333333, closing : 40033.333333333336 });
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 40033.333333333336, repayment : 10000, withdrawal : 0, balance : 30033.333333333336, interest : 25.02777777777778, closing : 30058.361111111113 });
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 30058.361111111113, repayment : 10000, withdrawal : 0, balance : 20058.361111111113, interest : 16.715300925925927, closing : 20075.07641203704 });
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 20075.07641203704, repayment : 10000, withdrawal : 0, balance : 10075.07641203704, interest : 8.395897010030867, closing : 10083.47230904707 });
+            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 10083.47230904707, repayment : 10000, withdrawal : 0, balance : 83.47230904707067, interest : 0.06956025753922555, closing : 83.54186930460989 });
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 83.54186930460989, repayment : 83.54186930460989, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2015-08-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
             expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual({ opening : 0, repayment : 0, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
@@ -430,30 +430,84 @@ describe('ag.sdk.model.liability', function () {
 
             expect(liability.data.monthly.length).toBe(2);
 
-            expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : 0, withdrawal : 2000, balance : 3000, interest : 0.8333333333333333, closing : 3000.8333333333335 });
-            expect(liability.data.monthly[1]).toEqual({ opening : 3000.8333333333335, repayment : 0, withdrawal : 10000, balance : 13000.833333333334, interest : 2.5006944444444446, closing : 13003.334027777779 });
+            expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : 0, withdrawal : 2000, balance : 3000, interest : 2.5, closing : 3002.5 });
+            expect(liability.data.monthly[1]).toEqual({ opening : 3002.5, repayment : 0, withdrawal : 10000, balance : 13002.5, interest : 10.835416666666665, closing : 13013.335416666667 });
 
-            expect(liability.setWithdrawalInMonth(50000, '2015-05-04T10:20:00')).toBe(13025.015281250482);
+            expect(liability.setWithdrawalInMonth(50000, '2015-05-04T10:20:00')).toBe(13035.03);
 
             expect(liability.data.monthly.length).toBe(5);
 
-            expect(liability.data.monthly[2]).toEqual({ opening : 13003.334027777779, repayment : 0, withdrawal : 0, balance : 13003.334027777779, interest : 10.836111689814816, closing : 13014.170139467593 });
-            expect(liability.data.monthly[3]).toEqual({ opening : 13014.170139467593, repayment : 0, withdrawal : 0, balance : 13014.170139467593, interest : 10.845141782889659, closing : 13025.015281250482 });
-            expect(liability.data.monthly[4]).toEqual({ opening : 13025.015281250482, repayment : 0, withdrawal : 36974.98471874952, balance : 50000, interest : 10.854179401042067, closing : 50010.854179401045 });
+            expect(liability.data.monthly[2]).toEqual({ opening : 13013.335416666667, repayment : 0, withdrawal : 0, balance : 13013.335416666667, interest : 10.844446180555556, closing : 13024.179862847222 });
+            expect(liability.data.monthly[3]).toEqual({ opening : 13024.179862847222, repayment : 0, withdrawal : 0, balance : 13024.179862847222, interest : 10.85348321903935, closing : 13035.033346066262 });
+            expect(liability.data.monthly[4]).toEqual({ opening : 13035.033346066262, repayment : 0, withdrawal : 36964.966653933734, balance : 50000, interest : 41.66666666666666, closing : 50041.666666666664 });
 
             expect(liability.setRepaymentInMonth(25000, '2015-07-04T10:20:00')).toBe(0);
 
             expect(liability.data.monthly.length).toBe(7);
 
-            expect(liability.data.monthly[5]).toEqual({ opening : 50010.854179401045, repayment : 0, withdrawal : 0, balance : 50010.854179401045, interest : 41.675711816167535, closing : 50052.529891217215 });
-            expect(liability.data.monthly[6]).toEqual({ opening : 50052.529891217215, repayment : 25000, withdrawal : 0, balance : 25052.529891217215, interest : 41.71044157601435, closing : 25094.24033279323 });
+            expect(liability.data.monthly[5]).toEqual({ opening : 50041.666666666664, repayment : 0, withdrawal : 0, balance : 50041.666666666664, interest : 41.701388888888886, closing : 50083.368055555555 });
+            expect(liability.data.monthly[6]).toEqual({ opening : 50083.368055555555, repayment : 25000, withdrawal : 0, balance : 25083.368055555555, interest : 20.90280671296296, closing : 25104.270862268517 });
 
-            expect(liability.setRepaymentInMonth(30000, '2015-08-04T10:20:00')).toBe(4905.75966720677);
+            expect(liability.setRepaymentInMonth(30000, '2015-08-04T10:20:00')).toBe(4895.73);
 
             expect(liability.data.monthly.length).toBe(8);
 
-            expect(liability.data.monthly[7]).toEqual({ opening : 25094.24033279323, repayment : 25094.24033279323, withdrawal : 0, balance : 0, interest : 20.911866943994355, closing : 0 });
+            expect(liability.data.monthly[7]).toEqual({ opening : 25104.270862268517, repayment : 25104.270862268517, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
 
             //console.log(JSON.stringify(liability));
+        });
+
+        it('adds repayments to a month', function () {
+            expect(liability.setRepaymentInMonth(500, '2015-02-04T10:20:00')).toBe(0);
+
+            expect(liability.data.monthly.length).toBe(2);
+
+            expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : 0, withdrawal : 0, balance : 1000, interest : 0.8333333333333333, closing : 1000.8333333333334 });
+
+            expect(liability.data.monthly[1]).toEqual({ opening : 1000.8333333333334, repayment : 500, withdrawal : 0, balance : 500.83333333333337, interest : 0.4173611111111111, closing : 501.2506944444445 });
+
+            expect(liability.addRepaymentInMonth(250, '2015-02-04T10:20:00')).toBe(0);
+
+            expect(liability.data.monthly.length).toBe(2);
+
+            expect(liability.data.monthly[1]).toEqual({ opening : 1000.8333333333334, repayment : 750, withdrawal : 0, balance : 250.83333333333337, interest : 0.20902777777777778, closing : 251.04236111111115 });
+
+            expect(liability.addRepaymentInMonth(500, '2015-02-04T10:20:00')).toBe(249.17);
+
+            expect(liability.data.monthly.length).toBe(2);
+
+            expect(liability.data.monthly[1]).toEqual({ opening : 1000.8333333333334, repayment : 1000.8333333333334, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+
+            expect(liability.addRepaymentInMonth(500, '2015-02-04T10:20:00')).toBe(500);
+
+            expect(liability.data.monthly.length).toBe(2);
+
+            expect(liability.data.monthly[1]).toEqual({ opening : 1000.8333333333334, repayment : 1000.8333333333334, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+        });
+
+        it('adds withdrawals to a month', function () {
+            expect(liability.setWithdrawalInMonth(500, '2015-01-04T10:20:00')).toBe(0);
+
+            expect(liability.data.monthly.length).toBe(1);
+
+            expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : 0, withdrawal : 500, balance : 1500, interest : 1.25, closing : 1501.25 });
+
+            expect(liability.addWithdrawalInMonth(25000, '2015-01-04T10:20:00')).toBe(0);
+
+            expect(liability.data.monthly.length).toBe(1);
+
+            expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : 0, withdrawal : 25500, balance : 26500, interest : 22.08333333333333, closing : 26522.083333333332 });
+
+            expect(liability.addWithdrawalInMonth(25000, '2015-01-04T10:20:00')).toBe(1500);
+
+            expect(liability.data.monthly.length).toBe(1);
+
+            expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : 0, withdrawal : 49000, balance : 50000, interest : 41.66666666666666, closing : 50041.666666666664 });
+
+            expect(liability.addWithdrawalInMonth(25000, '2015-01-04T10:20:00')).toBe(25000);
+
+            expect(liability.data.monthly.length).toBe(1);
+
+            expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : 0, withdrawal : 49000, balance : 50000, interest : 41.66666666666666, closing : 50041.666666666664 });
         });
     });});
