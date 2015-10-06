@@ -9,7 +9,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             this.data.account = this.data.account || {
                 monthly: [],
-                yearly: []
+                yearly: [],
+                openingBalance: 0,
+                interestRateCredit: 0,
+                interestRateDebit: 0,
+                depreciationRate: 0
             };
 
             this.data.models = this.data.models || {
@@ -29,12 +33,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
 
-                recalulate(instance);
+                recalculate(instance);
             }
 
-            function recalulate (instance) {
-                // Re-calculate summary & ratio data
+            function recalculate (instance) {
+                // Re-calculate summary, account & ratio data
                 recalculateSummary(instance);
+                recalculatePrimaryAccount(instance);
                 recalculateRatios(instance);
             }
 
@@ -49,6 +54,15 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             function infinityToZero(value) {
                 return (isFinite(value) ? value : 0);
+            }
+
+            function sumCollectionProperty(collection, property) {
+                return underscore.chain(collection)
+                    .pluck(property)
+                    .reduce(function(total, value) {
+                        return total + value;
+                    }, 0)
+                    .value();
             }
 
             /**
@@ -158,7 +172,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }, this);
 
                 reEvaluateProductionSchedules(this);
-                recalulate(this);
+                recalculate(this);
             });
 
             function initializeCategoryValues(instance, section, category, months) {
@@ -294,7 +308,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.farmValuations.push(farmValuation);
 
                     reEvaluateFarmValuations(this);
-                    recalulate(this);
+                    recalculate(this);
                 }
             });
 
@@ -304,7 +318,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateFarmValuations(this);
-                recalulate(this);
+                recalculate(this);
             });
 
             function reEvaluateFarmValuations (instance) {
@@ -403,7 +417,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.assets.push(asset instanceof Asset ? asset.asJSON() : asset);
 
                     reEvaluateAssetsAndLiabilities(this);
-                    recalulate(this);
+                    recalculate(this);
                 }
             });
 
@@ -413,7 +427,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
-                recalulate(this);
+                recalculate(this);
             });
 
             privateProperty(this, 'addLiability', function (liability) {
@@ -425,7 +439,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.liabilities.push(liability instanceof Liability ? liability.asJSON() : liability);
 
                     reEvaluateAssetsAndLiabilities(this);
-                    recalulate(this);
+                    recalculate(this);
                 }
             });
 
@@ -435,7 +449,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
-                recalulate(this);
+                recalculate(this);
             });
 
             function reEvaluateAssetsAndLiabilities (instance) {
@@ -620,16 +634,20 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 // Summary of year 1 & year 2 for each category
                 instance.data.summary = {};
                 instance.data.summary.monthly = {
+                    unallocatedProductionIncome: calculateMonthlySectionsTotal([instance.data.unallocatedProductionIncome], initializeArray(numberOfMonths)),
+                    unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], initializeArray(numberOfMonths)),
                     capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], initializeArray(numberOfMonths)),
                     capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], initializeArray(numberOfMonths)),
                     otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
                     otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
                     debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
-                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
-                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.productionExpenditure, instance.data.debtRedemption], initializeArray(numberOfMonths))
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.unallocatedProductionIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.debtRedemption, instance.data.otherExpenditure], initializeArray(numberOfMonths))
                 };
 
                 instance.data.summary.yearly = {
+                    unallocatedProductionIncome: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionIncome, 2)],
+                    unallocatedProductionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 2)],
                     capitalIncome: [calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 2)],
                     capitalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 2)],
                     otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
@@ -653,12 +671,76 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 };
             }
 
+            /**
+             * Primary Account Handling
+             */
+            function recalculatePrimaryAccount(instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months'),
+                    numberOfYears = Math.ceil(endMonth.diff(startMonth, 'years', true)),
+                    defaultMonthObj = {
+                        opening: 0,
+                        inflow: 0,
+                        outflow: 0,
+                        balance: 0,
+                        interestPayable: 0,
+                        interestReceivable: 0,
+                        closing: 0
+                    };
+
+                while (instance.account.monthly.length < numberOfMonths) {
+                    instance.account.monthly.push(defaultMonthObj);
+                }
+                while (instance.account.yearly.length < numberOfYears) {
+                    instance.account.yearly.push(underscore.extend(defaultMonthObj, { worstBalance: 0, bestBalance: 0, openingMonth: null, closingMonth: null }));
+                }
+
+                underscore.each(instance.account.monthly, function (month, index) {
+                    month.opening = (index === 0 ? instance.account.openingBalance : instance.account.monthly[index - 1].closing);
+                    month.inflow = instance.data.summary.monthly.totalIncome[index];
+                    month.outflow = instance.data.summary.monthly.totalExpenditure[index];
+                    month.balance = month.opening + month.inflow - month.outflow;
+                    month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit * 100 / 12) : 0 );
+                    month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit * 100 / 12) : 0 );
+                    month.closing = month.balance + month.interestPayable + month.interestReceivable;
+                });
+
+                underscore.each(instance.account.yearly, function(year, index) {
+                    var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
+                    year.opening = months[0].opening;
+                    year.inflow = sumCollectionProperty(months, 'inflow');
+                    year.outflow = sumCollectionProperty(months, 'outflow');
+                    year.balance = year.opening + year.inflow - year.outflow;
+                    year.interestPayable = sumCollectionProperty(months, 'interestPayable');
+                    year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
+                    year.closing = year.balance + year.interestPayable + year.interestReceivable;
+                    year.openingMonth = moment(startMonth).add(index, 'years');
+                    year.closingMonth = moment(startMonth).add(index, 'years').add(months.length - 1, 'months').format('MMM-YY');
+
+                    var bestBalance = underscore.max(months, function (month) { return month.closing; }),
+                        worstBalance = underscore.min(months, function (month) { return month.closing; });
+                    year.bestBalance = {
+                        balance: bestBalance.closing,
+                        month: moment(year.openingMonth).add(months.indexOf(bestBalance), 'months').format('MMM-YY')
+                    };
+                    year.worstBalance = {
+                        balance: worstBalance.closing,
+                        month: moment(year.openingMonth).add(months.indexOf(worstBalance), 'months').format('MMM-YY')
+                    };
+                    year.openingMonth.format('MMM-YY');
+                });
+            }
+
             function recalculateRatios (instance) {
                 instance.data.ratios = {
                     productionCost: calculateRatio(instance, 'totalExpenditure', 'totalIncome'),
                     netCapital: calculateRatio(instance, 'totalAssets', 'totalLiabilities'),
                     gearing: calculateRatio(instance, 'totalLiabilities', ['totalAssets', '-totalLiabilities']),
-                    debt: calculateRatio(instance, 'totalLiabilities', 'totalAssets')
+                    debt: calculateRatio(instance, 'totalLiabilities', 'totalAssets'),
+                    //TODO:
+                    cashFlowBank: null,
+                    cashFlowFarming: null
                 };
             }
 
@@ -743,6 +825,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.monthlyStatement;
             });
 
+            //TODO: remove this later
             privateProperty(this, 'recalculateModel', function() {
                 reEvaluateBusinessPlan(this);
             })
