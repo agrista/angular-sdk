@@ -593,7 +593,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             .reduce(function(total, monthlyInterest) { return total + monthlyInterest; }, 0)
                             .value() || 0);
                     }, 0)
-                    .value()
+                    .value();
             }
 
             function calculateYearlyLiabilitiesTotal(instance, liabilityTypes, startMonth, endMonth, year) {
@@ -607,7 +607,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         var liability = l.liabilityInRange(startMonth, endMonth).slice((year - 1) * 12, year * 12);
                         return total + (liability.length ? liability[liability.length - 1].closing || 0 : 0);
                     }, 0)
-                    .value()
+                    .value();
             }
 
             function calculateMonthlyCategoriesTotal (categories, results) {
@@ -655,7 +655,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
                     totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
                     totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
-                    shortTermInterest: [calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 2)],
+                    productionCapitalInterest: [calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 2)],
                     mediumTermInterest: [calculateYearlyInterest(instance, ['medium-loan'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['medium-loan'], startMonth, endMonth, 2)],
                     longTermInterest: [calculateYearlyInterest(instance, ['long-loan'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['long-loan'], startMonth, endMonth, 2)],
                     totalInterest: [calculateYearlyInterest(instance, [], startMonth, endMonth, 1), calculateYearlyInterest(instance, [], startMonth, endMonth, 2)],
@@ -729,7 +729,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         month: moment(year.openingMonth).add(months.indexOf(worstBalance), 'months').format('MMM-YY')
                     };
                     year.openingMonth.format('MMM-YY');
+
+                    if (year < 2) {
+                        instance.data.summary.yearly.productionCapitalInterest[year] += -year.interestPayable;
+                        instance.data.summary.yearly.totalInterest[year] += -year.interestPayable;
+                    }
                 });
+
             }
 
             function recalculateRatios (instance) {
