@@ -40,8 +40,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             }
         }
 
-        function fixPrecisionError (number) {
-            return Math.round(number * 100) / 100;
+        function fixPrecisionError (number, precision) {
+            precision = precision || 10;
+
+            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
         }
 
         function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
@@ -69,7 +71,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }
 
                 month.balance = (month.opening - month.repayment + month.withdrawal <= 0 ? 0 : month.opening - month.repayment + month.withdrawal);
-                month.interest = ((instance.interestRate / 12) * month.balance) / 100;
+                month.interest = fixPrecisionError((instance.interestRate / 12) * month.balance) / 100;
                 month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
             });
         }
@@ -129,6 +131,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             /**
              * Set/add repayment/withdrawal in month
              */
+            privateProperty(this, 'resetWithdrawalAndRepayments', function () {
+                this.data.monthly = [];
+            });
+
             privateProperty(this, 'addRepaymentInMonth', function (repayment, month) {
                 var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
@@ -139,8 +145,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 var monthLiability = this.data.monthly[appliedMonth],
                     summedRepayment = repayment + monthLiability.repayment,
-                    limitedRepayment = (monthLiability.opening <= summedRepayment ? monthLiability.opening : summedRepayment),
-                    repaymentRemainder = fixPrecisionError(summedRepayment - limitedRepayment);
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= summedRepayment ? openingPlusWithdrawal : summedRepayment),
+                    repaymentRemainder = summedRepayment - limitedRepayment;
 
                 monthLiability.repayment = limitedRepayment;
 
@@ -158,8 +165,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                 var monthLiability = this.data.monthly[appliedMonth],
-                    limitedRepayment = (monthLiability.opening <= repayment ? monthLiability.opening : repayment),
-                    repaymentRemainder = fixPrecisionError(repayment - limitedRepayment);
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= repayment ? openingPlusWithdrawal : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
 
                 monthLiability.repayment = limitedRepayment;
 
@@ -178,8 +186,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 var monthLiability = this.data.monthly[appliedMonth],
                     summedWithdrawal = withdrawal + monthLiability.withdrawal,
-                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, summedWithdrawal) : summedWithdrawal),
-                    withdrawalRemainder = fixPrecisionError(summedWithdrawal - limitedWithdrawal);
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.limit > 0 ? Math.min(Math.max(0, this.limit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
+                    withdrawalRemainder = summedWithdrawal - limitedWithdrawal;
 
                 monthLiability.withdrawal = limitedWithdrawal;
 
@@ -197,7 +206,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                 var monthLiability = this.data.monthly[appliedMonth],
-                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, withdrawal) : withdrawal),
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.limit > 0 ? Math.min(Math.max(0, this.limit - openingMinusRepayment), withdrawal) : withdrawal),
                     withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
 
                 monthLiability.withdrawal = limitedWithdrawal;
