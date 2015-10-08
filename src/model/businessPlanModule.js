@@ -415,7 +415,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
             }
 
-            // Add Assets & Liabilities
+            /**
+             *   Assets & Liabilities Handling
+             */
+
+            privateProperty(this, 'updateLivestockValues', function() {
+
+            });
+
             privateProperty(this, 'addAsset', function (asset) {
                 if (Asset.new(asset).validate()) {
                     this.models.assets = underscore.reject(this.models.assets, function (item) {
@@ -460,7 +467,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 recalculate(this);
             });
 
-            function updateAssetStatementCategory(instance, category, itemName, value) {
+            function updateAssetStatementCategory(instance, category, itemName, asset) {
                 instance.data.assetStatement[category] = instance.data.assetStatement[category] || [];
 
                 var index = underscore.findIndex(instance.data.assetStatement[category], function(statementObj) { return statementObj.name == itemName; });
@@ -468,10 +475,15 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     name: itemName,
                     estimatedValue: 0,
                     currentRMV: 0,
-                    yearlyRMV: []
+                    yearlyRMV: [],
+                    assets: []
                 });
 
-                assetCategory.estimatedValue += value || 0;
+                var includedAsset = underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey });
+                if (!includedAsset) {
+                    assetCategory.assets.push(asset);
+                }
+                assetCategory.estimatedValue += asset.data.assetValue || 0;
                 instance.data.assetStatement[category].push(assetCategory);
             }
 
@@ -489,8 +501,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.otherIncome = {};
                 instance.data.otherExpenditure = {};
                 instance.data.debtRedemption = {};
-                instance.data.assetStatement = { 'long-term': [], 'medium-term': [], 'short-term': [] };
-                instance.data.liabilityStatement = { 'long-term': [], 'medium-term': [], 'short-term': [] };
+                instance.data.assetStatement = {};
+                instance.data.liabilityStatement = {};
 
                 underscore.each(instance.models.assets, function (asset) {
                     asset = Asset.new(asset);
@@ -506,7 +518,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         // VME
                         if (asset.type === 'vme') {
 
-                            if (asset.data.subtype === 'Vehicles') {
+                            if (asset.data.type === 'Vehicles') {
                                 if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
                                     initializeCategoryValues(instance, 'capitalIncome', 'Vehicle Purchases', numberOfMonths);
 
@@ -519,7 +531,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                     instance.data.capitalExpenditure['Vehicle Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
 
-                            } else if (asset.data.subtype === 'Machinery') {
+                            } else if (asset.data.type === 'Machinery') {
                                 if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
                                     initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Plant Purchases', numberOfMonths);
 
@@ -532,16 +544,20 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                     instance.data.capitalExpenditure['Machinery & Plant Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
                             }
-                            if (asset.data.assetValue && !(asset.data.sold && soldDate.isBefore(startMonth))) {
-                                updateAssetStatementCategory(instance, 'medium-term', asset.data.subtype, asset.data.assetValue);
-                            }
-                        } else if (asset.type == 'improvement' || asset.type == 'farmland' && asset.data.assetValue && !(asset.data.sold && soldDate.isBefore(startMonth))) {
-                            updateAssetStatementCategory(instance, 'long-term', 'Land and fixed improvements', asset.data.assetValue);
-                        } else if (asset.type === 'other') {
-                            initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
-                            initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
-                            if (asset.data.assetValue && !(asset.data.sold && soldDate.isBefore(startMonth))) {
-                                updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.name, asset.data.assetValue);
+                        }
+
+                        if (asset.data.assetValue && !(asset.data.sold && soldDate.isBefore(startMonth))) {
+                            switch(asset.type) {
+                                case 'improvement':
+                                case 'farmland':
+                                    updateAssetStatementCategory(instance, 'long-term', 'Land and fixed improvements', asset);
+                                    break;
+                                case 'vme':
+                                    updateAssetStatementCategory(instance, 'medium-term', asset.data.type, asset);
+                                    break;
+                                case 'other':
+                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.name, asset);
+                                    break;
                             }
                         }
 
