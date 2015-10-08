@@ -460,7 +460,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 recalculate(this);
             });
 
-            function updateAssetStatementCategory(instance, category, value, itemName) {
+            function updateAssetStatementCategory(instance, category, itemName, value) {
                 instance.data.assetStatement[category] = instance.data.assetStatement[category] || [];
 
                 var index = underscore.findIndex(instance.data.assetStatement[category], function(statementObj) { return statementObj.name == itemName; });
