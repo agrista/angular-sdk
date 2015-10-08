@@ -5,7 +5,9 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
     'Validator.equal',
     'Validator.format',
     'Validator.inclusion',
+    'Validator.inclusion.in',
     'Validator.length',
+    'Validator.object',
     'Validator.numeric',
     'Validator.range',
     'Validator.required',
@@ -31,11 +33,13 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     validateField(instance, validation);
                 });
 
+
                 return instance.$errors.countFor(fieldName) === 0;
             });
 
             function validateField (instance, validation) {
                 if (validation.validate(instance) === false) {
+
                     instance.$errors.add(validation.field, validation.message);
                 } else {
                     instance.$errors.clear(validation.field, validation.message);
@@ -144,13 +148,11 @@ sdkModelValidation.factory('Validatable.ValidationFunction', ['underscore', func
         boundFunction.message = configureMessage();
 
         function configureMessage () {
-            if (underscore.isString(options.message)) {
-                return options.message;
-            }
-
             if (underscore.isFunction(options.message)) {
                 return options.message.apply(options);
             }
+
+            return options.message;
         }
 
         return boundFunction;
@@ -230,7 +232,7 @@ sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
             }
 
             function defaultOptions (options) {
-                if (underscore.isObject(options) === false) {
+                if (typeof options != 'object' || underscore.isArray(options)) {
                     options = {
                         value: options,
                         message: validator.message
