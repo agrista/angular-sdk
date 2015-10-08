@@ -25,6 +25,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             };
 
             this.data.monthlyStatement = this.data.monthlyStatement || [];
+            this.data.adjustmentFactors = this.data.adjustmentFactors || {};
+            this.data.livestockValues = this.data.livestockValues || {
+                breeding: {
+                    stockSales: initializeArray(12),
+                    stockPurchases: initializeArray(12)
+                },
+                marketable: {}
+            };
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -452,6 +460,21 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 recalculate(this);
             });
 
+            function updateAssetStatementCategory(instance, category, value, itemName) {
+                instance.data.assetStatement[category] = instance.data.assetStatement[category] || [];
+
+                var index = underscore.findIndex(instance.data.assetStatement[category], function(statementObj) { return statementObj.name == itemName; });
+                var assetCategory = (index !== -1 ? instance.data.assetStatement[category].splice(index, 1) : {
+                    name: itemName,
+                    estimatedValue: 0,
+                    currentRMV: 0,
+                    yearlyRMV: []
+                });
+
+                assetCategory.estimatedValue += value || 0;
+                instance.data.assetStatement[category].push(assetCategory);
+            }
+
             function reEvaluateAssetsAndLiabilities (instance) {
                 var startMonth = moment(instance.startDate),
                     endMonth = moment(instance.endDate),
@@ -466,6 +489,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.otherIncome = {};
                 instance.data.otherExpenditure = {};
                 instance.data.debtRedemption = {};
+                instance.data.assetStatement = { 'long-term': [], 'medium-term': [], 'short-term': [] };
+                instance.data.liabilityStatement = { 'long-term': [], 'medium-term': [], 'short-term': [] };
 
                 underscore.each(instance.models.assets, function (asset) {
                     asset = Asset.new(asset);
@@ -475,10 +500,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                     // Check asset is not already added
                     if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
+                        var acquisitionDate = moment(asset.data.acquisitionDate),
+                            soldDate = moment(asset.data.soldDate);
+
                         // VME
                         if (asset.type === 'vme') {
-                            var acquisitionDate = moment(asset.data.acquisitionDate),
-                                soldDate = moment(asset.data.soldDate);
 
                             if (asset.data.subtype === 'Vehicles') {
                                 if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
@@ -492,24 +518,31 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                                     instance.data.capitalExpenditure['Vehicle Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
-                            } else {
-                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
 
-                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
+                            } else if (asset.data.subtype === 'Machinery') {
+                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Plant Purchases', numberOfMonths);
+
+                                    instance.data.capitalIncome['Machinery & Plant Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
                                 }
 
                                 if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment Sales', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Plant Sales', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Machinery & Equipment Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
+                                    instance.data.capitalExpenditure['Machinery & Plant Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
                                 }
                             }
+                            if (asset.data.assetValue && !(asset.data.sold && soldDate.isBefore(startMonth))) {
+                                updateAssetStatementCategory(instance, 'medium-term', asset.data.subtype, asset.data.assetValue);
+                            }
+                        } else if (asset.type == 'improvement' || asset.type == 'farmland' && asset.data.assetValue && !(asset.data.sold && soldDate.isBefore(startMonth))) {
+                            updateAssetStatementCategory(instance, 'long-term', 'Land and fixed improvements', asset.data.assetValue);
                         } else if (asset.type === 'other') {
                             initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
                             initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
-
-                            // TODO: calculate purchase/sold date for asset
+                            if (asset.data.assetValue && !(asset.data.sold && soldDate.isBefore(startMonth))) {
+                                updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.name, asset.data.assetValue);
+                            }
                         }
 
                         angular.forEach(asset.liabilities, function (liability) {
@@ -821,6 +854,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             computedProperty(this, 'account', function () {
                 return this.data.account;
+            });
+
+            computedProperty(this, 'adjustmentFactors', function () {
+                return this.data.adjustmentFactors;
             });
 
             computedProperty(this, 'models', function () {
