@@ -75,6 +75,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                 }
             });
 
+            computedProperty(this, 'liquidityTypeTitle', function () {
+                return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
+            });
+
             computedProperty(this, 'description', function () {
                 return this.data.description || '';
             });
@@ -116,6 +120,12 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             'vme': 'Vehicles, Machinery & Equipment',
             'wasteland': 'Wasteland',
             'water right': 'Water Rights'
+        });
+
+        readOnlyProperty(Asset, 'liquidityTypes', {
+            'long-term': 'Long-term',
+            'medium-term': 'Movable',
+            'short-term': 'Current'
         });
 
         readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
