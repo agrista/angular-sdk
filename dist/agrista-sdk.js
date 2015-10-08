@@ -11080,7 +11080,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     rangeStartMonth = moment(rangeStart),
                     rangeEndMonth = moment(rangeEnd),
                     appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
-                    appliedEndMonth = rangeEndMonth.diff(startMonth, 'months'),
+                    appliedEndMonth = rangeEndMonth.diff(rangeStartMonth, 'months'),
                     paddedOffset = (appliedStartMonth < 0 ? 0 - appliedStartMonth : 0);
 
                 var monthlyData = angular.copy(this.data.monthly || []);
@@ -11088,7 +11088,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 return underscore.range(paddedOffset)
                     .map(defaultMonth)
-                    .concat(monthlyData.slice(appliedStartMonth - appliedStartMonth, appliedEndMonth - appliedStartMonth - paddedOffset));
+                    .concat(monthlyData.slice(appliedStartMonth + paddedOffset, appliedEndMonth - paddedOffset));
             });
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
