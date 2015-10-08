@@ -127,7 +127,7 @@ describe('ag.sdk.model.business-plan', function () {
 
             businessPlan.addLiability({
                 uuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
-                type: 'short-loan',
+                type: 'short-term',
                 installmentPayment: 10000,
                 interestRate: 1,
                 legalEntityId: 2,
@@ -162,7 +162,7 @@ describe('ag.sdk.model.business-plan', function () {
                     liabilities: [{
                         id: 7,
                         uuid: '75A91F7C-3F92-4A5E-A727-E74BD029364B',
-                        type: 'medium-loan',
+                        type: 'medium-term',
                         installmentPayment: 10000,
                         interestRate: 1,
                         legalEntityId: 2,
@@ -173,7 +173,7 @@ describe('ag.sdk.model.business-plan', function () {
                     }, {
                         id: 8,
                         uuid: 'A2CDB65E-7D5C-4921-8F7E-02B879EDD6DB',
-                        type: 'long-loan',
+                        type: 'long-term',
                         installmentPayment: 10000,
                         interestRate: 1,
                         legalEntityId: 2,
@@ -302,9 +302,9 @@ describe('ag.sdk.model.business-plan', function () {
             expect(businessPlan.monthlyStatement[4]).toEqual({
                 uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Medium Term Loan',
+                name: 'Medium Term',
                 type: 'liability',
-                subtype: 'medium-loan',
+                subtype: 'medium-term',
                 source: 'legal entity',
                 liability: [
                     { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 },
@@ -405,9 +405,9 @@ describe('ag.sdk.model.business-plan', function () {
             expect(businessPlan.monthlyStatement[4]).toEqual({
                 uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Medium Term Loan',
+                name: 'Medium Term',
                 type: 'liability',
-                subtype: 'medium-loan',
+                subtype: 'medium-term',
                 source: 'legal entity',
                 liability: [
                     { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 },
@@ -504,9 +504,9 @@ describe('ag.sdk.model.business-plan', function () {
             expect(businessPlan.monthlyStatement[4]).toEqual({
                 uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Medium Term Loan',
+                name: 'Medium Term',
                 type: 'liability',
-                subtype: 'medium-loan',
+                subtype: 'medium-term',
                 source: 'legal entity',
                 liability: [
                     { opening : 100000, repayment : 10000, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 },
@@ -783,33 +783,6 @@ describe('ag.sdk.model.business-plan', function () {
                 source: 'asset',
                 value: 300000
             });
-        });
-
-        it('adds a liability', function () {
-            businessPlan.addLegalEntity({
-                id: 2,
-                email: 'dave@roundtree.com',
-                name: 'Dave Roundtree',
-                type: 'Individual',
-                organizationId: 1,
-                uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
-            });
-
-            expect(businessPlan.monthlyStatement.length).toBe(7);
-
-            businessPlan.addLiability({
-                uuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
-                type: 'short-loan',
-                installmentPayment: 10000,
-                interestRate: 1,
-                legalEntityId: 2,
-                amount: 500000,
-                merchantUuid: '1E109A6C-625B-4FE2-AD23-35D082754914',
-                frequency: 'monthly',
-                startDate: '2015-10-10T10:20:00'
-            });
-
-            expect(businessPlan.monthlyStatement.length).toBe(8);
         });
     });
 });

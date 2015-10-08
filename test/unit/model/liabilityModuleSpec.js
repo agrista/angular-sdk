@@ -21,11 +21,10 @@ describe('ag.sdk.model.liability', function () {
         beforeEach(function () {
             liability = Liability.new({
                 uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
-                type: 'medium-loan',
+                type: 'medium-term',
                 installmentPayment: 1000,
                 openingBalance: 1000000,
                 interestRate: 1,
-                legalEntityId: 1,
                 frequency: 'monthly',
                 startDate: '2015-10-10T10:20:00',
                 merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729'
@@ -41,7 +40,7 @@ describe('ag.sdk.model.liability', function () {
             expect(liability.validate()).toBe(false);
 
 
-            liability.type = 'loan';
+            liability.type = 'term';
             expect(liability.validate()).toBe(false);
         });
 
@@ -50,14 +49,6 @@ describe('ag.sdk.model.liability', function () {
             expect(liability.validate()).toBe(false);
 
             liability.installmentPayment = 'one thousand';
-            expect(liability.validate()).toBe(false);
-        });
-
-        it('validates legalEntityId', function () {
-            liability.legalEntityId = '1';
-            expect(liability.validate()).toBe(false);
-
-            liability.legalEntityId = undefined;
             expect(liability.validate()).toBe(false);
         });
 
@@ -119,7 +110,7 @@ describe('ag.sdk.model.liability', function () {
             liability.data.subtype = 'not valid subtype';
             expect(liability.validate()).toBe(false);
 
-            liability.type = 'medium-loan';
+            liability.type = 'medium-term';
             liability.installmentPayment = 1000;
             expect(liability.validate()).toBe(true);
 
@@ -139,7 +130,6 @@ describe('ag.sdk.model.liability', function () {
                 uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
                 type: 'production-credit',
                 interestRate: 1,
-                legalEntityId: 1,
                 frequency: 'monthly',
                 startDate: '2015-10-10T10:20:00',
                 merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
@@ -152,16 +142,16 @@ describe('ag.sdk.model.liability', function () {
         it('validates', function () {
             expect(liability.validate()).toBe(false);
 
-            liability.limit = 10000;
+            liability.creditLimit = 10000;
             expect(liability.validate()).toBe(true);
 
-            liability.limit = -10000;
+            liability.creditLimit = -10000;
             expect(liability.validate()).toBe(false);
 
-            liability.limit = '10000';
+            liability.creditLimit = '10000';
             expect(liability.validate()).toBe(false);
 
-            liability.limit = null;
+            liability.creditLimit = null;
             liability.data.subtype = 'input-supplier';
             expect(liability.validate()).toBe(true);
         });
@@ -173,7 +163,7 @@ describe('ag.sdk.model.liability', function () {
         beforeEach(function () {
             liability = Liability.new({
                 uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
-                type: 'short-loan',
+                type: 'short-term',
                 interestRate: 1,
                 legalEntityId: 1,
                 frequency: 'monthly',
@@ -369,7 +359,7 @@ describe('ag.sdk.model.liability', function () {
         beforeEach(function () {
             liability = Liability.new({
                 uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
-                type: 'short-loan',
+                type: 'short-term',
                 interestRate: 1,
                 legalEntityId: 1,
                 frequency: 'monthly',
@@ -412,7 +402,7 @@ describe('ag.sdk.model.liability', function () {
                 frequency: 'custom',
                 startDate: '2015-01-04T10:20:00',
                 merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
-                limit: 50000,
+                creditLimit: 50000,
                 openingBalance: 1000,
                 data: {
                     subtype: 'off-taker'

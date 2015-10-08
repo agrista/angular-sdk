@@ -9689,15 +9689,15 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         };
 
         var _types = {
-            'short-loan': 'Short Term Loan',
-            'medium-loan': 'Medium Term Loan',
-            'long-loan': 'Long Term Loan',
+            'short-term': 'Short Term',
+            'medium-term': 'Medium Term',
+            'long-term': 'Long Term',
             'production-credit': 'Production Credit',
             'rent': 'Rented'
         };
 
-        var _typesWithInstallmentPayments = ['short-loan', 'medium-loan', 'long-loan', 'rent'];
-        var _typesWithAmount = ['short-loan', 'medium-loan', 'long-loan'];
+        var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
+        var _typesWithAmount = ['short-term', 'medium-term', 'long-term'];
 
         var _subtypes = {
             'production-credit': {
