@@ -1595,9 +1595,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
-                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0));
+                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
 
-                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
+                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
                                     console.log('ERROR: ' + err);
 
@@ -10559,6 +10559,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.endDate;
             });
 
+            computedProperty(this, 'numberOfMonths', function () {
+                return moment(this.endDate).diff(this.startDate, 'months');
+            });
+
             computedProperty(this, 'models', function () {
                 return this.data.models;
             });
@@ -10719,10 +10723,10 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
-var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
-sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, readOnlyProperty, underscore) {
+sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
+    function (Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
         function LegalEntity (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -10744,6 +10748,14 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
             this.telephone = attrs.telephone;
             this.type = attrs.type;
             this.uuid = attrs.uuid;
+
+            this.assets = underscore.map(attrs.assets, function (asset) {
+                return Asset.new(asset);
+            });
+
+            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
+                return Liability.new(liability);
+            });
         }
 
         inheritModel(LegalEntity, Model.Base);
@@ -10883,8 +10895,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             }
         }
 
-        function fixPrecisionError (number) {
-            return Math.round(number * 100) / 100;
+        function fixPrecisionError (number, precision) {
+            precision = precision || 10;
+
+            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
         }
 
         function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
@@ -10912,7 +10926,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }
 
                 month.balance = (month.opening - month.repayment + month.withdrawal <= 0 ? 0 : month.opening - month.repayment + month.withdrawal);
-                month.interest = ((instance.interestRate / 12) * month.balance) / 100;
+                month.interest = fixPrecisionError((instance.interestRate / 12) * month.balance) / 100;
                 month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
             });
         }
@@ -10972,6 +10986,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             /**
              * Set/add repayment/withdrawal in month
              */
+            privateProperty(this, 'resetWithdrawalAndRepayments', function () {
+                this.data.monthly = [];
+            });
+
             privateProperty(this, 'addRepaymentInMonth', function (repayment, month) {
                 var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
@@ -10982,8 +11000,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 var monthLiability = this.data.monthly[appliedMonth],
                     summedRepayment = repayment + monthLiability.repayment,
-                    limitedRepayment = (monthLiability.opening <= summedRepayment ? monthLiability.opening : summedRepayment),
-                    repaymentRemainder = fixPrecisionError(summedRepayment - limitedRepayment);
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= summedRepayment ? openingPlusWithdrawal : summedRepayment),
+                    repaymentRemainder = summedRepayment - limitedRepayment;
 
                 monthLiability.repayment = limitedRepayment;
 
@@ -11001,8 +11020,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                 var monthLiability = this.data.monthly[appliedMonth],
-                    limitedRepayment = (monthLiability.opening <= repayment ? monthLiability.opening : repayment),
-                    repaymentRemainder = fixPrecisionError(repayment - limitedRepayment);
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= repayment ? openingPlusWithdrawal : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
 
                 monthLiability.repayment = limitedRepayment;
 
@@ -11021,8 +11041,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 var monthLiability = this.data.monthly[appliedMonth],
                     summedWithdrawal = withdrawal + monthLiability.withdrawal,
-                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, summedWithdrawal) : summedWithdrawal),
-                    withdrawalRemainder = fixPrecisionError(summedWithdrawal - limitedWithdrawal);
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
+                    withdrawalRemainder = summedWithdrawal - limitedWithdrawal;
 
                 monthLiability.withdrawal = limitedWithdrawal;
 
@@ -11040,7 +11061,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                 var monthLiability = this.data.monthly[appliedMonth],
-                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, withdrawal) : withdrawal),
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), withdrawal) : withdrawal),
                     withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
 
                 monthLiability.withdrawal = limitedWithdrawal;
@@ -11080,16 +11102,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
-            this.legalEntityId = attrs.legalEntityId;
             this.name = attrs.name;
             this.type = attrs.type;
             this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
             this.interestRate = attrs.interestRate || 0;
-            this.limit = attrs.limit;
+            this.creditLimit = attrs.creditLimit;
             this.frequency = attrs.frequency;
             this.startDate = attrs.startDate;
             this.endDate = attrs.endDate;
+
+            // TODO: Add merchant model
+            this.merchant = attrs.merchant;
         }
 
         inheritModel(Liability, Model.Base);
@@ -11156,11 +11180,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 },
                 numeric: true
             },
-            legalEntityId: {
-                required: true,
-                numeric: true
-            },
-            limit: {
+            creditLimit: {
                 requiredIf: function (value, instance, field) {
                     return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
                         (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));

@@ -156,9 +156,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
-                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0));
+                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
 
-                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
+                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
                                     console.log('ERROR: ' + err);
 
@@ -9382,6 +9382,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.endDate;
             });
 
+            computedProperty(this, 'numberOfMonths', function () {
+                return moment(this.endDate).diff(this.startDate, 'months');
+            });
+
             computedProperty(this, 'models', function () {
                 return this.data.models;
             });
@@ -9542,10 +9546,10 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
-var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
-sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, readOnlyProperty, underscore) {
+sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
+    function (Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
         function LegalEntity (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -9567,6 +9571,14 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
             this.telephone = attrs.telephone;
             this.type = attrs.type;
             this.uuid = attrs.uuid;
+
+            this.assets = underscore.map(attrs.assets, function (asset) {
+                return Asset.new(asset);
+            });
+
+            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
+                return Liability.new(liability);
+            });
         }
 
         inheritModel(LegalEntity, Model.Base);
@@ -9706,8 +9718,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             }
         }
 
-        function fixPrecisionError (number) {
-            return Math.round(number * 100) / 100;
+        function fixPrecisionError (number, precision) {
+            precision = precision || 10;
+
+            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
         }
 
         function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
@@ -9735,7 +9749,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }
 
                 month.balance = (month.opening - month.repayment + month.withdrawal <= 0 ? 0 : month.opening - month.repayment + month.withdrawal);
-                month.interest = ((instance.interestRate / 12) * month.balance) / 100;
+                month.interest = fixPrecisionError((instance.interestRate / 12) * month.balance) / 100;
                 month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
             });
         }
@@ -9795,6 +9809,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             /**
              * Set/add repayment/withdrawal in month
              */
+            privateProperty(this, 'resetWithdrawalAndRepayments', function () {
+                this.data.monthly = [];
+            });
+
             privateProperty(this, 'addRepaymentInMonth', function (repayment, month) {
                 var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
@@ -9805,8 +9823,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 var monthLiability = this.data.monthly[appliedMonth],
                     summedRepayment = repayment + monthLiability.repayment,
-                    limitedRepayment = (monthLiability.opening <= summedRepayment ? monthLiability.opening : summedRepayment),
-                    repaymentRemainder = fixPrecisionError(summedRepayment - limitedRepayment);
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= summedRepayment ? openingPlusWithdrawal : summedRepayment),
+                    repaymentRemainder = summedRepayment - limitedRepayment;
 
                 monthLiability.repayment = limitedRepayment;
 
@@ -9824,8 +9843,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                 var monthLiability = this.data.monthly[appliedMonth],
-                    limitedRepayment = (monthLiability.opening <= repayment ? monthLiability.opening : repayment),
-                    repaymentRemainder = fixPrecisionError(repayment - limitedRepayment);
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= repayment ? openingPlusWithdrawal : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
 
                 monthLiability.repayment = limitedRepayment;
 
@@ -9844,8 +9864,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 var monthLiability = this.data.monthly[appliedMonth],
                     summedWithdrawal = withdrawal + monthLiability.withdrawal,
-                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, summedWithdrawal) : summedWithdrawal),
-                    withdrawalRemainder = fixPrecisionError(summedWithdrawal - limitedWithdrawal);
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
+                    withdrawalRemainder = summedWithdrawal - limitedWithdrawal;
 
                 monthLiability.withdrawal = limitedWithdrawal;
 
@@ -9863,7 +9884,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                 var monthLiability = this.data.monthly[appliedMonth],
-                    limitedWithdrawal = (this.limit > 0 ? Math.min(this.limit - monthLiability.opening, withdrawal) : withdrawal),
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), withdrawal) : withdrawal),
                     withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
 
                 monthLiability.withdrawal = limitedWithdrawal;
@@ -9903,16 +9925,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
-            this.legalEntityId = attrs.legalEntityId;
             this.name = attrs.name;
             this.type = attrs.type;
             this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
             this.interestRate = attrs.interestRate || 0;
-            this.limit = attrs.limit;
+            this.creditLimit = attrs.creditLimit;
             this.frequency = attrs.frequency;
             this.startDate = attrs.startDate;
             this.endDate = attrs.endDate;
+
+            // TODO: Add merchant model
+            this.merchant = attrs.merchant;
         }
 
         inheritModel(Liability, Model.Base);
@@ -9979,11 +10003,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 },
                 numeric: true
             },
-            legalEntityId: {
-                required: true,
-                numeric: true
-            },
-            limit: {
+            creditLimit: {
                 requiredIf: function (value, instance, field) {
                     return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
                         (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));
@@ -10940,31 +10960,46 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(entities, function (entity) {
                             if (entity.$dirty === true) {
                                 chain.push(function () {
-                                    return legalEntityApi.postEntity({data: entity});
+                                    return legalEntityApi.postEntity({data: entity}).then(function (res) {
+                                        return promiseService.all([_postAssets(entity.$id, res.id), _postLiabilities('legalentity', entity.$id, res.id, res.id)]);
+                                    });
+                                });
+                            } else {
+                                chain.push(function () {
+                                    return _postAssets(entity.$id, entity.id);
+                                });
+
+                                chain.push(function () {
+                                    return _postLiabilities('legalentity', entity.$id, entity.id, entity.$id);
                                 });
                             }
-
-                            chain.push(function () {
-                                return _postAssets(entity.id);
-                            });
                         });
                     });
                 }, promiseService.throwError);
             }
 
-            function _postAssets (entityId) {
-                return assetApi.getAssets({id: entityId, options: _options.local}).then(function (assets) {
+            function _postAssets (localEntityId, remoteEntityId) {
+                return assetApi.getAssets({id: localEntityId, options: _options.local}).then(function (assets) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(assets, function (asset) {
+                            if (localEntityId !== remoteEntityId) {
+                                asset.$uri = 'assets/' + remoteEntityId;
+                                asset.legalEntityId = remoteEntityId;
+
+                                chain.push(function () {
+                                    return assetApi.updateAsset({data: asset});
+                                });
+                            }
+
                             if (asset.$dirty === true) {
                                 chain.push(function () {
                                     return assetApi.postAsset({data: asset}).then(function (res) {
-                                        return promiseService.all([_postLiabilities(asset.$id, res.id), _postProductionSchedules(asset.$id, res.id)]);
+                                        return promiseService.all([_postLiabilities('asset', asset.$id, res.id, remoteEntityId), _postProductionSchedules(asset.$id, res.id)]);
                                     });
                                 });
                             } else {
                                 chain.push(function () {
-                                    return _postLiabilities(asset.$id, asset.id);
+                                    return _postLiabilities('asset', asset.$id, asset.id, remoteEntityId);
                                 });
 
                                 chain.push(function () {
@@ -10976,13 +11011,13 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 }, promiseService.throwError);
             }
 
-            function _postLiabilities (localAssetId, remoteAssetId) {
-                return liabilityApi.getLiabilities({id: localAssetId, options: _options.local}).then(function (liabilities) {
+            function _postLiabilities (type, localId, remoteId, legalEntityId) {
+                return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: localId}, options: _options.local}).then(function (liabilities) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(liabilities, function (liability) {
-                            if (localAssetId !== remoteAssetId) {
-                                liability.$id = remoteAssetId;
-                                liability.$uri = 'liability/' + remoteAssetId;
+                            if (localId !== remoteId) {
+                                liability.$uri = 'liabilities/' + type + '/' + remoteId;
+                                liability.legalEntityId = legalEntityId;
 
                                 chain.push(function () {
                                     return liabilityApi.updateLiability({data: liability});
@@ -10992,8 +11027,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             if (liability.$dirty === true) {
                                 chain.push(function () {
                                     return liabilityApi.postLiability({
-                                        template: (liability.$local ? 'asset/:aid/liability' : 'liability/:id'),
-                                        schema: {aid: remoteAssetId},
+                                        template: (liability.$local ? ':type/:oid/liability' : 'liability/:id'),
+                                        schema: {type: type, oid: remoteId},
                                         data: liability
                                     });
                                 });
@@ -11008,8 +11043,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     return promiseService.chain(function (chain) {
                         angular.forEach(schedules, function (schedule) {
                             if (localAssetId !== remoteAssetId) {
-                                schedule.$id = remoteAssetId;
                                 schedule.$uri = 'production-schedules/' + remoteAssetId;
+                                schedule.assetId = remoteAssetId;
 
                                 chain.push(function () {
                                     return productionScheduleApi.updateProductionSchedule({data: schedule});
@@ -11017,8 +11052,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             }
 
                             if (schedule.$dirty === true) {
-                                schedule.assetId = remoteAssetId;
-
                                 chain.push(function () {
                                     return productionScheduleApi.postProductionSchedule({data: schedule});
                                 });
@@ -11536,33 +11569,47 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }];
 }]);
 
-mobileSdkApiApp.factory('merchantApi', ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
-    var _host = configuration.getServer();
-
-    var merchantApi = api({
-        plural: 'merchants',
-        singular: 'merchant'
-    });
-
-    return {
-        getMerchants: merchantApi.getItems,
-        createMerchant: merchantApi.createItem,
-        getMerchant: merchantApi.getItem,
-        updateMerchant: merchantApi.updateItem,
-        postMerchant: merchantApi.postItem,
-        deleteMerchant: merchantApi.deleteItem,
-        searchMerchants: function (query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
-            }).join('&');
-
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type, options) {
+            return (obj.merchantUuid ? merchantApi.findMerchant({column: 'data', key: obj.merchantUuid, options: {like: true, one: true}}) : undefined);
         }
-    };
+    }]);
+
+    hydrationProvider.registerDehydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type) {
+            return merchantApi.createMerchant({template: 'merchants', data: obj.merchant, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+        }
+    }]);
+
+    this.$get = ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
+        var _host = configuration.getServer();
+        var merchantApi = api({
+            plural: 'merchants',
+            singular: 'merchant'
+        });
+
+        return {
+            getMerchants: merchantApi.getItems,
+            createMerchant: merchantApi.createItem,
+            getMerchant: merchantApi.getItem,
+            findMerchant: merchantApi.findItem,
+            updateMerchant: merchantApi.updateItem,
+            postMerchant: merchantApi.postItem,
+            deleteMerchant: merchantApi.deleteItem,
+            searchMerchants: function (query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function (promise) {
+                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            }
+        };
+    }];
 }]);
 
 mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
@@ -11653,7 +11700,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['assets'];
+        var defaultRelations = ['assets', 'liabilities'];
         var entityApi = api({
             plural: 'legalentities',
             singular: 'legalentity',
@@ -11788,7 +11835,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('liabilities', ['liabilityApi', function (liabilityApi) {
         return function (obj, type) {
-            return liabilityApi.getLiabilities({id: obj.$id});
+            return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: obj.$id}, options: {hydrate: true}});
         }
     }]);
 
@@ -11796,11 +11843,11 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
         return function (obj, type) {
             var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
-            return liabilityApi.purgeLiability({template: 'liabilities/:id', schema: {id: objId}, options: {force: false}})
+            return liabilityApi.purgeLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.liabilities, function (liability) {
-                            promises.push(liabilityApi.createLiability({template: 'liabilities/:id', schema: {id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                            promises.push(liabilityApi.createLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -11808,7 +11855,7 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = [];
+        var defaultRelations = ['merchant'];
         var liabilityApi = api({
             plural: 'liabilities',
             singular: 'liability',
@@ -11905,7 +11952,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
     hydrationProvider.registerHydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type, options) {
             if (obj.budgetUuid) {
-                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {one: true}});
+                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {like: true, one: true}});
             } else {
                 return enterpriseBudgetApi.findEnterpriseBudget({key: obj.budgetId, options: {one: true}});
             }
@@ -11914,7 +11961,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
 
     hydrationProvider.registerDehydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type) {
-            return enterpriseBudgetApi.createDocument({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+            return enterpriseBudgetApi.createEnterpriseBudget({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
         }
     }]);
 
@@ -12099,7 +12146,9 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
         parseRequest: function (templateUrl, schemaData) {
             if (templateUrl !== undefined) {
                 angular.forEach(schemaData, function (data, key) {
-                    templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
+                    templateUrl = templateUrl
+                        .replace('/:' + key, (data !== undefined ? '/' + data : ''))
+                        .replace(':' + key, (data !== undefined ? data : ''));
                 });
             }
 
