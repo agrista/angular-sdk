@@ -9005,6 +9005,34 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     .value();
             }
 
+            function divideArrayValues (numeratorValues, denominatorValues) {
+                if (numeratorValues.length != denominatorValues.length) {
+                    return [];
+                }
+
+                return underscore.reduce(denominatorValues, function(result, value, index) {
+                    result[index] = infinityToZero(result[index] / value);
+                    return result;
+                }, numeratorValues);
+            }
+
+            function addArrayValues (array1, array2) {
+                if (!array1 || !array2 || array1.length != array2.length) {
+                    return [];
+                }
+
+                return underscore.reduce(array1, function(result, value, index) {
+                    result[index] += value;
+                    return result;
+                }, array2);
+            }
+
+            function negateArrayValues (array) {
+                return underscore.map(array, function(value) {
+                    return value * -1;
+                });
+            }
+
             /**
              * Legal Entities handling
              */
@@ -9411,12 +9439,73 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     assets: []
                 });
 
-                var includedAsset = underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey });
-                if (!includedAsset) {
+                if (!underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey })) {
                     assetCategory.assets.push(asset);
                 }
                 assetCategory.estimatedValue += asset.data.assetValue || 0;
                 instance.data.assetStatement[category].push(assetCategory);
+            }
+
+            function updateLiabilityStatementCategory(instance, liability) {
+                var category = (liability.type == 'production-credit' || liability.type == 'rent' ? 'short-term' : liability.type),
+                    itemName = (liability.type == 'rent' ? 'Rent overdue' : liability.name),
+                    index = underscore.findIndex(instance.data.liabilityStatement[category], function(statementObj) { return statementObj.name == itemName; }),
+                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate)) / 12),
+                    liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1) : {
+                        name: itemName,
+                        currentValue: 0,
+                        yearlyValues: initializeArray(numberOfYears),
+                        liabilities: []
+                    });
+
+                instance.data.liabilityStatement[category] = instance.data.liabilityStatement[category] || [];
+
+                liabilityCategory.currentValue +=  liability.liabilityInMonth(instance.startDate).opening;
+
+                // Calculate total year-end values for liability category
+                for (var year = 0; year < numberOfYears; year++) {
+                    var yearEnd = moment.min(moment(instance.endDate), moment(instance.startDate).add(year, 'years').add(11, 'months'));
+                    liabilityCategory.yearlyValues[year] += liability.liabilityInMonth(yearEnd).closing;
+                }
+
+                if (!underscore.findWhere(liabilityCategory.liabilities, { uuid: liability.uuid })) {
+                    liabilityCategory.liabilities.push(liability);
+                }
+                instance.data.liabilityStatement[category].push(liabilityCategory);
+            }
+
+            function calculateAssetStatementRMV(instance) {
+
+            }
+
+            function totalAssetsAndLiabilities(instance) {
+                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate)) / 12);
+
+                instance.data.assetStatement.total = underscore.chain(instance.data.assetStatement)
+                    .values()
+                    .flatten(true)
+                    .reduce(function(result, asset) {
+                        result.estimatedValue += asset.estimatedValue;
+                        result.currentRMV += asset.currentRMV;
+                        result.yearlyRMV = addArrayValues(result.yearlyRMV, asset.yearlyRMV);
+                    }, {
+                        estimatedValue: 0,
+                        currentRMV: 0,
+                        yearlyRMV: initializeArray(numberOfYears)
+                    })
+                    .value();
+
+                instance.data.liabilityStatement.total = underscore.chain(instance.data.liabilityStatement)
+                    .values()
+                    .flatten(true)
+                    .reduce(function(result, liability) {
+                        result.currentValue += liability.currentValue;
+                        result.yearlyValues = addArrayValues(result.yearlyValues, liability.yearlyValues);
+                    }, {
+                        currentValue: 0,
+                        yearlyValues: initializeArray(numberOfYears)
+                    })
+                    .value();
             }
 
             function reEvaluateAssetsAndLiabilities (instance) {
@@ -9500,9 +9589,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                             initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
-                            instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
-                                return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
+                            instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                                return (month.repayment || 0) + (instance.data[section][typeTitle][index] || 0);
                             });
+
+                            // TODO: deal with missing liquidityType for 'Other' liabilities
+                            updateLiabilityStatementCategory(instance, liability)
                         });
 
                         // Add asset
@@ -9527,15 +9619,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                     // Check asset is not already added
                     if (registerLegalEntity && underscore.isUndefined(statementLiability)) {
-                        var section = (liability.type === 'rent' || liability.type === 'other' ? 'capitalExpenditure' : 'debtRedemption'),
+                        var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
                             typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                             liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
                         initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
-                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
-                            return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
+                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                            return (month.repayment || 0) + (instance.data[section][typeTitle][index] || 0);
                         });
+
+                        // TODO: deal with missing liquidityType for 'Other' liabilities
+                        updateLiabilityStatementCategory(instance, liability);
 
                         // Add liability
                         instance.data.monthlyStatement.push({
@@ -9546,10 +9641,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             type: 'liability',
                             subtype: 'other',
                             source: 'liability',
-                            liability: liability.liabilityInRange(instance.startDate, instance.endDate)
+                            liability: liabilityMonths
                         });
                     }
                 });
+
+                calculateAssetStatementRMV(instance);
+                totalAssetsAndLiabilities(instance);
             }
 
             /**
@@ -9636,18 +9734,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
                     totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
                     totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
-                    productionCapitalInterest: [calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 2)],
-                    mediumTermInterest: [calculateYearlyInterest(instance, ['medium-loan'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['medium-loan'], startMonth, endMonth, 2)],
-                    longTermInterest: [calculateYearlyInterest(instance, ['long-loan'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['long-loan'], startMonth, endMonth, 2)],
+                    productionCapitalInterest: [calculateYearlyInterest(instance, ['short-term', 'production-credit'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['short-term', 'production-credit'], startMonth, endMonth, 2)],
+                    mediumTermInterest: [calculateYearlyInterest(instance, ['medium-term'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['medium-term'], startMonth, endMonth, 2)],
+                    longTermInterest: [calculateYearlyInterest(instance, ['long-term'], startMonth, endMonth, 1), calculateYearlyInterest(instance, ['long-term'], startMonth, endMonth, 2)],
                     totalInterest: [calculateYearlyInterest(instance, [], startMonth, endMonth, 1), calculateYearlyInterest(instance, [], startMonth, endMonth, 2)],
-                    //TODO:
-                    currentAssets: null,
-                    movableAssets: null,
-                    fixedAssets: null,
-                    totalAssets: null,
-                    currentLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['short-loan', 'production-credit'], startMonth, endMonth, 2)],
-                    mediumLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['medium-loan'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['medium-loan'], startMonth, endMonth, 2)],
-                    longLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['long-loan'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['long-loan'], startMonth, endMonth, 2)],
+                    currentLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['short-term', 'production-credit'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['short-term', 'production-credit'], startMonth, endMonth, 2)],
+                    mediumLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['medium-term'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['medium-term'], startMonth, endMonth, 2)],
+                    longLiabilities: [calculateYearlyLiabilitiesTotal(instance, ['long-term'], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, ['long-term'], startMonth, endMonth, 2)],
                     totalLiabilities: [calculateYearlyLiabilitiesTotal(instance, [], startMonth, endMonth, 1), calculateYearlyLiabilitiesTotal(instance, [], startMonth, endMonth, 2)]
                 };
             }
@@ -9759,33 +9852,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             }
 
-            function divideArrayValues (numeratorValues, denominatorValues) {
-                if (numeratorValues.length != denominatorValues.length) {
-                    return [];
-                }
-
-                return underscore.reduce(denominatorValues, function(result, value, index) {
-                    result[index] = infinityToZero(result[index] / value);
-                    return result;
-                }, numeratorValues);
-            }
-
-            function addArrayValues (array1, array2) {
-                if (!array1 || !array2 || array1.length != array2.length) {
-                    return [];
-                }
-
-                return underscore.reduce(array1, function(result, value, index) {
-                    result[index] += value;
-                    return result;
-                }, array2);
-            }
-
-            function negateArrayValues (array) {
-                return underscore.map(array, function(value) {
-                    return value * -1;
-                });
-            }
 
             // View added Assets & Liabilities
             computedProperty(this, 'startDate', function () {
