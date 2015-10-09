@@ -171,27 +171,40 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
 /**
  * Inclusion Validator
  */
-sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
-    function (underscore, Validator) {
-        function inclusion (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value)) {
-                return false;
-            }
-
-            if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {
-                throw 'Inclusion validator must specify an \'in\' attribute';
-            }
-
-            return underscore.some(this.in, function (item) {
-                return value === item;
-            })
-        }
+sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator', 'Validator.inclusion.in',
+    function (underscore, Validator, inclusionIn) {
+        function inclusion (value, instance, field) {}
 
         inclusion.message = function () {
-            return 'Must be one of \''+ this.in.join(', ') + '\'';
+            return 'Must have an included value';
+        };
+
+        inclusion.options = {
+            in: inclusionIn
         };
 
         return new Validator(inclusion);
+    }]);
+
+sdkModelValidators.factory('Validator.inclusion.in', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function inclusionIn (value, instance, field) {
+            var _in = (typeof this.value == 'function' ? this.value(value, instance, field) : this.value);
+
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (_in.length == 0 ? true : underscore.some(_in, function (item) {
+                return value === item;
+            }));
+        }
+
+        inclusionIn.message = function () {
+            return 'Must be in array of values';
+        };
+
+        return new Validator(inclusionIn);
     }]);
 
 /**
@@ -265,6 +278,23 @@ sdkModelValidators.factory('Validator.numeric', ['underscore', 'Validatable.Vali
         };
 
         return new Validator(numeric);
+    }]);
+
+sdkModelValidators.factory('Validator.object', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function object (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (typeof value == 'object');
+        }
+
+        object.message = function () {
+            return 'Must be an object';
+        };
+
+        return new Validator(object);
     }]);
 
 /**
@@ -348,7 +378,7 @@ sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Val
 sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function requiredIf (value, instance, field) {
-            if (!this(value, instance, field)) {
+            if (!this.value(value, instance, field)) {
                 return true;
             } else {
                 if (underscore.isUndefined(value) || underscore.isNull(value)) {
@@ -363,7 +393,7 @@ sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.V
             }
         }
 
-        requiredIf.message = 'cannot be blank';
+        requiredIf.message = 'Is a required field';
 
         return new Validator(requiredIf);
     }]);

@@ -197,31 +197,46 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(entities, function (entity) {
                             if (entity.$dirty === true) {
                                 chain.push(function () {
-                                    return legalEntityApi.postEntity({data: entity});
+                                    return legalEntityApi.postEntity({data: entity}).then(function (res) {
+                                        return promiseService.all([_postAssets(entity.$id, res.id), _postLiabilities('legalentity', entity.$id, res.id, res.id)]);
+                                    });
+                                });
+                            } else {
+                                chain.push(function () {
+                                    return _postAssets(entity.$id, entity.id);
+                                });
+
+                                chain.push(function () {
+                                    return _postLiabilities('legalentity', entity.$id, entity.id, entity.$id);
                                 });
                             }
-
-                            chain.push(function () {
-                                return _postAssets(entity.id);
-                            });
                         });
                     });
                 }, promiseService.throwError);
             }
 
-            function _postAssets (entityId) {
-                return assetApi.getAssets({id: entityId, options: _options.local}).then(function (assets) {
+            function _postAssets (localEntityId, remoteEntityId) {
+                return assetApi.getAssets({id: localEntityId, options: _options.local}).then(function (assets) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(assets, function (asset) {
+                            if (localEntityId !== remoteEntityId) {
+                                asset.$uri = 'assets/' + remoteEntityId;
+                                asset.legalEntityId = remoteEntityId;
+
+                                chain.push(function () {
+                                    return assetApi.updateAsset({data: asset});
+                                });
+                            }
+
                             if (asset.$dirty === true) {
                                 chain.push(function () {
                                     return assetApi.postAsset({data: asset}).then(function (res) {
-                                        return promiseService.all([_postLiabilities(asset.$id, res.id), _postProductionSchedules(asset.$id, res.id)]);
+                                        return promiseService.all([_postLiabilities('asset', asset.$id, res.id, remoteEntityId), _postProductionSchedules(asset.$id, res.id)]);
                                     });
                                 });
                             } else {
                                 chain.push(function () {
-                                    return _postLiabilities(asset.$id, asset.id);
+                                    return _postLiabilities('asset', asset.$id, asset.id, remoteEntityId);
                                 });
 
                                 chain.push(function () {
@@ -233,13 +248,13 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 }, promiseService.throwError);
             }
 
-            function _postLiabilities (localAssetId, remoteAssetId) {
-                return liabilityApi.getLiabilities({id: localAssetId, options: _options.local}).then(function (liabilities) {
+            function _postLiabilities (type, localId, remoteId, legalEntityId) {
+                return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: localId}, options: _options.local}).then(function (liabilities) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(liabilities, function (liability) {
-                            if (localAssetId !== remoteAssetId) {
-                                liability.$id = remoteAssetId;
-                                liability.$uri = 'liability/' + remoteAssetId;
+                            if (localId !== remoteId) {
+                                liability.$uri = 'liabilities/' + type + '/' + remoteId;
+                                liability.legalEntityId = legalEntityId;
 
                                 chain.push(function () {
                                     return liabilityApi.updateLiability({data: liability});
@@ -249,8 +264,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             if (liability.$dirty === true) {
                                 chain.push(function () {
                                     return liabilityApi.postLiability({
-                                        template: (liability.$local ? 'asset/:aid/liability' : 'liability/:id'),
-                                        schema: {aid: remoteAssetId},
+                                        template: (liability.$local ? ':type/:oid/liability' : 'liability/:id'),
+                                        schema: {type: type, oid: remoteId},
                                         data: liability
                                     });
                                 });
@@ -265,8 +280,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     return promiseService.chain(function (chain) {
                         angular.forEach(schedules, function (schedule) {
                             if (localAssetId !== remoteAssetId) {
-                                schedule.$id = remoteAssetId;
                                 schedule.$uri = 'production-schedules/' + remoteAssetId;
+                                schedule.assetId = remoteAssetId;
 
                                 chain.push(function () {
                                     return productionScheduleApi.updateProductionSchedule({data: schedule});
@@ -274,8 +289,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             }
 
                             if (schedule.$dirty === true) {
-                                schedule.assetId = remoteAssetId;
-
                                 chain.push(function () {
                                     return productionScheduleApi.postProductionSchedule({data: schedule});
                                 });
@@ -793,33 +806,47 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }];
 }]);
 
-mobileSdkApiApp.factory('merchantApi', ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
-    var _host = configuration.getServer();
-
-    var merchantApi = api({
-        plural: 'merchants',
-        singular: 'merchant'
-    });
-
-    return {
-        getMerchants: merchantApi.getItems,
-        createMerchant: merchantApi.createItem,
-        getMerchant: merchantApi.getItem,
-        updateMerchant: merchantApi.updateItem,
-        postMerchant: merchantApi.postItem,
-        deleteMerchant: merchantApi.deleteItem,
-        searchMerchants: function (query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
-            }).join('&');
-
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type, options) {
+            return (obj.merchantUuid ? merchantApi.findMerchant({column: 'data', key: obj.merchantUuid, options: {like: true, one: true}}) : undefined);
         }
-    };
+    }]);
+
+    hydrationProvider.registerDehydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type) {
+            return merchantApi.createMerchant({template: 'merchants', data: obj.merchant, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+        }
+    }]);
+
+    this.$get = ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
+        var _host = configuration.getServer();
+        var merchantApi = api({
+            plural: 'merchants',
+            singular: 'merchant'
+        });
+
+        return {
+            getMerchants: merchantApi.getItems,
+            createMerchant: merchantApi.createItem,
+            getMerchant: merchantApi.getItem,
+            findMerchant: merchantApi.findItem,
+            updateMerchant: merchantApi.updateItem,
+            postMerchant: merchantApi.postItem,
+            deleteMerchant: merchantApi.deleteItem,
+            searchMerchants: function (query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function (promise) {
+                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            }
+        };
+    }];
 }]);
 
 mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
@@ -910,7 +937,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['assets'];
+        var defaultRelations = ['assets', 'liabilities'];
         var entityApi = api({
             plural: 'legalentities',
             singular: 'legalentity',
@@ -941,7 +968,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
         return function (obj, type, options) {
-            return farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}});
+            return (angular.isNumber(obj.farmId) ? farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}}) : null);
         }
     }]);
 
@@ -1045,7 +1072,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('liabilities', ['liabilityApi', function (liabilityApi) {
         return function (obj, type) {
-            return liabilityApi.getLiabilities({id: obj.$id});
+            return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: obj.$id}, options: {hydrate: true}});
         }
     }]);
 
@@ -1053,11 +1080,11 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
         return function (obj, type) {
             var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
-            return liabilityApi.purgeLiability({template: 'liabilities/:id', schema: {id: objId}, options: {force: false}})
+            return liabilityApi.purgeLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.liabilities, function (liability) {
-                            promises.push(liabilityApi.createLiability({template: 'liabilities/:id', schema: {id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                            promises.push(liabilityApi.createLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -1065,7 +1092,7 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = [];
+        var defaultRelations = ['merchant'];
         var liabilityApi = api({
             plural: 'liabilities',
             singular: 'liability',
@@ -1162,7 +1189,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
     hydrationProvider.registerHydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type, options) {
             if (obj.budgetUuid) {
-                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {one: true}});
+                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {like: true, one: true}});
             } else {
                 return enterpriseBudgetApi.findEnterpriseBudget({key: obj.budgetId, options: {one: true}});
             }
@@ -1171,7 +1198,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
 
     hydrationProvider.registerDehydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type) {
-            return enterpriseBudgetApi.createDocument({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+            return enterpriseBudgetApi.createEnterpriseBudget({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
         }
     }]);
 

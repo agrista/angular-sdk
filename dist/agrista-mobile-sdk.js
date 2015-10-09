@@ -156,9 +156,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
-                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0));
+                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
 
-                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
+                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
                                     console.log('ERROR: ' + err);
 
@@ -3210,7 +3210,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             },
 
             getDocumentTitle: function (docType) {
-                return (_documentMap[docType] ? _documentMap[docType].title : undefined);
+                return (_documentMap[docType] ? _documentMap[docType].title : '');
             },
             getDocumentState: function (docType) {
                 return (_documentMap[docType] ? _documentMap[docType].state : undefined);
@@ -9532,7 +9532,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         assets: []
                     });
 
-                if (asset && !underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey })) {
+                if (!underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey })) {
                     assetCategory.assets.push(asset);
                 }
                 assetCategory.estimatedValue += asset.data.assetValue || 0;
@@ -10080,6 +10080,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.adjustmentFactors;
             });
 
+            computedProperty(this, 'numberOfMonths', function () {
+                return moment(this.endDate).diff(this.startDate, 'months');
+            });
+
             computedProperty(this, 'models', function () {
                 return this.data.models;
             });
@@ -10245,10 +10249,10 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
-var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
-sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, readOnlyProperty, underscore) {
+sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
+    function (Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
         function LegalEntity (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -10270,6 +10274,14 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
             this.telephone = attrs.telephone;
             this.type = attrs.type;
             this.uuid = attrs.uuid;
+
+            this.assets = underscore.map(attrs.assets, function (asset) {
+                return Asset.new(asset);
+            });
+
+            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
+                return Liability.new(liability);
+            });
         }
 
         inheritModel(LegalEntity, Model.Base);
@@ -10379,40 +10391,85 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'yearly': 1
         };
 
+        var _types = {
+            'short-term': 'Short Term',
+            'medium-term': 'Medium Term',
+            'long-term': 'Long Term',
+            'production-credit': 'Production Credit',
+            'rent': 'Rented'
+        };
+
+        var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
+        var _typesWithAmount = ['short-term', 'medium-term', 'long-term'];
+
+        var _subtypes = {
+            'production-credit': {
+                'off-taker': 'Off Taker',
+                'input-supplier': 'Input Supplier',
+                'input-financing': 'Input Financing'
+            }
+        };
+
+        function defaultMonth () {
+            return {
+                opening: 0,
+                repayment: 0,
+                withdrawal: 0,
+                balance: 0,
+                interest: 0,
+                closing: 0
+            }
+        }
+
+        function fixPrecisionError (number, precision) {
+            precision = precision || 10;
+
+            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
+        }
+
+        function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
+            while (monthlyData.length <= upToIndex) {
+                monthlyData.push(defaultMonth());
+            }
+
+            recalculateMonthlyTotals(instance, monthlyData);
+        }
+
+        function recalculateMonthlyTotals (instance, monthlyData) {
+            var startMonth = moment(instance.startDate).month(),
+                paymentMonths = instance.paymentMonths,
+                paymentsPerMonth = (_frequency[instance.frequency] > 12 ? _frequency[instance.frequency] / 12 : 1);
+
+            underscore.each(monthlyData, function (month, index) {
+                var currentMonth = (index + startMonth) % 12;
+
+                month.opening = (index === 0 ? instance.openingBalance : monthlyData[index - 1].closing);
+
+                if ((this.frequency === 'once' && index === 0) || (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth))) {
+                    var installmentPayment = (this.frequency === 'once' ? month.opening : instance.installmentPayment * paymentsPerMonth);
+
+                    month.repayment = (month.opening <= installmentPayment ? month.opening : installmentPayment);
+                }
+
+                month.balance = (month.opening - month.repayment + month.withdrawal <= 0 ? 0 : month.opening - month.repayment + month.withdrawal);
+                month.interest = fixPrecisionError((instance.interestRate / 12) * month.balance) / 100;
+                month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
+            });
+        }
+
         function Liability (attrs) {
             Model.Base.apply(this, arguments);
 
-            computedProperty(this, 'currentBalance', function () {
-                return (this.type !== 'rent' ? this.liabilityInMonth(moment().startOf('month')) : 0);
+            this.data = (attrs && attrs.data) || {};
+
+            computedProperty(this, 'title', function () {
+                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
+                    (this.name ? this.name : Liability.getTypeTitle(this.type));
             });
 
-            privateProperty(this, 'balanceInMonth', function (month) {
-                var balance = this.amount || 0;
-
-                if (angular.isNumber(this.amount) && this.amount > 0) {
-                    var startMonth = moment(this.startDate),
-                        paymentMonths = this.paymentMonths,
-                        paymentsPerMonth = (_frequency[this.frequency] > 12 ? _frequency[this.frequency] / 12 : 1),
-                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
-
-                    for(var i = 0; i < numberOfMonths; i++) {
-                        var month = moment(this.startDate).add(i, 'M');
-
-                        if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                            balance += this.amount;
-                        } else if (month >= startMonth) {
-                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
-
-                            if (underscore.contains(paymentMonths, month.month())) {
-                                for (var j = 0; j < paymentsPerMonth; j++) {
-                                    balance -= Math.min(balance, (this.installmentPayment || 0));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return balance;
+            computedProperty(this, 'subtype', function () {
+                return this.data.subtype;
             });
 
             computedProperty(this, 'paymentMonths', function () {
@@ -10429,85 +10486,140 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     });
             });
 
-            computedProperty(this, 'title', function () {
-                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
-                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
-                    (this.name ? this.name : Liability.getTypeTitle(this.type));
-            });
 
+            /**
+             * Get liability/balance in month
+             */
             privateProperty(this, 'liabilityInMonth', function (month) {
-                var previousMonth = moment(month).subtract(1, 'M'),
+                var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth);
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
 
-                var liability = 0;
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedMonth);
 
-                if (this.frequency === 'once' && startMonth.month() === currentMonth.month() && startMonth.year() === currentMonth.year()) {
-                    liability += this.amount;
-                } else if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
-                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
-                        for (var i = 0; i < paymentsPerMonth; i++) {
-
-                            if (angular.isNumber(this.amount) && this.amount > 0) {
-                                liability += Math.min(previousBalance, (this.installmentPayment || 0));
-                                previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                            } else {
-                                liability += (this.installmentPayment || 0);
-                            }
-                        }
-                    }
-                }
-
-                return liability;
+                return monthlyData[appliedMonth] || defaultMonth();
             });
 
+            privateProperty(this, 'balanceInMonth', function (month) {
+                return this.liabilityInMonth(month).closing || 0;
+            });
+
+            computedProperty(this, 'currentBalance', function () {
+                return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
+            });
+
+            /**
+             * Set/add repayment/withdrawal in month
+             */
+            privateProperty(this, 'resetWithdrawalAndRepayments', function () {
+                this.data.monthly = [];
+            });
+
+            privateProperty(this, 'addRepaymentInMonth', function (repayment, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    summedRepayment = repayment + monthLiability.repayment,
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= summedRepayment ? openingPlusWithdrawal : summedRepayment),
+                    repaymentRemainder = summedRepayment - limitedRepayment;
+
+                monthLiability.repayment = limitedRepayment;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return repaymentRemainder;
+            });
+
+            privateProperty(this, 'setRepaymentInMonth', function (repayment, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    openingPlusWithdrawal = monthLiability.opening + monthLiability.withdrawal,
+                    limitedRepayment = (openingPlusWithdrawal <= repayment ? openingPlusWithdrawal : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
+
+                monthLiability.repayment = limitedRepayment;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return repaymentRemainder;
+            });
+
+            privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    summedWithdrawal = withdrawal + monthLiability.withdrawal,
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
+                    withdrawalRemainder = summedWithdrawal - limitedWithdrawal;
+
+                monthLiability.withdrawal = limitedWithdrawal;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return withdrawalRemainder;
+            });
+
+            privateProperty(this, 'setWithdrawalInMonth', function (withdrawal, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    openingMinusRepayment = monthLiability.opening - monthLiability.repayment,
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), withdrawal) : withdrawal),
+                    withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
+
+                monthLiability.withdrawal = limitedWithdrawal;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return withdrawalRemainder;
+            });
+
+            /**
+             * Ranges of liability
+             */
             privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var previousMonth = moment(rangeStart).subtract(1, 'M'),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentMonths = this.paymentMonths,
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth),
-                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months');
+                var startMonth = moment(this.startDate),
+                    rangeStartMonth = moment(rangeStart),
+                    rangeEndMonth = moment(rangeEnd),
+                    appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
+                    appliedEndMonth = rangeEndMonth.diff(rangeStartMonth, 'months'),
+                    paddedOffset = (appliedStartMonth < 0 ? 0 - appliedStartMonth : 0);
 
-                var liability = underscore.range(numberOfMonths).map(function () {
-                    return 0;
-                });
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedEndMonth);
 
-                for(var i = 0; i < numberOfMonths; i++) {
-                    var month = moment(rangeStart).add(i, 'M');
-
-                    if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                        liability[i] += this.amount;
-                    } else if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
-                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                        if (underscore.contains(paymentMonths, month.month())) {
-                            for (var j = 0; j < paymentsPerMonth; j++) {
-                                if (angular.isNumber(this.amount) && this.amount > 0) {
-                                    liability[i] += Math.min(previousBalance, (this.installmentPayment || 0));
-                                    previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                                } else {
-                                    liability[i] += (this.installmentPayment || 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return liability;
+                return underscore.range(paddedOffset)
+                    .map(defaultMonth)
+                    .concat(monthlyData.slice(appliedStartMonth + paddedOffset, appliedEndMonth - paddedOffset));
             });
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total - liability;
+                    return total - liability.repayment;
                 }, 0);
             });
 
@@ -10516,15 +10628,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
-            this.legalEntityId = attrs.legalEntityId;
             this.name = attrs.name;
             this.type = attrs.type;
+            this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
-            this.interestRate = attrs.interestRate;
-            this.amount = attrs.amount;
+            this.interestRate = attrs.interestRate || 0;
+            this.creditLimit = attrs.creditLimit;
             this.frequency = attrs.frequency;
             this.startDate = attrs.startDate;
             this.endDate = attrs.endDate;
+
+            // TODO: Add merchant model
+            this.merchant = attrs.merchant;
         }
 
         inheritModel(Liability, Model.Base);
@@ -10535,13 +10650,14 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'monthly': 'Monthly',
             'quarterly': 'Quarterly',
             'bi-yearly': 'Bi-Yearly',
-            'yearly': 'Yearly'});
+            'yearly': 'Yearly'
+        });
 
-        readOnlyProperty(Liability, 'liabilityTypes', {
-            'short-loan': 'Short Term Loan',
-            'medium-loan': 'Medium Term Loan',
-            'long-loan': 'Long Term Loan',
-            'rent': 'Rented'});
+        readOnlyProperty(Liability, 'frequencyTypesWithCustom', underscore.extend({
+            'custom': 'Custom'
+        }, Liability.frequencyTypes));
+
+        readOnlyProperty(Liability, 'liabilityTypes', _types);
 
         readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
             'other': 'Other'
@@ -10555,28 +10671,27 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             return Liability.liabilityTypesWithOther[type] || '';
         });
 
-        function isLoaned (value, instance, field) {
-            return instance.type !== 'rent';
-        }
-
         function isLeased (value, instance, field) {
-            return instance.leased === 'rent';
+            return instance.type === 'rent';
         }
 
         function isOtherType (value, instance, field) {
             return instance.type === 'other';
         }
 
-        function isNotOtherType (value, instance, field) {
-            return instance.type !== 'other';
+        function hasSubtype (value, instance, field) {
+            return !!(_subtypes[instance.type] && underscore.keys(_subtypes[instance.type]).length > 0);
         }
 
         Liability.validates({
+            openingBalance: {
+                required: true,
+                numeric: true
+            },
             installmentPayment: {
                 requiredIf: function (value, instance, field) {
-                    return isNotOtherType(value, instance, field) &&
-                        (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
-                        (angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
+                    return underscore.contains(_typesWithInstallmentPayments, instance.type) &&
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.interestRate));
                 },
                 range: {
                     from: 0
@@ -10584,22 +10699,17 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             interestRate: {
-                requiredIf: function (value, instance, field) {
-                    return angular.isNumber(instance.installmentPayment) && instance.installmentPayment > 0;
-                },
+                required: true,
                 range: {
                     from: 0,
                     to: 100
-                }
-            },
-            legalEntityId: {
-                required: true,
+                },
                 numeric: true
             },
-            amount: {
+            creditLimit: {
                 requiredIf: function (value, instance, field) {
-                    return (isLoaned(value, instance, field) && isNotOtherType(value, instance, field)) ||
-                        (angular.isNumber(instance.installmentPayment) && instance.installmentPayment >= 0) === false;
+                    return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));
                 },
                 range: {
                     from: 0
@@ -10607,7 +10717,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             merchantUuid: {
-                requiredIf: isNotOtherType,
+                requiredIf: function (value, instance, field) {
+                    return !isOtherType(value, instance, field);
+                },
                 format: {
                     uuid: true
                 }
@@ -10615,7 +10727,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             frequency: {
                 required: true,
                 inclusion: {
-                    in: underscore.keys(Liability.frequencyTypes)
+                    in: underscore.keys(Liability.frequencyTypesWithCustom)
                 }
             },
             type: {
@@ -10623,6 +10735,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 inclusion: {
                     in: underscore.keys(Liability.liabilityTypesWithOther)
                 }
+            },
+            subtype: {
+                requiredIf: hasSubtype,
+                inclusion: {
+                    in: function (value, instance, field) {
+                        return _subtypes[instance.type] && underscore.keys(_subtypes[instance.type]) || [];
+                    }
+                }
+            },
+            data: {
+                required: true,
+                object: true
             },
             name: {
                 requiredIf: isOtherType,
@@ -10638,7 +10762,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }
             },
             endDate: {
-                requiredIf: isLeased,
+                requiredIf: function (value, instance, field) {
+                    return isLeased(value, instance, field) || instance.type === 'custom';
+                },
                 format: {
                     date: true
                 }
@@ -11537,31 +11663,46 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(entities, function (entity) {
                             if (entity.$dirty === true) {
                                 chain.push(function () {
-                                    return legalEntityApi.postEntity({data: entity});
+                                    return legalEntityApi.postEntity({data: entity}).then(function (res) {
+                                        return promiseService.all([_postAssets(entity.$id, res.id), _postLiabilities('legalentity', entity.$id, res.id, res.id)]);
+                                    });
+                                });
+                            } else {
+                                chain.push(function () {
+                                    return _postAssets(entity.$id, entity.id);
+                                });
+
+                                chain.push(function () {
+                                    return _postLiabilities('legalentity', entity.$id, entity.id, entity.$id);
                                 });
                             }
-
-                            chain.push(function () {
-                                return _postAssets(entity.id);
-                            });
                         });
                     });
                 }, promiseService.throwError);
             }
 
-            function _postAssets (entityId) {
-                return assetApi.getAssets({id: entityId, options: _options.local}).then(function (assets) {
+            function _postAssets (localEntityId, remoteEntityId) {
+                return assetApi.getAssets({id: localEntityId, options: _options.local}).then(function (assets) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(assets, function (asset) {
+                            if (localEntityId !== remoteEntityId) {
+                                asset.$uri = 'assets/' + remoteEntityId;
+                                asset.legalEntityId = remoteEntityId;
+
+                                chain.push(function () {
+                                    return assetApi.updateAsset({data: asset});
+                                });
+                            }
+
                             if (asset.$dirty === true) {
                                 chain.push(function () {
                                     return assetApi.postAsset({data: asset}).then(function (res) {
-                                        return promiseService.all([_postLiabilities(asset.$id, res.id), _postProductionSchedules(asset.$id, res.id)]);
+                                        return promiseService.all([_postLiabilities('asset', asset.$id, res.id, remoteEntityId), _postProductionSchedules(asset.$id, res.id)]);
                                     });
                                 });
                             } else {
                                 chain.push(function () {
-                                    return _postLiabilities(asset.$id, asset.id);
+                                    return _postLiabilities('asset', asset.$id, asset.id, remoteEntityId);
                                 });
 
                                 chain.push(function () {
@@ -11573,13 +11714,13 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 }, promiseService.throwError);
             }
 
-            function _postLiabilities (localAssetId, remoteAssetId) {
-                return liabilityApi.getLiabilities({id: localAssetId, options: _options.local}).then(function (liabilities) {
+            function _postLiabilities (type, localId, remoteId, legalEntityId) {
+                return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: localId}, options: _options.local}).then(function (liabilities) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(liabilities, function (liability) {
-                            if (localAssetId !== remoteAssetId) {
-                                liability.$id = remoteAssetId;
-                                liability.$uri = 'liability/' + remoteAssetId;
+                            if (localId !== remoteId) {
+                                liability.$uri = 'liabilities/' + type + '/' + remoteId;
+                                liability.legalEntityId = legalEntityId;
 
                                 chain.push(function () {
                                     return liabilityApi.updateLiability({data: liability});
@@ -11589,8 +11730,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             if (liability.$dirty === true) {
                                 chain.push(function () {
                                     return liabilityApi.postLiability({
-                                        template: (liability.$local ? 'asset/:aid/liability' : 'liability/:id'),
-                                        schema: {aid: remoteAssetId},
+                                        template: (liability.$local ? ':type/:oid/liability' : 'liability/:id'),
+                                        schema: {type: type, oid: remoteId},
                                         data: liability
                                     });
                                 });
@@ -11605,8 +11746,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     return promiseService.chain(function (chain) {
                         angular.forEach(schedules, function (schedule) {
                             if (localAssetId !== remoteAssetId) {
-                                schedule.$id = remoteAssetId;
                                 schedule.$uri = 'production-schedules/' + remoteAssetId;
+                                schedule.assetId = remoteAssetId;
 
                                 chain.push(function () {
                                     return productionScheduleApi.updateProductionSchedule({data: schedule});
@@ -11614,8 +11755,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             }
 
                             if (schedule.$dirty === true) {
-                                schedule.assetId = remoteAssetId;
-
                                 chain.push(function () {
                                     return productionScheduleApi.postProductionSchedule({data: schedule});
                                 });
@@ -12133,33 +12272,47 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }];
 }]);
 
-mobileSdkApiApp.factory('merchantApi', ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
-    var _host = configuration.getServer();
-
-    var merchantApi = api({
-        plural: 'merchants',
-        singular: 'merchant'
-    });
-
-    return {
-        getMerchants: merchantApi.getItems,
-        createMerchant: merchantApi.createItem,
-        getMerchant: merchantApi.getItem,
-        updateMerchant: merchantApi.updateItem,
-        postMerchant: merchantApi.postItem,
-        deleteMerchant: merchantApi.deleteItem,
-        searchMerchants: function (query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
-            }).join('&');
-
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type, options) {
+            return (obj.merchantUuid ? merchantApi.findMerchant({column: 'data', key: obj.merchantUuid, options: {like: true, one: true}}) : undefined);
         }
-    };
+    }]);
+
+    hydrationProvider.registerDehydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type) {
+            return merchantApi.createMerchant({template: 'merchants', data: obj.merchant, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+        }
+    }]);
+
+    this.$get = ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
+        var _host = configuration.getServer();
+        var merchantApi = api({
+            plural: 'merchants',
+            singular: 'merchant'
+        });
+
+        return {
+            getMerchants: merchantApi.getItems,
+            createMerchant: merchantApi.createItem,
+            getMerchant: merchantApi.getItem,
+            findMerchant: merchantApi.findItem,
+            updateMerchant: merchantApi.updateItem,
+            postMerchant: merchantApi.postItem,
+            deleteMerchant: merchantApi.deleteItem,
+            searchMerchants: function (query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function (promise) {
+                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            }
+        };
+    }];
 }]);
 
 mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
@@ -12250,7 +12403,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['assets'];
+        var defaultRelations = ['assets', 'liabilities'];
         var entityApi = api({
             plural: 'legalentities',
             singular: 'legalentity',
@@ -12281,7 +12434,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
         return function (obj, type, options) {
-            return farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}});
+            return (angular.isNumber(obj.farmId) ? farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}}) : null);
         }
     }]);
 
@@ -12385,7 +12538,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('liabilities', ['liabilityApi', function (liabilityApi) {
         return function (obj, type) {
-            return liabilityApi.getLiabilities({id: obj.$id});
+            return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: obj.$id}, options: {hydrate: true}});
         }
     }]);
 
@@ -12393,11 +12546,11 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
         return function (obj, type) {
             var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
-            return liabilityApi.purgeLiability({template: 'liabilities/:id', schema: {id: objId}, options: {force: false}})
+            return liabilityApi.purgeLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.liabilities, function (liability) {
-                            promises.push(liabilityApi.createLiability({template: 'liabilities/:id', schema: {id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                            promises.push(liabilityApi.createLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -12405,7 +12558,7 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = [];
+        var defaultRelations = ['merchant'];
         var liabilityApi = api({
             plural: 'liabilities',
             singular: 'liability',
@@ -12502,7 +12655,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
     hydrationProvider.registerHydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type, options) {
             if (obj.budgetUuid) {
-                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {one: true}});
+                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {like: true, one: true}});
             } else {
                 return enterpriseBudgetApi.findEnterpriseBudget({key: obj.budgetId, options: {one: true}});
             }
@@ -12511,7 +12664,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
 
     hydrationProvider.registerDehydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type) {
-            return enterpriseBudgetApi.createDocument({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+            return enterpriseBudgetApi.createEnterpriseBudget({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
         }
     }]);
 
@@ -12696,7 +12849,9 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
         parseRequest: function (templateUrl, schemaData) {
             if (templateUrl !== undefined) {
                 angular.forEach(schemaData, function (data, key) {
-                    templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
+                    templateUrl = templateUrl
+                        .replace('/:' + key, (data !== undefined ? '/' + data : ''))
+                        .replace(':' + key, (data !== undefined ? data : ''));
                 });
             }
 
@@ -13813,7 +13968,9 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
     'Validator.equal',
     'Validator.format',
     'Validator.inclusion',
+    'Validator.inclusion.in',
     'Validator.length',
+    'Validator.object',
     'Validator.numeric',
     'Validator.range',
     'Validator.required',
@@ -13839,11 +13996,13 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     validateField(instance, validation);
                 });
 
+
                 return instance.$errors.countFor(fieldName) === 0;
             });
 
             function validateField (instance, validation) {
                 if (validation.validate(instance) === false) {
+
                     instance.$errors.add(validation.field, validation.message);
                 } else {
                     instance.$errors.clear(validation.field, validation.message);
@@ -13952,13 +14111,11 @@ sdkModelValidation.factory('Validatable.ValidationFunction', ['underscore', func
         boundFunction.message = configureMessage();
 
         function configureMessage () {
-            if (underscore.isString(options.message)) {
-                return options.message;
-            }
-
             if (underscore.isFunction(options.message)) {
                 return options.message.apply(options);
             }
+
+            return options.message;
         }
 
         return boundFunction;
@@ -14038,7 +14195,7 @@ sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
             }
 
             function defaultOptions (options) {
-                if (underscore.isObject(options) === false) {
+                if (typeof options != 'object' || underscore.isArray(options)) {
                     options = {
                         value: options,
                         message: validator.message
@@ -14248,27 +14405,40 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
 /**
  * Inclusion Validator
  */
-sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
-    function (underscore, Validator) {
-        function inclusion (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value)) {
-                return false;
-            }
-
-            if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {
-                throw 'Inclusion validator must specify an \'in\' attribute';
-            }
-
-            return underscore.some(this.in, function (item) {
-                return value === item;
-            })
-        }
+sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator', 'Validator.inclusion.in',
+    function (underscore, Validator, inclusionIn) {
+        function inclusion (value, instance, field) {}
 
         inclusion.message = function () {
-            return 'Must be one of \''+ this.in.join(', ') + '\'';
+            return 'Must have an included value';
+        };
+
+        inclusion.options = {
+            in: inclusionIn
         };
 
         return new Validator(inclusion);
+    }]);
+
+sdkModelValidators.factory('Validator.inclusion.in', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function inclusionIn (value, instance, field) {
+            var _in = (typeof this.value == 'function' ? this.value(value, instance, field) : this.value);
+
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (_in.length == 0 ? true : underscore.some(_in, function (item) {
+                return value === item;
+            }));
+        }
+
+        inclusionIn.message = function () {
+            return 'Must be in array of values';
+        };
+
+        return new Validator(inclusionIn);
     }]);
 
 /**
@@ -14342,6 +14512,23 @@ sdkModelValidators.factory('Validator.numeric', ['underscore', 'Validatable.Vali
         };
 
         return new Validator(numeric);
+    }]);
+
+sdkModelValidators.factory('Validator.object', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function object (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (typeof value == 'object');
+        }
+
+        object.message = function () {
+            return 'Must be an object';
+        };
+
+        return new Validator(object);
     }]);
 
 /**
@@ -14425,7 +14612,7 @@ sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Val
 sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function requiredIf (value, instance, field) {
-            if (!this(value, instance, field)) {
+            if (!this.value(value, instance, field)) {
                 return true;
             } else {
                 if (underscore.isUndefined(value) || underscore.isNull(value)) {
@@ -14440,7 +14627,7 @@ sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.V
             }
         }
 
-        requiredIf.message = 'cannot be blank';
+        requiredIf.message = 'Is a required field';
 
         return new Validator(requiredIf);
     }]);

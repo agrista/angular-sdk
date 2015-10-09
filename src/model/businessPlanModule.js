@@ -1148,6 +1148,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.adjustmentFactors;
             });
 
+            computedProperty(this, 'numberOfMonths', function () {
+                return moment(this.endDate).diff(this.startDate, 'months');
+            });
+
             computedProperty(this, 'models', function () {
                 return this.data.models;
             });
