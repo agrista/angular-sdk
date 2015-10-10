@@ -9448,12 +9448,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
                 }
 
+                initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', numberOfMonths);
                 for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
                     instance.data.capitalExpenditure['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
                 }
 
-                updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: this.data.livestockValues.breeding.currentValue } });
-                updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: this.data.livestockValues.marketable.currentValue } });
+                updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
+                updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: instance.data.livestockValues.marketable.currentValue } });
 
                 calculateAssetStatementRMV(instance);
 
@@ -9810,6 +9811,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     underscore.each(category, function (month, index) {
                         currentTotals[index] += month;
                     });
+                    return currentTotals;
                 }, results);
 
                 return results;
