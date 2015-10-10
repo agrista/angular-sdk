@@ -82,6 +82,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             };
 
             this.data.monthlyStatement = this.data.monthlyStatement || [];
+            this.data.assetStatement = this.data.assetStatement || { total: {}};
+            this.data.liabilityStatement = this.data.liabilityStatement || { total: {} };
             this.data.adjustmentFactors = this.data.adjustmentFactors || {};
             this.data.livestockValues = this.data.livestockValues || {
                 breeding: {
@@ -131,7 +133,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function divideArrayValues (numeratorValues, denominatorValues) {
-                if (numeratorValues.length != denominatorValues.length) {
+                if (!numeratorValues || !denominatorValues || numeratorValues.length != denominatorValues.length) {
                     return [];
                 }
 
@@ -379,8 +381,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             function reEvaluateProductionSchedules (instance) {
                 var startMonth = moment(instance.startDate),
-                    endMonth = moment(instance.endDate),
-                    numberOfMonths = endMonth.diff(startMonth, 'months');
+                    endMonth = moment(instance.endDate);
 
                 instance.data.productionIncome = {};
                 instance.data.productionExpenditure = {};
@@ -389,9 +390,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
-                    extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
-                    extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
-                    calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths);
+                    extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, instance.numberOfMonths);
+                    extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, instance.numberOfMonths);
+                    calculateIncomeComposition(instance, schedule, startMonth, instance.numberOfMonths);
                 });
             }
 
@@ -509,16 +510,15 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              */
 
             function updateLivestockValues (instance) {
-                var numberOfMonths = moment(this.endDate).diff(moment(this.startDate));
 
-                initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', numberOfMonths);
+                initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
                 for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
                     instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
                 }
 
-                initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', numberOfMonths);
+                initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
                 for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
-                    instance.data.capitalExpenditure['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
+                    instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
                 }
 
                 updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
@@ -530,12 +530,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 updateLivestockRMV('marketable', 'short-term', 'Marketable Livestock');
 
                 function updateLivestockRMV (livestockType, liquidityType, statementItem) {
-                    var yearChange = instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue;
+                    var yearChange = instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue,
+                        itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
+                        rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
 
-                    for (var year = 0; year < instance.data.assetStatement[liquidityType][statementItem].yearlyRMV.length; year++) {
-                        instance.data.assetStatement[liquidityType][statementItem].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][statementItem].currentRMV : instance.data.assetStatement[liquidityType][statementItem].yearlyRMV[year - 1]);
-                        instance.data.assetStatement[liquidityType][statementItem].yearlyRMV[year] += yearChange;
-                        instance.data.assetStatement[liquidityType][statementItem].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
+                    for (var year = 0; year < rmvArray.length; year++) {
+                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1]);
+                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
+                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
                     }
                 }
             }
@@ -592,8 +594,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.assetStatement[category] = instance.data.assetStatement[category] || [];
 
                 var index = underscore.findIndex(instance.data.assetStatement[category], function(statementObj) { return statementObj.name == itemName; }),
-                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate)) / 12),
-                    assetCategory = (index !== -1 ? instance.data.assetStatement[category].splice(index, 1) : {
+                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true)),
+                    assetCategory = (index !== -1 ? instance.data.assetStatement[category].splice(index, 1)[0] : {
                         name: itemName,
                         estimatedValue: 0,
                         currentRMV: 0,
@@ -612,8 +614,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var category = (liability.type == 'production-credit' || liability.type == 'rent' ? 'short-term' : liability.type),
                     itemName = (liability.type == 'rent' ? 'Rent overdue' : liability.name),
                     index = underscore.findIndex(instance.data.liabilityStatement[category], function(statementObj) { return statementObj.name == itemName; }),
-                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate)) / 12),
-                    liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1) : {
+                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true)),
+                    liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1)[0] : {
                         name: itemName,
                         currentValue: 0,
                         yearlyValues: initializeArray(numberOfYears),
@@ -659,7 +661,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function totalAssetsAndLiabilities(instance) {
-                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate)) / 12);
+                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true));
 
                 instance.data.assetStatement.total = underscore.chain(instance.data.assetStatement)
                     .values()
@@ -668,6 +670,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         result.estimatedValue += asset.estimatedValue;
                         result.currentRMV += asset.currentRMV;
                         result.yearlyRMV = addArrayValues(result.yearlyRMV, asset.yearlyRMV);
+                        return result;
                     }, {
                         estimatedValue: 0,
                         currentRMV: 0,
@@ -681,6 +684,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     .reduce(function(result, liability) {
                         result.currentValue += liability.currentValue;
                         result.yearlyValues = addArrayValues(result.yearlyValues, liability.yearlyValues);
+                        return result;
                     }, {
                         currentValue: 0,
                         yearlyValues: initializeArray(numberOfYears)
@@ -771,7 +775,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         angular.forEach(asset.liabilities, function (liability) {
                             var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
                                 typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
-                                liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+                                liabilityMonths = new Liability(liability).liabilityInRange(instance.startDate, instance.endDate);
 
                             if (asset.type == 'farmland' && liability.type !== 'rent' && moment(liability.startDate).isBetween(startMonth, endMonth)) {
                                 initializeCategoryValues(instance, 'capitalExpenditure', 'Land Purchases', numberOfMonths);
@@ -864,7 +868,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         return liabilityTypes.indexOf(liability.type) != -1;
                     })
                     .map(function(liability) {
-                        return liability.liabilityInRange(startMonth, endMonth);
+                        return new Liability(liability).liabilityInRange(startMonth, endMonth);
                     })
                     .invoke(underscore.pluck, property)
                     .unzip()
@@ -894,7 +898,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function getDepreciation(instance) {
                 var yearlyDepreciation = underscore.chain(instance.data.assetStatement['medium-term'])
                     .filter(function(item) {
-                        return underscore.contains(['Vehicle', 'Maachinery', 'Equipment'], item.name);
+                        return underscore.contains(['Vehicle', 'Machinery', 'Equipment'], item.name);
                     })
                     .map(function(item) {
                         var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1;
@@ -995,7 +999,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function recalculatePrimaryAccount(instance) {
                 var startMonth = moment(instance.startDate),
                     endMonth = moment(instance.endDate),
-                    numberOfMonths = endMonth.diff(startMonth, 'months'),
                     numberOfYears = Math.ceil(endMonth.diff(startMonth, 'years', true)),
                     defaultMonthObj = {
                         opening: 0,
@@ -1007,7 +1010,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         closing: 0
                     };
 
-                while (instance.account.monthly.length < numberOfMonths) {
+                while (instance.account.monthly.length < instance.numberOfMonths) {
                     instance.account.monthly.push(defaultMonthObj);
                 }
                 while (instance.account.yearly.length < numberOfYears) {
