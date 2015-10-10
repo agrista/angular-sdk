@@ -11169,7 +11169,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     productionCost: calculateRatio(instance, 'productionExpenditure', 'productionIncome'),
                     cashFlowBank: calculateRatio(instance, 'unallocatedProductionIncome', ['unallocatedProductionExpenditure', 'primaryAccountInterest']),
                     //TODO: add payments to co-ops with crop deliveries to cashFlowFarming denominator
-                    cashFlowFarming: calculateRatio(instance, ['productionIncome', 'capitalIncome', 'otherIncome'], ['totalExpenditure', 'primaryAccountInterest'])
+                    cashFlowFarming: calculateRatio(instance, ['productionIncome', 'capitalIncome', 'otherIncome'], ['totalExpenditure', 'primaryAccountInterest']),
+                    debtToTurnover: calculateRatio(instance, 'totalLiabilities', ['productionIncome', 'otherIncome']),
+                    interestToTurnover: calculateRatio(instance, 'totalInterest', ['productionIncome', 'otherIncome']),
+                    //TODO: change denominator to total asset value used for farming
+                    returnOnInvestment: calculateRatio(instance, 'netFarmIncome', 'totalAssets')
                 };
 
                 calculateAssetRatios(instance);
