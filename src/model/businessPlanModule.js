@@ -510,13 +510,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              */
 
             function updateLivestockValues (instance) {
-
                 initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
+
                 for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
                     instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
                 }
 
                 initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
+
                 for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
                     instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
                 }
@@ -547,34 +548,63 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             privateProperty(this, 'addAsset', function (asset) {
-                if (Asset.new(asset).validate()) {
-                    this.models.assets = underscore.reject(this.models.assets, function (item) {
+                var instance = this;
+
+                asset = Asset.new(asset);
+
+                if (asset.validate()) {
+                    instance.models.assets = underscore.reject(instance.models.assets, function (item) {
                         return item.assetKey === asset.assetKey;
                     });
 
-                    this.models.assets.push(asset instanceof Asset ? asset.asJSON() : asset);
+                    asset.liabilities = underscore.chain(asset.liabilities)
+                        .map(function (liability) {
+                            if (liability.validate()) {
+                                instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
+                                    return item.uuid === liability.uuid;
+                                });
 
-                    reEvaluateAssetsAndLiabilities(this);
-                    recalculate(this);
+                                instance.models.liabilities.push(liability.asJSON());
+                            }
+
+                            return liability.asJSON();
+                        })
+                        .value();
+
+                    instance.models.assets.push(asset.asJSON());
+
+                    reEvaluateAssetsAndLiabilities(instance);
+                    recalculate(instance);
                 }
             });
 
             privateProperty(this, 'removeAsset', function (asset) {
-                this.models.assets = underscore.reject(this.models.assets, function (item) {
+                var instance = this;
+
+                instance.models.assets = underscore.reject(instance.models.assets, function (item) {
                     return item.assetKey === asset.assetKey;
                 });
 
-                reEvaluateAssetsAndLiabilities(this);
-                recalculate(this);
+                underscore.each(asset.liabilities, function (liability) {
+                    instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
+                        return item.uuid === liability.uuid;
+                    });
+                });
+
+                reEvaluateAssetsAndLiabilities(instance);
+                recalculate(instance);
+
             });
 
             privateProperty(this, 'addLiability', function (liability) {
-                if (Liability.new(liability).validate()) {
+                liability = Liability.new(liability);
+
+                if (liability.validate()) {
                     this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
                         return item.uuid === liability.uuid;
                     });
 
-                    this.models.liabilities.push(liability instanceof Liability ? liability.asJSON() : liability);
+                    this.models.liabilities.push(liability.asJSON());
 
                     reEvaluateAssetsAndLiabilities(this);
                     recalculate(this);
@@ -695,11 +725,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function reEvaluateAssetsAndLiabilities (instance) {
                 var startMonth = moment(instance.startDate),
                     endMonth = moment(instance.endDate),
-                    numberOfMonths = endMonth.diff(startMonth, 'months');
-
-                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
-                    return underscore.contains(['asset', 'liability'], item.source);
-                });
+                    numberOfMonths = endMonth.diff(startMonth, 'months'),
+                    evaluatedModels = [];
 
                 instance.data.capitalIncome = {};
                 instance.data.capitalExpenditure = {};
@@ -710,13 +737,15 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.liabilityStatement = {};
 
                 underscore.each(instance.models.assets, function (asset) {
-                    asset = Asset.new(asset);
-
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
-                        statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
+                        evaluatedAsset = underscore.findWhere(evaluatedModels, {assetKey: asset.assetKey});
 
                     // Check asset is not already added
-                    if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
+                    if (registerLegalEntity && underscore.isUndefined(evaluatedAsset)) {
+                        evaluatedModels.push(asset);
+
+                        asset = Asset.new(asset);
+
                         var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
                             soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
                             constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
@@ -724,7 +753,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                         // VME
                         if (asset.type === 'vme') {
-
                             if (asset.data.type === 'Vehicles') {
                                 if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
                                     initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicle Purchases', numberOfMonths);
@@ -773,48 +801,40 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         }
 
                         angular.forEach(asset.liabilities, function (liability) {
-                            var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
-                                typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
-                                liabilityMonths = new Liability(liability).liabilityInRange(instance.startDate, instance.endDate);
+                            // Check liability is not already added
+                            if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
+                                evaluatedModels.push(liability);
 
-                            if (asset.type == 'farmland' && liability.type !== 'rent' && moment(liability.startDate).isBetween(startMonth, endMonth)) {
-                                initializeCategoryValues(instance, 'capitalExpenditure', 'Land Purchases', numberOfMonths);
+                                var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
+                                    typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
+                                    liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
-                                instance.data.capitalExpenditure['Land Purchases'][moment(liability.startDate).diff(startMonth, 'months')] += liability.openingBalance;
+                                if (asset.type == 'farmland' && liability.type !== 'rent' && moment(liability.startDate).isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Land Purchases', numberOfMonths);
+
+                                    instance.data.capitalExpenditure['Land Purchases'][moment(liability.startDate).diff(startMonth, 'months')] += liability.openingBalance;
+                                }
+
+                                initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                                instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                                    return (month.repayment || 0) + (instance.data[section][typeTitle][index] || 0);
+                                });
+
+                                // TODO: deal with missing liquidityType for 'Other' liabilities
+                                updateLiabilityStatementCategory(instance, liability)
                             }
-
-                            initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
-
-                            instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                                return (month.repayment || 0) + (instance.data[section][typeTitle][index] || 0);
-                            });
-
-                            // TODO: deal with missing liquidityType for 'Other' liabilities
-                            updateLiabilityStatementCategory(instance, liability)
-                        });
-
-                        // Add asset
-                        instance.data.monthlyStatement.push({
-                            uuid: asset.assetKey,
-                            legalEntityUuid: registerLegalEntity.uuid,
-                            name: asset.title,
-                            description: asset.description,
-                            type: 'asset',
-                            subtype: asset.type,
-                            source: 'asset',
-                            value: asset.data.assetValue || 0
                         });
                     }
                 });
 
                 underscore.each(instance.models.liabilities, function (liability) {
-                    liability = Liability.new(liability);
+                    // Check liability is not already added
+                    if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
+                        evaluatedModels.push(liability);
 
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId}),
-                        statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
+                        liability = Liability.new(liability);
 
-                    // Check asset is not already added
-                    if (registerLegalEntity && underscore.isUndefined(statementLiability)) {
                         var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
                             typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                             liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
@@ -827,18 +847,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                         // TODO: deal with missing liquidityType for 'Other' liabilities
                         updateLiabilityStatementCategory(instance, liability);
-
-                        // Add liability
-                        instance.data.monthlyStatement.push({
-                            uuid: liability.uuid,
-                            legalEntityUuid: registerLegalEntity.uuid,
-                            name: liability.name || '',
-                            description: liability.description || '',
-                            type: 'liability',
-                            subtype: 'other',
-                            source: 'liability',
-                            liability: liabilityMonths
-                        });
                     }
                 });
 

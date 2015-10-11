@@ -1,11 +1,13 @@
 describe('ag.sdk.model.business-plan', function () {
-    var Mocks, Model, BusinessPlan;
+    var Mocks, Model, Asset, BusinessPlan;
     beforeEach(module('ag.sdk.model.base'));
     beforeEach(module('ag.test.model.mocks'));
+    beforeEach(module('ag.sdk.model.asset'));
     beforeEach(module('ag.sdk.model.business-plan'));
-    beforeEach(inject(['BusinessPlan', 'Model', 'mocks', function(_BusinessPlan_, _Model_, _mocks_) {
+    beforeEach(inject(['Asset', 'BusinessPlan', 'Model', 'mocks', function(_Asset_, _BusinessPlan_, _Model_, _mocks_) {
         Model = _Model_;
         Mocks = _mocks_;
+        Asset = _Asset_;
         BusinessPlan = _BusinessPlan_;
     }]));
 
@@ -734,17 +736,121 @@ describe('ag.sdk.model.business-plan', function () {
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(8);
+            expect(businessPlan.models.assets.length).toBe(1);
 
-            expect(businessPlan.monthlyStatement[7]).toEqual({
-                uuid: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Vehicle model Toyota D',
-                description: '',
-                type: 'asset',
-                subtype: 'vme',
-                source: 'asset',
-                value: 0
+            expect(businessPlan.models.assets[0]).toEqual({
+                id: 7,
+                legalEntityId: 2,
+                assetKey: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
+                type: 'vme',
+                data: {
+                    category: 'Vehicle',
+                    model: 'Toyota D'
+                },
+                liabilities: [],
+                productionSchedules: []
+            });
+        });
+
+        it('adds an asset and its liabilities', function () {
+            businessPlan.addLegalEntity({
+                id: 2,
+                email: 'dave@roundtree.com',
+                name: 'Dave Roundtree',
+                type: 'Individual',
+                organizationId: 1,
+                uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
+            });
+
+            expect(businessPlan.monthlyStatement.length).toBe(7);
+
+            businessPlan.addAsset(Asset.new({
+                $id: 7,
+                $uri: 'assets/2',
+                legalEntityId: 2,
+                assetKey: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
+                type: 'vme',
+                data: {
+                    category: 'Vehicle',
+                    model: 'Toyota D'
+                },
+                liabilities: [{
+                    $id: 45,
+                    uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                    type: 'medium-term',
+                    installmentPayment: 1000,
+                    openingBalance: 1000000,
+                    interestRate: 1,
+                    frequency: 'monthly',
+                    startDate: '2015-10-10T10:20:00',
+                    merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729'
+                }]
+            }));
+
+            expect(businessPlan.models.assets.length).toBe(1);
+
+            expect(businessPlan.models.assets[0]).toEqual({
+                id: 7,
+                legalEntityId: 2,
+                assetKey: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
+                type: 'vme',
+                data: {
+                    category: 'Vehicle',
+                    model: 'Toyota D'
+                },
+                liabilities: [{
+                    id: 45,
+                    uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                    type: 'medium-term',
+                    installmentPayment: 1000,
+                    openingBalance: 1000000,
+                    interestRate: 1,
+                    frequency: 'monthly',
+                    startDate: '2015-10-10T10:20:00',
+                    merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                    data: {}
+                }],
+                productionSchedules: []
+            });
+
+            expect(businessPlan.models.liabilities.length).toBe(1);
+
+            expect(businessPlan.models.liabilities[0]).toEqual({
+                id: 45,
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'medium-term',
+                installmentPayment: 1000,
+                openingBalance: 1000000,
+                interestRate: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                data: {}
+            });
+
+            businessPlan.addLiability({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'medium-term',
+                installmentPayment: 1000,
+                openingBalance: 1000000,
+                interestRate: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729'
+            });
+
+            expect(businessPlan.models.liabilities.length).toBe(1);
+
+            expect(businessPlan.models.liabilities[0]).toEqual({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'medium-term',
+                installmentPayment: 1000,
+                openingBalance: 1000000,
+                interestRate: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                data: {}
             });
         });
 
@@ -771,17 +877,19 @@ describe('ag.sdk.model.business-plan', function () {
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(8);
+            expect(businessPlan.models.assets.length).toBe(1);
 
-            expect(businessPlan.monthlyStatement[7]).toEqual({
-                uuid: 'A7C803F5-F2CB-4FE1-A6FC-BAAD50D4AAB4',
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Life Insurance',
-                description: 'Its for life',
-                type: 'asset',
-                subtype: 'other',
-                source: 'asset',
-                value: 300000
+            expect(businessPlan.models.assets[0]).toEqual({
+                legalEntityId: 2,
+                assetKey: 'A7C803F5-F2CB-4FE1-A6FC-BAAD50D4AAB4',
+                type: 'other',
+                data: {
+                    name: 'Life Insurance',
+                    description: 'Its for life',
+                    assetValue: 300000
+                },
+                liabilities: [],
+                productionSchedules: []
             });
         });
     });
