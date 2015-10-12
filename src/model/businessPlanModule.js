@@ -946,7 +946,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     productionCreditInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'interest', startMonth, endMonth),
                     mediumTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'interest', startMonth, endMonth),
                     longTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'interest', startMonth, endMonth),
-                    totalInterest: calculateMonthlyLiabilityPropertyTotal(instance, [], 'interest', startMonth, endMonth),
+                    totalInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
 
                     // Liabilities
                     currentLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term'], 'closing', startMonth, endMonth),
@@ -973,11 +973,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
 
                     // Interest
-                    primaryAccountInterest: [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)],
+                    primaryAccountInterest: initializeArray(numberOfMonths),
                     productionCreditInterest: [calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 2)],
                     mediumTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 2)],
                     longTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 2)],
-                    totalInterest: [calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 2)],
+                    totalInterest: initializeArray(numberOfMonths),
 
                     // Liabilities
                     currentLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.currentLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.currentLiabilities, 2)],
@@ -1017,13 +1017,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     instance.account.yearly.push(underscore.extend(defaultMonthObj, { worstBalance: 0, bestBalance: 0, openingMonth: null, closingMonth: null }));
                 }
 
+                instance.data.summary.monthly.primaryAccountInterest = initializeArray(instance.numberOfMonths);
+                instance.data.summary.monthly.totalInterest = calculateMonthlyLiabilityPropertyTotal(instance, [], 'interest', startMonth, endMonth);
+
                 underscore.each(instance.account.monthly, function (month, index) {
                     month.opening = (index === 0 ? instance.account.openingBalance : instance.account.monthly[index - 1].closing);
                     month.inflow = instance.data.summary.monthly.totalIncome[index];
                     month.outflow = instance.data.summary.monthly.totalExpenditure[index];
                     month.balance = month.opening + month.inflow - month.outflow;
-                    month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit * 100 / 12) : 0 );
-                    month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit * 100 / 12) : 0 );
+                    month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
+                    month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
                     month.closing = month.balance + month.interestPayable + month.interestReceivable;
 
                     instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
@@ -1054,6 +1057,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     };
                     year.openingMonth.format('MMM-YY');
                 });
+
+                instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
+                instance.data.summary.yearly.totalInterest = [calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 2)];
             }
 
             function recalculateRatios (instance) {
@@ -1169,10 +1175,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.monthlyStatement;
             });
 
-            //TODO: remove this later
-            privateProperty(this, 'recalculateModel', function() {
-                reEvaluateBusinessPlan(this);
-            })
+            privateProperty(this, 'recalculateAccount', function() {
+                recalculatePrimaryAccount(this);
+            });
         }
 
         inheritModel(BusinessPlan, Document);
