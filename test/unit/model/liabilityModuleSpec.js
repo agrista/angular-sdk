@@ -20,6 +20,8 @@ describe('ag.sdk.model.liability', function () {
 
         beforeEach(function () {
             liability = Liability.new({
+                $id: 23,
+                $uri: 'liabilities/asset/43',
                 uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
                 type: 'medium-term',
                 installmentPayment: 1000,
@@ -79,6 +81,21 @@ describe('ag.sdk.model.liability', function () {
 
             liability.merchantUuid = '63210902-D65B-4F1B-8A37-CF5139>!6729';
             expect(liability.validate()).toBe(false);
+        });
+
+        it('removes metadata', function () {
+            expect(liability.asJSON()).toEqual({
+                id: 23,
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'medium-term',
+                installmentPayment: 1000,
+                openingBalance: 1000000,
+                interestRate: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                data: {}
+            });
         });
     });
 
