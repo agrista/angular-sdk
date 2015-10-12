@@ -1296,6 +1296,66 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
     };
 }]);
 
+
+/**
+ * Benefit API
+ */
+sdkApiApp.factory('benefitApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        searchCustomerNumber: function (customerNumber) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/benefit/search?customerNumber=' + customerNumber, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        linkCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/link', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        unlinkCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/unlink', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        authoriseCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/authorise', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        modifyAuthorisedCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/modify', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deauthoriseCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/deauthorise', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        listMemberships: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/benefit/memberships', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
 /**
  * Market Assumptions API
  */
