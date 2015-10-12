@@ -1022,6 +1022,13 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         },
         listValuationStatus: function(params) {
             return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
+        },
+        listBenefitAuthorisation: function() {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/aggregation/report-benefit-authorisation', {withCredentials: true}).then(function (res) {
+                 promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
