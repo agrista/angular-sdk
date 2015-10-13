@@ -720,6 +720,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         yearlyValues: initializeArray(numberOfYears)
                     })
                     .value();
+
+                recalculate(instance);
             }
 
             function reEvaluateAssetsAndLiabilities (instance) {
@@ -960,7 +962,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
 
                     // Liabilities
-                    currentLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term'], 'closing', startMonth, endMonth),
+                    currentLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'closing', startMonth, endMonth),
                     mediumLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'closing', startMonth, endMonth),
                     longLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'closing', startMonth, endMonth),
                     totalLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, [], 'closing', startMonth, endMonth),
@@ -984,11 +986,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
 
                     // Interest
-                    primaryAccountInterest: initializeArray(numberOfMonths),
+                    primaryAccountInterest: initializeArray(2),
                     productionCreditInterest: [calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 2)],
                     mediumTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 2)],
                     longTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 2)],
-                    totalInterest: initializeArray(numberOfMonths),
+                    totalInterest: initializeArray(2),
 
                     // Liabilities
                     currentLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.currentLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.currentLiabilities, 2)],
@@ -997,12 +999,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
                     totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
 
-                    totalAssets: instance.data.assetStatement.total.yearlyRMV,
+                    totalAssets: instance.data.assetStatement.total.yearlyRMV || initializeArray(2),
                     depreciation: getDepreciation(instance)
                 };
 
-                instance.data.summary.yearly.netFarmIncome = subtractArrayValues(instance.data.summary.yearly.productionIncome.yearly, addArrayValues(instance.data.summary.yearly.productionExpenditure.yearly, instance.data.summary.yearly.depreciation.yearly));
-                instance.data.summary.yearly.farmingProfitOrLoss = subtractArrayValues(instance.data.summary.yearly.netFarmIncome.yearly, addArrayValues(instance.data.summary.yearly.totalRent.yearly, instance.data.summary.yearly.totalInterest.yearly));
+                instance.data.summary.yearly.netFarmIncome = subtractArrayValues(instance.data.summary.yearly.productionIncome, addArrayValues(instance.data.summary.yearly.productionExpenditure, instance.data.summary.yearly.depreciation));
+                instance.data.summary.yearly.farmingProfitOrLoss = subtractArrayValues(instance.data.summary.yearly.netFarmIncome, addArrayValues(instance.data.summary.yearly.totalRent, instance.data.summary.yearly.totalInterest));
             }
 
             /**
@@ -1133,23 +1135,30 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     denominatorProperties = [denominatorProperties];
                 }
 
-                function fetchPropertiesForInterval (propertyList, interval) {
+                function sumPropertyValuesForInterval (propertyList, interval) {
                     if (!instance.data.summary[interval]) {
                         return [];
                     }
 
-                    return underscore.map(propertyList, function(propertyName) {
-                        if (propertyName.charAt(0) === '-') {
-                            propertyName = propertyName.substr(1);
-                            return negateArrayValues(instance.data.summary[interval][propertyName]);
-                        }
-                        return instance.data.summary[interval][propertyName];
-                    });
+                    var valueArrays = underscore.chain(propertyList)
+                        .map(function(propertyName) {
+                            if (propertyName.charAt(0) === '-') {
+                                propertyName = propertyName.substr(1);
+                                return negateArrayValues(instance.data.summary[interval][propertyName]);
+                            }
+                            return instance.data.summary[interval][propertyName];
+                        })
+                        .compact()
+                        .value();
+
+                    return underscore.reduce(valueArrays.slice(1), function(result, array) {
+                        return addArrayValues(result, array);
+                    }, angular.copy(valueArrays[0]) || []);
                 }
 
                 return {
-                    monthly: divideArrayValues(addArrayValues(fetchPropertiesForInterval(numeratorProperties, 'monthly')), addArrayValues(fetchPropertiesForInterval(denominatorProperties, 'monthly'))),
-                    yearly: divideArrayValues(addArrayValues(fetchPropertiesForInterval(numeratorProperties, 'yearly')), addArrayValues(fetchPropertiesForInterval(denominatorProperties, 'yearly')))
+                    monthly: divideArrayValues(sumPropertyValuesForInterval(numeratorProperties, 'monthly'), sumPropertyValuesForInterval(denominatorProperties, 'monthly')),
+                    yearly: divideArrayValues(sumPropertyValuesForInterval(numeratorProperties, 'yearly'), sumPropertyValuesForInterval(denominatorProperties, 'yearly'))
                 }
             }
 
