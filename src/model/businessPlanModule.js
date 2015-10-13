@@ -363,6 +363,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         });
 
                         var totalValue = underscore.chain(instance.data.productionIncomeComposition[year])
+                            .omit('total')
                             .values()
                             .pluck('value')
                             .reduce(function(total, value) { return total + value; }, 0)
