@@ -9801,19 +9801,22 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function calculateMonthlyLiabilityPropertyTotal (instance, liabilityTypes, property, startMonth, endMonth) {
-                return underscore.chain(instance.models.liabilities)
-                    .filter(function(liability) {
+                var liabilities = underscore.filter(instance.models.liabilities, function(liability) {
                         if (!liabilityTypes || liabilityTypes.length == 0) return true;
 
                         return liabilityTypes.indexOf(liability.type) != -1;
-                    })
+                    });
+
+                if (liabilities.length == 0) return initializeArray(instance.numberOfMonths);
+
+                return underscore.chain(liabilities)
                     .map(function(liability) {
-                        return new Liability(liability).liabilityInRange(startMonth, endMonth);
+                        var l = new Liability(liability).liabilityInRange(startMonth, endMonth);
+                        return underscore.pluck(l, property);
                     })
-                    .invoke(underscore.pluck, property)
                     .unzip()
                     .map(function(monthArray) {
-                            return underscore.reduce(monthArray, function(total, value) { return total + value; }, 0);
+                            return underscore.reduce(monthArray, function(total, value) { return total + (value || 0); }, 0);
                         })
                     .value();
             }
@@ -9854,7 +9857,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         }
                         return addArrayValues(result, rmvArray);
                     }, [])
-                    .value()
+                    .value();
                 return (yearlyDepreciation.length == 0 ? [0,0] : yearlyDepreciation);
             }
 
@@ -9926,6 +9929,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
                     totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
 
+                    totalAssets: instance.data.assetStatement.total.yearlyRMV,
                     depreciation: getDepreciation(instance)
                 };
 
