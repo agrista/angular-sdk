@@ -532,12 +532,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 updateLivestockRMV('marketable', 'short-term', 'Marketable Livestock');
 
                 function updateLivestockRMV (livestockType, liquidityType, statementItem) {
-                    var yearChange = instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue,
+                    var yearChange = (instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue) || 0 ,
                         itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
                         rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
 
                     for (var year = 0; year < rmvArray.length; year++) {
-                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1]);
+                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV || 0 : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1] || 0);
                         instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
                         instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
                     }
@@ -821,7 +821,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
                                 instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                                    return (month.repayment || 0) + (instance.data[section][typeTitle][index] || 0);
+                                    return ((month.repayment && month.repayment.bank) || 0) + (instance.data[section][typeTitle][index] || 0);
                                 });
 
                                 // TODO: deal with missing liquidityType for 'Other' liabilities
@@ -845,7 +845,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
                         instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                            return (month.repayment || 0) + (instance.data[section][typeTitle][index] || 0);
+                            return ((month.repayment && month.repayment.bank) || 0) + (instance.data[section][typeTitle][index] || 0);
                         });
 
                         // TODO: deal with missing liquidityType for 'Other' liabilities
@@ -905,7 +905,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             function calculateMonthlySectionsTotal (sections, results) {
                 return underscore.reduce(sections, function (sectionTotals, section) {
-                    return calculateMonthlyCategoriesTotal(section, sectionTotals);
+                    return (section ? calculateMonthlyCategoriesTotal(section, sectionTotals) : sectionTotals);
                 }, results);
             }
 
