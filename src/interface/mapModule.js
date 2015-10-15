@@ -2561,11 +2561,13 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         bottomright: '.leaflet-bottom.leaflet-right'
     };
 
-    function addListeners(element) {
+    function addListeners(scope, element) {
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
             parent.find('.leaflet-control-container ' + _positions[_position]).prepend(element);
+
+            scope.hidden = false;
         });
     }
 
@@ -2574,12 +2576,14 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         require: '^mapbox',
         replace: true,
         transclude: true,
-        template: '<div class="leaflet-control"><div class="leaflet-bar" ng-transclude></div></div>',
+        template: '<div class="leaflet-control" ng-hide="hidden"><div class="leaflet-bar" ng-transclude></div></div>',
         link: function (scope, element, attrs) {
+            scope.hidden = true;
+
             _position = (attrs.position == undefined ? 'bottomright' : attrs.position);
         },
-        controller: function($element) {
-            addListeners($element);
+        controller: function($scope, $element) {
+            addListeners($scope, $element);
         }
     }
 }]);
