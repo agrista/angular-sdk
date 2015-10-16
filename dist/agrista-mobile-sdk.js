@@ -8059,7 +8059,7 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         require: '^mapbox',
         replace: true,
         transclude: true,
-        template: '<div class="leaflet-control" ng-hide="hidden"><div class="leaflet-bar" ng-transclude></div></div>',
+        template: '<div class="leaflet-control"><div class="leaflet-bar" ng-hide="hidden" ng-transclude></div></div>',
         link: function (scope, element, attrs) {
             scope.hidden = true;
 
