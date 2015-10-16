@@ -6201,7 +6201,8 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
     };
 
     var _getActionVerb = function (action) {
-		var vowels = ['a', 'e', 'i', 'o', 'u'];
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
         return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action.lastIndexOf('y') == action.length - 1 ? (vowels.indexOf(action.substr(action.length - 1, action.length)) == -1 ? action.substr(0, action.length - 1)  + 'ied' : action + 'ed') : action + 'ed');
     };
 
