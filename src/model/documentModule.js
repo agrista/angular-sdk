@@ -45,9 +45,9 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
 
             readOnlyProperty(Document, 'docTypes', {
                 'asset register': 'Asset Register',
-                'business plan': 'Business Plan',
                 'emergence report': 'Emergence Report',
                 'farm valuation': 'Farm Valuation',
+                'financial resource plan': 'Financial Resource Plan',
                 'insurance policy': 'Insurance Policy',
                 'production plan': 'Production Plan',
                 'progress report': 'Progress Report'

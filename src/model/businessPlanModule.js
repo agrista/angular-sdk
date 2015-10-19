@@ -5,7 +5,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
-            this.docType = 'business plan';
+            this.docType = 'financial resource plan';
 
             this.data.models = this.data.models || {
                 assets: [],
@@ -486,7 +486,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             docType: {
                 required: true,
                 equal: {
-                    to: 'business plan'
+                    to: 'financial resource plan'
                 }
             },
             organizationId: {
