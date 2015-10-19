@@ -1022,6 +1022,13 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         },
         listValuationStatus: function(params) {
             return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
+        },
+        listBenefitAuthorisation: function() {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/aggregation/report-benefit-authorisation', {withCredentials: true}).then(function (res) {
+                 promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
@@ -1289,6 +1296,66 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
         deleteComparable: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+
+/**
+ * Benefit API
+ */
+sdkApiApp.factory('benefitApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        searchCustomerNumber: function (customerNumber) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/benefit/search?customerNumber=' + customerNumber, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        linkCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/link', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        unlinkCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/unlink', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        authoriseCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/authorise', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        modifyAuthorisedCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/modify', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deauthoriseCustomerNumber: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/benefit/deauthorise', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        listMemberships: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/benefit/memberships', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -6134,7 +6201,9 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
     };
 
     var _getActionVerb = function (action) {
-        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action.lastIndexOf('y') == action.length - 1 ? (vowels.indexOf(action.substr(action.length - 1, action.length)) == -1 ? action.substr(0, action.length - 1)  + 'ied' : action + 'ed') : action + 'ed');
     };
 
     var _getReferenceArticle = function (reference) {
