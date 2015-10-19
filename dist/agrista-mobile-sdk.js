@@ -9807,6 +9807,32 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return yearSlice[yearSlice.length - 1];
             }
 
+            function calculateAssetLiabilityGroupTotal (instance, type, subType) {
+                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true));
+                var defaultObj = (type == 'asset' ? {
+                    estimatedValue: 0,
+                    currentRMV: 0,
+                    yearlyRMV: initializeArray(numberOfYears)
+                } : { currentValue: 0, yearlyValues: initializeArray(numberOfYears) } );
+                var statementProperty = (type == 'asset' ? 'assetStatement' : 'liabilityStatement');
+
+                if (!instance.data[statementProperty][subType] || instance.data[statementProperty][subType].length == 0) {
+                    return defaultObj;
+                }
+
+                return underscore.reduce(instance.data[statementProperty][subType], function(result, item) {
+                    if (type == 'asset') {
+                        result.estimatedValue += item.estimatedValue || 0;
+                        result.currentRMV += item.currentRMV || 0;
+                        result.yearlyRMV = addArrayValues(result.yearlyRMV, item.yearlyRMV);
+                    } else {
+                        result.currentValue += item.currentValue || 0;
+                        result.yearlyValues = addArrayValues(result.yearlyValues, item.yearlyValues);
+                    }
+                    return result;
+                }, defaultObj);
+            }
+
             function calculateMonthlyLiabilityPropertyTotal (instance, liabilityTypes, property, startMonth, endMonth) {
                 var liabilities = underscore.filter(instance.models.liabilities, function(liability) {
                         if (!liabilityTypes || liabilityTypes.length == 0) return true;
@@ -9930,13 +9956,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalInterest: initializeArray(2),
 
                     // Liabilities
-                    currentLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.currentLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.currentLiabilities, 2)],
-                    mediumLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.mediumLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.mediumLiabilities, 2)],
-                    longLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.longLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.longLiabilities, 2)],
+                    currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
+                    mediumLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'medium-term'),
+                    longLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'long-term'),
                     totalLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
                     totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
 
+                    // Assets
+                    currentAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'short-term'),
+                    movableAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'medium-term'),
+                    fixedAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'long-term'),
                     totalAssets: instance.data.assetStatement.total.yearlyRMV || initializeArray(2),
+
                     depreciation: getDepreciation(instance)
                 };
 
