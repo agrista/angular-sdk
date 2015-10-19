@@ -10175,7 +10175,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
-            this.docType = 'business plan';
+            this.docType = 'financial resource plan';
 
             this.data.account = this.data.account || {
                 monthly: [],
@@ -11328,7 +11328,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             docType: {
                 required: true,
                 equal: {
-                    to: 'business plan'
+                    to: 'financial resource plan'
                 }
             },
             organizationId: {
@@ -11400,9 +11400,9 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
 
             readOnlyProperty(Document, 'docTypes', {
                 'asset register': 'Asset Register',
-                'business plan': 'Business Plan',
                 'emergence report': 'Emergence Report',
                 'farm valuation': 'Farm Valuation',
+                'financial resource plan': 'Financial Resource Plan',
                 'insurance policy': 'Insurance Policy',
                 'production plan': 'Production Plan',
                 'progress report': 'Progress Report'
