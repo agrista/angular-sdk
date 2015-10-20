@@ -10076,7 +10076,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     if (underscore.contains(['currentRMV', 'estimatedValue'], key)) {
                         return infinityToZero(instance.data.assetStatement.total[key] / instance.data.liabilityStatement.total.currentValue);
                     } else if (key === 'yearly') {
-                        return divideArrayValues(instance.data.assetStatement.total.yearlyRMV / instance.data.liabilityStatement.total.yearlyValues);
+                        return divideArrayValues(instance.data.assetStatement.total.yearlyRMV, instance.data.liabilityStatement.total.yearlyValues);
                     }
                 });
 
@@ -10084,7 +10084,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     if (underscore.contains(['currentRMV', 'estimatedValue'], key)) {
                         return infinityToZero(instance.data.liabilityStatement.total.currentValue / instance.data.assetStatement.total[key]);
                     } else if (key === 'yearly') {
-                        return divideArrayValues(instance.data.liabilityStatement.total.yearlyValues / instance.data.assetStatement.total.yearlyRMV);
+                        return divideArrayValues(instance.data.liabilityStatement.total.yearlyValues, instance.data.assetStatement.total.yearlyRMV);
                     }
                 });
 
@@ -10092,7 +10092,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     if (underscore.contains(['currentRMV', 'estimatedValue'], key)) {
                         return infinityToZero(instance.data.liabilityStatement.total.currentValue / (instance.data.assetStatement.total[key] - instance.data.liabilityStatement.total.currentValue));
                     } else if (key === 'yearly') {
-                        return divideArrayValues(instance.data.liabilityStatement.total.yearlyValues / subtractArrayValues(instance.data.assetStatement.total.yearlyRMV, instance.data.liabilityStatement.total.yearlyValues));
+                        return divideArrayValues(instance.data.liabilityStatement.total.yearlyValues, subtractArrayValues(instance.data.assetStatement.total.yearlyRMV, instance.data.liabilityStatement.total.yearlyValues));
                     }
                 });
             }
