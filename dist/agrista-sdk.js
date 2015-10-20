@@ -10852,24 +10852,26 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function calculateAssetStatementRMV(instance) {
-                angular.forEach(instance.data.assetStatement, function(statementItems) {
-                    angular.forEach(statementItems, function(item) {
-                        var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1;
-                        item.currentRMV = (item.estimatedValue || 0) * adjustmentFactor;
+                angular.forEach(instance.data.assetStatement, function(statementItems, category) {
+                    if (category != 'total') {
+                        angular.forEach(statementItems, function(item) {
+                            var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1;
+                            item.currentRMV = (item.estimatedValue || 0) * adjustmentFactor;
 
-                        for (var year = 0; year < item.yearlyRMV.length; year++) {
-                            var rmv = item.currentRMV;
-                            angular.forEach(_assetYearEndValueAdjustments[item.name], function(adjustment) {
-                                if (instance.data[adjustment.category][adjustment.item]) {
-                                    var value = underscore.reduce(instance.data[adjustment.category][adjustment.item].slice(year * 12, (year + 1) * 12), function(total, value) {
-                                        return total + (value || 0);
-                                    }, 0);
-                                    rmv = (['+', '-'].indexOf(adjustment.operation) != -1 ? eval( rmv + adjustment.operation + value ) : rmv);
-                                }
-                            });
-                            item.yearlyRMV[year] = rmv * adjustmentFactor;
-                        }
-                    });
+                            for (var year = 0; year < item.yearlyRMV.length; year++) {
+                                var rmv = (year == 0 ? item.currentRMV : item.yearlyRMV[year - 1]);
+                                angular.forEach(_assetYearEndValueAdjustments[item.name], function(adjustment) {
+                                    if (instance.data[adjustment.category][adjustment.item]) {
+                                        var value = underscore.reduce(instance.data[adjustment.category][adjustment.item].slice(year * 12, (year + 1) * 12), function(total, value) {
+                                            return total + (value || 0);
+                                        }, 0);
+                                        rmv = (['+', '-'].indexOf(adjustment.operation) != -1 ? eval( rmv + adjustment.operation + value ) : rmv);
+                                    }
+                                });
+                                item.yearlyRMV[year] = rmv * adjustmentFactor;
+                            }
+                        });
+                    }
                 });
             }
 
@@ -10877,6 +10879,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true));
 
                 instance.data.assetStatement.total = underscore.chain(instance.data.assetStatement)
+                    .omit('total')
                     .values()
                     .flatten(true)
                     .reduce(function(result, asset) {
@@ -10892,6 +10895,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     .value();
 
                 instance.data.liabilityStatement.total = underscore.chain(instance.data.liabilityStatement)
+                    .omit('total')
                     .values()
                     .flatten(true)
                     .reduce(function(result, liability) {
