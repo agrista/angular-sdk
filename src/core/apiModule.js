@@ -1552,3 +1552,54 @@ sdkApiApp.factory('customerRankingApi', ['$http', 'promiseService', 'configurati
             }
         };
     }]);
+
+/**
+ * Budget Blueprint API
+ */
+sdkApiApp.factory('budgetBlueprintApi', ['$http', 'promiseService', 'configuration', 'underscore',
+    function ($http, promiseService, configuration, underscore) {
+        var _host = configuration.getServer();
+
+        return {
+            searchBudgets: function (query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function (promise) {
+                    $http.get(_host + 'api/budget-blueprints/search' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            },
+            averageBudgets: function (data) {
+                return promiseService.wrap(function (promise) {
+                    $http.post(_host + 'api/budget-blueprint', data, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            },
+            getDistinctYears: function (query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function (promise) {
+                    $http.get(_host + 'api/budget-blueprints/distinct-years' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            },
+            getDistinctEnterprises: function(query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function(promise) {
+                    $http.get(_host + 'api/budget-blueprints/distinct-enterprises' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            }
+        };
+    }]);
