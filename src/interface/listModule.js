@@ -284,6 +284,21 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                 $rootScope.$broadcast('list::items__changed', _items);
             }
         },
+        updateItem: function(item) {
+            if(item instanceof Array) {
+                item = item[0];
+            }
+            if(item && item.id) {
+                if (_items instanceof Array) {
+                    for (var x = 0; x < _items.length; x++) {
+                        if (item.id == _items[x].id) {
+                            _items[x] = item;
+                            $rootScope.$broadcast('list::item__updated', item);
+                        }
+                    }
+                }
+            }
+        },
         selectFirstItem: function() {
             $rootScope.$broadcast('list::selectFirst__requested');
         },
