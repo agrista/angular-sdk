@@ -284,20 +284,28 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
                 $rootScope.$broadcast('list::items__changed', _items);
             }
         },
-        updateItem: function(item) {
-            if(item instanceof Array) {
-                item = item[0];
+        updateItem: function(items) {
+            if((items instanceof Array) === false) {
+                items = [items];
             }
-            if(item && item.id) {
-                if (_items instanceof Array) {
-                    for (var x = 0; x < _items.length; x++) {
-                        if (item.id == _items[x].id) {
-                            _items[x] = item;
-                            $rootScope.$broadcast('list::item__updated', item);
+
+            angular.forEach(items, function(item) {
+                if(item && item.id !== undefined) {
+                    if(_items instanceof Array) {
+                        for (var x = 0; x < _items.length; x++) {
+                            if (item.id == _items[x].id) {
+                                _items[x] = item;
+                                _items[x].active = (_activeItemId !== undefined && _activeItemId == item.id);
+                                $rootScope.$broadcast('list::item__updated', item);
+                            }
                         }
+                    } else {
+                        _items[item.id] = item;
+                        _items[item.id].active = (_activeItemId !== undefined && _activeItemId == item.id);
+                        $rootScope.$broadcast('list::item__updated', item);
                     }
                 }
-            }
+            });
         },
         selectFirstItem: function() {
             $rootScope.$broadcast('list::selectFirst__requested');
