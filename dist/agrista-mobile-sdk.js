@@ -3230,7 +3230,18 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             id: item.id || item.$id,
             title: item.name,
             subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
-            status: (item.published ? {text: 'published', label: 'label-success'} : false)
+            status: (item.published ? {text: 'published', label: 'label-success'} : false),
+            searchingIndex: searchingIndex(item)
+        };
+
+        function searchingIndex (item) {
+            var index = [item.name, item.assetType, item.commodityType];
+
+            if (item.data && item.data.details && item.data.details.regionName) {
+                index.push(item.data.details.regionName);
+            }
+
+            return index;
         }
     };
 
