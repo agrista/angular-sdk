@@ -1512,6 +1512,54 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
     };
 }]);
 
+
+/**
+ * Customer Ranking API
+ */
+sdkApiApp.factory('customerRankingApi', ['$http', 'promiseService', 'configuration', 'underscore',
+    function ($http, promiseService, configuration, underscore) {
+        var _host = configuration.getServer();
+
+        return {
+            searchCustomerRanking: function(query) {
+                if (query.horticultureStage) {
+                    query = angular.copy(query);
+                    query.horticulturestage = query.horticultureStage;
+                    delete query['horticultureStage'];
+                }
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function(promise) {
+                    $http.get(_host + 'api/customer-ranking/search' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            },
+            getDistinctYears: function() {
+                return promiseService.wrap(function(promise) {
+                    $http.get(_host + 'api/customer-ranking/distinct-years', {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            },
+            getDistinctEnterprises: function() {
+                return promiseService.wrap(function(promise) {
+                    $http.get(_host + 'api/customer-ranking/distinct-enterprises', {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            },
+            getDistinctCategories: function() {
+                return promiseService.wrap(function(promise) {
+                    $http.get(_host + 'api/customer-ranking/distinct-categories', {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            }
+        };
+    }]);
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
