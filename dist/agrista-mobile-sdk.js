@@ -9344,6 +9344,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, instance.numberOfMonths);
                     calculateIncomeComposition(instance, schedule, startMonth, instance.numberOfMonths);
                 });
+
+                instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
+                instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
             }
 
             /**
@@ -9801,7 +9804,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             return ((month.repayment && month.repayment.bank) || 0) + (instance.data[section][typeTitle][index] || 0);
                         });
 
-                        // TODO: deal with missing liquidityType for 'Other' liabilities
                         updateLiabilityStatementCategory(instance, liability);
                     }
                 });
