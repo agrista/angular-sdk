@@ -1222,9 +1222,10 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                 }, promise.reject);
             });
         },
-        publishEnterpriseBudget: function (id) {
+        publishEnterpriseBudget: function (id, publishSettings) {
+            publishSettings = publishSettings || {remote: 'agrista'};
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/budget/' + id + '/publish', {}, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + id + '/publish', publishSettings, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1242,6 +1243,13 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                     promise.resolve(res.data);
                 }, promise.reject);
             })
+        },
+        favoriteEnterpriseBudget: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget/' + id + '/favorite', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
 
     };
@@ -4736,7 +4744,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             id: item.id || item.$id,
             title: item.name,
             subtitle: item.commodityType + (item.regionName? ' in ' + item.regionName : ''),
-            status: (item.published ? {text: 'published', label: 'label-success'} : false),
+            status: (item.published ? {text: 'public', label: 'label-success'} : (item.internallyPublished ? {text: 'internal', label: 'label-info'} : false)),
             searchingIndex: searchingIndex(item)
         };
 
