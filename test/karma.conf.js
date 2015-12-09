@@ -12,14 +12,15 @@ module.exports = function(config) {
             'src/**/*.js',
             'test/unit/**/mocks/mock.js',
             'test/unit/**/mocks/*.js',
-            'test/unit/**/*.js'
+            //'test/unit/**/*.js'
+            'test/unit/model/frpCalculationModuleSpec.js'
         ],
         autoWatch: true,
         frameworks: ['jasmine'],
         browsers: ['Chrome'],
         plugins: [
             'karma-chrome-launcher',
-            'karma-firefox-launcher',
+            //'karma-firefox-launcher',
             'karma-jasmine',
             'karma-junit-reporter',
             'karma-phantomjs-launcher'
