@@ -29,6 +29,24 @@ module.exports = function(grunt) {
                 }
             }
         },
+        jsObfuscate: {
+            build: {
+                options: {
+                    concurrency: 2,
+                    keepLinefeeds: false,
+                    keepIndentations: false,
+                    encodeStrings: true,
+                    encodeNumbers: true,
+                    moveStrings: true,
+                    replaceNames: true,
+                    variableExclusions: [ '^_get_', '^_set_', '^_mtd_' ]
+                },
+                files: {
+                    'dist/agrista-sdk.obj.js': ['dist/agrista-sdk.min.js'],
+                    'dist/agrista-mobile-sdk.obj.js': ['dist/agrista-mobile-sdk.min.js']
+                }
+            }
+        },
         sloc: {
             client: {
                 options: {
@@ -60,8 +78,9 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-watch');
     grunt.loadNpmTasks('grunt-karma');
     grunt.loadNpmTasks('grunt-sloc');
+    grunt.loadNpmTasks('js-obfuscator');
 
-    grunt.registerTask('build', ['concat', 'uglify']);
+    grunt.registerTask('build', ['concat', 'uglify', 'jsObfuscate']);
     grunt.registerTask('default', ['karma:single','build']);
     grunt.registerTask('unit-test', ['karma:single']);
 };

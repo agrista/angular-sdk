@@ -1,11 +1,13 @@
 describe('ag.sdk.model.business-plan', function () {
-    var Mocks, Model, BusinessPlan;
+    var Mocks, Model, Asset, BusinessPlan;
     beforeEach(module('ag.sdk.model.base'));
     beforeEach(module('ag.test.model.mocks'));
+    beforeEach(module('ag.sdk.model.asset'));
     beforeEach(module('ag.sdk.model.business-plan'));
-    beforeEach(inject(['BusinessPlan', 'Model', 'mocks', function(_BusinessPlan_, _Model_, _mocks_) {
+    beforeEach(inject(['Asset', 'BusinessPlan', 'Model', 'mocks', function(_Asset_, _BusinessPlan_, _Model_, _mocks_) {
         Model = _Model_;
         Mocks = _mocks_;
+        Asset = _Asset_;
         BusinessPlan = _BusinessPlan_;
     }]));
 
@@ -127,7 +129,7 @@ describe('ag.sdk.model.business-plan', function () {
 
             businessPlan.addLiability({
                 uuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
-                type: 'short-loan',
+                type: 'short-term',
                 installmentPayment: 10000,
                 interestRate: 1,
                 legalEntityId: 2,
@@ -162,22 +164,22 @@ describe('ag.sdk.model.business-plan', function () {
                     liabilities: [{
                         id: 7,
                         uuid: '75A91F7C-3F92-4A5E-A727-E74BD029364B',
-                        type: 'medium-loan',
+                        type: 'medium-term',
                         installmentPayment: 10000,
                         interestRate: 1,
                         legalEntityId: 2,
-                        amount: 100000,
+                        openingBalance: 100000,
                         merchantUuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
                         frequency: 'monthly',
                         startDate: '2015-10-10T10:20:00'
                     }, {
                         id: 8,
                         uuid: 'A2CDB65E-7D5C-4921-8F7E-02B879EDD6DB',
-                        type: 'long-loan',
+                        type: 'long-term',
                         installmentPayment: 10000,
                         interestRate: 1,
                         legalEntityId: 2,
-                        amount: 500000,
+                        openingBalance: 500000,
                         merchantUuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
                         frequency: 'monthly',
                         startDate: '2015-10-10T10:20:00'
@@ -302,11 +304,36 @@ describe('ag.sdk.model.business-plan', function () {
             expect(businessPlan.monthlyStatement[4]).toEqual({
                 uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Medium Term Loan',
+                name: 'Medium Term',
                 type: 'liability',
-                subtype: 'medium-loan',
+                subtype: 'medium-term',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [
+                    { opening : 100000, repayment : { bank: 10000 }, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 },
+                    { opening : 90075, repayment : { bank: 10000 }, withdrawal : 0, balance : 80075, interest : 66.729166666667, closing : 80141.72916666667 },
+                    { opening : 80141.72916666667, repayment : { bank: 10000 }, withdrawal : 0, balance : 70141.72916666667, interest : 58.451440972222, closing : 70200.18060763889 },
+                    { opening : 70200.18060763889, repayment : { bank: 10000 }, withdrawal : 0, balance : 60200.18060763889, interest : 50.166817173031994, closing : 60250.347424811924 },
+                    { opening : 60250.347424811924, repayment : { bank: 10000 }, withdrawal : 0, balance : 50250.347424811924, interest : 41.875289520677, closing : 50292.2227143326 },
+                    { opening : 50292.2227143326, repayment : { bank: 10000 }, withdrawal : 0, balance : 40292.2227143326, interest : 33.576852261944, closing : 40325.79956659455 },
+                    { opening : 40325.79956659455, repayment : { bank: 10000 }, withdrawal : 0, balance : 30325.79956659455, interest : 25.271499638829, closing : 30351.071066233377 },
+                    { opening : 30351.071066233377, repayment : { bank: 10000 }, withdrawal : 0, balance : 20351.071066233377, interest : 16.959225888528, closing : 20368.030292121904 },
+                    { opening : 20368.030292121904, repayment : { bank: 10000 }, withdrawal : 0, balance : 10368.030292121904, interest : 8.640025243435, closing : 10376.670317365339 },
+                    { opening : 10376.670317365339, repayment : { bank: 10000 }, withdrawal : 0, balance : 376.67031736533863, interest : 0.313891931138, closing : 376.98420929647665 },
+                    { opening : 376.98420929647665, repayment : { bank: 376.98420929647665 }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
+                ]
             });
 
 
@@ -380,11 +407,36 @@ describe('ag.sdk.model.business-plan', function () {
             expect(businessPlan.monthlyStatement[4]).toEqual({
                 uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Medium Term Loan',
+                name: 'Medium Term',
                 type: 'liability',
-                subtype: 'medium-loan',
+                subtype: 'medium-term',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [
+                    { opening : 100000, repayment : { bank: 10000 }, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 },
+                    { opening : 90075, repayment : { bank: 10000 }, withdrawal : 0, balance : 80075, interest : 66.729166666667, closing : 80141.72916666667 },
+                    { opening : 80141.72916666667, repayment : { bank: 10000 }, withdrawal : 0, balance : 70141.72916666667, interest : 58.451440972222, closing : 70200.18060763889 },
+                    { opening : 70200.18060763889, repayment : { bank: 10000 }, withdrawal : 0, balance : 60200.18060763889, interest : 50.166817173031994, closing : 60250.347424811924 },
+                    { opening : 60250.347424811924, repayment : { bank: 10000 }, withdrawal : 0, balance : 50250.347424811924, interest : 41.875289520677, closing : 50292.2227143326 },
+                    { opening : 50292.2227143326, repayment : { bank: 10000 }, withdrawal : 0, balance : 40292.2227143326, interest : 33.576852261944, closing : 40325.79956659455 },
+                    { opening : 40325.79956659455, repayment : { bank: 10000 }, withdrawal : 0, balance : 30325.79956659455, interest : 25.271499638829, closing : 30351.071066233377 },
+                    { opening : 30351.071066233377, repayment : { bank: 10000 }, withdrawal : 0, balance : 20351.071066233377, interest : 16.959225888528, closing : 20368.030292121904 },
+                    { opening : 20368.030292121904, repayment : { bank: 10000 }, withdrawal : 0, balance : 10368.030292121904, interest : 8.640025243435, closing : 10376.670317365339 },
+                    { opening : 10376.670317365339, repayment : { bank: 10000 }, withdrawal : 0, balance : 376.67031736533863, interest : 0.313891931138, closing : 376.98420929647665 },
+                    { opening : 376.98420929647665, repayment : { bank: 376.98420929647665 }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
+                ]
             });
 
         });
@@ -454,11 +506,36 @@ describe('ag.sdk.model.business-plan', function () {
             expect(businessPlan.monthlyStatement[4]).toEqual({
                 uuid : '75A91F7C-3F92-4A5E-A727-E74BD029364B',
                 legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Medium Term Loan',
+                name: 'Medium Term',
                 type: 'liability',
-                subtype: 'medium-loan',
+                subtype: 'medium-term',
                 source: 'legal entity',
-                liability: [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 461.01459703640194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                liability: [
+                    { opening : 100000, repayment : { bank: 10000 }, withdrawal : 0, balance : 90000, interest : 75, closing : 90075 },
+                    { opening : 90075, repayment : { bank: 10000 }, withdrawal : 0, balance : 80075, interest : 66.729166666667, closing : 80141.72916666667 },
+                    { opening : 80141.72916666667, repayment : { bank: 10000 }, withdrawal : 0, balance : 70141.72916666667, interest : 58.451440972222, closing : 70200.18060763889 },
+                    { opening : 70200.18060763889, repayment : { bank: 10000 }, withdrawal : 0, balance : 60200.18060763889, interest : 50.166817173031994, closing : 60250.347424811924 },
+                    { opening : 60250.347424811924, repayment : { bank: 10000 }, withdrawal : 0, balance : 50250.347424811924, interest : 41.875289520677, closing : 50292.2227143326 },
+                    { opening : 50292.2227143326, repayment : { bank: 10000 }, withdrawal : 0, balance : 40292.2227143326, interest : 33.576852261944, closing : 40325.79956659455 },
+                    { opening : 40325.79956659455, repayment : { bank: 10000 }, withdrawal : 0, balance : 30325.79956659455, interest : 25.271499638829, closing : 30351.071066233377 },
+                    { opening : 30351.071066233377, repayment : { bank: 10000 }, withdrawal : 0, balance : 20351.071066233377, interest : 16.959225888528, closing : 20368.030292121904 },
+                    { opening : 20368.030292121904, repayment : { bank: 10000 }, withdrawal : 0, balance : 10368.030292121904, interest : 8.640025243435, closing : 10376.670317365339 },
+                    { opening : 10376.670317365339, repayment : { bank: 10000 }, withdrawal : 0, balance : 376.67031736533863, interest : 0.313891931138, closing : 376.98420929647665 },
+                    { opening : 376.98420929647665, repayment : { bank: 376.98420929647665 }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                    { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
+                ]
             });
 
         });
@@ -659,17 +736,121 @@ describe('ag.sdk.model.business-plan', function () {
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(8);
+            expect(businessPlan.models.assets.length).toBe(1);
 
-            expect(businessPlan.monthlyStatement[7]).toEqual({
-                uuid: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Vehicle model Toyota D',
-                description: '',
-                type: 'asset',
-                subtype: 'vme',
-                source: 'asset',
-                value: 0
+            expect(businessPlan.models.assets[0]).toEqual({
+                id: 7,
+                legalEntityId: 2,
+                assetKey: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
+                type: 'vme',
+                data: {
+                    category: 'Vehicle',
+                    model: 'Toyota D'
+                },
+                liabilities: [],
+                productionSchedules: []
+            });
+        });
+
+        it('adds an asset and its liabilities', function () {
+            businessPlan.addLegalEntity({
+                id: 2,
+                email: 'dave@roundtree.com',
+                name: 'Dave Roundtree',
+                type: 'Individual',
+                organizationId: 1,
+                uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
+            });
+
+            expect(businessPlan.monthlyStatement.length).toBe(7);
+
+            businessPlan.addAsset(Asset.new({
+                $id: 7,
+                $uri: 'assets/2',
+                legalEntityId: 2,
+                assetKey: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
+                type: 'vme',
+                data: {
+                    category: 'Vehicle',
+                    model: 'Toyota D'
+                },
+                liabilities: [{
+                    $id: 45,
+                    uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                    type: 'medium-term',
+                    installmentPayment: 1000,
+                    openingBalance: 1000000,
+                    interestRate: 1,
+                    frequency: 'monthly',
+                    startDate: '2015-10-10T10:20:00',
+                    merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729'
+                }]
+            }));
+
+            expect(businessPlan.models.assets.length).toBe(1);
+
+            expect(businessPlan.models.assets[0]).toEqual({
+                id: 7,
+                legalEntityId: 2,
+                assetKey: '510B25A6-DE4E-48E1-B2B0-A441D4127BB9',
+                type: 'vme',
+                data: {
+                    category: 'Vehicle',
+                    model: 'Toyota D'
+                },
+                liabilities: [{
+                    id: 45,
+                    uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                    type: 'medium-term',
+                    installmentPayment: 1000,
+                    openingBalance: 1000000,
+                    interestRate: 1,
+                    frequency: 'monthly',
+                    startDate: '2015-10-10T10:20:00',
+                    merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                    data: {}
+                }],
+                productionSchedules: []
+            });
+
+            expect(businessPlan.models.liabilities.length).toBe(1);
+
+            expect(businessPlan.models.liabilities[0]).toEqual({
+                id: 45,
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'medium-term',
+                installmentPayment: 1000,
+                openingBalance: 1000000,
+                interestRate: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                data: {}
+            });
+
+            businessPlan.addLiability({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'medium-term',
+                installmentPayment: 1000,
+                openingBalance: 1000000,
+                interestRate: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729'
+            });
+
+            expect(businessPlan.models.liabilities.length).toBe(1);
+
+            expect(businessPlan.models.liabilities[0]).toEqual({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'medium-term',
+                installmentPayment: 1000,
+                openingBalance: 1000000,
+                interestRate: 1,
+                frequency: 'monthly',
+                startDate: '2015-10-10T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                data: {}
             });
         });
 
@@ -696,45 +877,20 @@ describe('ag.sdk.model.business-plan', function () {
                 }
             });
 
-            expect(businessPlan.monthlyStatement.length).toBe(8);
+            expect(businessPlan.models.assets.length).toBe(1);
 
-            expect(businessPlan.monthlyStatement[7]).toEqual({
-                uuid: 'A7C803F5-F2CB-4FE1-A6FC-BAAD50D4AAB4',
-                legalEntityUuid: '19CD56FC-DFD6-4338-88E5-00571685F707',
-                name: 'Life Insurance',
-                description: 'Its for life',
-                type: 'asset',
-                subtype: 'other',
-                source: 'asset',
-                value: 300000
-            });
-        });
-
-        it('adds a liability', function () {
-            businessPlan.addLegalEntity({
-                id: 2,
-                email: 'dave@roundtree.com',
-                name: 'Dave Roundtree',
-                type: 'Individual',
-                organizationId: 1,
-                uuid: '19CD56FC-DFD6-4338-88E5-00571685F707'
-            });
-
-            expect(businessPlan.monthlyStatement.length).toBe(7);
-
-            businessPlan.addLiability({
-                uuid: '18F6C327-FBE5-4693-AE31-A89DD6BD9D0B',
-                type: 'short-loan',
-                installmentPayment: 10000,
-                interestRate: 1,
+            expect(businessPlan.models.assets[0]).toEqual({
                 legalEntityId: 2,
-                amount: 500000,
-                merchantUuid: '1E109A6C-625B-4FE2-AD23-35D082754914',
-                frequency: 'monthly',
-                startDate: '2015-10-10T10:20:00'
+                assetKey: 'A7C803F5-F2CB-4FE1-A6FC-BAAD50D4AAB4',
+                type: 'other',
+                data: {
+                    name: 'Life Insurance',
+                    description: 'Its for life',
+                    assetValue: 300000
+                },
+                liabilities: [],
+                productionSchedules: []
             });
-
-            expect(businessPlan.monthlyStatement.length).toBe(8);
         });
     });
 });

@@ -29,4 +29,35 @@ describe('ag.sdk.model.asset', function () {
             expect(asset.validate()).toBe(true);
         });
     });
+
+    describe('Asset with liabilities', function () {
+        var asset;
+
+        beforeEach(function () {
+            asset = Asset.new({
+                $id: 1,
+                $complete: true,
+                $local: true,
+                $saved: false,
+                $uri: 'assets',
+                assetKey: 'asset key',
+                legalEntityId: 1,
+                type: 'crop',
+                liabilities: [{
+                    uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                    type: 'medium-term',
+                    installmentPayment: 1000,
+                    openingBalance: 1000000,
+                    interestRate: 1,
+                    frequency: 'monthly',
+                    startDate: '2015-10-10T10:20:00',
+                    merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729'
+                }]
+            });
+        });
+
+        it('validates', function () {
+            expect(asset.validate()).toBe(true);
+        });
+    });
 });

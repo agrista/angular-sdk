@@ -45,7 +45,9 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
         parseRequest: function (templateUrl, schemaData) {
             if (templateUrl !== undefined) {
                 angular.forEach(schemaData, function (data, key) {
-                    templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
+                    templateUrl = templateUrl
+                        .replace('/:' + key, (data !== undefined ? '/' + data : ''))
+                        .replace(':' + key, (data !== undefined ? data : ''));
                 });
             }
 

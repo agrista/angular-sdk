@@ -79,7 +79,9 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
     };
 
     var _getActionVerb = function (action) {
-        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action.lastIndexOf('y') == action.length - 1 ? (vowels.indexOf(action.substr(action.length - 1, action.length)) == -1 ? action.substr(0, action.length - 1)  + 'ied' : action + 'ed') : action + 'ed');
     };
 
     var _getReferenceArticle = function (reference) {

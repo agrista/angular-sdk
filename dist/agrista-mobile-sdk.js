@@ -156,9 +156,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
-                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0));
+                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
 
-                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint.length > 0) {
+                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
                                     console.log('ERROR: ' + err);
 
@@ -877,7 +877,8 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
                 map.title = _assetTitle(item);
-                map.subtitle = item.data.type + ' - ' + item.data.category;
+                // Might want to edit this further so that title and subtitle are not identical in most cases
+                map.subtitle = item.data.type + (item.data.category ? ' - ' + item.data.category : '');
                 map.summary = (item.data.description || '');
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
@@ -947,16 +948,273 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
     };
 
     var _assetCategories = {
-        improvement: {
-            'Livestock & Game': ['Abattoir','Animal Cages','Animal Camp','Animal Feedlot','Animal Growing House','Animal Handling Equiment','Animal Handling Facility','Animal Pens','Animal Sale Facility','Animal Shelter','Animal Stable','Anti-Poaching Training Facility','Arena','Auction Facilities','Aviary','Barn','Beekeeping Room','Bottling Facility','Breeding Facility','Broiler House','Broiler House - Atmosphere','Broiler House - Semi','Broiler Unit','Cheese Factory','Chicken Coop','Chicken Run','Cooling Facility','Crocodile Dams','Dairy','Deboning Room','Dry Oven','Dry Storage','Drying Facility','Drying Ovens','Drying Racks','Drying Strips','Drying Tunnels','Egg Grading Facility','Egg Packaging Building','Elephant Enclosures','Embryo Room','Feed Dispensers','Feed Mill','Feed Storeroom','Feeding Lot','Feeding Pens','Feeding Shelter','Feeding Troughs','Filter Station','Fish Market Buildings','Flavour Shed','Game Cage Facility','Game Lodge','Game Pens','Game Room','Game Slaughter Area','Game Viewing Area','Grading Room','Handling Facilities','Hatchery','Hide Store','Hing Pen','Horse Walker','Hunters','Hide Storeroom','Inspection Room','Kennels','Kraal','Laying Hen House','Maternity House','Maternity Pens','Meat Processing Facility','Milk Bottling Plant','Milk Tank Room','Milking Parlour','Other','Packaging Complex','Packaging Facility','Paddocks','Pasteurising Facility','Pens','Pig Sty','Poison Store','Post-Feeding Shed','Processing Facility','Quarantine Area','Racing Track','Rankin Game','Refrigeration Facility','Rehab Facility','Saddle Room','Sales Facility','Selling Kraal','Shearing Facility','Shed','Shelter','Shooting Range','Skinning Facility','Slaughter Facility','Sorting Facility','Stable','Stall','Stock Handling Facility','Storage Facility','Sty','Surgery','Treatment Area','Trout Dam','Warehouse'],
-            'Crop Cultivation & Processing': ["Crop Cultivation & Processing","Barrel Maturation Room","Bottling Facility","Carton Shed","Cellar","Chemical Shed","Compost Pasteurising Unit","Compost Preparing Unit","Cooling Facility","Crushing Plant","Dark Room","Degreening Room","Dehusking Shed","Dry Oven","Dry Sow House","Dry Storage","Drying Facility","Drying Ovens","Drying Racks","Drying Strips","Drying Tunnels","Farrowing House","Fertilizer Shed","Flavour Shed","Food Plant Shed","Fruit Dry Tracks","Fruit Hopper","Gardening Facility","Germination Facility","Grading Room","Grain Handling Equipment","Grain Loading Facility","Grain Mill","Grain Silos","Grain Store","Greenhouse","Grower Unit","Handling Facilities","Hopper","Hothouse","Igloo","Inspection Room","Irrigation Dam","Irrigation Pump","Irrigation Reservoir","Irrigation System","Mill","Milling Store","Mushroom Cultivation Building","Mushroom Sweat Room","Nursery (Plant)","Nut Cracking Facility","Nut Factory","Oil Store","Onion Drying Shed","Other","Packaging Complex","Packaging Facility","Pesticide Store","Poison Store","Processing Facility","Refrigeration Facility","Sales Facility","Seed Store","Seedling Growing Facility","Seedling Packaging Facility","Shed","Silo","Sorting Facility","Sprinklers","Storage Facility","Tea Drying Facility","Tea Room","Tobacco Dryers","Warehouse","Wine Cellar","Wine Storage Shed","Wine Tanks","Winery Building"],
-            'Residential': ["Ablution Facility","Accommodation Units","Attic","Balcony","Bathroom","Bedroom","Building","Bungalow","Bunk House","Cabin","Camp Accommodation","Canteen","Caretaker's Dwelling","Chalet","Cloak Room","Community Dwelling","Cottage","Dining Area","Dining Facility","Dormitory","Dressing Rooms","Drivers' Accommodation","Dwelling","Estate House","Flat","Foreman's Dwelling","Game Lodge","Guest Accommodation","Homestead","Hostels","House","Hunters' Accommodation","Hunters' Kitchen","Hut","Kitchen","Lapa","Lean-to","Lodge","Loft","Log Cabin","Longdavel","Lounge","Luncheon Areas","Luxury Accommodation","Manager's Dwelling","Manor House","Maternity House","Other","Owner's Dwelling","Parlor","Shed","Shower","Staff Ablutions","Staff Accommodation","Staff Building","Staff Compound","Staff Dining Facility","Stoop","Tavern","Teachers' Dwellings","Toilet - Outdoor","Toilet Block","Toilets","Toilets - Staff","Veranda","Winemakers' Dwelling","Workers' Ablutions","Workers' Accommodation","Workers' Kitchen","Workers' School"],
-            'Business': ["Ablution Facility","Administration Block","Administrative Building","Administrative Offices","Animal Sale Facility","Auction Facilities","Barrel Maturation Room","Bathroom","Bottling Facility","Building","Charcoal Factory","Cheese Factory","Cloak Room","Cloth House","Commercial Buildings","Conference Facility","Cooling Facility","Distribution Centre","Factory Building","Fish Market Buildings","Functions Centre","Furniture Factory","Grading Room","Industrial Warehouse","Inspection Room","Ironing Room","Kiosk","Laboratory","Laundry Facility","Lean-to","Liquor Store","Loading Area","Loading Bay","Loading Platform","Loading Shed","Locker Room","Lockup Shed","Mechanical Workshop","Office","Office Building","Office Complex","Other","Packaging Complex","Packaging Facility","Pallet Factory","Pallet Stacking Area","Pill Factory","Processing Facility","Reception Area","Refrigeration Facility","Sales Facility","Saw Mill","Security Office","Shed","Shop","Sorting Facility","Staff Building","Staff Compound","Storage Facility","Studio","Toilet - Outdoor","Toilet Block","Toilets","Toilets - Client","Toilets - Office","Toilets - Staff","Transport Depot","Warehouse","Wine Cellar","Wine Shop","Wine Tasting Room","Winery Building","Work Station","Workers' Ablutions","Workers' Accommodation","Workers' Kitchen","Workers' School","Workshop"],
-            'Equipment & Utilities': ["Air Conditioners","Aircraft Hangar","Backup Generator","Boiler Room","Borehole","Borehole - Equipped","Borehole - Pump","Bulk Tank Room","Caravan Room","Carport","Carport - Double","Carton Shed","Chemical Shed","Compressor Room","Control Hut","Cooling Facility","Diesel Room","Electricity Room","Engine Room","Equipment Stores","Eskom Transformer","Filter Station","Fuel Depot","Fuel Store","Fuel Tank","Garage","Garage - Double","Garage - Triple","Generator Room","Hangar","Helipad","Hydro Tanks","Hydrophonic Pond","Laying Hen House Equipment","Machinery Room","Mechanical Workshop","Oil Store","Other","Oven","Petrol Storage","Poison Store","Power Room","Pump","Pump House Equipment","Pumphouse","Refuelling Canopy","Scale","Shed","Solar Power Room","Tank Stand","Tanks","Tool Shed","Tractor Shed","Transformer Room","Transport Depot","Truck Shelter","Truck Wash","Turbine Room","Twin Engine Generator Unit","Tyre Shed","Utility Building","Utility Room","Water Purification Plant","Water Reticulation Works","Water Storage Tanks","Water Tower"],
-            'Infrastructure': ["Ablution Facility","Access Roads","All Infrastructure","Attic","Balcony","Barn","Bathroom","Bedroom","Bell Arch","Bin Compartments","Boiler Room","Borehole","Borehole - Equipped","Borehole - Pump","Building","Bulk Tank Room","Bunker","Canopy","Canteen","Cellar","Classroom","Cloak Room","Concrete Slab","Concrete Surfaces","Courtyard","Covered Area","Dam","Dam - Filter","Debris Filter Pond","Deck","Driveway","Electric Fencing","Electric Gate","Electricity Room","Entrance Building","Entrance Gate","Fencing","Fencing (Game)","Fencing (Perimeter)","Fencing (Security)","Flooring","Foyer","Gate","Gate - Sliding","Gate House","Gazebo","Guardhouse","Hall","House","Hut","Hydro Tanks","Hydrophonic Pond","Infrastructure","Irrigation Dam","Irrigation Pump","Irrigation Reservoir","Irrigation System","Kiosk","Kitchen","Koi Pond","Kraal","Laboratory","Landing Strip","Laundry Facility","Lean-to","Lockup Shed","Longdavel","Mezzanine","Other","Outbuilding","Outdoor Room","Outhouse","Parking Area","Parlor","Patio","Paving","Pens","Poles","Pool Facility","Pool House","Porch","Porte Cochere","Reservoir","Reservoir Pumphouse","Reservoir Tower","Road Stall","Rondavel","Roofing","Room","Ruin","Runway","Security Office","Shade Netting","Shade Port","Shed","Shooting Range","Shower","Silo","Slab","Splash Pool","Sprinklers","Stable","Stoop","Storage Facility","Studio","Surrounding Works","Tarmac","Tarred Area","Tarred Road Surfaces","Terrace","Toilet - Outdoor","Toilet Block","Toilets","Toilets - Client","Toilets - Office","Toilets - Staff","Trench","Tunnel","Tunnel Building","Vacant Areas","Veranda","Walkways","Walls","Walls (Boundary)","Walls (Retaining)","Walls (Security)","Warehouse","Water Feature","Water Storage Tanks","Water Tower","Wire Enclosures","Work Station"],
-            'Recreational & Misc.': ["Anti-Poaching Training Facility","Archive Room","Arena","Art Gallery","Bar","Barrel Maturation Room","BBQ","BBQ Facility","Café","Canteen","Caravan Room","Chapel","Church","Church Facility","Classroom","Cloth House","Clubhouse","Coffee Shop","Community Centre","Compost Pasteurising Unit","Compost Preparing Unit","Dark Room","Entertainment Area","Entertainment Facility","Functions Centre","Funeral Building","Furniture Factory","Gallery","Game Room","Golf Clubhouse","Gymnasium","Helipad","Hydro Tanks","Hydrophonic Pond","Igloo","Ironing Room","Jacuzzi","Judging Booth","Kiosk","Koi Pond","Laundry Facility","Liquor Store","Locker Room","Lounge","Luncheon Areas","Museum","Nursery School","Nursing Home","Other","Parlor","Pill Factory","Play Area","Pool Facility","Pool House","Pottery Room","Pub","Reception Area","Recreation Facility","Rehab Facility","Restaurant","Retirement Centre","Salon","Sauna","Saw Mill","School","Spa Baths","Spa Complex","Splash Pool","Squash Court","Sulphur Room","Surgery","Swimming Pool - Indoor","Swimming Pool - Outdoor","Swimming Pool Ablution","Tavern","Tea Room","Tennis Court","Treatment Area","Trout Dam","Venue Hall","Vitamin Room","Wedding Venue","Weigh Bridge","Weigh Bridge Control Room","Wellness Centre","Windmill"
-            ]
-        },
+        improvement: [
+            { category: "Airport", subCategory: "Hangar" },
+            { category: "Airport", subCategory: "Helipad" },
+            { category: "Airport", subCategory: "Runway" },
+            { category: "Poultry", subCategory: "Hatchery" },
+            { category: "Aquaculture", subCategory: "Pond" },
+            { category: "Aquaculture", subCategory: "Net House" },
+            { category: "Aviary" },
+            { category: "Beekeeping" },
+            { category: "Borehole" },
+            { category: "Borehole", subCategory: "Equipped" },
+            { category: "Borehole", subCategory: "Pump" },
+            { category: "Borehole", subCategory: "Windmill" },
+            { category: "Poultry", subCategory: "Broiler House" },
+            { category: "Poultry", subCategory: "Broiler House - Atmosphere" },
+            { category: "Poultry", subCategory: "Broiler House - Semi" },
+            { category: "Poultry", subCategory: "Broiler House - Zinc" },
+            { category: "Building", subCategory: "Administrative" },
+            { category: "Building" },
+            { category: "Building", subCategory: "Commercial" },
+            { category: "Building", subCategory: "Entrance" },
+            { category: "Building", subCategory: "Lean-to" },
+            { category: "Building", subCategory: "Outbuilding" },
+            { category: "Building", subCategory: "Gate" },
+            { category: "Cold Storage" },
+            { category: "Commercial", subCategory: "Coffee Shop" },
+            { category: "Commercial", subCategory: "Sales Facility" },
+            { category: "Commercial", subCategory: "Shop" },
+            { category: "Commercial", subCategory: "Bar" },
+            { category: "Commercial", subCategory: "Café" },
+            { category: "Commercial", subCategory: "Restaurant" },
+            { category: "Commercial", subCategory: "Factory" },
+            { category: "Commercial", subCategory: "Tasting Facility" },
+            { category: "Commercial", subCategory: "Cloth House" },
+            { category: "Compost", subCategory: "Preparing Unit" },
+            { category: "Crocodile Dam" },
+            { category: "Crop Processing", subCategory: "Degreening Room" },
+            { category: "Crop Processing", subCategory: "Dehusking Facility" },
+            { category: "Crop Processing", subCategory: "Drying Facility" },
+            { category: "Crop Processing", subCategory: "Drying Tunnels" },
+            { category: "Crop Processing", subCategory: "Sorting Facility" },
+            { category: "Crop Processing", subCategory: "Drying Oven" },
+            { category: "Crop Processing", subCategory: "Drying Racks" },
+            { category: "Crop Processing", subCategory: "Crushing Plant" },
+            { category: "Crop Processing", subCategory: "Nut Cracking Facility" },
+            { category: "Crop Processing", subCategory: "Nut Factory" },
+            { category: "Dairy" },
+            { category: "Dairy", subCategory: "Pasteurising Facility" },
+            { category: "Dairy", subCategory: "Milking Parlour" },
+            { category: "Dam" },
+            { category: "Dam", subCategory: "Filter" },
+            { category: "Dam", subCategory: "Trout" },
+            { category: "Domestic", subCategory: "Chicken Coop" },
+            { category: "Domestic", subCategory: "Chicken Run" },
+            { category: "Domestic", subCategory: "Kennels" },
+            { category: "Domestic", subCategory: "Gardening Facility" },
+            { category: "Education", subCategory: "Conference Room" },
+            { category: "Education", subCategory: "Classroom" },
+            { category: "Education", subCategory: "Crèche" },
+            { category: "Education", subCategory: "School" },
+            { category: "Education", subCategory: "Training Facility" },
+            { category: "Equipment", subCategory: "Air Conditioner" },
+            { category: "Equipment", subCategory: "Gantry" },
+            { category: "Equipment", subCategory: "Oven" },
+            { category: "Equipment", subCategory: "Pump" },
+            { category: "Equipment", subCategory: "Pumphouse" },
+            { category: "Equipment", subCategory: "Scale" },
+            { category: "Feed Mill" },
+            { category: "Feedlot" },
+            { category: "Fencing" },
+            { category: "Fencing", subCategory: "Electric" },
+            { category: "Fencing", subCategory: "Game" },
+            { category: "Fencing", subCategory: "Perimeter" },
+            { category: "Fencing", subCategory: "Security" },
+            { category: "Fencing", subCategory: "Wire" },
+            { category: "Fuel", subCategory: "Tanks" },
+            { category: "Fuel", subCategory: "Tank Stand" },
+            { category: "Fuel", subCategory: "Fuelling Facility" },
+            { category: "Grain Mill" },
+            { category: "Greenhouse" },
+            { category: "Infrastructure" },
+            { category: "Irrigation", subCategory: "Sprinklers" },
+            { category: "Irrigation" },
+            { category: "Laboratory" },
+            { category: "Livestock Handling", subCategory: "Auction Facility" },
+            { category: "Livestock Handling", subCategory: "Cages" },
+            { category: "Livestock Handling", subCategory: "Growing House" },
+            { category: "Livestock Handling", subCategory: "Pens" },
+            { category: "Livestock Handling", subCategory: "Shelter" },
+            { category: "Livestock Handling", subCategory: "Breeding Facility" },
+            { category: "Livestock Handling", subCategory: "Culling Shed" },
+            { category: "Livestock Handling", subCategory: "Dipping Facility" },
+            { category: "Livestock Handling", subCategory: "Elephant Enclosures" },
+            { category: "Livestock Handling", subCategory: "Feed Troughs/Dispensers" },
+            { category: "Livestock Handling", subCategory: "Horse Walker" },
+            { category: "Livestock Handling", subCategory: "Maternity Shelter/Pen" },
+            { category: "Livestock Handling", subCategory: "Quarantine Area" },
+            { category: "Livestock Handling", subCategory: "Rehab Facility" },
+            { category: "Livestock Handling", subCategory: "Shearing Facility" },
+            { category: "Livestock Handling", subCategory: "Stable" },
+            { category: "Livestock Handling", subCategory: "Surgery" },
+            { category: "Livestock Handling", subCategory: "Treatment Area" },
+            { category: "Livestock Handling", subCategory: "Weaner House" },
+            { category: "Livestock Handling", subCategory: "Grading Facility" },
+            { category: "Livestock Handling", subCategory: "Inspection Facility" },
+            { category: "Logistics", subCategory: "Handling Equipment" },
+            { category: "Logistics", subCategory: "Handling Facility" },
+            { category: "Logistics", subCategory: "Depot" },
+            { category: "Logistics", subCategory: "Loading Area" },
+            { category: "Logistics", subCategory: "Loading Shed" },
+            { category: "Logistics", subCategory: "Hopper" },
+            { category: "Logistics", subCategory: "Weigh Bridge" },
+            { category: "Meat Processing", subCategory: "Abattoir" },
+            { category: "Meat Processing", subCategory: "Deboning Room" },
+            { category: "Meat Processing", subCategory: "Skinning Facility" },
+            { category: "Mill" },
+            { category: "Mushrooms", subCategory: "Cultivation" },
+            { category: "Mushrooms", subCategory: "Sweat Room" },
+            { category: "Nursery ", subCategory: "Plant" },
+            { category: "Nursery ", subCategory: "Plant Growing Facility" },
+            { category: "Office" },
+            { category: "Packaging Facility" },
+            { category: "Paddocks", subCategory: "Camp" },
+            { category: "Paddocks", subCategory: "Kraal" },
+            { category: "Paddocks" },
+            { category: "Piggery", subCategory: "Farrowing House" },
+            { category: "Piggery", subCategory: "Pig Sty" },
+            { category: "Processing", subCategory: "Bottling Facility" },
+            { category: "Processing", subCategory: "Flavour Shed" },
+            { category: "Processing", subCategory: "Processing Facility" },
+            { category: "Recreation", subCategory: "Viewing Area" },
+            { category: "Recreation", subCategory: "BBQ" },
+            { category: "Recreation", subCategory: "Clubhouse" },
+            { category: "Recreation", subCategory: "Event Venue" },
+            { category: "Recreation", subCategory: "Gallery" },
+            { category: "Recreation", subCategory: "Game Room" },
+            { category: "Recreation", subCategory: "Gazebo" },
+            { category: "Recreation", subCategory: "Gymnasium" },
+            { category: "Recreation", subCategory: "Jacuzzi" },
+            { category: "Recreation", subCategory: "Judging Booth" },
+            { category: "Recreation", subCategory: "Museum" },
+            { category: "Recreation", subCategory: "Play Area" },
+            { category: "Recreation", subCategory: "Pool House" },
+            { category: "Recreation", subCategory: "Pottery Room" },
+            { category: "Recreation", subCategory: "Racing Track" },
+            { category: "Recreation", subCategory: "Salon" },
+            { category: "Recreation", subCategory: "Sauna" },
+            { category: "Recreation", subCategory: "Shooting Range" },
+            { category: "Recreation", subCategory: "Spa Facility" },
+            { category: "Recreation", subCategory: "Squash Court" },
+            { category: "Recreation", subCategory: "Swimming Pool" },
+            { category: "Recreation" },
+            { category: "Religeous", subCategory: "Church" },
+            { category: "Residential", subCategory: "Carport" },
+            { category: "Residential", subCategory: "Driveway" },
+            { category: "Residential", subCategory: "Flooring" },
+            { category: "Residential", subCategory: "Paving" },
+            { category: "Residential", subCategory: "Roofing" },
+            { category: "Residential", subCategory: "Water Feature" },
+            { category: "Residential", subCategory: "Hall" },
+            { category: "Residential", subCategory: "Balcony" },
+            { category: "Residential", subCategory: "Canopy" },
+            { category: "Residential", subCategory: "Concrete Surface" },
+            { category: "Residential", subCategory: "Courtyard" },
+            { category: "Residential", subCategory: "Covered" },
+            { category: "Residential", subCategory: "Deck" },
+            { category: "Residential", subCategory: "Mezzanine" },
+            { category: "Residential", subCategory: "Parking Area" },
+            { category: "Residential", subCategory: "Patio" },
+            { category: "Residential", subCategory: "Porch" },
+            { category: "Residential", subCategory: "Porte Cochere" },
+            { category: "Residential", subCategory: "Terrace" },
+            { category: "Residential", subCategory: "Veranda" },
+            { category: "Residential", subCategory: "Walkways" },
+            { category: "Residential", subCategory: "Rondavel" },
+            { category: "Residential", subCategory: "Accommodation Units" },
+            { category: "Residential", subCategory: "Boma" },
+            { category: "Residential", subCategory: "Bungalow" },
+            { category: "Residential", subCategory: "Bunker" },
+            { category: "Residential", subCategory: "Cabin" },
+            { category: "Residential", subCategory: "Chalet" },
+            { category: "Residential", subCategory: "Community Centre" },
+            { category: "Residential", subCategory: "Dormitory" },
+            { category: "Residential", subCategory: "Dwelling" },
+            { category: "Residential", subCategory: "Flat" },
+            { category: "Residential", subCategory: "Kitchen" },
+            { category: "Residential", subCategory: "Lapa" },
+            { category: "Residential", subCategory: "Laundry Facility" },
+            { category: "Residential", subCategory: "Locker Room" },
+            { category: "Residential", subCategory: "Lodge" },
+            { category: "Residential", subCategory: "Shower" },
+            { category: "Residential", subCategory: "Toilets" },
+            { category: "Residential", subCategory: "Room" },
+            { category: "Residential", subCategory: "Cottage" },
+            { category: "Residential", subCategory: "Garage" },
+            { category: "Roads", subCategory: "Access Roads" },
+            { category: "Roads", subCategory: "Gravel" },
+            { category: "Roads", subCategory: "Tarred" },
+            { category: "Security", subCategory: "Control Room" },
+            { category: "Security", subCategory: "Guardhouse" },
+            { category: "Security", subCategory: "Office" },
+            { category: "Shade Nets" },
+            { category: "Silo" },
+            { category: "Sports", subCategory: "Arena" },
+            { category: "Sports", subCategory: "Tennis Court" },
+            { category: "Staff", subCategory: "Hostel" },
+            { category: "Staff", subCategory: "Hut" },
+            { category: "Staff", subCategory: "Retirement Centre" },
+            { category: "Staff", subCategory: "Staff Building" },
+            { category: "Staff", subCategory: "Canteen" },
+            { category: "Staff", subCategory: "Dining Facility" },
+            { category: "Storage", subCategory: "Truck Shelter" },
+            { category: "Storage", subCategory: "Barn" },
+            { category: "Storage", subCategory: "Dark Room" },
+            { category: "Storage", subCategory: "Bin Compartments" },
+            { category: "Storage", subCategory: "Machinery" },
+            { category: "Storage", subCategory: "Saddle Room" },
+            { category: "Storage", subCategory: "Shed" },
+            { category: "Storage", subCategory: "Chemicals" },
+            { category: "Storage", subCategory: "Tools" },
+            { category: "Storage", subCategory: "Dry" },
+            { category: "Storage", subCategory: "Equipment" },
+            { category: "Storage", subCategory: "Feed" },
+            { category: "Storage", subCategory: "Fertilizer" },
+            { category: "Storage", subCategory: "Fuel" },
+            { category: "Storage", subCategory: "Grain" },
+            { category: "Storage", subCategory: "Hides" },
+            { category: "Storage", subCategory: "Oil" },
+            { category: "Storage", subCategory: "Pesticide" },
+            { category: "Storage", subCategory: "Poison" },
+            { category: "Storage", subCategory: "Seed" },
+            { category: "Storage", subCategory: "Zinc" },
+            { category: "Storage", subCategory: "Sulphur" },
+            { category: "Storage" },
+            { category: "Storage", subCategory: "Vitamin Room" },
+            { category: "Sugar Mill" },
+            { category: "Tanks", subCategory: "Water" },
+            { category: "Timber Mill" },
+            { category: "Trench" },
+            { category: "Utilities", subCategory: "Battery Room" },
+            { category: "Utilities", subCategory: "Boiler Room" },
+            { category: "Utilities", subCategory: "Compressor Room" },
+            { category: "Utilities", subCategory: "Engine Room" },
+            { category: "Utilities", subCategory: "Generator" },
+            { category: "Utilities", subCategory: "Power Room" },
+            { category: "Utilities", subCategory: "Pumphouse" },
+            { category: "Utilities", subCategory: "Transformer Room" },
+            { category: "Utilities" },
+            { category: "Vacant Area" },
+            { category: "Vehicles", subCategory: "Transport Depot" },
+            { category: "Vehicles", subCategory: "Truck Wash" },
+            { category: "Vehicles", subCategory: "Workshop" },
+            { category: "Walls" },
+            { category: "Walls", subCategory: "Boundary" },
+            { category: "Walls", subCategory: "Retaining" },
+            { category: "Walls", subCategory: "Security" },
+            { category: "Warehouse" },
+            { category: "Water", subCategory: "Reservoir" },
+            { category: "Water", subCategory: "Tower" },
+            { category: "Water", subCategory: "Purification Plant" },
+            { category: "Water", subCategory: "Reticulation Works" },
+            { category: "Water", subCategory: "Filter Station" },
+            { category: "Wine Cellar", subCategory: "Tanks" },
+            { category: "Wine Cellar" },
+            { category: "Wine Cellar", subCategory: "Winery" },
+            { category: "Wine Cellar", subCategory: "Barrel Maturation Room" }
+        ],
         'livestock': {
             Cattle: {
                 Breeding: ['Phase A Bulls', 'Phase B Bulls', 'Phase C Bulls', 'Phase D Bulls', 'Heifers', 'Bull Calves', 'Heifer Calves', 'Tollies 1-2', 'Heifers 1-2', 'Culls'],
@@ -1064,7 +1322,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             return _assetSubtypes[type] || [];
         },
         getAssetCategories: function(type, subtype) {
-            return (_assetCategories[type] ? (_assetCategories[type][subtype] || []) : []);
+            return (_assetCategories[type] ? (subtype ? (_assetCategories[type][subtype] || []) : _assetCategories[type] ) : []);
+        },
+        getCategoryLabel: function(categoryObject) {
+            if (!(categoryObject && categoryObject.category)) {
+                return '';
+            }
+            return categoryObject.category + (categoryObject.subCategory ? ' (' + categoryObject.subCategory + ')'  : '');
         },
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
@@ -1173,6 +1437,29 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
                     " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
                     "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
+            }
+        },
+        generateAssetName: function(asset, categoryLabel, currentAssetList) {
+            if (asset.type == 'improvement') {
+                var assetCount = underscore.chain(currentAssetList)
+                    .filter(function(asset) {
+                        return asset.type == 'improvement'
+                    }).reduce(function(currentAssetCount, asset) {
+                        var index = asset.data.name.search(/\s+[0-9]+$/);
+                        var name = asset.data.name;
+                        var number;
+                        if (index != -1) {
+                            name = name.substr(0, index);
+                            number = parseInt(asset.data.name.substring(index).trim());
+                        }
+                        if (categoryLabel && name == categoryLabel && (!number || number > currentAssetCount)) {
+                            currentAssetCount = number || 1;
+                        }
+                        return currentAssetCount;
+                    }, -1)
+                    .value();
+
+                asset.data.name = categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
             }
         }
     }
@@ -2923,7 +3210,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
             },
 
             getDocumentTitle: function (docType) {
-                return (_documentMap[docType] ? _documentMap[docType].title : undefined);
+                return (_documentMap[docType] ? _documentMap[docType].title : '');
             },
             getDocumentState: function (docType) {
                 return (_documentMap[docType] ? _documentMap[docType].state : undefined);
@@ -4408,7 +4695,9 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
     };
 
     var _getActionVerb = function (action) {
-        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action + 'ed');
+        var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action.lastIndexOf('y') == action.length - 1 ? (vowels.indexOf(action.substr(action.length - 1, action.length)) == -1 ? action.substr(0, action.length - 1)  + 'ied' : action + 'ed') : action + 'ed');
     };
 
     var _getReferenceArticle = function (reference) {
@@ -7757,11 +8046,13 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         bottomright: '.leaflet-bottom.leaflet-right'
     };
 
-    function addListeners(element) {
+    function addListeners(scope, element) {
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
             parent.find('.leaflet-control-container ' + _positions[_position]).prepend(element);
+
+            scope.hidden = false;
         });
     }
 
@@ -7770,12 +8061,14 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         require: '^mapbox',
         replace: true,
         transclude: true,
-        template: '<div class="leaflet-control"><div class="leaflet-bar" ng-transclude></div></div>',
+        template: '<div class="leaflet-control"><div class="leaflet-bar" ng-hide="hidden" ng-transclude></div></div>',
         link: function (scope, element, attrs) {
+            scope.hidden = true;
+
             _position = (attrs.position == undefined ? 'bottomright' : attrs.position);
         },
-        controller: function($element) {
-            addListeners($element);
+        controller: function($scope, $element) {
+            addListeners($scope, $element);
         }
     }
 }]);
@@ -8438,6 +8731,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                 }
             });
 
+            computedProperty(this, 'liquidityTypeTitle', function () {
+                return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
+            });
+
             computedProperty(this, 'description', function () {
                 return this.data.description || '';
             });
@@ -8479,6 +8776,12 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             'vme': 'Vehicles, Machinery & Equipment',
             'wasteland': 'Wasteland',
             'water right': 'Water Rights'
+        });
+
+        readOnlyProperty(Asset, 'liquidityTypes', {
+            'long-term': 'Long-term',
+            'medium-term': 'Movable',
+            'short-term': 'Current'
         });
 
         readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
@@ -8529,7 +8832,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.asJSON = function () {
-                return JSON.parse(JSON.stringify(this));
+                return underscore.omit(JSON.parse(JSON.stringify(this)), ['$complete', '$dirty', '$id', '$local', '$saved', '$uri']);
             };
 
             _constructor.copy = function () {
@@ -8637,10 +8940,76 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'enterpriseBudgetHelper', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'underscore',
     function (Asset, computedProperty, Document, enterpriseBudgetHelper, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, underscore) {
+
+        var _assetYearEndValueAdjustments = {
+            'Land and fixed improvements': [
+                {
+                    operation: '+',
+                    category: 'capitalIncome',
+                    item: 'Land Sales'
+                },
+                {
+                    operation: '-',
+                    category: 'capitalExpenditure',
+                    item: 'Land Purchases'
+                },
+                {
+                    operation: '-',
+                    category: 'capitalExpenditure',
+                    item: 'Development'
+                }
+            ],
+            'Vehicles': [
+                {
+                    operation: '+',
+                    category: 'capitalIncome',
+                    item: 'Vehicle Sales'
+                },
+                {
+                    operation: '-',
+                    category: 'capitalExpenditure',
+                    item: 'Vehicle Purchases'
+                }
+            ],
+            'Machinery': [
+                {
+                    operation: '+',
+                    category: 'capitalIncome',
+                    item: 'Machinery & Plant Sales'
+                },
+                {
+                    operation: '-',
+                    category: 'capitalExpenditure',
+                    item: 'Machinery & Plant Purchases'
+                }
+            ],
+            'Breeding Stock': [
+                {
+                    operation: '+',
+                    category: 'capitalIncome',
+                    item: 'Breeding Stock Sales'
+                },
+                {
+                    operation: '-',
+                    category: 'capitalExpenditure',
+                    item: 'Breeding Stock Purchases'
+                }
+            ]
+        };
+
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
-            this.docType = 'business plan';
+            this.docType = 'financial resource plan';
+
+            this.data.account = this.data.account || {
+                monthly: [],
+                yearly: [],
+                openingBalance: 0,
+                interestRateCredit: 0,
+                interestRateDebit: 0,
+                depreciationRate: 0
+            };
 
             this.data.models = this.data.models || {
                 assets: [],
@@ -8651,6 +9020,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             };
 
             this.data.monthlyStatement = this.data.monthlyStatement || [];
+            this.data.assetStatement = this.data.assetStatement || { total: {}};
+            this.data.liabilityStatement = this.data.liabilityStatement || { total: {} };
+            this.data.adjustmentFactors = this.data.adjustmentFactors || {};
+            this.data.livestockValues = this.data.livestockValues || {
+                breeding: {
+                    stockSales: initializeArray(12),
+                    stockPurchases: initializeArray(12)
+                },
+                marketable: {}
+            };
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -8658,6 +9037,69 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 reEvaluateFarmValuations(instance);
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
+
+                recalculate(instance);
+            }
+
+            function recalculate (instance) {
+                // Re-calculate summary, account & ratio data
+                recalculateSummary(instance);
+                recalculatePrimaryAccount(instance);
+                recalculateRatios(instance);
+            }
+
+            /**
+             * Helper functions
+             */
+            function initializeArray(length) {
+                return underscore.range(length).map(function () {
+                    return 0;
+                });
+            }
+
+            function infinityToZero(value) {
+                return (isFinite(value) ? value : 0);
+            }
+
+            function sumCollectionProperty(collection, property) {
+                return underscore.chain(collection)
+                    .pluck(property)
+                    .reduce(function(total, value) {
+                        return total + value;
+                    }, 0)
+                    .value();
+            }
+
+            function divideArrayValues (numeratorValues, denominatorValues) {
+                if (!numeratorValues || !denominatorValues || numeratorValues.length != denominatorValues.length) {
+                    return [];
+                }
+
+                return underscore.reduce(denominatorValues, function(result, value, index) {
+                    result[index] = infinityToZero(result[index] / value);
+                    return result;
+                }, numeratorValues);
+            }
+
+            function addArrayValues (array1, array2) {
+                if (!array1 || !array2 || array1.length != array2.length) {
+                    return [];
+                }
+
+                return underscore.reduce(array1, function(result, value, index) {
+                    result[index] += value;
+                    return result;
+                }, array2);
+            }
+
+            function subtractArrayValues (array1, array2) {
+                return addArrayValues(array1, negateArrayValues(array2));
+            }
+
+            function negateArrayValues (array) {
+                return underscore.map(array, function(value) {
+                    return value * -1;
+                });
             }
 
             /**
@@ -8767,6 +9209,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }, this);
 
                 reEvaluateProductionSchedules(this);
+                recalculate(this);
             });
 
             function initializeCategoryValues(instance, section, category, months) {
@@ -8776,12 +9219,21 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
             }
 
+            function getLowerIndexBound (scheduleArray, offset) {
+                return (scheduleArray ? Math.min(scheduleArray.length, Math.abs(Math.min(0, offset))) : 0);
+            }
+
+            function getUpperIndexBound (scheduleArray, offset, numberOfMonths) {
+                return (scheduleArray ? Math.min(numberOfMonths, offset + scheduleArray.length) - offset : 0);
+            }
+
             function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
-                    scheduleStart = moment(schedule.startDate);
+                // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
 
                 if (section) {
-                    var offset = startMonth.diff(scheduleStart, 'months');
+                    var offset = scheduleStart.diff(startMonth, 'months');
 
                     angular.forEach(section.productCategoryGroups, function (group) {
                         angular.forEach(group.productCategories, function (category) {
@@ -8791,27 +9243,95 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 return 0;
                             });
 
-                            for (var i = 0; i < numberOfMonths; i++) {
-                                instance.data[type][categoryName][i] += (category.valuePerMonth[i + offset] || 0);
+                            var minIndex = getLowerIndexBound(category.valuePerMonth, offset);
+                            var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+                            for (var i = minIndex; i < maxIndex; i++) {
+                                instance.data[type][categoryName][i + offset] += (category.valuePerMonth[i] || 0);
                             }
                         });
                     });
                 }
             }
 
+            function calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths) {
+                var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
+                // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
+
+                if (section) {
+                    var numberOfYears = Math.ceil(numberOfMonths / 12);
+
+                    while (instance.data.productionIncomeComposition.length < numberOfYears) {
+                        instance.data.productionIncomeComposition.push({});
+                    }
+
+                    for (var year = 0; year < numberOfYears; year++) {
+                        var monthsInYear = Math.min(12, numberOfMonths - (year * 12));
+                        var offset = scheduleStart.diff(moment(startMonth).add(year, 'years'), 'months');
+
+                        angular.forEach(section.productCategoryGroups, function (group) {
+                            angular.forEach(group.productCategories, function (category) {
+                                var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name);
+
+                                var compositionCategory = instance.data.productionIncomeComposition[year][categoryName] ||
+                                {
+                                    unit: category.unit,
+                                    pricePerUnit: 0,
+                                    quantity: 0,
+                                    value: 0
+                                };
+
+                                var minIndex = getLowerIndexBound(category.valuePerMonth, offset);
+                                var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, monthsInYear);
+                                for (var i = minIndex; i < maxIndex; i++) {
+                                    compositionCategory.value += category.valuePerMonth[i];
+                                }
+
+                                minIndex = getLowerIndexBound(category.quantityPerMonth, offset);
+                                maxIndex = getUpperIndexBound(category.quantityPerMonth, offset, monthsInYear);
+                                for (i = minIndex; i < maxIndex; i++) {
+                                    compositionCategory.quantity += category.quantityPerMonth[i];
+                                }
+
+                                compositionCategory.pricePerUnit = ((!compositionCategory.pricePerUnit && category.pricePerUnit) ?
+                                    category.pricePerUnit : infinityToZero(compositionCategory.value / compositionCategory.quantity));
+
+                                instance.data.productionIncomeComposition[year][categoryName] = compositionCategory;
+                            });
+                        });
+
+                        var totalValue = underscore.chain(instance.data.productionIncomeComposition[year])
+                            .omit('total')
+                            .values()
+                            .pluck('value')
+                            .reduce(function(total, value) { return total + value; }, 0)
+                            .value();
+
+                        for (var categoryName in instance.data.productionIncomeComposition[year]) {
+                            if (instance.data.productionIncomeComposition[year].hasOwnProperty(categoryName) && categoryName != 'total') {
+                                instance.data.productionIncomeComposition[year][categoryName].contributionPercent =
+                                    infinityToZero(instance.data.productionIncomeComposition[year][categoryName].value / totalValue) * 100;
+                            }
+                        }
+                        instance.data.productionIncomeComposition[year].total = {value: totalValue};
+                    }
+                }
+            }
+
             function reEvaluateProductionSchedules (instance) {
                 var startMonth = moment(instance.startDate),
-                    endMonth = moment(instance.endDate),
-                    numberOfMonths = endMonth.diff(startMonth, 'months');
+                    endMonth = moment(instance.endDate);
 
                 instance.data.productionIncome = {};
                 instance.data.productionExpenditure = {};
+                instance.data.productionIncomeComposition = [];
 
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
-                    extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
-                    extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
+                    extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, instance.numberOfMonths);
+                    extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, instance.numberOfMonths);
+                    calculateIncomeComposition(instance, schedule, startMonth, instance.numberOfMonths);
                 });
             }
 
@@ -8825,6 +9345,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     this.models.farmValuations.push(farmValuation);
 
                     reEvaluateFarmValuations(this);
+                    recalculate(this);
                 }
             });
 
@@ -8834,6 +9355,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateFarmValuations(this);
+                recalculate(this);
             });
 
             function reEvaluateFarmValuations (instance) {
@@ -8922,36 +9444,109 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
             }
 
-            // Add Assets & Liabilities
+            /**
+             *   Assets & Liabilities Handling
+             */
+
+            function updateLivestockValues (instance) {
+                initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
+
+                for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
+                    instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
+                }
+
+                initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
+
+                for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
+                    instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
+                }
+
+                updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
+                updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: instance.data.livestockValues.marketable.currentValue } });
+
+                calculateAssetStatementRMV(instance);
+
+                updateLivestockRMV('breeding', 'medium-term', 'Breeding Stock');
+                updateLivestockRMV('marketable', 'short-term', 'Marketable Livestock');
+
+                function updateLivestockRMV (livestockType, liquidityType, statementItem) {
+                    var yearChange = (instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue) || 0 ,
+                        itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
+                        rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
+
+                    for (var year = 0; year < rmvArray.length; year++) {
+                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV || 0 : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1] || 0);
+                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
+                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
+                    }
+                }
+            }
+
+            privateProperty(this, 'updateLivestockValues', function() {
+                updateLivestockValues(this);
+            });
+
             privateProperty(this, 'addAsset', function (asset) {
-                if (Asset.new(asset).validate()) {
-                    this.models.assets = underscore.reject(this.models.assets, function (item) {
+                var instance = this;
+
+                asset = Asset.new(asset);
+
+                if (asset.validate()) {
+                    instance.models.assets = underscore.reject(instance.models.assets, function (item) {
                         return item.assetKey === asset.assetKey;
                     });
 
-                    this.models.assets.push(asset instanceof Asset ? asset.asJSON() : asset);
+                    asset.liabilities = underscore.chain(asset.liabilities)
+                        .map(function (liability) {
+                            if (liability.validate()) {
+                                instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
+                                    return item.uuid === liability.uuid;
+                                });
 
-                    reEvaluateAssetsAndLiabilities(this);
+                                instance.models.liabilities.push(liability.asJSON());
+                            }
+
+                            return liability.asJSON();
+                        })
+                        .value();
+
+                    instance.models.assets.push(asset.asJSON());
+
+                    reEvaluateAssetsAndLiabilities(instance);
+                    recalculate(instance);
                 }
             });
 
             privateProperty(this, 'removeAsset', function (asset) {
-                this.models.assets = underscore.reject(this.models.assets, function (item) {
+                var instance = this;
+
+                instance.models.assets = underscore.reject(instance.models.assets, function (item) {
                     return item.assetKey === asset.assetKey;
                 });
 
-                reEvaluateAssetsAndLiabilities(this);
+                underscore.each(asset.liabilities, function (liability) {
+                    instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
+                        return item.uuid === liability.uuid;
+                    });
+                });
+
+                reEvaluateAssetsAndLiabilities(instance);
+                recalculate(instance);
+
             });
 
             privateProperty(this, 'addLiability', function (liability) {
-                if (Liability.new(liability).validate()) {
+                liability = Liability.new(liability);
+
+                if (liability.validate()) {
                     this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
                         return item.uuid === liability.uuid;
                     });
 
-                    this.models.liabilities.push(liability instanceof Liability ? liability.asJSON() : liability);
+                    this.models.liabilities.push(liability.asJSON());
 
                     reEvaluateAssetsAndLiabilities(this);
+                    recalculate(this);
                 }
             });
 
@@ -8961,126 +9556,586 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
 
                 reEvaluateAssetsAndLiabilities(this);
+                recalculate(this);
             });
+
+            function updateAssetStatementCategory(instance, category, itemName, asset) {
+                instance.data.assetStatement[category] = instance.data.assetStatement[category] || [];
+
+                var index = underscore.findIndex(instance.data.assetStatement[category], function(statementObj) { return statementObj.name == itemName; }),
+                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true)),
+                    assetCategory = (index !== -1 ? instance.data.assetStatement[category].splice(index, 1)[0] : {
+                        name: itemName,
+                        estimatedValue: 0,
+                        currentRMV: 0,
+                        yearlyRMV: initializeArray(numberOfYears),
+                        assets: []
+                    });
+
+                if (!underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey })) {
+                    assetCategory.assets.push(asset);
+                }
+                assetCategory.estimatedValue += asset.data.assetValue || 0;
+                instance.data.assetStatement[category].push(assetCategory);
+            }
+
+            function updateLiabilityStatementCategory(instance, liability) {
+                var category = (liability.type == 'production-credit' || liability.type == 'rent' ? 'short-term' : liability.type),
+                    itemName = (liability.type == 'rent' ? 'Rent overdue' : liability.name),
+                    index = underscore.findIndex(instance.data.liabilityStatement[category], function(statementObj) { return statementObj.name == itemName; }),
+                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true)),
+                    liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1)[0] : {
+                        name: itemName,
+                        currentValue: 0,
+                        yearlyValues: initializeArray(numberOfYears),
+                        liabilities: []
+                    });
+
+                instance.data.liabilityStatement[category] = instance.data.liabilityStatement[category] || [];
+
+                liabilityCategory.currentValue +=  liability.liabilityInMonth(instance.startDate).opening;
+
+                // Calculate total year-end values for liability category
+                for (var year = 0; year < numberOfYears; year++) {
+                    var yearEnd = moment.min(moment(instance.endDate), moment(instance.startDate).add(year, 'years').add(11, 'months'));
+                    liabilityCategory.yearlyValues[year] += liability.liabilityInMonth(yearEnd).closing;
+                }
+
+                if (!underscore.findWhere(liabilityCategory.liabilities, { uuid: liability.uuid })) {
+                    liabilityCategory.liabilities.push(liability);
+                }
+                instance.data.liabilityStatement[category].push(liabilityCategory);
+            }
+
+            function calculateAssetStatementRMV(instance) {
+                angular.forEach(instance.data.assetStatement, function(statementItems, category) {
+                    if (category != 'total') {
+                        angular.forEach(statementItems, function(item) {
+                            var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1;
+                            item.currentRMV = (item.estimatedValue || 0) * adjustmentFactor;
+
+                            for (var year = 0; year < item.yearlyRMV.length; year++) {
+                                var rmv = (year == 0 ? item.currentRMV : item.yearlyRMV[year - 1]);
+                                angular.forEach(_assetYearEndValueAdjustments[item.name], function(adjustment) {
+                                    if (instance.data[adjustment.category][adjustment.item]) {
+                                        var value = underscore.reduce(instance.data[adjustment.category][adjustment.item].slice(year * 12, (year + 1) * 12), function(total, value) {
+                                            return total + (value || 0);
+                                        }, 0);
+                                        rmv = (['+', '-'].indexOf(adjustment.operation) != -1 ? eval( rmv + adjustment.operation + value ) : rmv);
+                                    }
+                                });
+                                item.yearlyRMV[year] = rmv * adjustmentFactor;
+                            }
+                        });
+                    }
+                });
+            }
+
+            function totalAssetsAndLiabilities(instance) {
+                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true));
+
+                instance.data.assetStatement.total = underscore.chain(instance.data.assetStatement)
+                    .omit('total')
+                    .values()
+                    .flatten(true)
+                    .reduce(function(result, asset) {
+                        result.estimatedValue += asset.estimatedValue;
+                        result.currentRMV += asset.currentRMV;
+                        result.yearlyRMV = addArrayValues(result.yearlyRMV, asset.yearlyRMV);
+                        return result;
+                    }, {
+                        estimatedValue: 0,
+                        currentRMV: 0,
+                        yearlyRMV: initializeArray(numberOfYears)
+                    })
+                    .value();
+
+                instance.data.liabilityStatement.total = underscore.chain(instance.data.liabilityStatement)
+                    .omit('total')
+                    .values()
+                    .flatten(true)
+                    .reduce(function(result, liability) {
+                        result.currentValue += liability.currentValue;
+                        result.yearlyValues = addArrayValues(result.yearlyValues, liability.yearlyValues);
+                        return result;
+                    }, {
+                        currentValue: 0,
+                        yearlyValues: initializeArray(numberOfYears)
+                    })
+                    .value();
+
+                recalculate(instance);
+            }
 
             function reEvaluateAssetsAndLiabilities (instance) {
                 var startMonth = moment(instance.startDate),
                     endMonth = moment(instance.endDate),
-                    numberOfMonths = endMonth.diff(startMonth, 'months');
-
-                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
-                    return underscore.contains(['asset', 'liability'], item.source);
-                });
+                    numberOfMonths = endMonth.diff(startMonth, 'months'),
+                    evaluatedModels = [];
 
                 instance.data.capitalIncome = {};
                 instance.data.capitalExpenditure = {};
                 instance.data.otherIncome = {};
                 instance.data.otherExpenditure = {};
                 instance.data.debtRedemption = {};
+                instance.data.assetStatement = {};
+                instance.data.liabilityStatement = {};
 
                 underscore.each(instance.models.assets, function (asset) {
-                    asset = Asset.new(asset);
-
                     var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
-                        statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
+                        evaluatedAsset = underscore.findWhere(evaluatedModels, {assetKey: asset.assetKey});
 
                     // Check asset is not already added
-                    if (registerLegalEntity && underscore.isUndefined(statementAsset)) {
+                    if (registerLegalEntity && underscore.isUndefined(evaluatedAsset)) {
+                        evaluatedModels.push(asset);
+
+                        asset = Asset.new(asset);
+
+                        var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
+                            soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
+                            constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
+                            demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate) : undefined);
+
                         // VME
                         if (asset.type === 'vme') {
-                            var acquisitionDate = moment(asset.data.acquisitionDate),
-                                soldDate = moment(asset.data.soldDate);
+                            if (asset.data.type === 'Vehicles') {
+                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicle Purchases', numberOfMonths);
 
-                            if (asset.data.subtype === 'Vehicles') {
-                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicle Purchases', numberOfMonths);
-
-                                    instance.data.capitalIncome['Vehicle Purchases'][startMonth.diff(acquisitionDate, 'months')] += asset.data.assetValue;
+                                    instance.data.capitalExpenditure['Vehicle Purchases'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
                                 }
 
-                                if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicle Sales', numberOfMonths);
+                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicle Sales', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Vehicle Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
-                                }
-                            } else {
-                                if (asset.data.assetValue && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment Purchases', numberOfMonths);
-
-                                    instance.data.capitalIncome['Machinery & Equipment Purchases'][startMonth.diff(acquisitionDate, 'Machinery & Equipment Purchases')] += asset.data.assetValue;
+                                    instance.data.capitalIncome['Vehicle Sales'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                                 }
 
-                                if (asset.data.sold && asset.data.salePrice && soldDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment Sales', numberOfMonths);
+                            } else if (asset.data.type === 'Machinery') {
+                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Plant Purchases', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Machinery & Equipment Sales'][startMonth.diff(soldDate, 'months')] += asset.data.salePrice;
+                                    instance.data.capitalExpenditure['Machinery & Plant Purchases'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                                }
+
+                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Plant Sales', numberOfMonths);
+
+                                    instance.data.capitalIncome['Machinery & Plant Sales'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                                 }
                             }
-                        } else if (asset.type === 'other') {
-                            initializeCategoryValues(instance, 'otherIncome', asset.data.name, numberOfMonths);
-                            initializeCategoryValues(instance, 'otherExpenditure', asset.data.name, numberOfMonths);
+                        } else if (asset.type === 'improvement' && asset.data.assetValue && constructionDate && constructionDate.isBetween(startMonth, endMonth)) {
+                            initializeCategoryValues(instance, 'capitalExpenditure', 'Development', numberOfMonths);
 
-                            // TODO: calculate purchase/sold date for asset
+                            instance.data.capitalExpenditure['Development'][constructionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                        }
+
+                        if (asset.data.assetValue && !(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
+                            switch(asset.type) {
+                                case 'improvement':
+                                case 'farmland':
+                                    updateAssetStatementCategory(instance, 'long-term', 'Land and fixed improvements', asset);
+                                    break;
+                                case 'vme':
+                                    updateAssetStatementCategory(instance, 'medium-term', asset.data.type, asset);
+                                    break;
+                                case 'other':
+                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.name, asset);
+                                    break;
+                            }
                         }
 
                         angular.forEach(asset.liabilities, function (liability) {
-                            var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
-                                typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
-                                liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+                            // Check liability is not already added
+                            if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
+                                evaluatedModels.push(liability);
 
-                            initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+                                var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
+                                    typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
+                                    liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
-                            instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
-                                return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
-                            });
-                        });
+                                if (asset.type == 'farmland' && liability.type !== 'rent' && moment(liability.startDate).isBetween(startMonth, endMonth)) {
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Land Purchases', numberOfMonths);
 
-                        // Add asset
-                        instance.data.monthlyStatement.push({
-                            uuid: asset.assetKey,
-                            legalEntityUuid: registerLegalEntity.uuid,
-                            name: asset.title,
-                            description: asset.description,
-                            type: 'asset',
-                            subtype: asset.type,
-                            source: 'asset',
-                            value: asset.data.assetValue || 0
+                                    instance.data.capitalExpenditure['Land Purchases'][moment(liability.startDate).diff(startMonth, 'months')] += liability.openingBalance;
+                                }
+
+                                initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                                instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                                    return ((month.repayment && month.repayment.bank) || 0) + (instance.data[section][typeTitle][index] || 0);
+                                });
+
+                                // TODO: deal with missing liquidityType for 'Other' liabilities
+                                updateLiabilityStatementCategory(instance, liability)
+                            }
                         });
                     }
                 });
 
                 underscore.each(instance.models.liabilities, function (liability) {
-                    liability = Liability.new(liability);
+                    // Check liability is not already added
+                    if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
+                        evaluatedModels.push(liability);
 
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: liability.legalEntityId}),
-                        statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
+                        liability = Liability.new(liability);
 
-                    // Check asset is not already added
-                    if (registerLegalEntity && underscore.isUndefined(statementLiability)) {
-                        var section = (liability.type === 'rent' || liability.type === 'other' ? 'capitalExpenditure' : 'debtRedemption'),
+                        var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
                             typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                             liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
                         initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
-                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (monthValue, index) {
-                            return (monthValue || 0) + (instance.data[section][typeTitle][index] || 0);
+                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                            return ((month.repayment && month.repayment.bank) || 0) + (instance.data[section][typeTitle][index] || 0);
                         });
 
-                        // Add liability
-                        instance.data.monthlyStatement.push({
-                            uuid: liability.uuid,
-                            legalEntityUuid: registerLegalEntity.uuid,
-                            name: liability.name || '',
-                            description: liability.description || '',
-                            type: 'liability',
-                            subtype: 'other',
-                            source: 'liability',
-                            liability: liability.liabilityInRange(instance.startDate, instance.endDate)
-                        });
+                        // TODO: deal with missing liquidityType for 'Other' liabilities
+                        updateLiabilityStatementCategory(instance, liability);
+                    }
+                });
+
+                updateLivestockValues(instance);
+                totalAssetsAndLiabilities(instance);
+            }
+
+            /**
+             * Recalculate summary & ratio data
+             */
+            function calculateYearlyTotal (monthlyTotals, year) {
+                return underscore.reduce(monthlyTotals.slice((year - 1) * 12, year * 12), function (total, value) {
+                    return total + (value || 0);
+                }, 0);
+            }
+
+            function calculateYearlEndLiabilityBalance(monthlyTotals, year) {
+                var yearSlice = monthlyTotals.slice((year - 1) * 12, year * 12);
+                return yearSlice[yearSlice.length - 1];
+            }
+
+            function calculateAssetLiabilityGroupTotal (instance, type, subType) {
+                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true));
+                var defaultObj = (type == 'asset' ? {
+                    estimatedValue: 0,
+                    currentRMV: 0,
+                    yearlyRMV: initializeArray(numberOfYears)
+                } : { currentValue: 0, yearlyValues: initializeArray(numberOfYears) } );
+                var statementProperty = (type == 'asset' ? 'assetStatement' : 'liabilityStatement');
+
+                if (!instance.data[statementProperty][subType] || instance.data[statementProperty][subType].length == 0) {
+                    return defaultObj;
+                }
+
+                return underscore.reduce(instance.data[statementProperty][subType], function(result, item) {
+                    if (type == 'asset') {
+                        result.estimatedValue += item.estimatedValue || 0;
+                        result.currentRMV += item.currentRMV || 0;
+                        result.yearlyRMV = addArrayValues(result.yearlyRMV, item.yearlyRMV);
+                    } else {
+                        result.currentValue += item.currentValue || 0;
+                        result.yearlyValues = addArrayValues(result.yearlyValues, item.yearlyValues);
+                    }
+                    return result;
+                }, defaultObj);
+            }
+
+            function calculateMonthlyLiabilityPropertyTotal (instance, liabilityTypes, property, startMonth, endMonth) {
+                var liabilities = underscore.filter(instance.models.liabilities, function(liability) {
+                        if (!liabilityTypes || liabilityTypes.length == 0) return true;
+
+                        return liabilityTypes.indexOf(liability.type) != -1;
+                    });
+
+                if (liabilities.length == 0) return initializeArray(instance.numberOfMonths);
+
+                return underscore.chain(liabilities)
+                    .map(function(liability) {
+                        var l = new Liability(liability).liabilityInRange(startMonth, endMonth);
+                        return underscore.pluck(l, property);
+                    })
+                    .unzip()
+                    .map(function(monthArray) {
+                            return underscore.reduce(monthArray, function(total, value) { return total + (value || 0); }, 0);
+                        })
+                    .value();
+            }
+
+            function calculateMonthlyCategoriesTotal (categories, results) {
+                underscore.reduce(categories, function (currentTotals, category) {
+                    underscore.each(category, function (month, index) {
+                        currentTotals[index] += month;
+                    });
+                    return currentTotals;
+                }, results);
+
+                return results;
+            }
+
+            function calculateMonthlySectionsTotal (sections, results) {
+                return underscore.reduce(sections, function (sectionTotals, section) {
+                    return (section ? calculateMonthlyCategoriesTotal(section, sectionTotals) : sectionTotals);
+                }, results);
+            }
+
+            function getDepreciation(instance) {
+                var yearlyDepreciation = underscore.chain(instance.data.assetStatement['medium-term'])
+                    .filter(function(item) {
+                        return underscore.contains(['Vehicle', 'Machinery', 'Equipment'], item.name);
+                    })
+                    .map(function(item) {
+                        var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1;
+                        for (var i = 0; i < item.yearlyRMV.length; i++) {
+                            item.yearlyRMV[i] = (item.yearlyRMV[i] / adjustmentFactor) * (1 - (instance.data.account.depreciationRate || 0));
+                        }
+                        return item;
+                    })
+                    .pluck('yearlyRMV')
+                    .reduce(function(result, rmvArray) {
+                        if (result.length == 0) {
+                            result = initializeArray(rmvArray.length);
+                        }
+                        return addArrayValues(result, rmvArray);
+                    }, [])
+                    .value();
+                return (yearlyDepreciation.length == 0 ? [0,0] : yearlyDepreciation);
+            }
+
+            function recalculateSummary (instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                // Summary of year 1 & year 2 for each category
+                instance.data.summary = {};
+                instance.data.summary.monthly = {
+                    // Income
+                    unallocatedProductionIncome: calculateMonthlySectionsTotal([instance.data.unallocatedProductionIncome], initializeArray(numberOfMonths)),
+                    productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], initializeArray(numberOfMonths)),
+                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], initializeArray(numberOfMonths)),
+                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.unallocatedProductionIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+
+                    // Expenses
+                    unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], initializeArray(numberOfMonths)),
+                    productionExpenditure: calculateMonthlySectionsTotal([instance.data.productionExpenditure], initializeArray(numberOfMonths)),
+                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], initializeArray(numberOfMonths)),
+                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
+                    debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
+                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.debtRedemption, instance.data.otherExpenditure], initializeArray(numberOfMonths)),
+
+                    // Interest
+                    primaryAccountInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
+                    productionCreditInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'interest', startMonth, endMonth),
+                    mediumTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'interest', startMonth, endMonth),
+                    longTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'interest', startMonth, endMonth),
+                    totalInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
+
+                    // Liabilities
+                    currentLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'closing', startMonth, endMonth),
+                    mediumLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'closing', startMonth, endMonth),
+                    longLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'closing', startMonth, endMonth),
+                    totalLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, [], 'closing', startMonth, endMonth),
+                    totalRent: calculateMonthlyLiabilityPropertyTotal(instance, ['rent'], 'rent', startMonth, endMonth)
+                };
+
+                instance.data.summary.yearly = {
+                    // Income
+                    unallocatedProductionIncome: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionIncome, 2)],
+                    productionIncome: [calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 2)],
+                    capitalIncome: [calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 2)],
+                    otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
+                    totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
+
+                    // Expenses
+                    unallocatedProductionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 2)],
+                    productionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.productionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.productionExpenditure, 2)],
+                    capitalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 2)],
+                    otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
+                    debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
+                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
+
+                    // Interest
+                    primaryAccountInterest: initializeArray(2),
+                    productionCreditInterest: [calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 2)],
+                    mediumTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 2)],
+                    longTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 2)],
+                    totalInterest: initializeArray(2),
+
+                    // Liabilities
+                    currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
+                    mediumLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'medium-term'),
+                    longLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'long-term'),
+                    totalLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
+                    totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
+
+                    // Assets
+                    currentAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'short-term'),
+                    movableAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'medium-term'),
+                    fixedAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'long-term'),
+                    totalAssets: instance.data.assetStatement.total.yearlyRMV || initializeArray(2),
+
+                    depreciation: getDepreciation(instance)
+                };
+
+                instance.data.summary.yearly.netFarmIncome = subtractArrayValues(instance.data.summary.yearly.productionIncome, addArrayValues(instance.data.summary.yearly.productionExpenditure, instance.data.summary.yearly.depreciation));
+                instance.data.summary.yearly.farmingProfitOrLoss = subtractArrayValues(instance.data.summary.yearly.netFarmIncome, addArrayValues(instance.data.summary.yearly.totalRent, instance.data.summary.yearly.totalInterest));
+            }
+
+            /**
+             * Primary Account Handling
+             */
+            function recalculatePrimaryAccount(instance) {
+                var startMonth = moment(instance.startDate),
+                    endMonth = moment(instance.endDate),
+                    numberOfYears = Math.ceil(endMonth.diff(startMonth, 'years', true)),
+                    defaultMonthObj = {
+                        opening: 0,
+                        inflow: 0,
+                        outflow: 0,
+                        balance: 0,
+                        interestPayable: 0,
+                        interestReceivable: 0,
+                        closing: 0
+                    };
+
+                while (instance.account.monthly.length < instance.numberOfMonths) {
+                    instance.account.monthly.push(defaultMonthObj);
+                }
+                while (instance.account.yearly.length < numberOfYears) {
+                    instance.account.yearly.push(underscore.extend(defaultMonthObj, { worstBalance: 0, bestBalance: 0, openingMonth: null, closingMonth: null }));
+                }
+
+                instance.data.summary.monthly.primaryAccountInterest = initializeArray(instance.numberOfMonths);
+                instance.data.summary.monthly.totalInterest = calculateMonthlyLiabilityPropertyTotal(instance, [], 'interest', startMonth, endMonth);
+
+                underscore.each(instance.account.monthly, function (month, index) {
+                    month.opening = (index === 0 ? instance.account.openingBalance : instance.account.monthly[index - 1].closing);
+                    month.inflow = instance.data.summary.monthly.totalIncome[index];
+                    month.outflow = instance.data.summary.monthly.totalExpenditure[index];
+                    month.balance = month.opening + month.inflow - month.outflow;
+                    month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
+                    month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
+                    month.closing = month.balance + month.interestPayable + month.interestReceivable;
+
+                    instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
+                    instance.data.summary.monthly.primaryAccountInterest[index] += -month.interestPayable;
+                });
+
+                underscore.each(instance.account.yearly, function(year, index) {
+                    var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
+                    year.opening = months[0].opening;
+                    year.inflow = sumCollectionProperty(months, 'inflow');
+                    year.outflow = sumCollectionProperty(months, 'outflow');
+                    year.balance = year.opening + year.inflow - year.outflow;
+                    year.interestPayable = sumCollectionProperty(months, 'interestPayable');
+                    year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
+                    year.closing = year.balance + year.interestPayable + year.interestReceivable;
+                    year.openingMonth = moment(startMonth).add(index, 'years');
+                    year.closingMonth = moment(startMonth).add(index, 'years').add(months.length - 1, 'months').format('MMM-YY');
+
+                    var bestBalance = underscore.max(months, function (month) { return month.closing; }),
+                        worstBalance = underscore.min(months, function (month) { return month.closing; });
+                    year.bestBalance = {
+                        balance: bestBalance.closing,
+                        month: moment(year.openingMonth).add(months.indexOf(bestBalance), 'months').format('MMM-YY')
+                    };
+                    year.worstBalance = {
+                        balance: worstBalance.closing,
+                        month: moment(year.openingMonth).add(months.indexOf(worstBalance), 'months').format('MMM-YY')
+                    };
+                    year.openingMonth.format('MMM-YY');
+                });
+
+                instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
+                instance.data.summary.yearly.totalInterest = [calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 2)];
+            }
+
+            function recalculateRatios (instance) {
+                instance.data.ratios = {
+                    interestCover: calculateRatio(instance, 'netFarmIncome', 'totalInterest'),
+                    inputOutput: calculateRatio(instance, 'productionIncome', ['productionExpenditure', 'productionCreditInterest', 'primaryAccountInterest']),
+                    productionCost: calculateRatio(instance, 'productionExpenditure', 'productionIncome'),
+                    cashFlowBank: calculateRatio(instance, 'unallocatedProductionIncome', ['unallocatedProductionExpenditure', 'primaryAccountInterest']),
+                    //TODO: add payments to co-ops with crop deliveries to cashFlowFarming denominator
+                    cashFlowFarming: calculateRatio(instance, ['productionIncome', 'capitalIncome', 'otherIncome'], ['totalExpenditure', 'primaryAccountInterest']),
+                    debtToTurnover: calculateRatio(instance, 'totalLiabilities', ['productionIncome', 'otherIncome']),
+                    interestToTurnover: calculateRatio(instance, 'totalInterest', ['productionIncome', 'otherIncome']),
+                    //TODO: change denominator to total asset value used for farming
+                    returnOnInvestment: calculateRatio(instance, 'netFarmIncome', 'totalAssets')
+                };
+
+                calculateAssetRatios(instance);
+            }
+
+            function calculateAssetRatios (instance) {
+                var defaultObj = { yearly: [], currentRMV: 0, estimatedValue: 0 };
+
+                instance.data.ratios = underscore.extend(instance.data.ratios, {
+                    netCapital: defaultObj,
+                    gearing: defaultObj,
+                    debt: defaultObj
+                });
+
+                instance.data.ratios.netCapital = underscore.mapObject(instance.data.ratios.netCapital, function(value, key) {
+                    if (underscore.contains(['currentRMV', 'estimatedValue'], key)) {
+                        return infinityToZero(instance.data.assetStatement.total[key] / instance.data.liabilityStatement.total.currentValue);
+                    } else if (key === 'yearly') {
+                        return divideArrayValues(instance.data.assetStatement.total.yearlyRMV, instance.data.liabilityStatement.total.yearlyValues);
+                    }
+                });
+
+                instance.data.ratios.debt = underscore.mapObject(instance.data.ratios.debt, function(value, key) {
+                    if (underscore.contains(['currentRMV', 'estimatedValue'], key)) {
+                        return infinityToZero(instance.data.liabilityStatement.total.currentValue / instance.data.assetStatement.total[key]);
+                    } else if (key === 'yearly') {
+                        return divideArrayValues(instance.data.liabilityStatement.total.yearlyValues, instance.data.assetStatement.total.yearlyRMV);
+                    }
+                });
+
+                instance.data.ratios.gearing = underscore.mapObject(instance.data.ratios.gearing, function(value, key) {
+                    if (underscore.contains(['currentRMV', 'estimatedValue'], key)) {
+                        return infinityToZero(instance.data.liabilityStatement.total.currentValue / (instance.data.assetStatement.total[key] - instance.data.liabilityStatement.total.currentValue));
+                    } else if (key === 'yearly') {
+                        return divideArrayValues(instance.data.liabilityStatement.total.yearlyValues, subtractArrayValues(instance.data.assetStatement.total.yearlyRMV, instance.data.liabilityStatement.total.yearlyValues));
                     }
                 });
             }
+
+            function calculateRatio(instance, numeratorProperties, denominatorProperties) {
+                if (!underscore.isArray(numeratorProperties)) {
+                    numeratorProperties = [numeratorProperties];
+                }
+                if (!underscore.isArray(denominatorProperties)) {
+                    denominatorProperties = [denominatorProperties];
+                }
+
+                function sumPropertyValuesForInterval (propertyList, interval) {
+                    if (!instance.data.summary[interval]) {
+                        return [];
+                    }
+
+                    var valueArrays = underscore.chain(propertyList)
+                        .map(function(propertyName) {
+                            if (propertyName.charAt(0) === '-') {
+                                propertyName = propertyName.substr(1);
+                                return negateArrayValues(instance.data.summary[interval][propertyName]);
+                            }
+                            return instance.data.summary[interval][propertyName];
+                        })
+                        .compact()
+                        .value();
+
+                    return underscore.reduce(valueArrays.slice(1), function(result, array) {
+                        return addArrayValues(result, array);
+                    }, angular.copy(valueArrays[0]) || []);
+                }
+
+                return {
+                    monthly: divideArrayValues(sumPropertyValuesForInterval(numeratorProperties, 'monthly'), sumPropertyValuesForInterval(denominatorProperties, 'monthly')),
+                    yearly: divideArrayValues(sumPropertyValuesForInterval(numeratorProperties, 'yearly'), sumPropertyValuesForInterval(denominatorProperties, 'yearly'))
+                }
+            }
+
 
             // View added Assets & Liabilities
             computedProperty(this, 'startDate', function () {
@@ -9095,12 +10150,28 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.endDate;
             });
 
+            computedProperty(this, 'account', function () {
+                return this.data.account;
+            });
+
+            computedProperty(this, 'adjustmentFactors', function () {
+                return this.data.adjustmentFactors;
+            });
+
+            computedProperty(this, 'numberOfMonths', function () {
+                return moment(this.endDate).diff(this.startDate, 'months');
+            });
+
             computedProperty(this, 'models', function () {
                 return this.data.models;
             });
 
             computedProperty(this, 'monthlyStatement', function () {
                 return this.data.monthlyStatement;
+            });
+
+            privateProperty(this, 'recalculateAccount', function() {
+                recalculatePrimaryAccount(this);
             });
         }
 
@@ -9117,7 +10188,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             docType: {
                 required: true,
                 equal: {
-                    to: 'business plan'
+                    to: 'financial resource plan'
                 }
             },
             organizationId: {
@@ -9189,9 +10260,9 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
 
             readOnlyProperty(Document, 'docTypes', {
                 'asset register': 'Asset Register',
-                'business plan': 'Business Plan',
                 'emergence report': 'Emergence Report',
                 'farm valuation': 'Farm Valuation',
+                'financial resource plan': 'Financial Resource Plan',
                 'insurance policy': 'Insurance Policy',
                 'production plan': 'Production Plan',
                 'progress report': 'Progress Report'
@@ -9255,10 +10326,10 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
-var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
-sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, readOnlyProperty, underscore) {
+sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
+    function (Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
         function LegalEntity (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -9280,6 +10351,14 @@ sdkModelLegalEntity.factory('LegalEntity', ['inheritModel', 'Model', 'readOnlyPr
             this.telephone = attrs.telephone;
             this.type = attrs.type;
             this.uuid = attrs.uuid;
+
+            this.assets = underscore.map(attrs.assets, function (asset) {
+                return Asset.new(asset);
+            });
+
+            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
+                return Liability.new(liability);
+            });
         }
 
         inheritModel(LegalEntity, Model.Base);
@@ -9389,40 +10468,91 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'yearly': 1
         };
 
-        function Liability (attrs) {
-            Model.Base.apply(this, arguments);
+        var _types = {
+            'short-term': 'Short Term',
+            'medium-term': 'Medium Term',
+            'long-term': 'Long Term',
+            'production-credit': 'Production Credit',
+            'rent': 'Rented'
+        };
 
-            computedProperty(this, 'currentBalance', function () {
-                return (this.type !== 'rent' ? this.liabilityInMonth(moment().startOf('month')) : 0);
-            });
+        var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
+        var _typesWithAmount = ['short-term', 'medium-term', 'long-term'];
 
-            privateProperty(this, 'balanceInMonth', function (month) {
-                var balance = this.amount || 0;
+        var _subtypes = {
+            'production-credit': {
+                'off-taker': 'Off Taker',
+                'input-supplier': 'Input Supplier',
+                'input-financing': 'Input Financing'
+            }
+        };
 
-                if (angular.isNumber(this.amount) && this.amount > 0) {
-                    var startMonth = moment(this.startDate),
-                        paymentMonths = this.paymentMonths,
-                        paymentsPerMonth = (_frequency[this.frequency] > 12 ? _frequency[this.frequency] / 12 : 1),
-                        numberOfMonths = moment(month).diff(startMonth, 'months') + 1;
+        function defaultMonth () {
+            return {
+                opening: 0,
+                repayment: {},
+                withdrawal: 0,
+                balance: 0,
+                interest: 0,
+                closing: 0
+            }
+        }
 
-                    for(var i = 0; i < numberOfMonths; i++) {
-                        var month = moment(this.startDate).add(i, 'M');
+        function fixPrecisionError (number, precision) {
+            precision = precision || 10;
 
-                        if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                            balance += this.amount;
-                        } else if (month >= startMonth) {
-                            balance += (((this.interestRate || 0) / 100) / 12) * balance;
+            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
+        }
 
-                            if (underscore.contains(paymentMonths, month.month())) {
-                                for (var j = 0; j < paymentsPerMonth; j++) {
-                                    balance -= Math.min(balance, (this.installmentPayment || 0));
-                                }
-                            }
-                        }
+        function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
+            while (monthlyData.length <= upToIndex) {
+                monthlyData.push(defaultMonth());
+            }
+
+            recalculateMonthlyTotals(instance, monthlyData);
+        }
+
+        function recalculateMonthlyTotals (instance, monthlyData) {
+            var startMonth = moment(instance.startDate).month(),
+                paymentMonths = instance.paymentMonths,
+                paymentsPerMonth = (_frequency[instance.frequency] > 12 ? _frequency[instance.frequency] / 12 : 1);
+
+            underscore.each(monthlyData, function (month, index) {
+                var currentMonth = (index + startMonth) % 12;
+
+                month.opening = (index === 0 ? instance.openingBalance : monthlyData[index - 1].closing);
+
+                if ((this.frequency === 'once' && index === 0) || (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth))) {
+                    var installmentPayment = (this.frequency === 'once' ? month.opening : instance.installmentPayment * paymentsPerMonth);
+
+                    if (month.opening > 0) {
+                        month.repayment.bank = (month.opening <= installmentPayment ? month.opening : installmentPayment);
                     }
                 }
 
-                return balance;
+                var totalRepayment = underscore.reduce(month.repayment, function (total, amount, source) {
+                    return total + (amount || 0);
+                }, 0);
+
+                month.balance = (month.opening - totalRepayment + month.withdrawal <= 0 ? 0 : month.opening - totalRepayment + month.withdrawal);
+                month.interest = fixPrecisionError((instance.interestRate / 12) * month.balance) / 100;
+                month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
+            });
+        }
+
+        function Liability (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+
+            computedProperty(this, 'title', function () {
+                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
+                    (this.name ? this.name : Liability.getTypeTitle(this.type));
+            });
+
+            computedProperty(this, 'subtype', function () {
+                return this.data.subtype;
             });
 
             computedProperty(this, 'paymentMonths', function () {
@@ -9439,85 +10569,154 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     });
             });
 
-            computedProperty(this, 'title', function () {
-                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
-                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
-                    (this.name ? this.name : Liability.getTypeTitle(this.type));
-            });
 
+            /**
+             * Get liability/balance in month
+             */
             privateProperty(this, 'liabilityInMonth', function (month) {
-                var previousMonth = moment(month).subtract(1, 'M'),
+                var startMonth = moment(this.startDate),
                     currentMonth = moment(month),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth);
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
 
-                var liability = 0;
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedMonth);
 
-                if (this.frequency === 'once' && startMonth.month() === currentMonth.month() && startMonth.year() === currentMonth.year()) {
-                    liability += this.amount;
-                } else if (currentMonth >= startMonth && (this.endDate === undefined || currentMonth <= endMonth)) {
-                    previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                    if (underscore.contains(this.paymentMonths, currentMonth.month())) {
-                        for (var i = 0; i < paymentsPerMonth; i++) {
-
-                            if (angular.isNumber(this.amount) && this.amount > 0) {
-                                liability += Math.min(previousBalance, (this.installmentPayment || 0));
-                                previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                            } else {
-                                liability += (this.installmentPayment || 0);
-                            }
-                        }
-                    }
-                }
-
-                return liability;
+                return monthlyData[appliedMonth] || defaultMonth();
             });
 
+            privateProperty(this, 'balanceInMonth', function (month) {
+                return this.liabilityInMonth(month).closing || 0;
+            });
+
+            computedProperty(this, 'currentBalance', function () {
+                return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
+            });
+
+            /**
+             * Set/add repayment/withdrawal in month
+             */
+            privateProperty(this, 'resetWithdrawalAndRepayments', function () {
+                this.data.monthly = [];
+            });
+
+            privateProperty(this, 'addRepaymentInMonth', function (repayment, month, source) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                source = source || 'bank';
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    summedRepayment = underscore.reduce(monthLiability.repayment, function (total, amount) {
+                            return total + (amount || 0);
+                        }, 0),
+                    openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - summedRepayment,
+                    limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
+
+                monthLiability.repayment[source] = monthLiability.repayment[source] || 0;
+                monthLiability.repayment[source] += limitedRepayment;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return repaymentRemainder;
+            });
+
+            privateProperty(this, 'setRepaymentInMonth', function (repayment, month, source) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                source = source || 'bank';
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    repaymentWithoutSource = underscore.reduce(monthLiability.repayment, function (total, amount, src) {
+                        return total + (src === source ? 0 : amount || 0)
+                    }, 0),
+                    openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - repaymentWithoutSource,
+                    limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment),
+                    repaymentRemainder = repayment - limitedRepayment;
+
+                monthLiability.repayment[source] = limitedRepayment;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return repaymentRemainder;
+            });
+
+            privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    summedWithdrawal = withdrawal + monthLiability.withdrawal,
+                    openingMinusRepayment = monthLiability.opening - underscore.reduce(monthLiability.repayment, function (total, amount) {
+                            return total + (amount || 0);
+                        }, 0),
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
+                    withdrawalRemainder = summedWithdrawal - limitedWithdrawal;
+
+                monthLiability.withdrawal = limitedWithdrawal;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return withdrawalRemainder;
+            });
+
+            privateProperty(this, 'setWithdrawalInMonth', function (withdrawal, month) {
+                var startMonth = moment(this.startDate),
+                    currentMonth = moment(month),
+                    appliedMonth = currentMonth.diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
+
+                var monthLiability = this.data.monthly[appliedMonth],
+                    openingMinusRepayment = monthLiability.opening - underscore.reduce(monthLiability.repayment, function (total, amount) {
+                            return total + (amount || 0);
+                        }, 0),
+                    limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), withdrawal) : withdrawal),
+                    withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
+
+                monthLiability.withdrawal = limitedWithdrawal;
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+
+                return withdrawalRemainder;
+            });
+
+            /**
+             * Ranges of liability
+             */
             privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var previousMonth = moment(rangeStart).subtract(1, 'M'),
-                    startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate),
-                    paymentMonths = this.paymentMonths,
-                    paymentsPerYear = _frequency[this.frequency],
-                    paymentsPerMonth = (paymentsPerYear > 12 ? paymentsPerYear / 12 : 1),
-                    previousBalance = this.balanceInMonth(previousMonth),
-                    numberOfMonths = moment(rangeEnd).diff(rangeStart, 'months');
+                var startMonth = moment(this.startDate),
+                    rangeStartMonth = moment(rangeStart),
+                    rangeEndMonth = moment(rangeEnd),
+                    appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
+                    appliedEndMonth = rangeEndMonth.diff(rangeStartMonth, 'months'),
+                    paddedOffset = (appliedStartMonth < 0 ? 0 - appliedStartMonth : 0);
 
-                var liability = underscore.range(numberOfMonths).map(function () {
-                    return 0;
-                });
+                var monthlyData = angular.copy(this.data.monthly || []);
+                initializeMonthlyTotals(this, monthlyData, appliedEndMonth);
 
-                for(var i = 0; i < numberOfMonths; i++) {
-                    var month = moment(rangeStart).add(i, 'M');
-
-                    if (this.frequency === 'once' && month.month() === startMonth.month() && month.year() === startMonth.year()) {
-                        liability[i] += this.amount;
-                    } else if (month >= startMonth && (this.endDate === undefined || month <= endMonth)) {
-                        previousBalance += (((this.interestRate || 0) / 100) / 12) * previousBalance;
-
-                        if (underscore.contains(paymentMonths, month.month())) {
-                            for (var j = 0; j < paymentsPerMonth; j++) {
-                                if (angular.isNumber(this.amount) && this.amount > 0) {
-                                    liability[i] += Math.min(previousBalance, (this.installmentPayment || 0));
-                                    previousBalance -= Math.min(previousBalance, (this.installmentPayment || 0));
-                                } else {
-                                    liability[i] += (this.installmentPayment || 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return liability;
+                return underscore.range(paddedOffset)
+                    .map(defaultMonth)
+                    .concat(monthlyData.slice(appliedStartMonth + paddedOffset, appliedEndMonth - paddedOffset));
             });
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total - liability;
+                    return total - liability.repayment;
                 }, 0);
             });
 
@@ -9526,15 +10725,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.id = attrs.id || attrs.$id;
             this.uuid = attrs.uuid;
             this.merchantUuid = attrs.merchantUuid;
-            this.legalEntityId = attrs.legalEntityId;
             this.name = attrs.name;
             this.type = attrs.type;
+            this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
-            this.interestRate = attrs.interestRate;
-            this.amount = attrs.amount;
+            this.interestRate = attrs.interestRate || 0;
+            this.creditLimit = attrs.creditLimit;
             this.frequency = attrs.frequency;
             this.startDate = attrs.startDate;
             this.endDate = attrs.endDate;
+
+            // TODO: Add merchant model
+            this.merchant = attrs.merchant;
         }
 
         inheritModel(Liability, Model.Base);
@@ -9545,13 +10747,14 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'monthly': 'Monthly',
             'quarterly': 'Quarterly',
             'bi-yearly': 'Bi-Yearly',
-            'yearly': 'Yearly'});
+            'yearly': 'Yearly'
+        });
 
-        readOnlyProperty(Liability, 'liabilityTypes', {
-            'short-loan': 'Short Term Loan',
-            'medium-loan': 'Medium Term Loan',
-            'long-loan': 'Long Term Loan',
-            'rent': 'Rented'});
+        readOnlyProperty(Liability, 'frequencyTypesWithCustom', underscore.extend({
+            'custom': 'Custom'
+        }, Liability.frequencyTypes));
+
+        readOnlyProperty(Liability, 'liabilityTypes', _types);
 
         readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
             'other': 'Other'
@@ -9565,28 +10768,27 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             return Liability.liabilityTypesWithOther[type] || '';
         });
 
-        function isLoaned (value, instance, field) {
-            return instance.type !== 'rent';
-        }
-
         function isLeased (value, instance, field) {
-            return instance.leased === 'rent';
+            return instance.type === 'rent';
         }
 
         function isOtherType (value, instance, field) {
             return instance.type === 'other';
         }
 
-        function isNotOtherType (value, instance, field) {
-            return instance.type !== 'other';
+        function hasSubtype (value, instance, field) {
+            return !!(_subtypes[instance.type] && underscore.keys(_subtypes[instance.type]).length > 0);
         }
 
         Liability.validates({
+            openingBalance: {
+                required: true,
+                numeric: true
+            },
             installmentPayment: {
                 requiredIf: function (value, instance, field) {
-                    return isNotOtherType(value, instance, field) &&
-                        (angular.isNumber(instance.amount) && instance.amount >= 0) === false ||
-                        (angular.isNumber(instance.interestRate) && instance.interestRate >= 0);
+                    return underscore.contains(_typesWithInstallmentPayments, instance.type) &&
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.interestRate));
                 },
                 range: {
                     from: 0
@@ -9594,22 +10796,17 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             interestRate: {
-                requiredIf: function (value, instance, field) {
-                    return angular.isNumber(instance.installmentPayment) && instance.installmentPayment > 0;
-                },
+                required: true,
                 range: {
                     from: 0,
                     to: 100
-                }
-            },
-            legalEntityId: {
-                required: true,
+                },
                 numeric: true
             },
-            amount: {
+            creditLimit: {
                 requiredIf: function (value, instance, field) {
-                    return (isLoaned(value, instance, field) && isNotOtherType(value, instance, field)) ||
-                        (angular.isNumber(instance.installmentPayment) && instance.installmentPayment >= 0) === false;
+                    return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
+                        (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));
                 },
                 range: {
                     from: 0
@@ -9617,7 +10814,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 numeric: true
             },
             merchantUuid: {
-                requiredIf: isNotOtherType,
+                requiredIf: function (value, instance, field) {
+                    return !isOtherType(value, instance, field);
+                },
                 format: {
                     uuid: true
                 }
@@ -9625,7 +10824,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             frequency: {
                 required: true,
                 inclusion: {
-                    in: underscore.keys(Liability.frequencyTypes)
+                    in: underscore.keys(Liability.frequencyTypesWithCustom)
                 }
             },
             type: {
@@ -9633,6 +10832,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 inclusion: {
                     in: underscore.keys(Liability.liabilityTypesWithOther)
                 }
+            },
+            subtype: {
+                requiredIf: hasSubtype,
+                inclusion: {
+                    in: function (value, instance, field) {
+                        return _subtypes[instance.type] && underscore.keys(_subtypes[instance.type]) || [];
+                    }
+                }
+            },
+            data: {
+                required: true,
+                object: true
             },
             name: {
                 requiredIf: isOtherType,
@@ -9648,7 +10859,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }
             },
             endDate: {
-                requiredIf: isLeased,
+                requiredIf: function (value, instance, field) {
+                    return isLeased(value, instance, field) || instance.type === 'custom';
+                },
                 format: {
                     date: true
                 }
@@ -10547,31 +11760,46 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(entities, function (entity) {
                             if (entity.$dirty === true) {
                                 chain.push(function () {
-                                    return legalEntityApi.postEntity({data: entity});
+                                    return legalEntityApi.postEntity({data: entity}).then(function (res) {
+                                        return promiseService.all([_postAssets(entity.$id, res.id), _postLiabilities('legalentity', entity.$id, res.id, res.id)]);
+                                    });
+                                });
+                            } else {
+                                chain.push(function () {
+                                    return _postAssets(entity.$id, entity.id);
+                                });
+
+                                chain.push(function () {
+                                    return _postLiabilities('legalentity', entity.$id, entity.id, entity.$id);
                                 });
                             }
-
-                            chain.push(function () {
-                                return _postAssets(entity.id);
-                            });
                         });
                     });
                 }, promiseService.throwError);
             }
 
-            function _postAssets (entityId) {
-                return assetApi.getAssets({id: entityId, options: _options.local}).then(function (assets) {
+            function _postAssets (localEntityId, remoteEntityId) {
+                return assetApi.getAssets({id: localEntityId, options: _options.local}).then(function (assets) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(assets, function (asset) {
+                            if (localEntityId !== remoteEntityId) {
+                                asset.$uri = 'assets/' + remoteEntityId;
+                                asset.legalEntityId = remoteEntityId;
+
+                                chain.push(function () {
+                                    return assetApi.updateAsset({data: asset});
+                                });
+                            }
+
                             if (asset.$dirty === true) {
                                 chain.push(function () {
                                     return assetApi.postAsset({data: asset}).then(function (res) {
-                                        return promiseService.all([_postLiabilities(asset.$id, res.id), _postProductionSchedules(asset.$id, res.id)]);
+                                        return promiseService.all([_postLiabilities('asset', asset.$id, res.id, remoteEntityId), _postProductionSchedules(asset.$id, res.id)]);
                                     });
                                 });
                             } else {
                                 chain.push(function () {
-                                    return _postLiabilities(asset.$id, asset.id);
+                                    return _postLiabilities('asset', asset.$id, asset.id, remoteEntityId);
                                 });
 
                                 chain.push(function () {
@@ -10583,13 +11811,13 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 }, promiseService.throwError);
             }
 
-            function _postLiabilities (localAssetId, remoteAssetId) {
-                return liabilityApi.getLiabilities({id: localAssetId, options: _options.local}).then(function (liabilities) {
+            function _postLiabilities (type, localId, remoteId, legalEntityId) {
+                return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: localId}, options: _options.local}).then(function (liabilities) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(liabilities, function (liability) {
-                            if (localAssetId !== remoteAssetId) {
-                                liability.$id = remoteAssetId;
-                                liability.$uri = 'liability/' + remoteAssetId;
+                            if (localId !== remoteId) {
+                                liability.$uri = 'liabilities/' + type + '/' + remoteId;
+                                liability.legalEntityId = legalEntityId;
 
                                 chain.push(function () {
                                     return liabilityApi.updateLiability({data: liability});
@@ -10599,8 +11827,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             if (liability.$dirty === true) {
                                 chain.push(function () {
                                     return liabilityApi.postLiability({
-                                        template: (liability.$local ? 'asset/:aid/liability' : 'liability/:id'),
-                                        schema: {aid: remoteAssetId},
+                                        template: (liability.$local ? ':type/:oid/liability' : 'liability/:id'),
+                                        schema: {type: type, oid: remoteId},
                                         data: liability
                                     });
                                 });
@@ -10615,8 +11843,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     return promiseService.chain(function (chain) {
                         angular.forEach(schedules, function (schedule) {
                             if (localAssetId !== remoteAssetId) {
-                                schedule.$id = remoteAssetId;
                                 schedule.$uri = 'production-schedules/' + remoteAssetId;
+                                schedule.assetId = remoteAssetId;
 
                                 chain.push(function () {
                                     return productionScheduleApi.updateProductionSchedule({data: schedule});
@@ -10624,8 +11852,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             }
 
                             if (schedule.$dirty === true) {
-                                schedule.assetId = remoteAssetId;
-
                                 chain.push(function () {
                                     return productionScheduleApi.postProductionSchedule({data: schedule});
                                 });
@@ -11143,33 +12369,47 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }];
 }]);
 
-mobileSdkApiApp.factory('merchantApi', ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
-    var _host = configuration.getServer();
-
-    var merchantApi = api({
-        plural: 'merchants',
-        singular: 'merchant'
-    });
-
-    return {
-        getMerchants: merchantApi.getItems,
-        createMerchant: merchantApi.createItem,
-        getMerchant: merchantApi.getItem,
-        updateMerchant: merchantApi.updateItem,
-        postMerchant: merchantApi.postItem,
-        deleteMerchant: merchantApi.deleteItem,
-        searchMerchants: function (query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
-            }).join('&');
-
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type, options) {
+            return (obj.merchantUuid ? merchantApi.findMerchant({column: 'data', key: obj.merchantUuid, options: {like: true, one: true}}) : undefined);
         }
-    };
+    }]);
+
+    hydrationProvider.registerDehydrate('merchant', ['merchantApi', function (merchantApi) {
+        return function (obj, type) {
+            return merchantApi.createMerchant({template: 'merchants', data: obj.merchant, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+        }
+    }]);
+
+    this.$get = ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
+        var _host = configuration.getServer();
+        var merchantApi = api({
+            plural: 'merchants',
+            singular: 'merchant'
+        });
+
+        return {
+            getMerchants: merchantApi.getItems,
+            createMerchant: merchantApi.createItem,
+            getMerchant: merchantApi.getItem,
+            findMerchant: merchantApi.findItem,
+            updateMerchant: merchantApi.updateItem,
+            postMerchant: merchantApi.postItem,
+            deleteMerchant: merchantApi.deleteItem,
+            searchMerchants: function (query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function (promise) {
+                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
+            }
+        };
+    }];
 }]);
 
 mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationProvider) {
@@ -11260,7 +12500,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['assets'];
+        var defaultRelations = ['assets', 'liabilities'];
         var entityApi = api({
             plural: 'legalentities',
             singular: 'legalentity',
@@ -11291,7 +12531,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
 mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
         return function (obj, type, options) {
-            return farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}});
+            return (angular.isNumber(obj.farmId) ? farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}}) : null);
         }
     }]);
 
@@ -11395,7 +12635,7 @@ mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationPr
 mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('liabilities', ['liabilityApi', function (liabilityApi) {
         return function (obj, type) {
-            return liabilityApi.getLiabilities({id: obj.$id});
+            return liabilityApi.getLiabilities({template: 'liabilities/:type/:id', schema: {type: type, id: obj.$id}, options: {hydrate: true}});
         }
     }]);
 
@@ -11403,11 +12643,11 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
         return function (obj, type) {
             var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
-            return liabilityApi.purgeLiability({template: 'liabilities/:id', schema: {id: objId}, options: {force: false}})
+            return liabilityApi.purgeLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
                         angular.forEach(obj.liabilities, function (liability) {
-                            promises.push(liabilityApi.createLiability({template: 'liabilities/:id', schema: {id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                            promises.push(liabilityApi.createLiability({template: 'liabilities/:type/:id', schema: {type: type, id: objId}, data: liability, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -11415,7 +12655,7 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = [];
+        var defaultRelations = ['merchant'];
         var liabilityApi = api({
             plural: 'liabilities',
             singular: 'liability',
@@ -11512,7 +12752,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
     hydrationProvider.registerHydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type, options) {
             if (obj.budgetUuid) {
-                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {one: true}});
+                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {like: true, one: true}});
             } else {
                 return enterpriseBudgetApi.findEnterpriseBudget({key: obj.budgetId, options: {one: true}});
             }
@@ -11521,7 +12761,7 @@ mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (
 
     hydrationProvider.registerDehydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
         return function (obj, type) {
-            return enterpriseBudgetApi.createDocument({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+            return enterpriseBudgetApi.createEnterpriseBudget({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
         }
     }]);
 
@@ -11706,7 +12946,9 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
         parseRequest: function (templateUrl, schemaData) {
             if (templateUrl !== undefined) {
                 angular.forEach(schemaData, function (data, key) {
-                    templateUrl = templateUrl.replace('/:' + key, (data !== undefined ? '/' + data : ''));
+                    templateUrl = templateUrl
+                        .replace('/:' + key, (data !== undefined ? '/' + data : ''))
+                        .replace(':' + key, (data !== undefined ? data : ''));
                 });
             }
 
@@ -12823,7 +14065,9 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
     'Validator.equal',
     'Validator.format',
     'Validator.inclusion',
+    'Validator.inclusion.in',
     'Validator.length',
+    'Validator.object',
     'Validator.numeric',
     'Validator.range',
     'Validator.required',
@@ -12849,11 +14093,13 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     validateField(instance, validation);
                 });
 
+
                 return instance.$errors.countFor(fieldName) === 0;
             });
 
             function validateField (instance, validation) {
                 if (validation.validate(instance) === false) {
+
                     instance.$errors.add(validation.field, validation.message);
                 } else {
                     instance.$errors.clear(validation.field, validation.message);
@@ -12962,13 +14208,11 @@ sdkModelValidation.factory('Validatable.ValidationFunction', ['underscore', func
         boundFunction.message = configureMessage();
 
         function configureMessage () {
-            if (underscore.isString(options.message)) {
-                return options.message;
-            }
-
             if (underscore.isFunction(options.message)) {
                 return options.message.apply(options);
             }
+
+            return options.message;
         }
 
         return boundFunction;
@@ -13048,7 +14292,7 @@ sdkModelValidation.factory('Validatable.Validator', ['privateProperty', 'undersc
             }
 
             function defaultOptions (options) {
-                if (underscore.isObject(options) === false) {
+                if (typeof options != 'object' || underscore.isArray(options)) {
                     options = {
                         value: options,
                         message: validator.message
@@ -13258,27 +14502,40 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
 /**
  * Inclusion Validator
  */
-sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator',
-    function (underscore, Validator) {
-        function inclusion (value, instance, field) {
-            if (underscore.isUndefined(value) || underscore.isNull(value)) {
-                return false;
-            }
-
-            if (underscore.isUndefined(this.in) || underscore.isArray(this.in) === false) {
-                throw 'Inclusion validator must specify an \'in\' attribute';
-            }
-
-            return underscore.some(this.in, function (item) {
-                return value === item;
-            })
-        }
+sdkModelValidators.factory('Validator.inclusion', ['underscore', 'Validatable.Validator', 'Validator.inclusion.in',
+    function (underscore, Validator, inclusionIn) {
+        function inclusion (value, instance, field) {}
 
         inclusion.message = function () {
-            return 'Must be one of \''+ this.in.join(', ') + '\'';
+            return 'Must have an included value';
+        };
+
+        inclusion.options = {
+            in: inclusionIn
         };
 
         return new Validator(inclusion);
+    }]);
+
+sdkModelValidators.factory('Validator.inclusion.in', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function inclusionIn (value, instance, field) {
+            var _in = (typeof this.value == 'function' ? this.value(value, instance, field) : this.value);
+
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (_in.length == 0 ? true : underscore.some(_in, function (item) {
+                return value === item;
+            }));
+        }
+
+        inclusionIn.message = function () {
+            return 'Must be in array of values';
+        };
+
+        return new Validator(inclusionIn);
     }]);
 
 /**
@@ -13352,6 +14609,23 @@ sdkModelValidators.factory('Validator.numeric', ['underscore', 'Validatable.Vali
         };
 
         return new Validator(numeric);
+    }]);
+
+sdkModelValidators.factory('Validator.object', ['underscore', 'Validatable.Validator',
+    function (underscore, Validator) {
+        function object (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value)) {
+                return true;
+            }
+
+            return (typeof value == 'object');
+        }
+
+        object.message = function () {
+            return 'Must be an object';
+        };
+
+        return new Validator(object);
     }]);
 
 /**
@@ -13435,7 +14709,7 @@ sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Val
 sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function requiredIf (value, instance, field) {
-            if (!this(value, instance, field)) {
+            if (!this.value(value, instance, field)) {
                 return true;
             } else {
                 if (underscore.isUndefined(value) || underscore.isNull(value)) {
@@ -13450,7 +14724,7 @@ sdkModelValidators.factory('Validator.requiredIf', ['underscore', 'Validatable.V
             }
         }
 
-        requiredIf.message = 'cannot be blank';
+        requiredIf.message = 'Is a required field';
 
         return new Validator(requiredIf);
     }]);
