@@ -90,9 +90,11 @@ describe('ag.sdk.model.liability', function () {
                 type: 'medium-term',
                 installmentPayment: 1000,
                 openingBalance: 1000000,
+                amount: 1000000,
                 interestRate: 1,
                 frequency: 'monthly',
                 startDate: '2015-10-10T10:20:00',
+                openingDate: '2015-10-10T10:20:00',
                 merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
                 data: {}
             });
@@ -517,4 +519,222 @@ describe('ag.sdk.model.liability', function () {
 
             expect(liability.data.monthly[0]).toEqual({ opening : 1000, repayment : { }, withdrawal : 49000, balance : 50000, interest : 41.666666666667, closing : 50041.666666666664 });
         });
-    });});
+    });
+
+    describe('Liability financing with the startDate before openingDate', function() {
+        var liability;
+
+        beforeEach(function () {
+            liability = Liability.new({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'long-term',
+                interestRate: 0,
+                legalEntityId: 1,
+                frequency: 'monthly',
+                startDate: '2014-11-04T10:20:00',
+                openingDate: '2015-01-04T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                installmentPayment: 10000,
+                openingBalance: 50000,
+                amount: 80000
+            });
+        });
+
+        it('validates amount', function () {
+            liability.amount = '1000000';
+            expect(liability.validate()).toBe(false);
+
+            liability.amount = 'one million';
+            expect(liability.validate()).toBe(false);
+        });
+
+        it('validates openingDate', function () {
+            liability.openingDate = '2015-10-10T99:99:99';
+            expect(liability.validate()).toBe(false);
+
+            liability.openingDate = 'not a date';
+            expect(liability.validate()).toBe(false);
+        });
+
+        it('computes property paymentMonths', function () {
+            expect(liability.paymentMonths).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+            liability.frequency = 'bi-monthly';
+            expect(liability.paymentMonths).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+            liability.frequency = 'quarterly';
+            expect(liability.paymentMonths).toEqual([0, 3, 6, 9]);
+
+            liability.frequency = 'bi-yearly';
+            expect(liability.paymentMonths).toEqual([0, 6]);
+
+            liability.frequency = 'yearly';
+            expect(liability.paymentMonths).toEqual([0]);
+        });
+
+        it('computes property balanceInMonth', function () {
+            expect(liability.balanceInMonth('2014-08-04T10:20:00')).toEqual(0);
+            expect(liability.balanceInMonth('2014-11-04T10:20:00')).toEqual(0);
+
+            expect(liability.balanceInMonth('2015-01-04T10:20:00')).toEqual(40000);
+            expect(liability.balanceInMonth('2015-02-04T10:20:00')).toEqual(30000);
+            expect(liability.balanceInMonth('2015-04-04T10:20:00')).toEqual(10000);
+            expect(liability.balanceInMonth('2015-05-04T10:20:00')).toEqual(0);
+
+            expect(liability.balanceInMonth('2015-06-04T10:20:00')).toEqual(0);
+        });
+    });
+
+    describe('Liability financing with the startDate after openingDate', function() {
+        var liability;
+
+        beforeEach(function () {
+            liability = Liability.new({
+                uuid: '53486CEC-523F-4842-B7F6-4132A9622960',
+                type: 'long-term',
+                interestRate: 0,
+                legalEntityId: 1,
+                frequency: 'monthly',
+                startDate: '2015-03-04T10:20:00',
+                openingDate: '2015-01-04T10:20:00',
+                merchantUuid: '63210902-D65B-4F1B-8A37-CF5139716729',
+                installmentPayment: 10000,
+                openingBalance: 0,
+                amount: 80000
+            });
+        });
+
+        it('validates amount', function () {
+            liability.amount = '1000000';
+            expect(liability.validate()).toBe(false);
+
+            liability.amount = 'one million';
+            expect(liability.validate()).toBe(false);
+        });
+
+        it('validates openingDate', function () {
+            liability.openingDate = '2015-10-10T99:99:99';
+            expect(liability.validate()).toBe(false);
+
+            liability.openingDate = 'not a date';
+            expect(liability.validate()).toBe(false);
+        });
+
+        it('computes property paymentMonths', function () {
+            expect(liability.paymentMonths).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+            liability.frequency = 'bi-monthly';
+            expect(liability.paymentMonths).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+
+            liability.frequency = 'quarterly';
+            expect(liability.paymentMonths).toEqual([2, 5, 8, 11]);
+
+            liability.frequency = 'bi-yearly';
+            expect(liability.paymentMonths).toEqual([2, 8]);
+
+            liability.frequency = 'yearly';
+            expect(liability.paymentMonths).toEqual([2]);
+        });
+
+        it('computes property balanceInMonth', function () {
+            expect(liability.balanceInMonth('2014-11-04T10:20:00')).toEqual(0);
+
+            expect(liability.balanceInMonth('2015-01-04T10:20:00')).toEqual(0);
+            expect(liability.balanceInMonth('2015-02-04T10:20:00')).toEqual(0);
+
+            expect(liability.balanceInMonth('2015-03-04T10:20:00')).toEqual(70000);
+            expect(liability.balanceInMonth('2015-04-04T10:20:00')).toEqual(60000);
+            expect(liability.balanceInMonth('2015-09-04T10:20:00')).toEqual(10000);
+            expect(liability.balanceInMonth('2015-10-04T10:20:00')).toEqual(0);
+
+            expect(liability.balanceInMonth('2015-12-04T10:20:00')).toEqual(0);
+        });
+
+        it('computes property liabilityInMonth for Quarterly payments', function () {
+            liability.frequency = 'quarterly';
+
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 80000, repayment : {bank: 10000}, withdrawal : 0, balance : 70000, interest : 0, closing : 70000 });
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 70000, repayment : {}, withdrawal : 0, balance : 70000, interest : 0, closing : 70000 });
+            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 70000, repayment : {}, withdrawal : 0, balance : 70000, interest : 0, closing : 70000 });
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 70000, repayment : {bank: 10000}, withdrawal : 0, balance : 60000, interest : 0, closing : 60000 });
+
+            expect(liability.liabilityInMonth('2016-03-04T10:20:00')).toEqual({ opening : 40000, repayment : {bank: 10000}, withdrawal : 0, balance : 30000, interest : 0, closing : 30000 });
+            expect(liability.liabilityInMonth('2016-04-04T10:20:00')).toEqual({ opening : 30000, repayment : {}, withdrawal : 0, balance : 30000, interest : 0, closing : 30000 });
+
+            expect(liability.liabilityInMonth('2016-11-04T10:20:00')).toEqual({ opening : 10000, repayment : {}, withdrawal : 0, balance : 10000, interest : 0, closing : 10000 });
+            expect(liability.liabilityInMonth('2016-12-04T10:20:00')).toEqual({ opening : 10000, repayment : {bank: 10000}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+
+            expect(liability.liabilityInMonth('2017-01-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+        });
+
+        it('computes property liabilityInMonth for Monthly payments', function () {
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 80000, repayment : {bank: 10000}, withdrawal : 0, balance : 70000, interest : 0, closing : 70000 });
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 70000, repayment : {bank: 10000}, withdrawal : 0, balance : 60000, interest : 0, closing : 60000 });
+            expect(liability.liabilityInMonth('2015-09-04T10:20:00')).toEqual({ opening : 20000, repayment : {bank: 10000}, withdrawal : 0, balance : 10000, interest : 0, closing : 10000 });
+            expect(liability.liabilityInMonth('2015-10-04T10:20:00')).toEqual({ opening : 10000, repayment : {bank: 10000}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+
+            expect(liability.liabilityInMonth('2015-11-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+        });
+
+        it('computes property liabilityInMonth Bi-Monthly payments', function () {
+            liability.frequency = 'bi-monthly';
+            expect(liability.liabilityInMonth('2015-01-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+            expect(liability.liabilityInMonth('2015-02-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+
+            expect(liability.liabilityInMonth('2015-03-04T10:20:00')).toEqual({ opening : 80000, repayment : {bank: 20000}, withdrawal : 0, balance : 60000, interest : 0, closing : 60000 });
+            expect(liability.liabilityInMonth('2015-04-04T10:20:00')).toEqual({ opening : 60000, repayment : {bank: 20000}, withdrawal : 0, balance : 40000, interest : 0, closing : 40000 });
+            expect(liability.liabilityInMonth('2015-05-04T10:20:00')).toEqual({ opening : 40000, repayment : {bank: 20000}, withdrawal : 0, balance : 20000, interest : 0, closing : 20000 });
+            expect(liability.liabilityInMonth('2015-06-04T10:20:00')).toEqual({ opening : 20000, repayment : {bank: 20000}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+
+            expect(liability.liabilityInMonth('2015-07-04T10:20:00')).toEqual({ opening : 0, repayment : {}, withdrawal : 0, balance : 0, interest : 0, closing : 0 });
+        });
+
+        it('computes property liabilityInRange Quarterly payments', function () {
+            liability.frequency = 'quarterly';
+            expect(liability.liabilityInRange('2014-11-04T10:20:00', '2015-12-04T10:20:00').length).toBe(13);
+            expect(liability.liabilityInRange('2014-11-04T10:20:00', '2016-01-04T10:20:00').length).toBe(14);
+            expect(liability.liabilityInRange('2014-11-04T10:20:00', '2016-02-04T10:20:00').length).toBe(15);
+
+            expect(liability.liabilityInRange('2016-02-04T10:20:00', '2016-04-04T10:20:00').length).toBe(2);
+            expect(liability.liabilityInRange('2014-12-04T10:20:00', '2015-08-04T10:20:00')).toEqual([
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 80000, repayment : {bank: 10000}, withdrawal : 0, balance : 70000, interest : 0, closing : 70000 },
+                { opening : 70000, repayment : {}, withdrawal : 0, balance : 70000, interest : 0, closing : 70000 },
+                { opening : 70000, repayment : {}, withdrawal : 0, balance : 70000, interest : 0, closing : 70000 },
+                { opening : 70000, repayment : {bank: 10000}, withdrawal : 0, balance : 60000, interest : 0, closing : 60000 },
+                { opening : 60000, repayment : {}, withdrawal : 0, balance : 60000, interest : 0, closing : 60000 }
+            ]);
+
+            expect(liability.liabilityInRange('2016-11-04T10:20:00', '2017-03-04T10:20:00')).toEqual([
+                { opening : 10000, repayment : { }, withdrawal : 0, balance : 10000, interest : 0, closing : 10000 },
+                { opening : 10000, repayment : {bank: 10000}, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 }
+            ]);
+        });
+
+        it('computes property liabilityInRange Bi-Monthly payments', function () {
+            liability.frequency = 'bi-monthly';
+
+            expect(liability.liabilityInRange('2014-12-04T10:20:00', '2015-08-04T10:20:00')).toEqual([
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 80000, repayment : {bank: 20000}, withdrawal : 0, balance : 60000, interest : 0, closing : 60000 },
+                { opening : 60000, repayment : {bank: 20000}, withdrawal : 0, balance : 40000, interest : 0, closing : 40000 },
+                { opening : 40000, repayment : {bank: 20000}, withdrawal : 0, balance : 20000, interest : 0, closing : 20000 },
+                { opening : 20000, repayment : {bank: 20000}, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+                { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
+            ]);
+        });
+    });
+
+});
