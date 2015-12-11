@@ -395,6 +395,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, instance.numberOfMonths);
                     calculateIncomeComposition(instance, schedule, startMonth, instance.numberOfMonths);
                 });
+
+                instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
+                instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
             }
 
             /**
