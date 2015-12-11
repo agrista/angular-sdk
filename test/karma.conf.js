@@ -13,7 +13,7 @@ module.exports = function(config) {
             'test/unit/**/mocks/mock.js',
             'test/unit/**/mocks/*.js',
             //'test/unit/**/*.js'
-            'test/unit/model/frpCalculationModuleSpec.js'
+            'test/unit/model/liabilityModuleSpec.js'
         ],
         autoWatch: true,
         frameworks: ['jasmine'],
