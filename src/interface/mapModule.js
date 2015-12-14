@@ -1809,7 +1809,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             if (layer.eachLayer) {
                 layer.eachLayer(function (item) {
-                    if (item.bindLabel && item.feature.properties.label) {
+                    if (item.bindLabel && item.feature && item.feature.properties && item.feature.properties.label) {
                         item.bindLabel(item.feature.properties.label.message, item.feature.properties.label.options);
                     }
                 });
