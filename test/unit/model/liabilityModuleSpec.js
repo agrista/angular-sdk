@@ -735,6 +735,12 @@ describe('ag.sdk.model.liability', function () {
                 { opening : 0, repayment : { }, withdrawal : 0, balance : 0, interest : 0, closing : 0 },
             ]);
         });
+
+        it('computes property totalLiabilityInRange Bi-Monthly payments', function () {
+            liability.frequency = 'bi-monthly';
+
+            expect(liability.totalLiabilityInRange('2014-12-04T10:20:00', '2015-08-04T10:20:00')).toEqual(80000);
+        });
     });
 
 });

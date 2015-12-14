@@ -12002,8 +12002,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
-                return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total - liability.repayment;
+                return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, monthLiability) {
+                    return total + underscore.reduce(monthLiability.repayment, function (subtotal, amount) {
+                            return subtotal + (amount || 0);
+                        }, 0);
                 }, 0);
             });
 
