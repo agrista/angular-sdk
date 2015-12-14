@@ -8886,7 +8886,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             if (layer.eachLayer) {
                 layer.eachLayer(function (item) {
-                    if (item.bindLabel && item.feature.properties.label) {
+                    if (item.bindLabel && item.feature && item.feature.properties && item.feature.properties.label) {
                         item.bindLabel(item.feature.properties.label.message, item.feature.properties.label.options);
                     }
                 });
@@ -10979,6 +10979,62 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                 reEvaluateAssetsAndLiabilities(this);
                 recalculate(this);
+            });
+
+            function reEvaluateProductionCredit(instance, liabilities) {
+                var affectedLiabilities = [],
+                    filteredLiabilities = underscore.chain(liabilities)
+                    .where({type: 'production-credit'})
+                    .sortBy(function (liability) {
+                        return liability.interestRate;
+                    })
+                    .map(function (liability) {
+                        return Liability.new(angular.copy(liability));
+                    })
+                    .value();
+
+                instance.data.unallocatedProductionIncome = angular.copy(instance.data.productionIncome);
+                instance.data.unallocatedProductionExpenditure = angular.copy(instance.data.productionExpenditure);
+
+                underscore.each(filteredLiabilities, function (liability) {
+                    liability.resetWithdrawalAndRepayments();
+
+                    for (var i = 0; i < instance.numberOfMonths; i++) {
+                        var month = moment(liability.startDate).add(i, 'M');
+
+                        underscore.each(liability.data['inputs'], function (input) {
+                            if (instance.data.unallocatedProductionExpenditure[input] && instance.data.unallocatedProductionExpenditure[input][i]) {
+                                instance.data.unallocatedProductionExpenditure[input][i] = liability.addWithdrawalInMonth(instance.data.unallocatedProductionExpenditure[input][i], month);
+                            }
+                        });
+
+                        underscore.each(liability.data['commodities'], function (commodity) {
+                            if (instance.data.unallocatedProductionIncome[commodity] && instance.data.unallocatedProductionIncome[commodity][i]) {
+                                instance.data.unallocatedProductionIncome[commodity][i] = liability.addRepaymentInMonth(instance.data.unallocatedProductionIncome[commodity][i], month, 'production');
+                            }
+                        });
+                    }
+
+                    underscore.each(liability.data.customRepayments, function (amount, month) {
+                        liability.addRepaymentInMonth(amount, month, 'bank');
+                    });
+
+                    var originalLiability = underscore.findWhere(liabilities, {uuid: liability.uuid});
+
+                    if (originalLiability && angular.equals(originalLiability.data.monthly, liability.data.monthly) === false) {
+                        affectedLiabilities.push(liability);
+                    }
+                });
+
+                if (affectedLiabilities.length > 0) {
+                    recalculateSummary(instance);
+                }
+
+                return affectedLiabilities;
+            }
+
+            privateProperty(this, 'reEvaluateProductionCredit', function (liabilities) {
+                return reEvaluateProductionCredit(this, liabilities);
             });
 
             function updateAssetStatementCategory(instance, category, itemName, asset) {
