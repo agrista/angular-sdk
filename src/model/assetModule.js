@@ -86,7 +86,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
                 var income = {};
 
-                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate).isBetween(rangeStart, rangeEnd)) {
+                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate, 'YYYY-MM-DD').isBetween(rangeStart, rangeEnd)) {
                     income['Sales'] = this.data.salePrice;
                 }
 
