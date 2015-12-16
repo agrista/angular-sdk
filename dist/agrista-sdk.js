@@ -10325,7 +10325,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return underscore.reduce(denominatorValues, function(result, value, index) {
                     result[index] = infinityToZero(result[index] / value);
                     return result;
-                }, numeratorValues);
+                }, angular.copy(numeratorValues));
             }
 
             function addArrayValues (array1, array2) {
@@ -10336,7 +10336,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return underscore.reduce(array1, function(result, value, index) {
                     result[index] += value;
                     return result;
-                }, array2);
+                }, angular.copy(array2));
             }
 
             function subtractArrayValues (array1, array2) {
