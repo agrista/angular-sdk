@@ -9986,7 +9986,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
                 var income = {};
 
-                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate).isBetween(rangeStart, rangeEnd)) {
+                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate, 'YYYY-MM-DD').isBetween(rangeStart, rangeEnd)) {
                     income['Sales'] = this.data.salePrice;
                 }
 
@@ -10441,8 +10441,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              * Production Schedule handling
              */
             privateProperty(this, 'updateProductionSchedules', function (schedules) {
-                var startMonth = moment(this.startDate),
-                    endMonth = moment(this.endDate);
+                var startMonth = moment(this.startDate, 'YYYY-MM-DD'),
+                    endMonth = moment(this.endDate, 'YYYY-MM-DD');
 
                 this.models.productionSchedules = [];
 
@@ -10476,7 +10476,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'days');
+                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD').add(1, 'days');
 
                 if (section) {
                     var offset = scheduleStart.diff(startMonth, 'months');
@@ -10502,7 +10502,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'days');
+                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD').add(1, 'days');
 
                 if (section) {
                     var numberOfYears = Math.ceil(numberOfMonths / 12);
@@ -10513,7 +10513,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                     for (var year = 0; year < numberOfYears; year++) {
                         var monthsInYear = Math.min(12, numberOfMonths - (year * 12));
-                        var offset = scheduleStart.diff(moment(startMonth).add(year, 'years'), 'months');
+                        var offset = scheduleStart.diff(moment(startMonth, 'YYYY-MM-DD').add(year, 'years'), 'months');
 
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
@@ -10565,7 +10565,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function reEvaluateProductionSchedules (instance) {
-                var startMonth = moment(instance.startDate),
+                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     numberOfMonths = instance.numberOfMonths;
 
                 instance.data.productionIncome = {};
@@ -10628,8 +10628,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             function reEvaluateIncomeAndExpenses (instance) {
-                var startMonth = moment(instance.startDate),
-                    endMonth = moment(instance.endDate),
+                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
                     numberOfMonths = endMonth.diff(startMonth, 'months'),
                     evaluatedModels = [];
 
@@ -10914,7 +10914,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     liability.resetWithdrawalAndRepayments();
 
                     for (var i = 0; i < instance.numberOfMonths; i++) {
-                        var month = moment(liability.startDate).add(i, 'M');
+                        var month = moment(liability.startDate, 'YYYY-MM-DD').add(i, 'M');
 
                         underscore.each(liability.data['inputs'], function (input) {
                             if (instance.data.unallocatedProductionExpenditure[input] && instance.data.unallocatedProductionExpenditure[input][i]) {
@@ -10955,7 +10955,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.assetStatement[category] = instance.data.assetStatement[category] || [];
 
                 var index = underscore.findIndex(instance.data.assetStatement[category], function(statementObj) { return statementObj.name == itemName; }),
-                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true)),
+                    numberOfYears = Math.ceil(moment(instance.endDate, 'YYYY-MM-DD').diff(moment(instance.startDate, 'YYYY-MM-DD'), 'years', true)),
                     assetCategory = (index !== -1 ? instance.data.assetStatement[category].splice(index, 1)[0] : {
                         name: itemName,
                         estimatedValue: 0,
@@ -10975,7 +10975,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var category = (liability.type == 'production-credit' || liability.type == 'rent' ? 'short-term' : liability.type),
                     itemName = (liability.type == 'rent' ? 'Rent overdue' : liability.name),
                     index = underscore.findIndex(instance.data.liabilityStatement[category], function(statementObj) { return statementObj.name == itemName; }),
-                    numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true)),
+                    numberOfYears = Math.ceil(moment(instance.endDate, 'YYYY-MM-DD').diff(moment(instance.startDate, 'YYYY-MM-DD'), 'years', true)),
                     liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1)[0] : {
                         name: itemName,
                         currentValue: 0,
@@ -10989,7 +10989,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                 // Calculate total year-end values for liability category
                 for (var year = 0; year < numberOfYears; year++) {
-                    var yearEnd = moment.min(moment(instance.endDate), moment(instance.startDate).add(year, 'years').add(11, 'months'));
+                    var yearEnd = moment.min(moment(instance.endDate, 'YYYY-MM-DD'), moment(instance.startDate, 'YYYY-MM-DD').add(year, 'years').add(11, 'months'));
                     liabilityCategory.yearlyValues[year] += liability.liabilityInMonth(yearEnd).closing;
                 }
 
@@ -11024,7 +11024,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function totalAssetsAndLiabilities(instance) {
-                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true));
+                var numberOfYears = Math.ceil(moment(instance.endDate, 'YYYY-MM-DD').diff(moment(instance.startDate, 'YYYY-MM-DD'), 'years', true));
 
                 instance.data.assetStatement.total = underscore.chain(instance.data.assetStatement)
                     .omit('total')
@@ -11060,8 +11060,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function reEvaluateAssetsAndLiabilities (instance) {
-                var startMonth = moment(instance.startDate),
-                    endMonth = moment(instance.endDate),
+                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
                     numberOfMonths = endMonth.diff(startMonth, 'months'),
                     evaluatedModels = [];
 
@@ -11081,10 +11081,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                         asset = Asset.new(asset);
 
-                        var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
-                            soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
-                            constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
-                            demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate) : undefined);
+                        var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate, 'YYYY-MM-DD') : undefined),
+                            soldDate = (asset.data.soldDate ? moment(asset.data.soldDate, 'YYYY-MM-DD') : undefined),
+                            constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate, 'YYYY-MM-DD') : undefined),
+                            demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate, 'YYYY-MM-DD') : undefined);
 
                         // VME
                         if (asset.type === 'vme') {
@@ -11144,10 +11144,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                     typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
                                     liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
-                                if (asset.type == 'farmland' && liability.type !== 'rent' && moment(liability.startDate).isBetween(startMonth, endMonth)) {
+                                if (asset.type == 'farmland' && liability.type !== 'rent' && moment(liability.startDate, 'YYYY-MM-DD').isBetween(startMonth, endMonth)) {
                                     initializeCategoryValues(instance, 'capitalExpenditure', 'Land Purchases', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Land Purchases'][moment(liability.startDate).diff(startMonth, 'months')] += liability.openingBalance;
+                                    instance.data.capitalExpenditure['Land Purchases'][moment(liability.startDate, 'YYYY-MM-DD').diff(startMonth, 'months')] += liability.openingBalance;
                                 }
 
                                 initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
@@ -11204,7 +11204,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function calculateAssetLiabilityGroupTotal (instance, type, subType) {
-                var numberOfYears = Math.ceil(moment(instance.endDate).diff(moment(instance.startDate), 'years', true));
+                var numberOfYears = Math.ceil(moment(instance.endDate, 'YYYY-MM-DD').diff(moment(instance.startDate, 'YYYY-MM-DD'), 'years', true));
                 var defaultObj = (type == 'asset' ? {
                     estimatedValue: 0,
                     currentRMV: 0,
@@ -11291,8 +11291,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function recalculateSummary (instance) {
-                var startMonth = moment(instance.startDate),
-                    endMonth = moment(instance.endDate),
+                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
                     numberOfMonths = endMonth.diff(startMonth, 'months');
 
                 // Summary of year 1 & year 2 for each category
@@ -11375,8 +11375,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              * Primary Account Handling
              */
             function recalculatePrimaryAccount(instance) {
-                var startMonth = moment(instance.startDate),
-                    endMonth = moment(instance.endDate),
+                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
                     numberOfYears = Math.ceil(endMonth.diff(startMonth, 'years', true)),
                     defaultMonthObj = {
                         opening: 0,
@@ -11420,18 +11420,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     year.interestPayable = sumCollectionProperty(months, 'interestPayable');
                     year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
                     year.closing = year.balance + year.interestPayable + year.interestReceivable;
-                    year.openingMonth = moment(startMonth).add(index, 'years');
-                    year.closingMonth = moment(startMonth).add(index, 'years').add(months.length - 1, 'months').format('MMM-YY');
+                    year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years');
+                    year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('MMM-YY');
 
                     var bestBalance = underscore.max(months, function (month) { return month.closing; }),
                         worstBalance = underscore.min(months, function (month) { return month.closing; });
                     year.bestBalance = {
                         balance: bestBalance.closing,
-                        month: moment(year.openingMonth).add(months.indexOf(bestBalance), 'months').format('MMM-YY')
+                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('MMM-YY')
                     };
                     year.worstBalance = {
                         balance: worstBalance.closing,
-                        month: moment(year.openingMonth).add(months.indexOf(worstBalance), 'months').format('MMM-YY')
+                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('MMM-YY')
                     };
                     year.openingMonth.format('MMM-YY');
                 });
@@ -11532,7 +11532,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             computedProperty(this, 'endDate', function () {
                 this.data.endDate = (this.data.startDate ?
-                    moment(this.data.startDate).add(2, 'y').format() :
+                    moment(this.data.startDate, 'YYYY-MM-DD').add(2, 'y').format() :
                     this.data.endDate);
 
                 return this.data.endDate;
@@ -11547,7 +11547,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             computedProperty(this, 'numberOfMonths', function () {
-                return moment(this.endDate).diff(this.startDate, 'months');
+                return moment(this.endDate, 'YYYY-MM-DD').diff(this.startDate, 'months');
             });
 
             computedProperty(this, 'models', function () {
@@ -11907,7 +11907,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         }
 
         function recalculateMonthlyTotals (instance, monthlyData) {
-            var startMonth = moment(instance.startDate).month(),
+            var startMonth = moment(instance.startDate, 'YYYY-MM-DD').month(),
                 paymentMonths = instance.paymentMonths,
                 paymentsPerMonth = (_frequency[instance.frequency] > 12 ? _frequency[instance.frequency] / 12 : 1);
 
@@ -11951,7 +11951,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             computedProperty(this, 'paymentMonths', function () {
                 var paymentsPerYear = _frequency[this.frequency],
-                    firstPaymentMonth = moment(this.startDate).month();
+                    firstPaymentMonth = moment(this.startDate, 'YYYY-MM-DD').month();
 
                 return underscore
                     .range(firstPaymentMonth, firstPaymentMonth + 12, (paymentsPerYear < 12 ? 12 / paymentsPerYear : 1))
@@ -11968,8 +11968,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
              * Get liability/balance in month
              */
             privateProperty(this, 'liabilityInMonth', function (month) {
-                var startMonth = moment(this.startDate),
-                    currentMonth = moment(month),
+                var startMonth = moment(this.startDate, 'YYYY-MM-DD'),
+                    currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
                 var monthlyData = angular.copy(this.data.monthly || []);
@@ -11994,8 +11994,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'addRepaymentInMonth', function (repayment, month, source) {
-                var startMonth = moment(this.startDate),
-                    currentMonth = moment(month),
+                var startMonth = moment(this.startDate, 'YYYY-MM-DD'),
+                    currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
                 source = source || 'bank';
@@ -12020,8 +12020,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'setRepaymentInMonth', function (repayment, month, source) {
-                var startMonth = moment(this.startDate),
-                    currentMonth = moment(month),
+                var startMonth = moment(this.startDate, 'YYYY-MM-DD'),
+                    currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
                 source = source || 'bank';
@@ -12045,8 +12045,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
-                var startMonth = moment(this.startDate),
-                    currentMonth = moment(month),
+                var startMonth = moment(this.startDate, 'YYYY-MM-DD'),
+                    currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
                 this.data.monthly = this.data.monthly || [];
@@ -12068,8 +12068,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'setWithdrawalInMonth', function (withdrawal, month) {
-                var startMonth = moment(this.startDate),
-                    currentMonth = moment(month),
+                var startMonth = moment(this.startDate, 'YYYY-MM-DD'),
+                    currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
                 this.data.monthly = this.data.monthly || [];
@@ -12093,9 +12093,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
              * Ranges of liability
              */
             privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var startMonth = moment(this.startDate),
-                    rangeStartMonth = moment(rangeStart),
-                    rangeEndMonth = moment(rangeEnd),
+                var startMonth = moment(this.startDate, 'YYYY-MM-DD'),
+                    rangeStartMonth = moment(rangeStart, 'YYYY-MM-DD'),
+                    rangeEndMonth = moment(rangeEnd, 'YYYY-MM-DD'),
                     appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
                     appliedEndMonth = rangeEndMonth.diff(rangeStartMonth, 'months'),
                     paddedOffset = (appliedStartMonth < 0 ? 0 - appliedStartMonth : 0);
