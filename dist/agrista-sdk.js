@@ -11547,7 +11547,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             computedProperty(this, 'numberOfMonths', function () {
-                return moment(this.endDate, 'YYYY-MM-DD').diff(this.startDate, 'months');
+                return moment(this.endDate, 'YYYY-MM-DD').diff(moment(this.startDate, 'YYYY-MM-DD'), 'months');
             });
 
             computedProperty(this, 'models', function () {
