@@ -10476,7 +10476,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD').add(1, 'days');
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
 
                 if (section) {
                     var offset = scheduleStart.diff(startMonth, 'months');
@@ -10502,7 +10502,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD').add(1, 'days');
+                    scheduleStart = moment(schedule.startDate).add(1, 'days');
 
                 if (section) {
                     var numberOfYears = Math.ceil(numberOfMonths / 12);
@@ -11081,10 +11081,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                         asset = Asset.new(asset);
 
-                        var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate, 'YYYY-MM-DD') : undefined),
-                            soldDate = (asset.data.soldDate ? moment(asset.data.soldDate, 'YYYY-MM-DD') : undefined),
-                            constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate, 'YYYY-MM-DD') : undefined),
-                            demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate, 'YYYY-MM-DD') : undefined);
+                        var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
+                            soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
+                            constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
+                            demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate) : undefined);
 
                         // VME
                         if (asset.type === 'vme') {
@@ -11532,7 +11532,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             computedProperty(this, 'endDate', function () {
                 this.data.endDate = (this.data.startDate ?
-                    moment(this.data.startDate, 'YYYY-MM-DD').add(2, 'y').format() :
+                    moment(this.data.startDate).add(2, 'y').format() :
                     this.data.endDate);
 
                 return this.data.endDate;
