@@ -10325,6 +10325,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return this.data.monthlyStatement;
             });
 
+            privateProperty(this, 'reEvaluate', function() {
+                reEvaluateBusinessPlan(this);
+            });
+
             privateProperty(this, 'recalculateAccount', function() {
                 recalculatePrimaryAccount(this);
             });
