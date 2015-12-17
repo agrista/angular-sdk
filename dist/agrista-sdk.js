@@ -12009,6 +12009,17 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 }, 0);
             });
 
+            privateProperty(this, 'getLiabilityOpening', function () {
+                var opening = 0;
+                var instance = angular.copy(this);
+                if(moment(instance.startDate).isBefore(instance.openingDate)) {
+                    opening = instance.openingBalance;
+                } else {
+                    opening = instance.amount;
+                }
+                return opening;
+            });
+
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
@@ -12057,17 +12068,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
         privateProperty(Liability, 'getTypeTitle', function (type) {
             return Liability.liabilityTypesWithOther[type] || '';
-        });
-
-        privateProperty(Liability, 'getLiabilityOpening', function () {
-            var opening = 0;
-            var instance = angular.copy(this);
-            if(moment(instance.startDate).isBefore(instance.openingDate)) {
-                opening = instance.openingBalance;
-            } else {
-                opening = instance.amount;
-            }
-            return opening;
         });
 
         function isLeased (value, instance, field) {
