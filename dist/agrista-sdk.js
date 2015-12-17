@@ -12059,6 +12059,17 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             return Liability.liabilityTypesWithOther[type] || '';
         });
 
+        privateProperty(Liability, 'getLiabilityOpening', function () {
+            var opening = 0;
+            var instance = angular.copy(this);
+            if(moment(instance.startDate).isBefore(instance.openingDate)) {
+                opening = instance.openingBalance;
+            } else {
+                opening = instance.amount;
+            }
+            return opening;
+        });
+
         function isLeased (value, instance, field) {
             return instance.type === 'rent';
         }
