@@ -12249,6 +12249,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return opening;
             });
 
+            privateProperty(this, 'getOffsetDate', function () {
+                return getOffsetDate(this);
+            });
+
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
