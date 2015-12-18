@@ -5125,11 +5125,19 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
 
         this.teamsDetails = angular.copy(teams);
 
+        this.filterList = function () {
+            var instance = this;
+            instance.selection.list = underscore.reject(availableTeams, function (item) {
+                return underscore.contains(instance.teams, (item.name ? item.name : item));
+            })
+        };
+
         this.selection = {
-            list: availableTeams,
             mode: (availableTeams.length == 0 ? 'add' : 'select'),
             text: ''
         };
+
+        this.filterList();
     }
 
     TeamEditor.prototype.toggleMode = function() {
@@ -5147,6 +5155,7 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
             this.teams.push(team);
             this.teamsDetails.push(underscore.findWhere(this.selection.list, {name: team}));
             this.selection.text = '';
+            this.filterList();
         }
     };
 
@@ -5159,6 +5168,7 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
             this.teams.splice(indexOrTeam, 1);
             this.teamsDetails.splice(indexOrTeam, 1);
             this.selection.text = '';
+            this.filterList();
         }
     };
 
