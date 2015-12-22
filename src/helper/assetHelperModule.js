@@ -473,9 +473,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
     var _liabilityTypes = {
         'rent': 'Rented',
-        'short-loan': 'Short Term Loan',
-        'medium-loan': 'Medium Term Loan',
-        'long-loan': 'Long Term Loan'
+        'short-term': 'Short Term Loan',
+        'medium-term': 'Medium Term Loan',
+        'long-term': 'Long Term Loan'
     };
 
     return {
