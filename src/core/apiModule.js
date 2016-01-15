@@ -958,7 +958,7 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
 /**
  * Aggregation API
  */
-sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseService', 'pagingService', function ($log, $http, configuration, promiseService, pagingService) {
+sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($log, $http, configuration, promiseService, pagingService, underscore) {
     // TODO: Refactor so that the aggregationApi can be extended for downstream platforms
     var _host = configuration.getServer();
 
@@ -1027,6 +1027,63 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/report-benefit-authorisation', {withCredentials: true}).then(function (res) {
                  promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchProductionSchedules: function(query) {
+            query = angular.copy(query);
+
+            if (query.horticultureStage) {
+                query.horticulturestage = query.horticultureStage;
+                delete query['horticultureStage'];
+            }
+            if (query.regionName) {
+                query.regionname = query.regionName;
+                delete query['regionName'];
+            }
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/aggregation/search-production-schedules' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        averageProductionSchedules: function(query) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/aggregation/average-production-schedules', query, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistinctProductionScheduleYears: function(query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/aggregation/distinct-production-schedule-years' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistinctProductionScheduleEnterprises: function(query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/aggregation/distinct-production-schedule-enterprises' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistinctProductionScheduleCategories: function() {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/aggregation/distinct-production-schedule-categories', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
                 }, promise.reject);
             });
         }
@@ -1176,6 +1233,17 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 
             return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
         },
+        getAveragedBudgets: function(query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + value;
+            }).join('&');
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budgets/averaged?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         searchEnterpriseBudgets: function (query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + value;
@@ -1222,9 +1290,10 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                 }, promise.reject);
             });
         },
-        publishEnterpriseBudget: function (id) {
+        publishEnterpriseBudget: function (id, publishSettings) {
+            publishSettings = publishSettings || {remote: 'agrista'};
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/budget/' + id + '/publish', {}, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + id + '/publish', publishSettings, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1242,6 +1311,13 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                     promise.resolve(res.data);
                 }, promise.reject);
             })
+        },
+        favoriteEnterpriseBudget: function(id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/budget/' + id + '/favorite', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
 
     };
