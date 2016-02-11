@@ -39,7 +39,7 @@ cordovaConnectionApp.factory('connectionService', ['$timeout', 'underscore', fun
             }
         },
         isOnline: function () {
-            return (navigator.connection && navigator.connection.type !== Connection.NONE && navigator.connection.type !== Connection.UNKNOWN);
+            return (navigator.connection && navigator.connection.type !== Connection.NONE);
         },
         isMobile: function () {
             return navigator.connection && (navigator.connection.type === Connection.CELL ||
