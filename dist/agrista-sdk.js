@@ -2414,8 +2414,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                        (asset.data.crop ? asset.data.crop : '') +
                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
                 case 'farmland':
-                    return (asset.data.portionLabel ? asset.data.portionLabel :
-                        (asset.data.portionNumber ? 'Ptn. ' + asset.data.portionNumber : 'Rem. extent of farm'));
+                    return (asset.data.label ? asset.data.label :
+                        (asset.data.portionLabel ? asset.data.portionLabel :
+                            (asset.data.portionNumber ? 'Ptn. ' + asset.data.portionNumber : 'Rem. extent of farm')));
                 case 'improvement':
                     return asset.data.name;
                 case 'cropland':
