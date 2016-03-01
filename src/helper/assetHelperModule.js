@@ -12,8 +12,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                        (asset.data.crop ? asset.data.crop : '') +
                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
                 case 'farmland':
-                    return (asset.data.portionLabel ? asset.data.portionLabel :
-                        (asset.data.portionNumber ? 'Portion ' + asset.data.portionNumber : 'Remainder of farm'));
+                    return (asset.data.label ? asset.data.label :
+                        (asset.data.portionLabel ? asset.data.portionLabel :
+                            (asset.data.portionNumber ? 'Ptn. ' + asset.data.portionNumber : 'Rem. extent of farm')));
                 case 'improvement':
                     return asset.data.name;
                 case 'cropland':
@@ -609,7 +610,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         generateFarmlandAssetLabels: function(asset) {
             if (asset.type == 'farmland') {
                 asset.data.portionLabel = (asset.data.portionNumber ?
-                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Portion ' + asset.data.portionNumber) :
+                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Ptn. ' + asset.data.portionNumber) :
                     'Rem. extent');
                 asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
                     _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');

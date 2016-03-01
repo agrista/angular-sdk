@@ -28,8 +28,12 @@ sdkInterfaceUiApp.directive('defaultSrc', [function () {
 }]);
 
 sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
-    return function (value) {
-        return ((value && value.geometry ? $filter('number')(value.geometry.coordinates[0], 3) + ', ' + $filter('number')(value.geometry.coordinates[1], 3) : '') + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
+    return function (value, abs) {
+        var geometry = value && value.geometry || value;
+
+        return ((geometry ? ($filter('number')(abs ? Math.abs(geometry.coordinates[1]) : geometry.coordinates[0], 3) + (abs ? '° ' + (geometry.coordinates[1] >= 0 ? 'N' : 'S') : '') + ', '
+        + $filter('number')(abs ? Math.abs(geometry.coordinates[0]) : geometry.coordinates[1], 3) + (abs ? '° ' + (geometry.coordinates[0] <= 0 ? 'W' : 'E') : '')) : '')
+        + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);
 
