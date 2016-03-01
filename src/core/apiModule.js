@@ -797,6 +797,13 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        mergeDocumentPdfs: function (key, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/document/pdf/merge?key=' + key, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
