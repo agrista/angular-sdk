@@ -469,6 +469,8 @@ sdkLibraryApp.constant('moment', window.moment);
 
 sdkLibraryApp.constant('geojsonUtils', window.gju);
 
+sdkLibraryApp.constant('naturalSort', window.naturalSort);
+
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
 
 sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
@@ -3225,7 +3227,7 @@ sdkHelperDocumentApp.provider('documentHelper', function () {
 
 var sdkHelperEnterpriseBudgetApp = angular.module('ag.sdk.helper.enterprise-budget', ['ag.sdk.library']);
 
-sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', function(underscore) {
+sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['naturalSort', 'underscore', function(naturalSort, underscore) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.$id,
@@ -4005,7 +4007,19 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
             shortname: 'Dec'
         }];
 
-    var _scheduleTypes = ['Fertilise', 'Harvest', 'Plant/Seed', 'Plough', 'Spray'];
+    var _scheduleTypes = {
+        'default': ['Fertilise', 'Harvest', 'Plant/Seed', 'Plough', 'Spray'],
+        'livestock': ['Lick', 'Sales', 'Shearing', 'Vaccination']
+    };
+
+    var _scheduleBirthing = {
+        'Calving': ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Dairy'],
+        'Hatching': ['Chicken (Broilers)', 'Chicken (Layers)', 'Ostrich'],
+        'Kidding': ['Game', 'Goats'],
+        'Foaling': ['Horses'],
+        'Farrowing': ['Pigs'],
+        'Lambing': ['Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+    };
 
     var _productsMap = {
         'INC-PDS-MILK': {
@@ -4025,6 +4039,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
 
     function getBaseAnimal (commodityType) {
         return _baseAnimal[commodityType] || commodityType;
+    }
+
+    function getScheduleBirthing (commodityType) {
+        return underscore.chain(_scheduleBirthing)
+            .keys()
+            .filter(function (key) {
+                return underscore.contains(_scheduleBirthing[key], commodityType);
+            })
+            .value();
     }
 
     function checkBudgetSection (budget, stage) {
@@ -4147,6 +4170,15 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['underscore', fu
         },
         getModelType: function (type) {
             return _modelTypes[type] || '';
+        },
+        getScheduleTypes: function(assetType, commodityType) {
+            return underscore.chain(_scheduleTypes[assetType] ? _scheduleTypes[assetType] : _scheduleTypes.default)
+                .union(getScheduleBirthing(commodityType))
+                .compact()
+                .value()
+                .sort(function (a, b) {
+                    return naturalSort(a, b);
+                });
         },
 
         validateBudgetData: function (budget, stage) {
