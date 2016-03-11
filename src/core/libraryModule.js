@@ -8,3 +8,5 @@ sdkLibraryApp.constant('underscore', window._);
 sdkLibraryApp.constant('moment', window.moment);
 
 sdkLibraryApp.constant('geojsonUtils', window.gju);
+
+sdkLibraryApp.constant('naturalSort', window.naturalSort);
