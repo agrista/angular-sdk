@@ -161,6 +161,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
                                     console.log('ERROR: ' + err);
+                                    console.log('ERROR: ' + JSON.stringify(err));
 
                                     _lastError = {
                                         type: 'error',
@@ -187,6 +188,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                                     $rootScope.$broadcast('authorization::login', _user);
                                 } else {
+                                    console.log('RESULT: ' + res);
+                                    console.log('RESULT: ' + JSON.stringify(res));
+
                                     _lastError = {
                                         type: 'error',
                                         message: 'The entered e-mail and/or password is incorrect. Please try again.'
@@ -199,8 +203,18 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 }
 
                             }, function (err) {
+                                console.log('ERROR: ' + err);
+                                console.log('ERROR: ' + JSON.stringify(err));
+
+                                _lastError = {
+                                    type: 'error',
+                                    message: err.data && err.data.message || 'Could not connect to the server. Please try again or contact your administrator'
+                                };
+
                                 localStore.removeItem('user');
-                                promise.reject(err);
+                                promise.reject({
+                                    data: _lastError
+                                });
                             });
                         });
                     }, promiseService.throwError);
