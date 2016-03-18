@@ -9865,6 +9865,9 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
 
         // Public functions
         return {
+            getApp: function (id) {
+                return underscore.findWhere(_registeredApps, {id: id});
+            },
             getGroupedApps: function () {
                 return _groupedApps;
             },
