@@ -178,6 +178,13 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     var _terrainTypes = ['Plains', 'Mountains'];
     var _waterSourceTypes = ['Irrigation Scheme', 'River', 'Dam', 'Borehole'];
 
+    var _pipLandUseConvertion = {
+        'Crops': 'Cropland',
+        'Orchards': 'Horticulture (Perennial)',
+        'Plantations': 'Plantation',
+        'Vineyards': 'Horticulture (Perennial)'
+    };
+
     return {
         croppingPotentialTypes: function () {
             return _croppingPotentialTypes;
@@ -205,6 +212,9 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
         },
         isTerrainRequired: function (landUse) {
             return (landUse == 'Grazing');
+        },
+        getPipLandUseType: function (pipLandUse) {
+            return _pipLandUseConvertion[pipLandUse];
         }
     }
 });
