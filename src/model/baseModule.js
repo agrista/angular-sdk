@@ -19,6 +19,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 return inst;
             };
 
+            _constructor.newCopy = function (attrs) {
+                return this.new(angular.copy(attrs));
+            };
+
             _constructor.asJSON = function () {
                 return underscore.omit(JSON.parse(JSON.stringify(this)), ['$complete', '$dirty', '$id', '$local', '$saved', '$uri']);
             };
@@ -111,6 +115,26 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             Object.defineProperty(object, name, {
                 enumerable: false,
                 configurable: false,
+                get: function () {
+                    return val;
+                },
+                set: function (newVal) {
+                    val = newVal;
+                }
+            });
+
+            if (value !== undefined) {
+                object[name] = value;
+            }
+        }
+    }])
+    .factory('interfaceProperty', [function () {
+        return function (object, name, value) {
+            var val;
+
+            Object.defineProperty(object, name, {
+                enumerable: false,
+                configurable: true,
                 get: function () {
                     return val;
                 },
