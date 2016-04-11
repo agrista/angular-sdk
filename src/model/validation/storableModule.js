@@ -7,11 +7,11 @@ sdkModelStore.factory('Storable', ['computedProperty', 'privateProperty',
 
             privateProperty(_storable, 'set', function (inst, attrs) {
                 if (attrs) {
-                    inst.$complete = attrs.$complete;
-                    inst.$dirty = attrs.$dirty;
+                    inst.$complete = attrs.$complete === true;
+                    inst.$dirty = attrs.$dirty === true;
                     inst.$id = attrs.$id;
-                    inst.$local = attrs.$local;
-                    inst.$saved = attrs.$saved;
+                    inst.$local = attrs.$local === true;
+                    inst.$saved = attrs.$saved === true;
                     inst.$uri = attrs.$uri;
                 }
             });
