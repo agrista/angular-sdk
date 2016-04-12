@@ -868,7 +868,7 @@ sdkApiApp.factory('agristaApi', ['$http', 'pagingService', 'promiseService', 'co
         },
         searchMerchants: function (query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function (promise) {
@@ -1049,7 +1049,7 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                 delete query['regionName'];
             }
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
@@ -1067,7 +1067,7 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         },
         getDistinctProductionScheduleYears: function(query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
@@ -1078,7 +1078,7 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         },
         getDistinctProductionScheduleEnterprises: function(query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
@@ -1141,7 +1141,7 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'und
                     return (value == null || value == '');
                 })
                 .map(function (value, key) {
-                    return key + '=' + value;
+                    return key + '=' + encodeURIComponent(value);
                 })
                 .value().join('&');
 
@@ -1242,7 +1242,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
         },
         getAveragedBudgets: function(query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function (promise) {
@@ -1253,7 +1253,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
         },
         searchEnterpriseBudgets: function (query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function (promise) {
@@ -1346,7 +1346,7 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
         },
         searchComparables: function (query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function (promise) {
@@ -1455,7 +1455,7 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
     return {
         getProductDemandAssumptions: function(query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
@@ -1564,7 +1564,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
     return {
         getFarmlandValue: function(id, query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
@@ -1575,7 +1575,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
         },
         getFarmlandValues: function(query) {
             query = underscore.map(query, function (value, key) {
-                return key + '=' + value;
+                return key + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
