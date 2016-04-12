@@ -188,7 +188,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             });
 
             privateProperty(this, 'getConversionRate', function(animal) {
-                return conversionRate[this.baseAnimal][animal || representativeAnimal[this.baseAnimal]];
+                return conversionRate[this.baseAnimal][animal] || conversionRate[this.baseAnimal][representativeAnimal[this.baseAnimal]];
             });
 
             privateProperty(this, 'getConversionRates', function() {
@@ -286,7 +286,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 unit: 'head'
             }, {
                 code: 'INC-LSS-CST18',
-                name: 'Steer (18 moths plus)',
+                name: 'Steer (18 months plus)',
                 unit: 'head'
             }, {
                 code: 'INC-LSS-CST36',
@@ -680,7 +680,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 'Calf': 0.32,
                 'Weaner calves': 0.44,
                 'Cow or heifer': 1.1,
-                'Steer (18  months plus)': 0.75,
+                'Steer (18 months plus)': 0.75,
+                'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
                 'Bull (3 years plus)': 1.36
             },
@@ -943,11 +944,17 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
             }
         }
 
+        function roundValue (value, precision) {
+            precision = Math.pow(10, precision || 0);
+
+            return Math.round(value * precision) / precision;
+        }
+
         function recalculateEnterpriseBudget (instance) {
             validateEnterpriseBudget(instance);
 
             if(instance.assetType == 'livestock') {
-                instance.data.details.calculatedLSU = instance.data.details.herdSize * instance.getConversionRate()
+                instance.data.details.calculatedLSU = instance.data.details.herdSize * instance.getConversionRate();
             }
 
             instance.data.sections.forEach(function(section, i) {
@@ -982,14 +989,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
                                 }, 0)
                                 .value();
 
-                            category.value = (category.pricePerUnit || 0) * groupSum / 100;
+                            category.value = roundValue((category.pricePerUnit || 0) * groupSum / 100, 2);
                         } else {
                             category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
-                            category.value = (category.pricePerUnit || 0) * (category.quantity || 0);
+                            category.value = roundValue((category.pricePerUnit || 0) * (category.quantity || 0), 2);
                         }
 
                         if(instance.assetType == 'livestock') {
-                            category.valuePerLSU = (category.pricePerUnit || 0) / instance.getConversionRate(category.name);
+                            category.valuePerLSU = roundValue((category.pricePerUnit || 0) / instance.getConversionRate(category.name), 2);
                             group.total.valuePerLSU += category.valuePerLSU;
                         }
 

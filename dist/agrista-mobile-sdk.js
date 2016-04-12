@@ -10751,7 +10751,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             });
 
             privateProperty(this, 'getConversionRate', function(animal) {
-                return conversionRate[this.baseAnimal][animal || representativeAnimal[this.baseAnimal]];
+                return conversionRate[this.baseAnimal][animal] || conversionRate[this.baseAnimal][representativeAnimal[this.baseAnimal]];
             });
 
             privateProperty(this, 'getConversionRates', function() {
@@ -10849,7 +10849,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 unit: 'head'
             }, {
                 code: 'INC-LSS-CST18',
-                name: 'Steer (18 moths plus)',
+                name: 'Steer (18 months plus)',
                 unit: 'head'
             }, {
                 code: 'INC-LSS-CST36',
@@ -11243,7 +11243,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 'Calf': 0.32,
                 'Weaner calves': 0.44,
                 'Cow or heifer': 1.1,
-                'Steer (18  months plus)': 0.75,
+                'Steer (18 months plus)': 0.75,
+                'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
                 'Bull (3 years plus)': 1.36
             },
@@ -11506,11 +11507,17 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
             }
         }
 
+        function roundValue (value, precision) {
+            precision = Math.pow(10, precision || 0);
+
+            return Math.round(value * precision) / precision;
+        }
+
         function recalculateEnterpriseBudget (instance) {
             validateEnterpriseBudget(instance);
 
             if(instance.assetType == 'livestock') {
-                instance.data.details.calculatedLSU = instance.data.details.herdSize * instance.getConversionRate()
+                instance.data.details.calculatedLSU = instance.data.details.herdSize * instance.getConversionRate();
             }
 
             instance.data.sections.forEach(function(section, i) {
@@ -11545,14 +11552,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
                                 }, 0)
                                 .value();
 
-                            category.value = (category.pricePerUnit || 0) * groupSum / 100;
+                            category.value = roundValue((category.pricePerUnit || 0) * groupSum / 100, 2);
                         } else {
                             category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
-                            category.value = (category.pricePerUnit || 0) * (category.quantity || 0);
+                            category.value = roundValue((category.pricePerUnit || 0) * (category.quantity || 0), 2);
                         }
 
                         if(instance.assetType == 'livestock') {
-                            category.valuePerLSU = (category.pricePerUnit || 0) / instance.getConversionRate(category.name);
+                            category.valuePerLSU = roundValue((category.pricePerUnit || 0) / instance.getConversionRate(category.name), 2);
                             group.total.valuePerLSU += category.valuePerLSU;
                         }
 
@@ -12324,7 +12331,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
                         var scheduleCategory = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
 
                         if (scheduleCategory) {
-                            scheduleCategory[property] = fixPrecisionError((scheduleCategory[property] / 100) * offset, 2);
+                            scheduleCategory[property] = (scheduleCategory[property] / 100) * offset;
 
                             productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property);
                         }
@@ -12351,10 +12358,10 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
 
         inheritModel(ProductionGroup, EnterpriseBudgetBase);
 
-        function fixPrecisionError (number, precision) {
-            precision = precision || 10;
+        function roundValue (value, precision) {
+            precision = Math.pow(10, precision || 0);
 
-            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
+            return Math.round(value * precision) / precision;
         }
 
         function recalculateProductionGroup (instance) {
@@ -12389,9 +12396,9 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
                                 }
 
                                 if (section.code === 'INC') {
-                                    groupCategory.pricePerUnit = fixPrecisionError(groupCategory.value / groupCategory.quantity, 2);
+                                    groupCategory.pricePerUnit = roundValue(groupCategory.value / groupCategory.quantity, 2);
                                 } else {
-                                    groupCategory.valuePerHa = fixPrecisionError(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
+                                    groupCategory.valuePerHa = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
                                         return total + category.value;
                                     }, 0) / instance.data.details.size, 2);
                                 }
@@ -12431,16 +12438,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
                                     })
                                     .value();
 
-                                /*groupGroup.total.valuePerMonth = underscore.reduce(groupGroup.productCategories, function (valuePerMonth, category) {
-                                    return underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
-                                        valuePerMonth[index] += value;
-
-                                        return valuePerMonth;
-                                    }, valuePerMonth);
-                                }, groupGroup.total.valuePerMonth || underscore.range(instance.numberOfMonths).map(function () {
-                                    return 0;
-                                }));*/
-
                                 if (productionSchedule.type == 'livestock') {
                                     groupGroup.total.valuePerLSU = underscore.reduce(groupGroup.productCategories, function (total, category) {
                                         return total + category.valuePerLSU;
@@ -12467,16 +12464,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
                                     }) : angular.copy(valuePerMonth));
                                 })
                                 .value();
-
-                            /*groupSection.total.valuePerMonth = underscore.reduce(groupSection.productCategoryGroups, function (valuePerMonth, group) {
-                                return underscore.reduce(group.total.valuePerMonth, function (valuePerMonth, value, index) {
-                                    valuePerMonth[index] += value;
-
-                                    return valuePerMonth;
-                                }, valuePerMonth);
-                            }, groupSection.total.valuePerMonth || underscore.range(instance.numberOfMonths).map(function () {
-                                return 0;
-                            }));*/
 
                             if (productionSchedule.type == 'livestock') {
                                 groupSection.total.valuePerLSU = underscore.reduce(groupSection.productCategoryGroups, function (total, group) {
@@ -12693,10 +12680,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             }
         }
 
-        function fixPrecisionError (number, precision) {
-            precision = precision || 10;
+        function roundValue (value, precision) {
+            precision = Math.pow(10, precision || 0);
 
-            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
+            return Math.round(value * precision) / precision;
         }
 
         function recalculateProductionSchedule (instance) {
@@ -12715,12 +12702,12 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                                 scheduleCategory.pricePerUnit = category.pricePerUnit;
 
                                 if (instance.type == 'livestock') {
-                                    scheduleCategory.valuePerLSU += fixPrecisionError(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
-                                    scheduleCategory.quantity += fixPrecisionError(category.quantity * instance.data.details.multiplicationFactor, 2);
-                                    scheduleCategory.value += fixPrecisionError(category.value * instance.data.details.multiplicationFactor, 2);
+                                    scheduleCategory.valuePerLSU += roundValue(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
+                                    scheduleCategory.quantity += roundValue(category.quantity * instance.data.details.multiplicationFactor, 2);
+                                    scheduleCategory.value += roundValue(category.value * instance.data.details.multiplicationFactor, 2);
                                 } else {
-                                    scheduleCategory.quantity += fixPrecisionError(category.quantity * instance.allocatedSize, 2);
-                                    scheduleCategory.value += fixPrecisionError(category.value * instance.allocatedSize, 2);
+                                    scheduleCategory.quantity += roundValue(category.quantity * instance.allocatedSize, 2);
+                                    scheduleCategory.value += roundValue(category.value * instance.allocatedSize, 2);
                                 }
 
                                 if (section.code === 'EXP') {
