@@ -1007,14 +1007,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
                         group.total.valuePerMonth = (group.total.valuePerMonth ?
                             underscore.map(group.total.valuePerMonth, function (month, i) {
                                 return month + category.valuePerMonth[i];
-                            }) : category.valuePerMonth);
+                            }) : angular.copy(category.valuePerMonth));
                     });
 
                     section.total.value += group.total.value;
                     section.total.valuePerMonth = (section.total.valuePerMonth ?
                         underscore.map(section.total.valuePerMonth, function (month, i) {
                             return month + group.total.valuePerMonth[i];
-                        }) : group.total.valuePerMonth);
+                        }) : angular.copy(group.total.valuePerMonth));
 
                     if(instance.assetType == 'livestock') {
                         section.total.valuePerLSU += group.total.valuePerLSU;

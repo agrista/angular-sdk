@@ -1,7 +1,7 @@
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionGroup', ['EnterpriseBudgetBase', 'inheritModel', 'privateProperty', 'ProductionSchedule', 'underscore',
-    function (EnterpriseBudgetBase, inheritModel, privateProperty, ProductionSchedule, underscore) {
+sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'underscore',
+    function (computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, underscore) {
         function ProductionGroup (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -11,6 +11,14 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['EnterpriseBudgetBase', '
             this.productionSchedules = [];
 
             privateProperty(this, 'addProductionSchedule', function (productionSchedule) {
+                if (underscore.isUndefined(this.startDate) || moment(productionSchedule.startDate).isBefore(this.startDate)) {
+                    this.startDate = moment(productionSchedule.startDate).format('YYYY-MM-DD');
+                }
+
+                if (underscore.isUndefined(this.endDate) || moment(productionSchedule.endDate).isAfter(this.endDate)) {
+                    this.endDate = moment(productionSchedule.endDate).format('YYYY-MM-DD');
+                }
+
                 this.productionSchedules.push(productionSchedule);
                 this.recalculate();
             });
@@ -55,7 +63,15 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['EnterpriseBudgetBase', '
                 recalculateProductionGroup(this);
             });
 
+            computedProperty(this, 'numberOfMonths', function () {
+                return moment(this.endDate).diff(this.startDate, 'months');
+            });
+
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
+            this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
+
 
             underscore.each(attrs.productionSchedules, this.addProductionSchedule, this);
         }
@@ -79,6 +95,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['EnterpriseBudgetBase', '
             });
 
             angular.forEach(instance.productionSchedules, function (productionSchedule) {
+                var startOffset = moment(productionSchedule.startDate).diff(instance.startDate, 'months');
+
                 angular.forEach(productionSchedule.data.sections, function (section) {
                     if (productionSchedule.data.details.applyEstablishmentCosts || section.costStage === productionSchedule.defaultCostStage) {
                         angular.forEach(section.productCategoryGroups, function (group) {
@@ -104,6 +122,22 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['EnterpriseBudgetBase', '
                                         return total + category.value;
                                     }, 0) / instance.data.details.size, 2);
                                 }
+
+                                groupCategory.valuePerMonth = underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
+                                    valuePerMonth[index + startOffset] += value;
+
+                                    return valuePerMonth;
+                                }, groupCategory.valuePerMonth || underscore.range(instance.numberOfMonths).map(function () {
+                                    return 0;
+                                }));
+
+                                groupCategory.quantityPerMonth = underscore.reduce(category.quantityPerMonth, function (quantityPerMonth, value, index) {
+                                    quantityPerMonth[index + startOffset] += value;
+
+                                    return quantityPerMonth;
+                                }, groupCategory.quantityPerMonth || underscore.range(instance.numberOfMonths).map(function () {
+                                    return 0;
+                                }));
                             });
 
                             // Group totals
@@ -113,6 +147,26 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['EnterpriseBudgetBase', '
                                 groupGroup.total.value = underscore.reduce(groupGroup.productCategories, function (total, category) {
                                     return total + category.value;
                                 }, 0);
+
+                                groupGroup.total.valuePerMonth = underscore
+                                    .chain(groupGroup.productCategories)
+                                    .pluck('valuePerMonth')
+                                    .reduce(function (totalPerMonth, valuePerMonth) {
+                                        return (totalPerMonth ? underscore.map(valuePerMonth, function (value, index) {
+                                            return totalPerMonth[index] + value;
+                                        }) : angular.copy(valuePerMonth));
+                                    })
+                                    .value();
+
+                                /*groupGroup.total.valuePerMonth = underscore.reduce(groupGroup.productCategories, function (valuePerMonth, category) {
+                                    return underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
+                                        valuePerMonth[index] += value;
+
+                                        return valuePerMonth;
+                                    }, valuePerMonth);
+                                }, groupGroup.total.valuePerMonth || underscore.range(instance.numberOfMonths).map(function () {
+                                    return 0;
+                                }));*/
 
                                 if (productionSchedule.type == 'livestock') {
                                     groupGroup.total.valuePerLSU = underscore.reduce(groupGroup.productCategories, function (total, category) {
@@ -129,6 +183,27 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['EnterpriseBudgetBase', '
                             groupSection.total.value = underscore.reduce(groupSection.productCategoryGroups, function (total, group) {
                                 return total + group.total.value;
                             }, 0);
+
+                            groupSection.total.valuePerMonth = underscore
+                                .chain(groupSection.productCategoryGroups)
+                                .pluck('total')
+                                .pluck('valuePerMonth')
+                                .reduce(function (totalPerMonth, valuePerMonth) {
+                                    return (totalPerMonth ? underscore.map(valuePerMonth, function (value, index) {
+                                        return totalPerMonth[index] + value;
+                                    }) : angular.copy(valuePerMonth));
+                                })
+                                .value();
+
+                            /*groupSection.total.valuePerMonth = underscore.reduce(groupSection.productCategoryGroups, function (valuePerMonth, group) {
+                                return underscore.reduce(group.total.valuePerMonth, function (valuePerMonth, value, index) {
+                                    valuePerMonth[index] += value;
+
+                                    return valuePerMonth;
+                                }, valuePerMonth);
+                            }, groupSection.total.valuePerMonth || underscore.range(instance.numberOfMonths).map(function () {
+                                return 0;
+                            }));*/
 
                             if (productionSchedule.type == 'livestock') {
                                 groupSection.total.valuePerLSU = underscore.reduce(groupSection.productCategoryGroups, function (total, group) {
@@ -166,8 +241,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                 var startCycle = this.budget.data.details.cycleStart || startDate.month(),
                     allocationDate = moment([(startDate.month() < startCycle ? startDate.year() - 1 : startDate.year()), startCycle]);
 
-                this.startDate = allocationDate.format();
-                this.endDate = allocationDate.add(1, 'y').format();
+                this.startDate = allocationDate.format('YYYY-MM-DD');
+                this.endDate = allocationDate.add(1, 'y').format('YYYY-MM-DD');
 
                 if (this.asset) {
                     this.data.details.assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
@@ -312,6 +387,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                 return this.data.details.size || 0;
             });
 
+            computedProperty(this, 'numberOfMonths', function () {
+                return moment(this.endDate).diff(this.startDate, 'months');
+            });
+
             computedProperty(this, 'income', function () {
                 return underscore.findWhere(this.data.sections, {code: 'INC'});
             });
@@ -325,10 +404,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             this.assetId = attrs.assetId;
             this.budgetUuid = attrs.budgetUuid;
             this.type = attrs.type;
-            this.endDate = attrs.endDate;
+            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             this.id = attrs.id || attrs.$id;
             this.organizationId = attrs.organizationId;
-            this.startDate = attrs.startDate;
+            this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
 
             this.organization = attrs.organization;
 
@@ -400,7 +479,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                                     .reduce(function (total, valuePerMonth) {
                                         return (total ? underscore.map(valuePerMonth, function (value, index) {
                                             return total[index] + value;
-                                        }) : valuePerMonth);
+                                        }) : angular.copy(valuePerMonth));
                                     })
                                     .value();
 
@@ -410,7 +489,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                                     .reduce(function (total, quantityPerMonth) {
                                         return (total ? underscore.map(quantityPerMonth, function (value, index) {
                                             return total[index] + value;
-                                        }) : quantityPerMonth);
+                                        }) : angular.copy(quantityPerMonth));
                                     })
                                     .value();
 
@@ -437,7 +516,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                                 .reduce(function (total, valuePerMonth) {
                                     return (total ? underscore.map(valuePerMonth, function (value, index) {
                                         return total[index] + value;
-                                    }) : valuePerMonth);
+                                    }) : angular.copy(valuePerMonth));
                                 })
                                 .value();
 
@@ -448,7 +527,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                                 .reduce(function (total, quantityPerMonth) {
                                     return (total ? underscore.map(quantityPerMonth, function (value, index) {
                                         return total[index] + value;
-                                    }) : quantityPerMonth);
+                                    }) : angular.copy(quantityPerMonth));
                                 })
                                 .value();
 
