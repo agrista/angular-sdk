@@ -146,8 +146,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                     if (this.assetType == 'livestock') {
                         category = underscore.extend(category, {
                             conversionRate: this.getConversionRate(category.name),
-                            valuePerLSU: 0
+                            valuePerLSU: 0,
+                            per: 'LSU'
                         });
+                    } else {
+                        category.per = 'ha';
                     }
 
                     group.productCategories.push(category);
