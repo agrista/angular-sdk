@@ -559,6 +559,20 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        attachLiability: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/legalentity/' + id + '/liability', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachLiability: function (id, liabilityId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/legalentity/' + id + '/liability/' + liabilityId + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
