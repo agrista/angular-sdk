@@ -12541,6 +12541,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                 this.data.budget = this.budget;
                 this.data.details = underscore.extend(this.data.details, {
                     applyEstablishmentCosts: false,
+                    commodity: this.budget.commodityType,
                     grossProfit: 0
                 });
 
