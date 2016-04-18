@@ -1523,6 +1523,13 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        validateData: function(data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/data-validate', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
