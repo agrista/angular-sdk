@@ -2270,7 +2270,12 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                         }
 
                         return res;
-                    }, promiseService.throwError);
+                    }, function (err) {
+                        _scroll.complete = true;
+                        _scroll.busy = false;
+
+                        promiseService.throwError(err);
+                    });
                 }
             };
 
