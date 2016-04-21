@@ -5102,6 +5102,9 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
             getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
 
+            taskStatusTitles: function () {
+                return _taskStatusTitles;
+            },
             filterTasks: function (tasks, excludeStatus) {
                 excludeStatus = excludeStatus || [];
 
