@@ -2458,7 +2458,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 case 'crop':
                 case 'permanent crop':
                 case 'plantation':
-                    return (asset.data.plantedArea ? $filter('number')(asset.data.plantedArea, 2) + 'Ha' : '') +
+                    return (asset.data.plantedArea ? $filter('number')(asset.data.plantedArea, 2) + 'ha' : '') +
                        (asset.data.plantedArea && asset.data.crop ? ' of ' : '') +
                        (asset.data.crop ? asset.data.crop : '') +
                        (asset.data.fieldName ? ' on field ' + asset.data.fieldName : '');
@@ -2504,7 +2504,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.farmId;
             } else if (item.type == 'farmland') {
                 map.title = _assetTitle(item);
-                map.subtitle = (item.data.area !== undefined ? 'Area: ' + $filter('number')(item.data.area, 2) + 'Ha' : 'Unknown area');
+                map.subtitle = (item.data.area !== undefined ? 'Area: ' + $filter('number')(item.data.area, 2) + 'ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'improvement') {
                 map.title = _assetTitle(item);
@@ -2514,7 +2514,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.farmId;
             } else if (item.type == 'cropland') {
                 map.title = _assetTitle(item);
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'livestock') {
                 map.title = _assetTitle(item);
@@ -2523,7 +2523,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.data.type;
             } else if (item.type == 'pasture') {
                 map.title = _assetTitle(item);
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'permanent crop') {
                 map.title = _assetTitle(item);
@@ -2540,11 +2540,11 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                 map.groupby = item.data.type;
             } else if (item.type == 'wasteland') {
                 map.title = _assetTitle(item);
-                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
+                map.subtitle = (item.data.size !== undefined ? 'Area: ' + $filter('number')(item.data.size, 2) + 'ha' : 'Unknown area');
                 map.groupby = item.farmId;
             } else if (item.type == 'water right') {
                 map.title = _assetTitle(item);
-                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + $filter('number')(item.data.size, 2) + 'Ha' : 'Unknown area');
+                map.subtitle = (item.data.size !== undefined ? 'Irrigatable Extent: ' + $filter('number')(item.data.size, 2) + 'ha' : 'Unknown area');
                 map.groupby = item.farmId;
             }
 
@@ -2911,9 +2911,9 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
     var _landUseCropTypes = {
         'Cropland': ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Peanut', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'],
         'Grazing': _grazingCropTypes,
-        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Fig', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Prickly Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Tea', 'Walnut'],
+        'Horticulture (Perennial)': ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Fig', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Prickly Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Walnut'],
         'Horticulture (Seasonal)': ['Asparagus', 'Beet', 'Beetroot', 'Blackberry', 'Borecole', 'Brinjal', 'Broccoli', 'Brussel Sprout', 'Cabbage', 'Cabbage (Chinese)', 'Cabbage (Savoy)', 'Cactus Pear', 'Carrot', 'Cauliflower', 'Celery', 'Chicory', 'Chili', 'Cucumber', 'Cucurbit', 'Garlic', 'Ginger', 'Granadilla', 'Kale', 'Kohlrabi', 'Leek', 'Lentil', 'Lespedeza', 'Lettuce', 'Makataan', 'Mustard', 'Mustard (White)', 'Onion', 'Paprika', 'Parsley', 'Parsnip', 'Pea', 'Pea (Dry)', 'Pepper', 'Pumpkin', 'Quince', 'Radish', 'Squash', 'Strawberry', 'Swede', 'Sweet Melon', 'Swiss Chard', 'Tomato', 'Turnip', 'Vetch (Common)', 'Vetch (Hairy)', 'Watermelon', 'Youngberry'],
-        'Plantation': ['Bluegum', 'Pine', 'Sugarcane', 'Wattle'],
+        'Plantation': ['Bluegum', 'Pine', 'Sugarcane', 'Tea', 'Wattle'],
         'Planted Pastures': _grazingCropTypes
     };
 
@@ -5996,7 +5996,7 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
     };
 
     var _expenseUnits = {
-        area: 'Ha',
+        area: 'ha',
         distance: 'km',
         hours: 'h'
     };
@@ -10122,8 +10122,8 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
 }]);
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, Liability, Model, moment, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, attachmentHelper, computedProperty, inheritModel, Liability, Model, moment, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -10148,6 +10148,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                 (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
             });
 
+            privateProperty(this, 'getPhoto', function () {
+                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png')
+            });
+
             computedProperty(this, 'age', function (asOfDate) {
                 return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
             });
@@ -10157,21 +10161,22 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                     case 'crop':
                     case 'permanent crop':
                     case 'plantation':
-                        return (this.data.plantedArea ? $filter('number')(this.data.plantedArea, 2) + 'Ha' : '') +
+                        return (this.data.plantedArea ? $filter('number')(this.data.plantedArea, 2) + 'ha' : '') +
                             (this.data.plantedArea && this.data.crop ? ' of ' : '') +
                             (this.data.crop ? this.data.crop : '') +
                             (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
                     case 'farmland':
-                        return (this.data.portionLabel ? this.data.portionLabel :
-                            (this.data.portionNumber ? 'Portion ' + this.data.portionNumber : 'Remainder of farm'));
+                        return (this.data.label ? this.data.label :
+                            (this.data.portionLabel ? this.data.portionLabel :
+                                (this.data.portionNumber ? 'Ptn. ' + this.data.portionNumber : 'Rem. extent of farm')));
                     case 'cropland':
-                        return (this.data.equipped ? 'Irrigated ' + this.type + ' (' + (this.data.irrigation ? this.data.irrigation + ' irrigation from ' : '')
-                            + this.data.waterSource + ')' : (this.data.irrigated ? 'Irrigable, unequipped ' : 'Non irrigable ') + this.type)
-                            + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
+                        return (this.data.irrigation ? this.data.irrigation + ' irrigated' :
+                                (this.data.irrigated ? 'Irrigated' + (this.data.equipped ? ', equipped' : ', unequipped') : 'Non irrigable'))
+                            + ' ' + this.type + (this.data.waterSource ? ' from ' + this.data.waterSource : '') + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
                     case 'livestock':
                         return this.data.type + (this.data.category ? ' - ' + this.data.category : '');
                     case 'pasture':
-                        return (this.data.intensified ? (this.data.crop || 'Intensified pasture') : 'Natural grazing') +
+                        return (this.data.intensified ? (this.data.crop ? this.data.crop + ' intensified ' : 'Intensified ') + this.type : 'Natural grazing') +
                             (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
                     case 'vme':
                         return this.data.category + (this.data.model ? ' model ' + this.data.model : '');
@@ -10185,12 +10190,35 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
                 }
             });
 
-            computedProperty(this, 'liquidityTypeTitle', function () {
-                return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
-            });
-
             computedProperty(this, 'description', function () {
                 return this.data.description || '';
+            });
+
+            computedProperty(this, 'fieldName', function () {
+                return this.data.fieldName;
+            });
+
+            computedProperty(this, 'size', function () {
+                return this.data.size;
+            });
+
+            // Crop
+            privateProperty(this, 'availableCrops', function () {
+                return Asset.cropsByType[this.type] || [];
+            });
+
+            computedProperty(this, 'crop', function () {
+                return this.data.crop;
+            });
+
+            computedProperty(this, 'establishedDate', function () {
+                return this.data.establishedDate;
+            });
+
+            // Value / Liability
+
+            computedProperty(this, 'liquidityTypeTitle', function () {
+                return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
             });
 
             privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
@@ -10249,6 +10277,20 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             'water right': 'Water Rights'
         });
 
+        var _croplandCrops = ['Barley', 'Bean', 'Bean (Broad)', 'Bean (Dry)', 'Bean (Sugar)', 'Bean (Green)', 'Bean (Kidney)', 'Canola', 'Cassava', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Maize', 'Maize (White)', 'Maize (Yellow)', 'Oats', 'Peanut', 'Pearl Millet', 'Potato', 'Rape', 'Rice', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Sweet Potato', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Durum)'];
+        var _grazingCrops = ['Bahia-Notatum', 'Birdsfoot Trefoil', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Phalaris', 'Rescue', 'Rhodes', 'Russian Grass', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium', 'Smuts Finger', 'Soutbos', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'];
+        var _perennialCrops = ['Almond', 'Aloe', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Cherry', 'Coconut', 'Coffee', 'Fig', 'Grape', 'Grape (Bush Vine)', 'Grape (Red)', 'Grape (Table)', 'Grape (White)', 'Grapefruit', 'Guava', 'Hops', 'Kiwi Fruit', 'Lemon', 'Litchi', 'Macadamia Nut', 'Mandarin', 'Mango', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Peach', 'Pear', 'Prickly Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Rooibos', 'Sisal', 'Walnut'];
+        var _plantationCrops = ['Bluegum', 'Pine', 'Sugarcane', 'Tea', 'Wattle'];
+
+        readOnlyProperty(Asset, 'cropsByType', {
+            'crop': _croplandCrops,
+            'cropland': _croplandCrops,
+            'livestock': _grazingCrops,
+            'pasture': _grazingCrops,
+            'permanent crop': _perennialCrops,
+            'plantation': _plantationCrops
+        });
+
         readOnlyProperty(Asset, 'liquidityTypes', {
             'long-term': 'Long-term',
             'medium-term': 'Movable',
@@ -10259,9 +10301,46 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             'other': 'Other'
         }, Asset.assetTypes));
 
+        privateProperty(Asset, 'getTypeTitle', function (type) {
+            return Asset.assetTypes[type] || '';
+        });
+
+        privateProperty(Asset, 'getTitleType', function (title) {
+            var keys = underscore.keys(Asset.assetTypes);
+
+            return keys[underscore.values(Asset.assetTypes).indexOf(title)];
+        });
+
         Asset.validates({
+            crop: {
+                requiredIf: function (value, instance, field) {
+                    return underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type);
+                },
+                inclusion: {
+                    in: function (value, instance, field) {
+                        return Asset.cropsByType[instance.type];
+                    }
+                }
+            },
+            establishedDate: {
+                requiredIf: function (value, instance, field) {
+                    return underscore.contains(['permanent crop', 'plantation'], instance.type);
+                },
+                format: {
+                    date: true
+                }
+            },
             farmId: {
                 numeric: true
+            },
+            fieldName: {
+                requiredIf: function (value, instance, field) {
+                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation'], instance.type);
+                },
+                length: {
+                    min: 1,
+                    max: 255
+                }
             },
             legalEntityId: {
                 required: true,
@@ -10269,6 +10348,12 @@ sdkModelAsset.factory('Asset', ['$filter', 'computedProperty', 'inheritModel', '
             },
             assetKey: {
                 required: true
+            },
+            size: {
+                requiredIf: function (value, instance, field) {
+                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                },
+                numeric: true
             },
             type: {
                 required: true,
