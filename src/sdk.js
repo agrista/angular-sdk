@@ -16,6 +16,7 @@ angular.module('ag.sdk.helper', [
 ]);
 
 angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.geocledian',
     'ag.sdk.interface.ui',
     'ag.sdk.interface.list',
     'ag.sdk.interface.map',

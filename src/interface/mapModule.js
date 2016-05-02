@@ -2552,8 +2552,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 }]);
 
 sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScope) {
-    var _position;
-
     var _positions = {
         topleft: '.leaflet-top.leaflet-left',
         topright: '.leaflet-top.leaflet-right',
@@ -2565,7 +2563,7 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
-            parent.find('.leaflet-control-container ' + _positions[_position]).prepend(element);
+            parent.find('.leaflet-control-container ' + _positions[scope.position]).prepend(element);
 
             scope.hidden = false;
         });
@@ -2576,11 +2574,12 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         require: '^mapbox',
         replace: true,
         transclude: true,
+        scope: {
+            position: '@'
+        },
         template: '<div class="leaflet-control"><div class="leaflet-bar" ng-hide="hidden" ng-transclude></div></div>',
         link: function (scope, element, attrs) {
             scope.hidden = true;
-
-            _position = (attrs.position == undefined ? 'bottomright' : attrs.position);
         },
         controller: function($scope, $element) {
             addListeners($scope, $element);
