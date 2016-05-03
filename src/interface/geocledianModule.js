@@ -33,19 +33,12 @@ sdkInterfaceGeocledianApp.provider('geocledianService', ['underscore', function 
                         })
                         .value();
                 },
-                getParcels: function (type, date) {
-                    if (type && date) {
-                        return underscore.where(this.parcels, {type: type, date: date});
-                    } else if (type) {
-                        return underscore.where(this.parcels, {type: type});
-                    } else if (date) {
-                        return underscore.where(this.parcels, {date: date});
+                getParcels: function (query) {
+                    if (typeof query != 'object') {
+                        query = {'parcel_id': query};
                     }
 
-                    return this.parcels;
-                },
-                getParcel: function (parcelId, type) {
-                    return underscore.findWhere(this.parcels, (type ? {parcel_id: parcelId, type: type} : {parcel_id: parcelId}));
+                    return underscore.where(this.parcels, query);
                 },
                 getParcelImageUrl: function (parcel, imageType) {
                     return _defaultConfig.url + parcel[imageType || 'png'] + '?key=' + _defaultConfig.key;
@@ -54,11 +47,17 @@ sdkInterfaceGeocledianApp.provider('geocledianService', ['underscore', function 
 
             function addParcel (instance, parcelId) {
                 return promiseService.wrapAll(function (promises) {
-                    if (parcelId) {
+                    var parcels = instance.getParcels(parcelId);
+
+                    if (parcelId && parcels && parcels.length == 0) {
                         instance.ids.push(parcelId);
 
                         underscore.each(_defaultConfig.layers, function (layer) {
                             promises.push(addParcelType(instance, parcelId, layer));
+                        });
+                    } else {
+                        underscore.each(parcels, function (parcel) {
+                            promises.push(parcel);
                         });
                     }
                 });
@@ -67,7 +66,6 @@ sdkInterfaceGeocledianApp.provider('geocledianService', ['underscore', function 
             function addParcelType (instance, parcelId, type) {
                 return $http.get(_defaultConfig.url + 'parcels/' + parcelId + '/' + type + '?key=' + _defaultConfig.key).then(function (result) {
                     if (result && result.data && result.data.content) {
-
                         instance.parcels = instance.parcels.concat(underscore.map(result.data.content, function (parcel) {
                             return underscore.extend(parcel, {
                                 type: type
