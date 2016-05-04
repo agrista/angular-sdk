@@ -129,11 +129,11 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             this.legalEntityId = attrs.legalEntityId;
 
             this.liabilities = underscore.map(attrs.liabilities, function (liability) {
-                return Liability.new(liability);
+                return Liability.newCopy(liability);
             });
 
             this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
-                return ProductionSchedule.new(schedule);
+                return ProductionSchedule.newCopy(schedule);
             });
 
             this.type = attrs.type;

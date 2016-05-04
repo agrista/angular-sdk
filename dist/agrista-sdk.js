@@ -10332,11 +10332,11 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             this.legalEntityId = attrs.legalEntityId;
 
             this.liabilities = underscore.map(attrs.liabilities, function (liability) {
-                return Liability.new(liability);
+                return Liability.newCopy(liability);
             });
 
             this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
-                return ProductionSchedule.new(schedule);
+                return ProductionSchedule.newCopy(schedule);
             });
 
             this.type = attrs.type;
@@ -14064,7 +14064,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             });
 
             privateProperty(this, 'setAsset', function (asset) {
-                this.asset = asset;
+                this.asset = underscore.omit(asset, ['liabilities', 'productionSchedules']);
                 this.assetId = this.asset.id || this.asset.$id;
                 this.data.details.fieldName = this.asset.data.fieldName;
                 this.data.details.assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
@@ -14081,7 +14081,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = EnterpriseBudget.new(budget);
+                this.budget = (budget instanceof EnterpriseBudget ? budget : EnterpriseBudget.new(budget));
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 
@@ -14123,10 +14123,13 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                 if (this.type == 'livestock') {
                     this.data.details.calculatedLSU = (this.data.details.stockingDensity ? this.allocatedSize / this.data.details.stockingDensity : 0);
                     this.data.details.multiplicationFactor = roundValue(this.data.details.calculatedLSU ? (this.data.details.stockingDensity ? this.allocatedSize / this.data.details.stockingDensity : 0) / this.data.details.calculatedLSU : 0, 2);
-                    this.data.details.herdSize = this.budget.data.details.herdSize * this.data.details.multiplicationFactor;
-                    this.data.details.grossProfit = this.budget.data.details.grossProfit * this.data.details.multiplicationFactor;
-                    this.data.details.grossProfitPerLSU = (this.data.details.calculatedLSU ? this.data.details.grossProfit / this.data.details.calculatedLSU : 0);
-                } else {
+
+                    if (this.budget) {
+                        this.data.details.herdSize = this.budget.data.details.herdSize * this.data.details.multiplicationFactor;
+                        this.data.details.grossProfit = this.budget.data.details.grossProfit * this.data.details.multiplicationFactor;
+                        this.data.details.grossProfitPerLSU = (this.data.details.calculatedLSU ? this.data.details.grossProfit / this.data.details.calculatedLSU : 0);
+                    }
+                } else if (this.budget) {
                     this.data.details.grossProfit = this.budget.data.details.grossProfit * this.data.details.size;
                 }
 
@@ -14196,15 +14199,19 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             });
 
             computedProperty(this, 'assetType', function () {
-                return this.budget.assetType;
+                return (this.budget ? this.budget.assetType : undefined);
             });
 
             computedProperty(this, 'commodityType', function () {
-                return this.budget.commodityType;
+                return (this.budget ? this.budget.commodityType : undefined);
             });
             
             computedProperty(this, 'allocatedSize', function () {
                 return roundValue(this.data.details.size || 0, 2);
+            });
+
+            computedProperty(this, 'title', function () {
+                return this.allocatedSize + 'ha ' + (this.commodityType ? 'of ' + this.commodityType : '') + (this.startDate ? ' starting ' + moment(this.startDate).format('MMM YYYY') : '');
             });
 
             computedProperty(this, 'numberOfMonths', function () {
