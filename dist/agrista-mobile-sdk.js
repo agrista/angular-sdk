@@ -8883,7 +8883,11 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             });
 
             privateProperty(this, 'getPhoto', function () {
-                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png')
+                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+            });
+
+            privateProperty(this, 'getTitle', function (withField) {
+                return getTitle(this, withField);
             });
 
             computedProperty(this, 'age', function (asOfDate) {
@@ -8891,37 +8895,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             });
 
             computedProperty(this, 'title', function () {
-                switch (this.type) {
-                    case 'crop':
-                    case 'permanent crop':
-                    case 'plantation':
-                        return (this.data.plantedArea ? $filter('number')(this.data.plantedArea, 2) + 'ha' : '') +
-                            (this.data.plantedArea && this.data.crop ? ' of ' : '') +
-                            (this.data.crop ? this.data.crop : '') +
-                            (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
-                    case 'farmland':
-                        return (this.data.label ? this.data.label :
-                            (this.data.portionLabel ? this.data.portionLabel :
-                                (this.data.portionNumber ? 'Ptn. ' + this.data.portionNumber : 'Rem. extent of farm')));
-                    case 'cropland':
-                        return (this.data.irrigation ? this.data.irrigation + ' irrigated' :
-                                (this.data.irrigated ? 'Irrigated' + (this.data.equipped ? ', equipped' : ', unequipped') : 'Non irrigable'))
-                            + ' ' + this.type + (this.data.waterSource ? ' from ' + this.data.waterSource : '') + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
-                    case 'livestock':
-                        return this.data.type + (this.data.category ? ' - ' + this.data.category : '');
-                    case 'pasture':
-                        return (this.data.intensified ? (this.data.crop ? this.data.crop + ' intensified ' : 'Intensified ') + this.type : 'Natural grazing') +
-                            (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
-                    case 'vme':
-                        return this.data.category + (this.data.model ? ' model ' + this.data.model : '');
-                    case 'wasteland':
-                        return 'Wasteland';
-                    case 'water source':
-                    case 'water right':
-                        return this.data.waterSource + (this.data.fieldName ? ' on field ' + this.data.fieldName : '');
-                    default:
-                        return this.data.name || this.assetTypes[this.type];
-                }
+                return getTitle(this, true);
             });
 
             computedProperty(this, 'description', function () {
@@ -9007,7 +8981,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'permanent crop': 'Permanent Crops',
             'plantation': 'Plantations',
             'vme': 'Vehicles, Machinery & Equipment',
-            'wasteland': 'Wasteland',
+            'wasteland': 'Homestead & Wasteland',
             'water right': 'Water Rights'
         });
 
@@ -9044,6 +9018,40 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
 
             return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
+
+        function getTitle (instance, withField) {
+            switch (instance.type) {
+                case 'crop':
+                case 'permanent crop':
+                case 'plantation':
+                    return (instance.data.plantedArea ? $filter('number')(instance.data.plantedArea, 2) + 'ha' : '') +
+                        (instance.data.plantedArea && instance.data.crop ? ' of ' : '') +
+                        (instance.data.crop ? instance.data.crop : '') +
+                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                case 'farmland':
+                    return (instance.data.label ? instance.data.label :
+                        (instance.data.portionLabel ? instance.data.portionLabel :
+                            (instance.data.portionNumber ? 'Ptn. ' + instance.data.portionNumber : 'Rem. extent of farm')));
+                case 'cropland':
+                    return (instance.data.irrigation ? instance.data.irrigation + ' irrigated' :
+                            (instance.data.irrigated ? 'Irrigated' + (instance.data.equipped ? ', equipped' : ', unequipped') : 'Non irrigable'))
+                        + ' ' + instance.type + (instance.data.waterSource ? ' from ' + instance.data.waterSource : '') + (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                case 'livestock':
+                    return instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
+                case 'pasture':
+                    return (instance.data.intensified ? (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type : 'Natural grazing') +
+                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                case 'vme':
+                    return instance.data.category + (instance.data.model ? ' model ' + instance.data.model : '');
+                case 'wasteland':
+                    return 'Homestead & Wasteland';
+                case 'water source':
+                case 'water right':
+                    return instance.data.waterSource + (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                default:
+                    return instance.data.name || instance.assetTypes[instance.type];
+            }
+        }
 
         Asset.validates({
             crop: {
