@@ -14058,7 +14058,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             privateProperty(this, 'setDate', function (startDate) {
                 startDate = moment(startDate);
 
-                var startCycle = this.budget.data.details.cycleStart || startDate.month(),
+                var startCycle = (this.budget ? this.budget.cycleStart : startDate.month()),
                     allocationDate = moment([(startDate.month() < startCycle ? startDate.year() - 1 : startDate.year()), startCycle]);
 
                 this.startDate = allocationDate.format('YYYY-MM-DD');
@@ -14108,6 +14108,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
                         stockingDensity: 0,
                         multiplicationFactor: 0
                     });
+                }
+
+                if (this.startDate) {
+                    this.setDate(this.startDate);
                 }
 
                 if (this.data.details.pastureType && this.budget.data.details.stockingDensity) {
