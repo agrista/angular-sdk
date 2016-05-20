@@ -668,39 +668,45 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     }
                 },
                 request: function (params) {
-                    var currentListId = _listId;
-
-                    params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
-
-                    _scroll.busy = true;
-                    delete params.complete;
-
-                    return requestor(params).then(function(res) {
-                        if (params.search === undefined) {
-                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                            _scroll.complete = (res.length !== _scroll.page.limit);
+                    return promiseService.wrap(function (promise) {
+                        if (_scroll.disabled()) {
+                            promise.reject();
                         } else {
-                            _scroll.searching = params;
-                            _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
-                            _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                            var currentListId = _listId;
+
+                            params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
+
+                            _scroll.busy = true;
+                            delete params.complete;
+
+                            requestor(params).then(function(res) {
+                                if (params.search === undefined) {
+                                    _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                                    _scroll.complete = (res.length !== _scroll.page.limit);
+                                } else {
+                                    _scroll.searching = params;
+                                    _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                                    _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                                }
+
+                                _scroll.busy = false;
+
+                                if (currentListId === _listId) {
+                                    if (dataMap) {
+                                        res = dataMapService(res, dataMap);
+                                    }
+
+                                    itemStore(res);
+                                }
+
+                                promise.resolve(res);
+                            }, function (err) {
+                                _scroll.complete = true;
+                                _scroll.busy = false;
+
+                                promise.reject(err);
+                            });
                         }
-
-                        _scroll.busy = false;
-
-                        if (currentListId === _listId) {
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
-
-                            itemStore(res);
-                        }
-
-                        return res;
-                    }, function (err) {
-                        _scroll.complete = true;
-                        _scroll.busy = false;
-
-                        promiseService.throwError(err);
                     });
                 }
             };
@@ -715,12 +721,12 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                 if (params !== undefined) {
                     if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
+                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
                     } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promiseService.throwError);
+                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
                     }
                 } else {
-                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
+                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
                 }
             });
         }
@@ -10278,7 +10284,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }, 0);
             }
 
-            function calculateYearlEndLiabilityBalance(monthlyTotals, year) {
+            function calculateYearlyEndLiabilityBalance(monthlyTotals, year) {
                 var yearSlice = monthlyTotals.slice((year - 1) * 12, year * 12);
                 return yearSlice[yearSlice.length - 1];
             }
@@ -10435,7 +10441,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
                     mediumLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'medium-term'),
                     longLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'long-term'),
-                    totalLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
+                    totalLiabilities: [calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
                     totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
 
                     // Assets
@@ -12039,7 +12045,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'medium-term': 'Medium Term',
             'long-term': 'Long Term',
             'production-credit': 'Production Credit',
-            'rent': 'Rented'
+            'rent': 'Rent'
         };
 
         var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
@@ -12121,9 +12127,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.data = (attrs && attrs.data) || {};
 
             computedProperty(this, 'title', function () {
-                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
-                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
-                    (this.name ? this.name : Liability.getTypeTitle(this.type));
+                return this.name || (this.type ? Liability.getTypeTitle(this.type) + ' ' : '') + (this.type === 'rent' ?
+                        (this.installmentPayment ? 'R ' + $filter('number')(this.installmentPayment, 0) + ' installments ' : '') :
+                        (this.amount ? 'R ' + $filter('number')(this.amount, 0) + ' loan ' : '')) +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' repayment ' : '');
             });
 
             computedProperty(this, 'subtype', function () {
@@ -12369,7 +12376,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         }, Liability.liabilityTypes));
 
         privateProperty(Liability, 'getFrequencyTitle', function (type) {
-            return Liability.frequencyTypes[type] || '';
+            return Liability.frequencyTypesWithCustom[type] || '';
         });
 
         privateProperty(Liability, 'getTypeTitle', function (type) {

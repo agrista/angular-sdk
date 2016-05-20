@@ -1018,7 +1018,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }, 0);
             }
 
-            function calculateYearlEndLiabilityBalance(monthlyTotals, year) {
+            function calculateYearlyEndLiabilityBalance(monthlyTotals, year) {
                 var yearSlice = monthlyTotals.slice((year - 1) * 12, year * 12);
                 return yearSlice[yearSlice.length - 1];
             }
@@ -1175,7 +1175,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
                     mediumLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'medium-term'),
                     longLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'long-term'),
-                    totalLiabilities: [calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
+                    totalLiabilities: [calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
                     totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
 
                     // Assets

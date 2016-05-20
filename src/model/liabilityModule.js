@@ -15,7 +15,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'medium-term': 'Medium Term',
             'long-term': 'Long Term',
             'production-credit': 'Production Credit',
-            'rent': 'Rented'
+            'rent': 'Rent'
         };
 
         var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
@@ -97,9 +97,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.data = (attrs && attrs.data) || {};
 
             computedProperty(this, 'title', function () {
-                return (this.installmentPayment ? $filter('number')(this.installmentPayment, 0) + ' ' : '') +
-                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' ' : '') +
-                    (this.name ? this.name : Liability.getTypeTitle(this.type));
+                return this.name || (this.type ? Liability.getTypeTitle(this.type) + ' ' : '') + (this.type === 'rent' ?
+                        (this.installmentPayment ? 'R ' + $filter('number')(this.installmentPayment, 0) + ' installments ' : '') :
+                        (this.amount ? 'R ' + $filter('number')(this.amount, 0) + ' loan ' : '')) +
+                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' repayment ' : '');
             });
 
             computedProperty(this, 'subtype', function () {
@@ -345,7 +346,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         }, Liability.liabilityTypes));
 
         privateProperty(Liability, 'getFrequencyTitle', function (type) {
-            return Liability.frequencyTypes[type] || '';
+            return Liability.frequencyTypesWithCustom[type] || '';
         });
 
         privateProperty(Liability, 'getTypeTitle', function (type) {
