@@ -29,12 +29,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 var section = this.getSection(sectionCode, costStage);
 
                 if (underscore.isUndefined(section)) {
-                    section = underscore.extend(angular.copy(EnterpriseBudgetBase.sections[sectionCode]), {
+                    section = underscore.extend({
                         productCategoryGroups: [],
                         total: {
                             value: 0
                         }
-                    });
+                    }, EnterpriseBudgetBase.sections[sectionCode]);
 
                     if (this.assetType == 'livestock') {
                         section.total.valuePerLSU = 0;
@@ -65,12 +65,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 if (underscore.isUndefined(group)) {
                     var section = this.addSection(sectionCode, costStage);
 
-                    group = underscore.extend(angular.copy(EnterpriseBudgetBase.groups[groupName]), {
+                    group = underscore.extend({
                         productCategories: [],
                         total: {
                             value: 0
                         }
-                    });
+                    }, EnterpriseBudgetBase.groups[groupName]);
 
                     if (this.assetType == 'livestock') {
                         group.total.valuePerLSU = 0;
@@ -105,6 +105,18 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                     .value();
             });
 
+            interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
+                return (this.assetType == 'livestock' ?
+                    EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] :
+                    EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode]);
+            });
+
+            privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {
+                var group = this.getGroup(sectionCode, groupName, costStage);
+
+                return _getAvailableGroupCategories(this, sectionCode, (group ? group.productCategories : []), groupName);
+            });
+
             privateProperty(this, 'getAvailableCategories', function (sectionCode, costStage) {
                 var sectionCategories = underscore.chain(this.getSections(sectionCode, costStage))
                     .pluck('productCategoryGroups')
@@ -113,23 +125,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                     .flatten()
                     .value();
 
-                return underscore
-                    .chain(this.assetType == 'livestock' ? EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] : EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode])
-                    .map(function (categoryGroup, categoryGroupName) {
-                        return underscore.chain(categoryGroup)
-                            .reject(function (category) {
-                                return underscore.findWhere(sectionCategories, {code: category.code});
-                            })
-                            .map(function (category) {
-                                return underscore.extend(category, {
-                                    groupBy: categoryGroupName
-                                });
-                            })
-                            .value();
-                    })
-                    .values()
-                    .flatten()
-                    .value();
+                return _getAvailableGroupCategories(this, sectionCode, sectionCategories);
             });
 
             privateProperty(this, 'addCategory', function (sectionCode, groupName, categoryCode, costStage) {
@@ -138,10 +134,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 if (underscore.isUndefined(category)) {
                     var group = this.addGroup(sectionCode, groupName, costStage);
 
-                    category = underscore.extend(angular.copy(EnterpriseBudgetBase.categories[categoryCode]), {
+                    category = underscore.extend({
                         quantity: 0,
                         value: 0
-                    });
+                    }, EnterpriseBudgetBase.categories[categoryCode]);
 
                     if (this.assetType == 'livestock') {
                         category = underscore.extend(category, {
@@ -654,9 +650,29 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
         function getCategoryArray (categoryCodes) {
             return underscore.chain(categoryCodes)
                 .map(function (code) {
-                    return EnterpriseBudgetBase.categories[code]
+                    return EnterpriseBudgetBase.categories[code];
                 })
                 .compact()
+                .value();
+        }
+
+        function _getAvailableGroupCategories (instance, sectionCode, usedCategories, groupName) {
+            return underscore.chain(instance.getCategoryOptions(sectionCode))
+                .map(function (categoryGroup, categoryGroupName) {
+                    return underscore.chain(categoryGroup)
+                        .reject(function (category) {
+                            return (groupName && categoryGroupName !== groupName) ||
+                                underscore.findWhere(usedCategories, {code: category.code});
+                        })
+                        .map(function (category) {
+                            return underscore.extend(category, {
+                                groupBy: categoryGroupName
+                            });
+                        })
+                        .value();
+                })
+                .values()
+                .flatten()
                 .value();
         }
 
