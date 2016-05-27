@@ -948,9 +948,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
         }
 
         function roundValue (value, precision) {
-            precision = Math.pow(10, precision || 0);
-
-            return Math.round(value * precision) / precision;
+            return Number(Math.round(value+'e'+precision)+'e-'+precision);
         }
 
         function recalculateEnterpriseBudget (instance) {
@@ -992,11 +990,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
                                 }, 0)
                                 .value();
 
-                            category.value = roundValue((category.pricePerUnit || 0) * groupSum / 100, 2);
+                            category.quantity = roundValue(groupSum / 100);
                         } else {
                             category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
-                            category.value = roundValue((category.pricePerUnit || 0) * (category.quantity || 0), 2);
                         }
+
+                        category.value = roundValue((category.pricePerUnit || 0) * (category.quantity || 0), 2);
 
                         if(instance.assetType == 'livestock') {
                             category.valuePerLSU = roundValue((category.pricePerUnit || 0) / instance.getConversionRate(category.name), 2);
