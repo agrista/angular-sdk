@@ -779,7 +779,7 @@ sdkHelperCropInspectionApp.factory('cultivarHelper', ['underscore', function (un
                 'Scout'
             ]
         },
-        'Oats': {
+        'Oat': {
             'Agricol': [
                 'Magnifico',
                 'Maida',
