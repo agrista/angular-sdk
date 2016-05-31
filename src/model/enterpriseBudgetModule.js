@@ -549,23 +549,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             }, {
                 code: 'EXP-MRK-LSSF',
                 name: 'Livestock sales marketing fees',
-                incomeGroup: 'Livestock Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-LSPF',
                 name: 'Livestock products marketing fees',
-                incomeGroup: 'Product Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-HOTF',
                 name: 'Horticulture marketing fees',
-                incomeGroup: 'Fruit Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-CRPF',
                 name: 'Crop marketing fees',
-                incomeGroup: 'Crop Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-LSTP',
                 name: 'Livestock transport',
@@ -730,8 +726,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'EnterpriseBudgetBase', 'enterpriseBudgetHelper', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, EnterpriseBudgetBase, enterpriseBudgetHelper, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 

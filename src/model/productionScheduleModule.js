@@ -154,11 +154,11 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
                                     }, 0) / groupCategory.scheduleCategories.length, 2);
                                 }
 
-                                if (section.code === 'INC') {
-                                    groupCategory.pricePerUnit = roundValue(groupCategory.value / groupCategory.quantity, 2);
-                                } else {
+                                if (section.code === 'EXP') {
                                     groupCategory.valuePerHa = roundValue(groupCategory.value / instance.allocatedSize, 2);
                                 }
+
+                                groupCategory.pricePerUnit = roundValue(groupCategory.value / groupCategory.quantity, 2);
 
                                 groupCategory.valuePerMonth = underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
                                     valuePerMonth[index + startOffset] += value;
@@ -244,8 +244,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'enterpriseBudgetHelper', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, EnterpriseBudget, EnterpriseBudgetBase, enterpriseBudgetHelper, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 

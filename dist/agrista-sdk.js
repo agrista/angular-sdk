@@ -10613,8 +10613,8 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
     }]);
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation', 'ag.sdk.model.production-schedule']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'enterpriseBudgetHelper', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function (Asset, computedProperty, Document, enterpriseBudgetHelper, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
 
         var _assetYearEndValueAdjustments = {
             'Land and fixed improvements': [
@@ -12673,23 +12673,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             }, {
                 code: 'EXP-MRK-LSSF',
                 name: 'Livestock sales marketing fees',
-                incomeGroup: 'Livestock Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-LSPF',
                 name: 'Livestock products marketing fees',
-                incomeGroup: 'Product Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-HOTF',
                 name: 'Horticulture marketing fees',
-                incomeGroup: 'Fruit Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-CRPF',
                 name: 'Crop marketing fees',
-                incomeGroup: 'Crop Sales',
-                unit: '%'
+                unit: 't'
             }, {
                 code: 'EXP-MRK-LSTP',
                 name: 'Livestock transport',
@@ -12854,8 +12850,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'EnterpriseBudgetBase', 'enterpriseBudgetHelper', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, EnterpriseBudgetBase, enterpriseBudgetHelper, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -13432,10 +13428,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             }
         }
 
-        function getOffsetDate(instance) {
-            return moment(instance.startDate).isBefore(instance.openingDate) ? instance.openingDate : instance.startDate;
-        }
-
         function fixPrecisionError (number, precision) {
             precision = precision || 10;
 
@@ -13501,7 +13493,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             computedProperty(this, 'paymentMonths', function () {
                 var paymentsPerYear = _frequency[this.frequency],
-                    firstPaymentMonth = moment(getOffsetDate(this), 'YYYY-MM-DD').month();
+                    firstPaymentMonth = moment(this.offsetDate, 'YYYY-MM-DD').month();
 
                 return underscore
                     .range(firstPaymentMonth, firstPaymentMonth + 12, (paymentsPerYear < 12 ? 12 / paymentsPerYear : 1))
@@ -13513,12 +13505,17 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     });
             });
 
+            computedProperty(this, 'offsetDate', function () {
+                return (this.startDate && this.openingDate ?
+                    (moment(this.startDate).isBefore(this.openingDate) ? this.openingDate : this.startDate) :
+                    (this.startDate ? this.startDate : this.openingDate));
+            });
 
             /**
              * Get liability/balance in month
              */
             privateProperty(this, 'liabilityInMonth', function (month) {
-                var startMonth = moment(getOffsetDate(this), 'YYYY-MM-DD'),
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
@@ -13544,7 +13541,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'addRepaymentInMonth', function (repayment, month, source) {
-                var startMonth = moment(getOffsetDate(this), 'YYYY-MM-DD'),
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
@@ -13577,7 +13574,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'setRepaymentInMonth', function (repayment, month, source) {
-                var startMonth = moment(getOffsetDate(this), 'YYYY-MM-DD'),
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
@@ -13608,7 +13605,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
-                var startMonth = moment(getOffsetDate(this), 'YYYY-MM-DD'),
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
@@ -13635,7 +13632,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'setWithdrawalInMonth', function (withdrawal, month) {
-                var startMonth = moment(getOffsetDate(this), 'YYYY-MM-DD'),
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
                     appliedMonth = currentMonth.diff(startMonth, 'months');
 
@@ -13664,7 +13661,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
              * Ranges of liability
              */
             privateProperty(this, 'liabilityInRange', function (rangeStart, rangeEnd) {
-                var startMonth = moment(getOffsetDate(this), 'YYYY-MM-DD'),
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     rangeStartMonth = moment(rangeStart, 'YYYY-MM-DD'),
                     rangeEndMonth = moment(rangeEnd, 'YYYY-MM-DD'),
                     appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
@@ -13689,10 +13686,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             privateProperty(this, 'getLiabilityOpening', function () {
                 return (moment(this.startDate).isBefore(this.openingDate) ? this.openingBalance : this.amount);
-            });
-
-            privateProperty(this, 'getOffsetDate', function () {
-                return getOffsetDate(this);
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -14014,11 +14007,11 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
                                     }, 0) / groupCategory.scheduleCategories.length, 2);
                                 }
 
-                                if (section.code === 'INC') {
-                                    groupCategory.pricePerUnit = roundValue(groupCategory.value / groupCategory.quantity, 2);
-                                } else {
+                                if (section.code === 'EXP') {
                                     groupCategory.valuePerHa = roundValue(groupCategory.value / instance.allocatedSize, 2);
                                 }
+
+                                groupCategory.pricePerUnit = roundValue(groupCategory.value / groupCategory.quantity, 2);
 
                                 groupCategory.valuePerMonth = underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
                                     valuePerMonth[index + startOffset] += value;
@@ -14104,8 +14097,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'enterpriseBudgetHelper', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, EnterpriseBudget, EnterpriseBudgetBase, enterpriseBudgetHelper, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
