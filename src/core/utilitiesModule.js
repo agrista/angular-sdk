@@ -231,7 +231,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
 
         return $q.all(list);
     };
-    
+
     return {
         all: function (promises) {
             return $q.all(promises);
