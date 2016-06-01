@@ -943,8 +943,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                         if (asset.data.assetValue && !(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
                             switch(asset.type) {
-                                case 'improvement':
+                                case 'cropland':
                                 case 'farmland':
+                                case 'improvement':
+                                case 'pasture':
+                                case 'permanent crop':
+                                case 'plantation':
+                                case 'wasteland':
                                     updateAssetStatementCategory(instance, 'long-term', 'Land and fixed improvements', asset);
                                     break;
                                 case 'vme':
