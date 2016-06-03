@@ -287,3 +287,11 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
         }
     }
 }]);
+
+skdUtilitiesApp.filter('round', ['$filter', function ($filter) {
+    return function (value, precision) {
+        precision = precision || 2;
+
+        return Number(Math.round(value + 'e' + precision) + 'e-' + precision);
+    };
+}]);

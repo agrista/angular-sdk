@@ -1,7 +1,7 @@
-var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.model']);
+var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'underscore',
-    function (computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, underscore) {
+sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, underscore) {
         function ProductionGroup (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -66,9 +66,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
 
         inheritModel(ProductionGroup, EnterpriseBudgetBase);
 
-        function roundValue (value, precision) {
-            return Number(Math.round(value+'e'+precision)+'e-'+precision);
-        }
+        var roundValue = $filter('round');
 
         function adjustCategory (instance, sectionCode, categoryCode, costStage, property) {
             var groupCategory = instance.getCategory(sectionCode, categoryCode, costStage),
@@ -244,8 +242,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -286,7 +284,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = (budget instanceof EnterpriseBudget ? budget : EnterpriseBudget.new(budget));
+                this.budget = (budget instanceof EnterpriseBudget ? budget : EnterpriseBudget.newCopy(budget));
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 
@@ -444,11 +442,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             });
 
             computedProperty(this, 'income', function () {
-                return underscore.findWhere(this.data.sections, {code: 'INC'});
+                return underscore.findWhere(this.data.sections, {code: 'INC', costStage: this.defaultCostStage});
             });
 
             computedProperty(this, 'expenses', function () {
-                return underscore.findWhere(this.data.sections, {code: 'EXP'});
+                return underscore.findWhere(this.data.sections, {code: 'EXP', costStage: this.defaultCostStage});
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -472,9 +470,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             }
         }
 
-        function roundValue (value, precision) {
-            return Number(Math.round(value+'e'+precision)+'e-'+precision);
-        }
+        var roundValue = $filter('round');
 
         function recalculateProductionSchedule (instance) {
             if (instance.budget) {

@@ -751,7 +751,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
         },
         createDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document', _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document', underscore.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -779,7 +779,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
         },
         updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + data.id, _.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + data.id, underscore.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1255,23 +1255,33 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
         },
         getAveragedBudgets: function(query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + encodeURIComponent(value);
-            }).join('&');
+            query = underscore.chain(query)
+                .defaults({
+                    resulttype: 'simple'
+                })
+                .map(function (value, key) {
+                    return key + '=' + encodeURIComponent(value);
+                })
+                .value().join('&');
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/averaged?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budgets/averaged' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchEnterpriseBudgets: function (query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + encodeURIComponent(value);
-            }).join('&');
+            query = underscore.chain(query)
+                .defaults({
+                    resulttype: 'simple'
+                })
+                .map(function (value, key) {
+                    return key + '=' + encodeURIComponent(value);
+                })
+                .value().join('&');
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budgets/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1359,12 +1369,17 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
             });
         },
         searchComparables: function (query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + encodeURIComponent(value);
-            }).join('&');
+            query = underscore.chain(query)
+                .defaults({
+                    resulttype: 'simple'
+                })
+                .map(function (value, key) {
+                    return key + '=' + encodeURIComponent(value);
+                })
+                .value().join('&');
 
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/comparables/search?resulttype=simple' + (query ? '&' + query : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1537,7 +1552,7 @@ sdkApiApp.factory('importApi', ['$http', 'promiseService', 'configuration', func
 /**
  * Production Schedule API
  */
-sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -1546,7 +1561,7 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseSe
         },
         createProductionSchedule: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/production-schedule', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/production-schedule', underscore.omit(data, ['asset', 'budget', 'organization']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1558,9 +1573,9 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseSe
                 }, promise.reject);
             });
         },
-        updateProductionSchedule: function (id, data) {
+        updateProductionSchedule: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/production-schedule/' + id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/production-schedule/' + data.id, underscore.omit(data, ['asset', 'budget', 'organization']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

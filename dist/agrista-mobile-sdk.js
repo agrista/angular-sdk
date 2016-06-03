@@ -846,6 +846,13 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
+skdUtilitiesApp.filter('round', ['$filter', function ($filter) {
+    return function (value, precision) {
+        precision = precision || 2;
+
+        return Number(Math.round(value + 'e' + precision) + 'e-' + precision);
+    };
+}]);
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
@@ -10780,7 +10787,7 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             return Document;
         }]);
 
-var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
 sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
     function (computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
@@ -10896,7 +10903,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {
                 var group = this.getGroup(sectionCode, groupName, costStage);
 
-                return _getAvailableGroupCategories(this, sectionCode, (group ? group.productCategories : []), groupName);
+                return getAvailableGroupCategories(this, sectionCode, (group ? group.productCategories : []), groupName);
             });
 
             privateProperty(this, 'getAvailableCategories', function (sectionCode, costStage) {
@@ -10907,19 +10914,24 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                     .flatten()
                     .value();
 
-                return _getAvailableGroupCategories(this, sectionCode, sectionCategories);
+                return getAvailableGroupCategories(this, sectionCode, sectionCategories);
             });
 
             privateProperty(this, 'addCategory', function (sectionCode, groupName, categoryCode, costStage) {
                 var category = this.getCategory(sectionCode, categoryCode, costStage);
 
                 if (underscore.isUndefined(category)) {
-                    var group = this.addGroup(sectionCode, groupName, costStage);
+                    var group = this.addGroup(sectionCode, findGroupNameByCategory(this, sectionCode, groupName, categoryCode), costStage);
 
                     category = underscore.extend({
                         quantity: 0,
                         value: 0
                     }, EnterpriseBudgetBase.categories[categoryCode]);
+
+                    // WA: Modify enterprise budget model to specify input costs as "per ha"
+                    if (sectionCode === 'EXP') {
+                        category.unit = 'Total'
+                    }
 
                     if (this.assetType == 'livestock') {
                         category = underscore.extend(category, {
@@ -10938,6 +10950,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             });
 
             privateProperty(this, 'removeCategory', function (sectionCode, groupName, categoryCode, costStage) {
+                groupName = findGroupNameByCategory(this, sectionCode, groupName, categoryCode);
+
                 var group = this.getGroup(sectionCode, groupName, costStage);
 
                 if (group) {
@@ -11433,8 +11447,18 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 .compact()
                 .value();
         }
+        
+        function findGroupNameByCategory(instance, sectionCode, groupName, categoryCode) {
+            return (groupName ? groupName : underscore.chain(instance.getCategoryOptions(sectionCode))
+                .map(function (categoryGroup, categoryGroupName) {
+                    return (underscore.where(categoryGroup, {code: categoryCode}).length > 0 ? categoryGroupName : undefined);
+                })
+                .compact()
+                .first()
+                .value());
+        }
 
-        function _getAvailableGroupCategories (instance, sectionCode, usedCategories, groupName) {
+        function getAvailableGroupCategories (instance, sectionCode, usedCategories, groupName) {
             return underscore.chain(instance.getCategoryOptions(sectionCode))
                 .map(function (categoryGroup, categoryGroupName) {
                     return underscore.chain(categoryGroup)
@@ -11508,8 +11532,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -11741,9 +11765,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
             }
         }
 
-        function roundValue (value, precision) {
-            return Number(Math.round(value+'e'+precision)+'e-'+precision);
-        }
+        var roundValue = $filter('round');
 
         function recalculateEnterpriseBudget (instance) {
             validateEnterpriseBudget(instance);
@@ -11752,7 +11774,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
                 instance.data.details.calculatedLSU = instance.data.details.herdSize * instance.getConversionRate();
             }
 
-            instance.data.sections.forEach(function(section, i) {
+            angular.forEach(instance.data.sections, function(section) {
                 section.total = {
                     value: 0
                 };
@@ -11761,7 +11783,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
                     section.total.valuePerLSU = 0;
                 }
 
-                section.productCategoryGroups.forEach(function(group, j) {
+                angular.forEach(section.productCategoryGroups, function(group) {
                     group.total = {
                         value: 0
                     };
@@ -11770,7 +11792,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['computedProperty', 'Enter
                         group.total.valuePerLSU = 0;
                     }
 
-                    group.productCategories.forEach(function(category, k) {
+                    angular.forEach(group.productCategories, function(category) {
                         if(category.unit == '%') {
                             var groupSum = underscore
                                 .chain(instance.data.sections)
@@ -12509,10 +12531,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         return Liability;
     }]);
 
-var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.model']);
+var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'underscore',
-    function (computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, underscore) {
+sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, underscore) {
         function ProductionGroup (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -12577,9 +12599,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
 
         inheritModel(ProductionGroup, EnterpriseBudgetBase);
 
-        function roundValue (value, precision) {
-            return Number(Math.round(value+'e'+precision)+'e-'+precision);
-        }
+        var roundValue = $filter('round');
 
         function adjustCategory (instance, sectionCode, categoryCode, costStage, property) {
             var groupCategory = instance.getCategory(sectionCode, categoryCode, costStage),
@@ -12755,8 +12775,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['computedProperty', 'Ente
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -12797,7 +12817,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = (budget instanceof EnterpriseBudget ? budget : EnterpriseBudget.new(budget));
+                this.budget = (budget instanceof EnterpriseBudget ? budget : EnterpriseBudget.newCopy(budget));
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 
@@ -12955,11 +12975,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             });
 
             computedProperty(this, 'income', function () {
-                return underscore.findWhere(this.data.sections, {code: 'INC'});
+                return underscore.findWhere(this.data.sections, {code: 'INC', costStage: this.defaultCostStage});
             });
 
             computedProperty(this, 'expenses', function () {
-                return underscore.findWhere(this.data.sections, {code: 'EXP'});
+                return underscore.findWhere(this.data.sections, {code: 'EXP', costStage: this.defaultCostStage});
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -12983,9 +13003,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['computedProperty', 'E
             }
         }
 
-        function roundValue (value, precision) {
-            return Number(Math.round(value+'e'+precision)+'e-'+precision);
-        }
+        var roundValue = $filter('round');
 
         function recalculateProductionSchedule (instance) {
             if (instance.budget) {
