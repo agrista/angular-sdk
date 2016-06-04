@@ -401,6 +401,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         budgetCategory.value = roundValue((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0), 2);
                         scheduleCategory.value = roundValue(budgetCategory.value * (this.type == 'livestock' ? this.data.details.multiplicationFactor : this.allocatedSize), 2);
                         scheduleCategory.pricePerUnit = budgetCategory.pricePerUnit;
+                    } else if (property === 'stock') {
+                        budgetCategory.stock = scheduleCategory.stock;
                     }
 
                     if(this.type == 'livestock') {
@@ -492,6 +494,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                     scheduleCategory.valuePerLSU += roundValue(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
                                     scheduleCategory.quantity += roundValue(scheduleCategory.value / category.pricePerUnit, 2);
                                     scheduleCategory.quantityPerLSU = category.quantity;
+
+                                    if (group.code === 'INC-LSS') {
+                                        scheduleCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
+                                    }
                                 } else {
                                     scheduleCategory.value += roundValue(category.value * instance.allocatedSize, 2);
                                     scheduleCategory.quantity += roundValue(scheduleCategory.value / category.pricePerUnit, 2);

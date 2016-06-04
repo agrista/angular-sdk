@@ -10722,13 +10722,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             this.data.assetStatement = this.data.assetStatement || { total: {}};
             this.data.liabilityStatement = this.data.liabilityStatement || { total: {} };
             this.data.adjustmentFactors = this.data.adjustmentFactors || {};
-            this.data.livestockValues = this.data.livestockValues || {
-                breeding: {
-                    stockSales: initializeArray(12),
-                    stockPurchases: initializeArray(12)
-                },
-                marketable: {}
-            };
+            this.data.livestockValues = this.data.livestockValues || {};
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -11249,20 +11243,29 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              */
 
             function updateLivestockValues (instance) {
-                initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
+                if (instance.data.livestockValues.breeding) {
+                    if (instance.data.livestockValues.breeding.stockSales) {
+                        initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
 
-                for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
-                    instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
+                        for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
+                            instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
+                        }
+                    }
+
+                    if (instance.data.livestockValues.breeding.stockPurchases) {
+                        initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
+
+                        for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
+                            instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
+                        }
+                    }
+
+                    updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
                 }
 
-                initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
-
-                for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
-                    instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
+                if (instance.data.livestockValues.marketable) {
+                    updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: instance.data.livestockValues.marketable.currentValue } });
                 }
-
-                updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
-                updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: instance.data.livestockValues.marketable.currentValue } });
 
                 calculateAssetStatementRMV(instance);
 
@@ -11270,14 +11273,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 updateLivestockRMV('marketable', 'short-term', 'Marketable Livestock');
 
                 function updateLivestockRMV (livestockType, liquidityType, statementItem) {
-                    var yearChange = (instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue) || 0 ,
-                        itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
-                        rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
+                    if (instance.data.livestockValues[livestockType]) {
+                        var yearChange = (instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue) || 0 ,
+                            itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
+                            rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
 
-                    for (var year = 0; year < rmvArray.length; year++) {
-                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV || 0 : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1] || 0);
-                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
-                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
+                        for (var year = 0; year < rmvArray.length; year++) {
+                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV || 0 : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1] || 0);
+                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
+                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
+                        }
                     }
                 }
             }
@@ -11396,7 +11401,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 var opening = expenditure[i];
 
                                 expenditure[i] = liability.addWithdrawalInMonth(opening, month);
-                                instance.data.unallocatedProductionExpenditure[input][i] -= (opening - expenditure[i])
+                                instance.data.unallocatedProductionExpenditure[input][i] += (expenditure[i] - opening)
                             });
                         });
                     }
@@ -12305,6 +12310,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                             valuePerLSU: 0,
                             per: 'LSU'
                         });
+
+                        if (breedingStock[this.commodityType] && underscore.contains(breedingStock[this.commodityType], category.name)) {
+                            category.breedingStock = true;
+                        }
                     } else {
                         category.per = 'ha';
                     }
@@ -12888,6 +12897,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             }
         };
 
+        var breedingStock = {
+            'Cattle (Extensive)': ['Cow or heifer', 'Bull (3 years plus)'],
+            'Sheep (Extensive)': ['Ewe', 'Ram (2-tooth plus)']
+        };
+
         EnterpriseBudgetBase.validates({
             data: {
                 required: true,
@@ -13432,7 +13446,7 @@ sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability'
         return LegalEntity;
     }]);
 
-var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
 sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
     function ($filter, computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
@@ -13473,12 +13487,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 closing: 0
             }
         }
-
-        function fixPrecisionError (number, precision) {
-            precision = precision || 10;
-
-            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
-        }
+        
+        var roundValue = $filter('round');
 
         function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
             while (monthlyData.length <= upToIndex) {
@@ -13515,9 +13525,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     return total + (amount || 0);
                 }, 0);
 
-                month.balance = (month.opening - totalRepayment + month.withdrawal <= 0 ? 0 : month.opening - totalRepayment + month.withdrawal);
-                month.interest = fixPrecisionError((instance.interestRate / 12) * month.balance) / 100;
-                month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
+                month.balance = roundValue(month.opening - totalRepayment + month.withdrawal <= 0 ? 0 : month.opening - totalRepayment + month.withdrawal);
+                month.interest = roundValue(((instance.interestRate / 12) * month.balance) / 100);
+                month.closing = roundValue(month.balance === 0 ? 0 : month.balance + month.interest);
             });
         }
 
@@ -13606,9 +13616,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                             return total + (amount || 0);
                         }, 0),
                         openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - summedRepayment,
-                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment),
-                        repaymentRemainder = repayment - limitedRepayment;
+                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment);
 
+                    repaymentRemainder = roundValue(repayment - limitedRepayment);
                     monthLiability.repayment[source] = monthLiability.repayment[source] || 0;
                     monthLiability.repayment[source] += limitedRepayment;
 
@@ -13638,9 +13648,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                             return total + (src === source ? 0 : amount || 0)
                         }, 0),
                         openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - repaymentWithoutSource,
-                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment),
-                        repaymentRemainder = repayment - limitedRepayment;
+                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment);
 
+                    repaymentRemainder = roundValue(repayment - limitedRepayment)
                     monthLiability.repayment[source] = limitedRepayment;
 
                     recalculateMonthlyTotals(this, this.data.monthly);
@@ -13666,7 +13676,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                                 return total + (amount || 0);
                             }, 0),
                         limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
-                        withdrawalRemainder = summedWithdrawal - limitedWithdrawal;
+                        withdrawalRemainder = roundValue(summedWithdrawal - limitedWithdrawal);
 
                     monthLiability.withdrawal = limitedWithdrawal;
 
@@ -13692,7 +13702,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                                 return total + (amount || 0);
                             }, 0),
                         limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), withdrawal) : withdrawal),
-                        withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
+                        withdrawalRemainder = roundValue(withdrawal - limitedWithdrawal);
 
                     monthLiability.withdrawal = limitedWithdrawal;
 
@@ -14300,6 +14310,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         budgetCategory.value = roundValue((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0), 2);
                         scheduleCategory.value = roundValue(budgetCategory.value * (this.type == 'livestock' ? this.data.details.multiplicationFactor : this.allocatedSize), 2);
                         scheduleCategory.pricePerUnit = budgetCategory.pricePerUnit;
+                    } else if (property === 'stock') {
+                        budgetCategory.stock = scheduleCategory.stock;
                     }
 
                     if(this.type == 'livestock') {
@@ -14391,6 +14403,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                     scheduleCategory.valuePerLSU += roundValue(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
                                     scheduleCategory.quantity += roundValue(scheduleCategory.value / category.pricePerUnit, 2);
                                     scheduleCategory.quantityPerLSU = category.quantity;
+
+                                    if (group.code === 'INC-LSS') {
+                                        scheduleCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
+                                    }
                                 } else {
                                     scheduleCategory.value += roundValue(category.value * instance.allocatedSize, 2);
                                     scheduleCategory.quantity += roundValue(scheduleCategory.value / category.pricePerUnit, 2);

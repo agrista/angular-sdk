@@ -150,6 +150,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                             valuePerLSU: 0,
                             per: 'LSU'
                         });
+
+                        if (breedingStock[this.commodityType] && underscore.contains(breedingStock[this.commodityType], category.name)) {
+                            category.breedingStock = true;
+                        }
                     } else {
                         category.per = 'ha';
                     }
@@ -731,6 +735,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 'Castrate (2-tooth plus)': 0.17,
                 'Ram (2-tooth plus)': 0.22
             }
+        };
+
+        var breedingStock = {
+            'Cattle (Extensive)': ['Cow or heifer', 'Bull (3 years plus)'],
+            'Sheep (Extensive)': ['Ewe', 'Ram (2-tooth plus)']
         };
 
         EnterpriseBudgetBase.validates({

@@ -87,13 +87,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             this.data.assetStatement = this.data.assetStatement || { total: {}};
             this.data.liabilityStatement = this.data.liabilityStatement || { total: {} };
             this.data.adjustmentFactors = this.data.adjustmentFactors || {};
-            this.data.livestockValues = this.data.livestockValues || {
-                breeding: {
-                    stockSales: initializeArray(12),
-                    stockPurchases: initializeArray(12)
-                },
-                marketable: {}
-            };
+            this.data.livestockValues = this.data.livestockValues || {};
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -614,20 +608,29 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              */
 
             function updateLivestockValues (instance) {
-                initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
+                if (instance.data.livestockValues.breeding) {
+                    if (instance.data.livestockValues.breeding.stockSales) {
+                        initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
 
-                for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
-                    instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
+                        for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
+                            instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
+                        }
+                    }
+
+                    if (instance.data.livestockValues.breeding.stockPurchases) {
+                        initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
+
+                        for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
+                            instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
+                        }
+                    }
+
+                    updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
                 }
 
-                initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
-
-                for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
-                    instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
+                if (instance.data.livestockValues.marketable) {
+                    updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: instance.data.livestockValues.marketable.currentValue } });
                 }
-
-                updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
-                updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: instance.data.livestockValues.marketable.currentValue } });
 
                 calculateAssetStatementRMV(instance);
 
@@ -635,14 +638,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 updateLivestockRMV('marketable', 'short-term', 'Marketable Livestock');
 
                 function updateLivestockRMV (livestockType, liquidityType, statementItem) {
-                    var yearChange = (instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue) || 0 ,
-                        itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
-                        rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
+                    if (instance.data.livestockValues[livestockType]) {
+                        var yearChange = (instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue) || 0 ,
+                            itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
+                            rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
 
-                    for (var year = 0; year < rmvArray.length; year++) {
-                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV || 0 : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1] || 0);
-                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
-                        instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
+                        for (var year = 0; year < rmvArray.length; year++) {
+                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV || 0 : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1] || 0);
+                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
+                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
+                        }
                     }
                 }
             }
@@ -761,7 +766,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 var opening = expenditure[i];
 
                                 expenditure[i] = liability.addWithdrawalInMonth(opening, month);
-                                instance.data.unallocatedProductionExpenditure[input][i] -= (opening - expenditure[i])
+                                instance.data.unallocatedProductionExpenditure[input][i] += (expenditure[i] - opening)
                             });
                         });
                     }

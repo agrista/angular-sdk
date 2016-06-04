@@ -1,4 +1,4 @@
-var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
 sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
     function ($filter, computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
@@ -39,12 +39,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 closing: 0
             }
         }
-
-        function fixPrecisionError (number, precision) {
-            precision = precision || 10;
-
-            return parseFloat((+(Math.round(+(number + 'e' + precision)) + 'e' + -precision)).toFixed(precision)) || 0;
-        }
+        
+        var roundValue = $filter('round');
 
         function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
             while (monthlyData.length <= upToIndex) {
@@ -81,9 +77,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     return total + (amount || 0);
                 }, 0);
 
-                month.balance = (month.opening - totalRepayment + month.withdrawal <= 0 ? 0 : month.opening - totalRepayment + month.withdrawal);
-                month.interest = fixPrecisionError((instance.interestRate / 12) * month.balance) / 100;
-                month.closing = (month.balance === 0 ? 0 : month.balance + month.interest);
+                month.balance = roundValue(month.opening - totalRepayment + month.withdrawal <= 0 ? 0 : month.opening - totalRepayment + month.withdrawal);
+                month.interest = roundValue(((instance.interestRate / 12) * month.balance) / 100);
+                month.closing = roundValue(month.balance === 0 ? 0 : month.balance + month.interest);
             });
         }
 
@@ -172,9 +168,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                             return total + (amount || 0);
                         }, 0),
                         openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - summedRepayment,
-                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment),
-                        repaymentRemainder = repayment - limitedRepayment;
+                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment);
 
+                    repaymentRemainder = roundValue(repayment - limitedRepayment);
                     monthLiability.repayment[source] = monthLiability.repayment[source] || 0;
                     monthLiability.repayment[source] += limitedRepayment;
 
@@ -204,9 +200,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                             return total + (src === source ? 0 : amount || 0)
                         }, 0),
                         openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - repaymentWithoutSource,
-                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment),
-                        repaymentRemainder = repayment - limitedRepayment;
+                        limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment);
 
+                    repaymentRemainder = roundValue(repayment - limitedRepayment)
                     monthLiability.repayment[source] = limitedRepayment;
 
                     recalculateMonthlyTotals(this, this.data.monthly);
@@ -232,7 +228,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                                 return total + (amount || 0);
                             }, 0),
                         limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
-                        withdrawalRemainder = summedWithdrawal - limitedWithdrawal;
+                        withdrawalRemainder = roundValue(summedWithdrawal - limitedWithdrawal);
 
                     monthLiability.withdrawal = limitedWithdrawal;
 
@@ -258,7 +254,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                                 return total + (amount || 0);
                             }, 0),
                         limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), withdrawal) : withdrawal),
-                        withdrawalRemainder = fixPrecisionError(withdrawal - limitedWithdrawal);
+                        withdrawalRemainder = roundValue(withdrawal - limitedWithdrawal);
 
                     monthLiability.withdrawal = limitedWithdrawal;
 
