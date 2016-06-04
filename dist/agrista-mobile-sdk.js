@@ -9395,6 +9395,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 });
             }
 
+            function initializeObject(object, property, defaultObject) {
+                return object[property] = object[property] || defaultObject;
+            }
+
             function infinityToZero(value) {
                 return (isFinite(value) ? value : 0);
             }
@@ -9564,7 +9568,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 return (scheduleArray ? Math.min(numberOfMonths, offset + scheduleArray.length) - offset : 0);
             }
 
-            function extractGroupCategories(instance, schedule, code, type, startMonth, numberOfMonths) {
+            function extractGroupCategories(dataStore, schedule, code, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
                 // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
                     scheduleStart = moment(schedule.startDate).add(1, 'days');
@@ -9574,16 +9578,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
                     angular.forEach(section.productCategoryGroups, function (group) {
                         angular.forEach(group.productCategories, function (category) {
-                            var categoryName = (schedule.type !== 'livestock' && type === 'productionIncome' ? schedule.data.details.commodity : category.name);
+                            var categoryName = (schedule.type !== 'livestock' && code === 'INC' ? schedule.data.details.commodity : category.name);
 
-                            instance.data[type][categoryName] = instance.data[type][categoryName] || underscore.range(numberOfMonths).map(function () {
+                            dataStore[categoryName] = dataStore[categoryName] || underscore.range(numberOfMonths).map(function () {
                                 return 0;
                             });
 
                             var minIndex = getLowerIndexBound(category.valuePerMonth, offset);
                             var maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
                             for (var i = minIndex; i < maxIndex; i++) {
-                                instance.data[type][categoryName][i + offset] += (category.valuePerMonth[i] || 0);
+                                dataStore[categoryName][i + offset] += (category.valuePerMonth[i] || 0);
                             }
                         });
                     });
@@ -9659,6 +9663,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     numberOfMonths = instance.numberOfMonths;
 
+                instance.data.enterpriseProductionExpenditure = {};
                 instance.data.productionIncome = {};
                 instance.data.productionExpenditure = {};
                 instance.data.productionIncomeComposition = [];
@@ -9666,8 +9671,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
-                    extractGroupCategories(instance, schedule, 'INC', 'productionIncome', startMonth, numberOfMonths);
-                    extractGroupCategories(instance, schedule,  'EXP', 'productionExpenditure', startMonth, numberOfMonths);
+                    initializeObject(instance.data.enterpriseProductionExpenditure, schedule.data.details.commodity, {});
+                    extractGroupCategories(instance.data.enterpriseProductionExpenditure[schedule.data.details.commodity], schedule, 'EXP', startMonth, numberOfMonths);
+
+                    extractGroupCategories(instance.data.productionIncome, schedule, 'INC', startMonth, numberOfMonths);
+                    extractGroupCategories(instance.data.productionExpenditure, schedule, 'EXP', startMonth, numberOfMonths);
                     calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths);
                 });
 
@@ -9990,55 +9998,51 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             function reEvaluateProductionCredit(instance, liabilities) {
-                var affectedLiabilities = [],
-                    filteredLiabilities = underscore.chain(liabilities)
-                    .where({type: 'production-credit'})
-                    .sortBy(function (liability) {
-                        return liability.interestRate;
-                    })
-                    .map(function (liability) {
-                        return Liability.new(angular.copy(liability));
-                    })
-                    .value();
+                var filteredLiabilities = underscore.where(liabilities, {type: 'production-credit'});
 
+                instance.data.unallocatedEnterpriseProductionExpenditure = angular.copy(instance.data.enterpriseProductionExpenditure);
                 instance.data.unallocatedProductionIncome = angular.copy(instance.data.productionIncome);
                 instance.data.unallocatedProductionExpenditure = angular.copy(instance.data.productionExpenditure);
 
                 underscore.each(filteredLiabilities, function (liability) {
                     liability.resetWithdrawalAndRepayments();
+                    liability.$dirty = true;
+
+                    var filteredUnallocatedEnterpriseProductionExpenditure = underscore.chain(instance.data.unallocatedEnterpriseProductionExpenditure)
+                        .reduce(function (enterpriseProductionExpenditure, productionExpenditure, enterprise) {
+                            if (underscore.isEmpty(liability.data.enterprises) || underscore.contains(liability.data.enterprises, enterprise)) {
+                                enterpriseProductionExpenditure[enterprise] = underscore.chain(productionExpenditure)
+                                    .reduce(function (productionExpenditure, expenditure, input) {
+                                        if (underscore.isEmpty(liability.data.inputs) || underscore.contains(liability.data.inputs, input)) {
+                                            productionExpenditure[input] = expenditure;
+                                        }
+
+                                        return productionExpenditure;
+                                    }, {})
+                                    .value();
+                            }
+
+                            return enterpriseProductionExpenditure;
+                        }, {})
+                        .value();
 
                     for (var i = 0; i < instance.numberOfMonths; i++) {
                         var month = moment(liability.startDate, 'YYYY-MM-DD').add(i, 'M');
 
-                        underscore.each(liability.data['inputs'], function (input) {
-                            if (instance.data.unallocatedProductionExpenditure[input] && instance.data.unallocatedProductionExpenditure[input][i]) {
-                                instance.data.unallocatedProductionExpenditure[input][i] = liability.addWithdrawalInMonth(instance.data.unallocatedProductionExpenditure[input][i], month);
-                            }
-                        });
+                        underscore.each(filteredUnallocatedEnterpriseProductionExpenditure, function (productionExpenditure, enterprise) {
+                            underscore.each(productionExpenditure, function (expenditure, input) {
+                                var opening = expenditure[i];
 
-                        underscore.each(liability.data['commodities'], function (commodity) {
-                            if (instance.data.unallocatedProductionIncome[commodity] && instance.data.unallocatedProductionIncome[commodity][i]) {
-                                instance.data.unallocatedProductionIncome[commodity][i] = liability.addRepaymentInMonth(instance.data.unallocatedProductionIncome[commodity][i], month, 'production');
-                            }
+                                expenditure[i] = liability.addWithdrawalInMonth(opening, month);
+                                instance.data.unallocatedProductionExpenditure[input][i] -= (opening - expenditure[i])
+                            });
                         });
                     }
 
                     underscore.each(liability.data.customRepayments, function (amount, month) {
                         liability.addRepaymentInMonth(amount, month, 'bank');
                     });
-
-                    var originalLiability = underscore.findWhere(liabilities, {uuid: liability.uuid});
-
-                    if (originalLiability && angular.equals(originalLiability.data.monthly, liability.data.monthly) === false) {
-                        affectedLiabilities.push(liability);
-                    }
                 });
-
-                if (affectedLiabilities.length > 0) {
-                    recalculateSummary(instance);
-                }
-
-                return affectedLiabilities;
             }
 
             privateProperty(this, 'reEvaluateProductionCredit', function (liabilities) {
