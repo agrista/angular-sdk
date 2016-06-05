@@ -12620,7 +12620,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                 value = 0;
 
             if (groupCategory && !underscore.isUndefined(groupCategory[property])) {
-                if (underscore.contains(['valuePerLSU', 'quantityPerLSU', 'quantityPerHa'], property)) {
+                if (underscore.contains(['valuePerLSU', 'pricePerUnit', 'quantityPerLSU', 'quantityPerHa'], property)) {
                     value = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
                         return total + category[property];
                     }, 0) / groupCategory.scheduleCategories.length, 2);
@@ -12630,8 +12630,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                     }, 0), 2);
                 } else if (property === 'valuePerHa') {
                     value = roundValue(groupCategory.value / instance.allocatedSize, 2);
-                } else if (property === 'pricePerUnit') {
-                    value = roundValue(groupCategory.value / groupCategory.quantity, 2);
                 }
 
                 var offset = (100 / value) * groupCategory[property],
@@ -12703,7 +12701,9 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                                     groupCategory.valuePerHa = roundValue(groupCategory.value / instance.allocatedSize, 2);
                                 }
 
-                                groupCategory.pricePerUnit = roundValue(groupCategory.value / groupCategory.quantity, 2);
+                                groupCategory.pricePerUnit = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
+                                    return total + category.pricePerUnit;
+                                }, 0) / groupCategory.scheduleCategories.length, 2);
 
                                 groupCategory.valuePerMonth = underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
                                     valuePerMonth[index + startOffset] += value;
