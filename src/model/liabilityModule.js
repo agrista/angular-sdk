@@ -308,9 +308,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.interestRate = attrs.interestRate || 0;
             this.creditLimit = attrs.creditLimit;
             this.frequency = attrs.frequency;
-            this.startDate = attrs.startDate;
-            this.endDate = attrs.endDate;
-            this.openingDate = attrs.openingDate || this.startDate;
+            this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
+            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
+            this.openingDate = attrs.openingDate && moment(attrs.openingDate).format('YYYY-MM-DD') || this.startDate;
             this.amount = attrs.amount || this.openingBalance;
 
             // TODO: Add merchant model

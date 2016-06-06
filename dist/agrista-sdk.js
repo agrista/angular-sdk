@@ -11889,20 +11889,19 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     year.interestPayable = sumCollectionProperty(months, 'interestPayable');
                     year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
                     year.closing = year.balance + year.interestPayable + year.interestReceivable;
-                    year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years');
-                    year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('MMM-YY');
+                    year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').format('YYYY-MM-DD');
+                    year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('YYYY-MM-DD');
 
                     var bestBalance = underscore.max(months, function (month) { return month.closing; }),
                         worstBalance = underscore.min(months, function (month) { return month.closing; });
                     year.bestBalance = {
                         balance: bestBalance.closing,
-                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('MMM-YY')
+                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('YYYY-MM-DD')
                     };
                     year.worstBalance = {
                         balance: worstBalance.closing,
-                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('MMM-YY')
+                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('YYYY-MM-DD')
                     };
-                    year.openingMonth.format('MMM-YY');
                 });
 
                 instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
@@ -13756,9 +13755,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.interestRate = attrs.interestRate || 0;
             this.creditLimit = attrs.creditLimit;
             this.frequency = attrs.frequency;
-            this.startDate = attrs.startDate;
-            this.endDate = attrs.endDate;
-            this.openingDate = attrs.openingDate || this.startDate;
+            this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
+            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
+            this.openingDate = attrs.openingDate && moment(attrs.openingDate).format('YYYY-MM-DD') || this.startDate;
             this.amount = attrs.amount || this.openingBalance;
 
             // TODO: Add merchant model
