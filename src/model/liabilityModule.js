@@ -11,9 +11,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         };
 
         var _types = {
-            'short-term': 'Short Term',
-            'medium-term': 'Medium Term',
-            'long-term': 'Long Term',
+            'short-term': 'Short-term',
+            'medium-term': 'Medium-term',
+            'long-term': 'Long-term',
             'production-credit': 'Production Credit',
             'rent': 'Rent'
         };

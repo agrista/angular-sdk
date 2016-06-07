@@ -10722,7 +10722,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             this.data.assetStatement = this.data.assetStatement || { total: {}};
             this.data.liabilityStatement = this.data.liabilityStatement || { total: {} };
             this.data.adjustmentFactors = this.data.adjustmentFactors || {};
-            this.data.livestockValues = this.data.livestockValues || {};
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -11015,6 +11014,26 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             }
 
+            function extractLivestockBreedingStockComposition (instance, schedule) {
+                if (schedule.type == 'livestock') {
+                    var livestockSalesGroup = schedule.getGroup('INC', 'Livestock Sales', schedule.defaultCostStage);
+
+                    if (livestockSalesGroup) {
+                        underscore.each(livestockSalesGroup.productCategories, function (category) {
+                            if (category.breedingStock) {
+                                updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
+                                    data: {
+                                        name: 'Breeding Stock',
+                                        liquidityType: 'medium-term',
+                                        assetValue: (category.stock || 0) * category.pricePerUnit
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
             function reEvaluateProductionSchedules (instance) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     numberOfMonths = instance.numberOfMonths;
@@ -11242,55 +11261,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
              *   Assets & Liabilities Handling
              */
 
-            function updateLivestockValues (instance) {
-                if (instance.data.livestockValues.breeding) {
-                    if (instance.data.livestockValues.breeding.stockSales) {
-                        initializeCategoryValues(instance, 'capitalIncome', 'Livestock Sales', instance.numberOfMonths);
-
-                        for (i = 0; i < instance.data.capitalIncome['Livestock Sales'].length; i++) {
-                            instance.data.capitalIncome['Livestock Sales'][i] = instance.data.livestockValues.breeding.stockSales[i % 12];
-                        }
-                    }
-
-                    if (instance.data.livestockValues.breeding.stockPurchases) {
-                        initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock Purchases', instance.numberOfMonths);
-
-                        for (var i = 0; i < instance.data.capitalExpenditure['Livestock Purchases'].length; i++) {
-                            instance.data.capitalExpenditure['Livestock Purchases'][i] = instance.data.livestockValues.breeding.stockPurchases[i % 12];
-                        }
-                    }
-
-                    updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', { data: { name: 'Breeding Stock', liquidityType: 'medium-term', assetValue: instance.data.livestockValues.breeding.currentValue } });
-                }
-
-                if (instance.data.livestockValues.marketable) {
-                    updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', { data: { name: 'Marketable Livestock', liquidityType: 'short-term', assetValue: instance.data.livestockValues.marketable.currentValue } });
-                }
-
-                calculateAssetStatementRMV(instance);
-
-                updateLivestockRMV('breeding', 'medium-term', 'Breeding Stock');
-                updateLivestockRMV('marketable', 'short-term', 'Marketable Livestock');
-
-                function updateLivestockRMV (livestockType, liquidityType, statementItem) {
-                    if (instance.data.livestockValues[livestockType]) {
-                        var yearChange = (instance.data.livestockValues[livestockType].yearEndValue - instance.data.livestockValues[livestockType].currentValue) || 0 ,
-                            itemIndex = underscore.findIndex(instance.data.assetStatement[liquidityType], function(item) { return item.name == statementItem; }),
-                            rmvArray = (itemIndex !== -1 ? instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV || [] : []);
-
-                        for (var year = 0; year < rmvArray.length; year++) {
-                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] = (year == 0 ? instance.data.assetStatement[liquidityType][itemIndex].currentRMV || 0 : instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year - 1] || 0);
-                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] += yearChange;
-                            instance.data.assetStatement[liquidityType][itemIndex].yearlyRMV[year] *= instance.data.adjustmentFactors[statementItem] || 1;
-                        }
-                    }
-                }
-            }
-
-            privateProperty(this, 'updateLivestockValues', function() {
-                updateLivestockValues(this);
-            });
-
             privateProperty(this, 'addAsset', function (asset) {
                 var instance = this;
 
@@ -11437,7 +11407,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             }
 
             function updateLiabilityStatementCategory(instance, liability) {
-                var category = (liability.type == 'production-credit' || liability.type == 'rent' ? 'short-term' : liability.type),
+                var category = (liability.type == 'production-credit' ? 'medium-term' : (liability.type == 'rent' ? 'short-term' : liability.type)),
                     itemName = (liability.type == 'rent' ? 'Rent overdue' : liability.name),
                     index = underscore.findIndex(instance.data.liabilityStatement[category], function(statementObj) { return statementObj.name == itemName; }),
                     numberOfYears = Math.ceil(moment(instance.endDate, 'YYYY-MM-DD').diff(moment(instance.startDate, 'YYYY-MM-DD'), 'years', true)),
@@ -11654,7 +11624,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     }
                 });
 
-                updateLivestockValues(instance);
+                underscore.each(instance.models.productionSchedules, function (productionSchedule) {
+                    var schedule = ProductionSchedule.new(productionSchedule);
+
+                    extractLivestockBreedingStockComposition(instance, schedule);
+                });
+
                 totalAssetsAndLiabilities(instance);
             }
 
@@ -13458,9 +13433,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         };
 
         var _types = {
-            'short-term': 'Short Term',
-            'medium-term': 'Medium Term',
-            'long-term': 'Long Term',
+            'short-term': 'Short-term',
+            'medium-term': 'Medium-term',
+            'long-term': 'Long-term',
             'production-credit': 'Production Credit',
             'rent': 'Rent'
         };
