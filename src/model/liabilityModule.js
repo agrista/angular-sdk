@@ -148,6 +148,31 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 this.data.monthly = [];
             });
 
+            privateProperty(this, 'resetRepayments', function () {
+                underscore.each(this.data.monthly, function (month, index) {
+                    month.repayment = {};
+                });
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
+            privateProperty(this, 'resetWithdrawalsInRange', function (rangeStart, rangeEnd) {
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
+                    appliedStartMonth = moment(rangeStart, 'YYYY-MM-DD').diff(startMonth, 'months'),
+                    appliedEndMonth = moment(rangeEnd, 'YYYY-MM-DD').diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+
+                appliedStartMonth = (appliedStartMonth < 0 ? 0 : appliedStartMonth);
+                appliedEndMonth = (appliedEndMonth > this.data.monthly.length ? this.data.monthly.length - 1 : appliedEndMonth);
+
+                for (var i = appliedStartMonth; i < appliedEndMonth; i++) {
+                    this.data.monthly[i].withdrawal = 0;
+                }
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
             privateProperty(this, 'addRepaymentInMonth', function (repayment, month, source) {
                 var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
@@ -159,7 +184,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 // applied month is not before the offsetDate, add repayment and do calculation
                 if(appliedMonth > -1) {
-
                     this.data.monthly = this.data.monthly || [];
                     initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 

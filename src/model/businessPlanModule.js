@@ -707,7 +707,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.unallocatedProductionExpenditure = angular.copy(instance.data.productionExpenditure);
 
                 underscore.each(filteredLiabilities, function (liability) {
-                    liability.resetWithdrawalAndRepayments();
+                    liability.resetRepayments();
+                    liability.resetWithdrawalsInRange(instance.startDate, instance.endDate);
                     liability.$dirty = true;
 
                     var filteredUnallocatedEnterpriseProductionExpenditure = underscore.chain(instance.data.unallocatedEnterpriseProductionExpenditure)
@@ -1408,7 +1409,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             },
             title: {
-                required: true,
                 length: {
                     min: 1,
                     max: 255

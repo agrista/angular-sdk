@@ -5,7 +5,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         function ProductionGroup (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data = (attrs && attrs.data ? attrs.data : {});
             this.data.details = this.data.details || {};
 
             this.productionSchedules = [];
@@ -247,7 +246,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data = (attrs && attrs.data ? attrs.data : {});
             this.data.details = this.data.details || {};
 
             privateProperty(this, 'setDate', function (startDate) {

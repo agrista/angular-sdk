@@ -757,7 +757,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data = (attrs && attrs.data ? attrs.data : {});
             this.data.details = this.data.details || {};
             this.data.details.cycleStart = this.data.details.cycleStart || 0;
             this.data.details.productionArea = this.data.details.productionArea || '1 Hectare';

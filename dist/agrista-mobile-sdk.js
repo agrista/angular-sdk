@@ -9980,7 +9980,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.unallocatedProductionExpenditure = angular.copy(instance.data.productionExpenditure);
 
                 underscore.each(filteredLiabilities, function (liability) {
-                    liability.resetWithdrawalAndRepayments();
+                    liability.resetRepayments();
+                    liability.resetWithdrawalsInRange(instance.startDate, instance.endDate);
                     liability.$dirty = true;
 
                     var filteredUnallocatedEnterpriseProductionExpenditure = underscore.chain(instance.data.unallocatedEnterpriseProductionExpenditure)
@@ -10681,7 +10682,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
             },
             title: {
-                required: true,
                 length: {
                     min: 1,
                     max: 255
@@ -11529,7 +11529,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data = (attrs && attrs.data ? attrs.data : {});
             this.data.details = this.data.details || {};
             this.data.details.cycleStart = this.data.details.cycleStart || 0;
             this.data.details.productionArea = this.data.details.productionArea || '1 Hectare';
@@ -11955,11 +11954,11 @@ sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability'
             this.uuid = attrs.uuid;
 
             this.assets = underscore.map(attrs.assets, function (asset) {
-                return Asset.new(asset);
+                return Asset.newCopy(asset);
             });
 
             this.liabilities = underscore.map(attrs.liabilities, function (liability) {
-                return Liability.new(liability);
+                return Liability.newCopy(liability);
             });
         }
 
@@ -12208,6 +12207,31 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 this.data.monthly = [];
             });
 
+            privateProperty(this, 'resetRepayments', function () {
+                underscore.each(this.data.monthly, function (month, index) {
+                    month.repayment = {};
+                });
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
+            privateProperty(this, 'resetWithdrawalsInRange', function (rangeStart, rangeEnd) {
+                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
+                    appliedStartMonth = moment(rangeStart, 'YYYY-MM-DD').diff(startMonth, 'months'),
+                    appliedEndMonth = moment(rangeEnd, 'YYYY-MM-DD').diff(startMonth, 'months');
+
+                this.data.monthly = this.data.monthly || [];
+                
+                appliedStartMonth = (appliedStartMonth < 0 ? 0 : appliedStartMonth);
+                appliedEndMonth = (appliedEndMonth > this.data.monthly.length ? this.data.monthly.length - 1 : appliedEndMonth);
+
+                for (var i = appliedStartMonth; i < appliedEndMonth; i++) {
+                    this.data.monthly[i].withdrawal = 0;
+                }
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
             privateProperty(this, 'addRepaymentInMonth', function (repayment, month, source) {
                 var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
@@ -12219,7 +12243,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
                 // applied month is not before the offsetDate, add repayment and do calculation
                 if(appliedMonth > -1) {
-
                     this.data.monthly = this.data.monthly || [];
                     initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
@@ -12526,7 +12549,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         function ProductionGroup (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data = (attrs && attrs.data ? attrs.data : {});
             this.data.details = this.data.details || {};
 
             this.productionSchedules = [];
@@ -12768,7 +12790,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data = (attrs && attrs.data ? attrs.data : {});
             this.data.details = this.data.details || {};
 
             privateProperty(this, 'setDate', function (startDate) {
