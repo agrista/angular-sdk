@@ -504,6 +504,55 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
 }]);
 
 /**
+ * Financial API
+ */
+sdkApiApp.factory('financialApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getFinancials: function (id) {
+            return promiseService.wrap(function (promise) {
+                if (id !== undefined) {
+                    $http.get(_host + 'api/financials/' + id, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                } else {
+                    promise.reject();
+                }
+            });
+        },
+        createFinancial: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/financial', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFinancial: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/financial/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateFinancial: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/financial/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteFinancial: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/financial/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Legal Entity API
  */
 sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {

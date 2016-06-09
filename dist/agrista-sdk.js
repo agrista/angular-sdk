@@ -504,6 +504,55 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
 }]);
 
 /**
+ * Financial API
+ */
+sdkApiApp.factory('financialApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getFinancials: function (id) {
+            return promiseService.wrap(function (promise) {
+                if (id !== undefined) {
+                    $http.get(_host + 'api/financials/' + id, {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                } else {
+                    promise.reject();
+                }
+            });
+        },
+        createFinancial: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/financial', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFinancial: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/financial/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateFinancial: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/financial/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteFinancial: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/financial/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Legal Entity API
  */
 sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
@@ -13289,6 +13338,44 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
+var sdkModelFinancial = angular.module('ag.sdk.model.financial', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelFinancial.factory('Financial', ['inheritModel', 'Model', 'underscore',
+    function (inheritModel, Model, underscore) {
+        function Financial (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.year = attrs.year;
+            this.id = attrs.id || attrs.$id;
+            this.organizationId = attrs.organizationId;
+
+            // Models
+            this.organization = attrs.organization;
+        }
+
+        inheritModel(Financial, Model.Base);
+
+        Financial.validates({
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            year: {
+                numeric: true,
+                range: {
+                    from: 1000,
+                    to: 9999
+                }
+            }
+        });
+
+        return Financial;
+    }]);
+
 var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
 sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
@@ -13583,7 +13670,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     appliedEndMonth = moment(rangeEnd, 'YYYY-MM-DD').diff(startMonth, 'months');
 
                 this.data.monthly = this.data.monthly || [];
-                
+
                 appliedStartMonth = (appliedStartMonth < 0 ? 0 : appliedStartMonth);
                 appliedEndMonth = (appliedEndMonth > this.data.monthly.length ? this.data.monthly.length - 1 : appliedEndMonth);
 
@@ -15416,6 +15503,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm-valuation',
+    'ag.sdk.model.financial',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.production-schedule',
