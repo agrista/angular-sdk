@@ -10684,8 +10684,8 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
     }]);
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation', 'ag.sdk.model.production-schedule']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'Financial', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, Financial, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
 
         var _assetYearEndValueAdjustments = {
             'Land and fixed improvements': [
@@ -10748,29 +10748,31 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             this.docType = 'financial resource plan';
 
-            this.data.account = this.data.account || {
-                monthly: [],
-                yearly: [],
-                openingBalance: 0,
-                interestRateCredit: 0,
-                interestRateDebit: 0,
-                depreciationRate: 0
-            };
+            initializeObject(this.data, 'account', {});
+            initializeObject(this.data, 'models', {});
+            initializeObject(this.data, 'monthlyStatement', []);
+            initializeObject(this.data, 'adjustmentFactors', {});
+            initializeObject(this.data, 'assetStatement', {});
+            initializeObject(this.data, 'liabilityStatement', {});
 
-            this.data.models = this.data.models || {
-                assets: [],
-                farmValuations: [],
-                legalEntities: [],
-                liabilities: [],
-                productionSchedules: [],
-                income: [],
-                expenses: []
-            };
+            initializeObject(this.data.assetStatement, 'total', {});
+            initializeObject(this.data.liabilityStatement, 'total', {});
 
-            this.data.monthlyStatement = this.data.monthlyStatement || [];
-            this.data.assetStatement = this.data.assetStatement || { total: {}};
-            this.data.liabilityStatement = this.data.liabilityStatement || { total: {} };
-            this.data.adjustmentFactors = this.data.adjustmentFactors || {};
+            initializeObject(this.data.account, 'monthly', []);
+            initializeObject(this.data.account, 'yearly', []);
+            initializeObject(this.data.account, 'openingBalance', 0);
+            initializeObject(this.data.account, 'interestRateCredit', 0);
+            initializeObject(this.data.account, 'interestRateDebit', 0);
+            initializeObject(this.data.account, 'depreciationRate', 0);
+
+            initializeObject(this.data.models, 'assets', []);
+            initializeObject(this.data.models, 'expenses', []);
+            initializeObject(this.data.models, 'farmValuations', []);
+            initializeObject(this.data.models, 'financials', []);
+            initializeObject(this.data.models, 'income', []);
+            initializeObject(this.data.models, 'legalEntities', []);
+            initializeObject(this.data.models, 'liabilities', []);
+            initializeObject(this.data.models, 'productionSchedules', []);
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -11196,6 +11198,24 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
                 instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
             }
+
+            /**
+             * Financials
+             */
+            privateProperty(this, 'updateFinancials', function (financials) {
+                this.models.financials = underscore.chain(financials)
+                    .filter(function(financial) {
+                        return Financial.new(financial).validate();
+                    })
+                    .sortBy(function (financial) {
+                        return -financial.year;
+                    })
+                    .first(3)
+                    .sortBy(function (financial) {
+                        return financial.year;
+                    })
+                    .value();
+            });
 
             /**
              * Farm Valuations handling
@@ -13338,17 +13358,25 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
-var sdkModelFinancial = angular.module('ag.sdk.model.financial', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelFinancial = angular.module('ag.sdk.model.financial', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.utilities']);
 
-sdkModelFinancial.factory('Financial', ['inheritModel', 'Model', 'underscore',
-    function (inheritModel, Model, underscore) {
+sdkModelFinancial.factory('Financial', ['$filter', 'inheritModel', 'Model', 'privateProperty', 'underscore',
+    function ($filter, inheritModel, Model, privateProperty, underscore) {
         function Financial (attrs) {
             Model.Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data) || {};
+            this.data.assets = this.data.assets || {};
+            this.data.liabilities = this.data.liabilities || {};
+            this.data.ratios = this.data.ratios || {};
+
+            privateProperty(this, 'recalculate', function () {
+                return recalculate(this);
+            });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.month = attrs.month;
             this.year = attrs.year;
             this.id = attrs.id || attrs.$id;
             this.organizationId = attrs.organizationId;
@@ -13359,10 +13387,72 @@ sdkModelFinancial.factory('Financial', ['inheritModel', 'Model', 'underscore',
 
         inheritModel(Financial, Model.Base);
 
+        var roundValue = $filter('round');
+
+        function calculateRatio (numeratorProperties, denominatorProperties) {
+            numeratorProperties = (underscore.isArray(numeratorProperties) ? numeratorProperties : [numeratorProperties]);
+            denominatorProperties = (underscore.isArray(denominatorProperties) ? denominatorProperties : [denominatorProperties]);
+
+            var numerator = underscore.reduce(numeratorProperties, function (total, value) {
+                    return total + (value || 0);
+                }, 0),
+                denominator = underscore.reduce(denominatorProperties, function (total, value) {
+                    return total + (value || 0);
+                }, 0);
+
+            return (denominator ? roundValue(numerator / denominator) : 0);
+        }
+
+        function recalculate (instance) {
+            instance.data.totalAssets = roundValue(underscore.chain(instance.data.assets)
+                .values()
+                .flatten()
+                .reduce(function (total, asset) {
+                    return total + (asset.estimatedValue || 0);
+                }, 0)
+                .value());
+            instance.data.totalLiabilities = roundValue(underscore.chain(instance.data.liabilities)
+                .values()
+                .flatten()
+                .reduce(function (total, liability) {
+                    return total + (liability.estimatedValue || 0);
+                }, 0)
+                .value());
+
+            instance.netWorth = roundValue(instance.data.totalAssets - instance.data.totalLiabilities);
+            instance.grossProfit = roundValue((instance.data.productionIncome || 0) - (instance.data.productionExpenditure || 0));
+
+            instance.data.ebitda = roundValue(instance.grossProfit + (instance.data.otherIncome || 0) - (instance.data.otherExpenditure || 0));
+            instance.data.ebit = roundValue(instance.data.ebitda - (instance.data.depreciationAmortization || 0));
+            instance.data.ebt = roundValue(instance.data.ebit - (instance.data.interestPaid || 0));
+
+            instance.netProfit = roundValue(instance.data.ebt - (instance.data.taxPaid || 0));
+
+            instance.data.ratios = {
+                debt: calculateRatio(instance.data.totalLiabilities, instance.data.totalAssets),
+                debtToTurnover: calculateRatio(instance.data.totalLiabilities, [instance.data.productionIncome, instance.data.otherIncome]),
+                gearing: calculateRatio(instance.data.totalLiabilities, instance.netWorth),
+                inputOutput: calculateRatio(instance.data.productionIncome, instance.data.productionExpenditure),
+                interestCover: calculateRatio(instance.grossProfit, instance.data.interestPaid),
+                interestToTurnover: calculateRatio(instance.data.interestPaid, [instance.data.productionIncome, instance.data.otherIncome]),
+                productionCost: calculateRatio(instance.data.productionExpenditure, instance.data.productionIncome),
+                returnOnInvestment: calculateRatio(instance.grossProfit, instance.data.totalAssets)
+            };
+
+            instance.$dirty = true;
+        }
+
         Financial.validates({
             organizationId: {
                 required: true,
                 numeric: true
+            },
+            month: {
+                numeric: true,
+                range: {
+                    from: 1,
+                    to: 12
+                }
             },
             year: {
                 numeric: true,

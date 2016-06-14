@@ -1,7 +1,7 @@
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation', 'ag.sdk.model.production-schedule']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'Financial', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function (Asset, computedProperty, Document, FarmValuation, Financial, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
 
         var _assetYearEndValueAdjustments = {
             'Land and fixed improvements': [
@@ -64,29 +64,31 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             this.docType = 'financial resource plan';
 
-            this.data.account = this.data.account || {
-                monthly: [],
-                yearly: [],
-                openingBalance: 0,
-                interestRateCredit: 0,
-                interestRateDebit: 0,
-                depreciationRate: 0
-            };
+            initializeObject(this.data, 'account', {});
+            initializeObject(this.data, 'models', {});
+            initializeObject(this.data, 'monthlyStatement', []);
+            initializeObject(this.data, 'adjustmentFactors', {});
+            initializeObject(this.data, 'assetStatement', {});
+            initializeObject(this.data, 'liabilityStatement', {});
 
-            this.data.models = this.data.models || {
-                assets: [],
-                farmValuations: [],
-                legalEntities: [],
-                liabilities: [],
-                productionSchedules: [],
-                income: [],
-                expenses: []
-            };
+            initializeObject(this.data.assetStatement, 'total', {});
+            initializeObject(this.data.liabilityStatement, 'total', {});
 
-            this.data.monthlyStatement = this.data.monthlyStatement || [];
-            this.data.assetStatement = this.data.assetStatement || { total: {}};
-            this.data.liabilityStatement = this.data.liabilityStatement || { total: {} };
-            this.data.adjustmentFactors = this.data.adjustmentFactors || {};
+            initializeObject(this.data.account, 'monthly', []);
+            initializeObject(this.data.account, 'yearly', []);
+            initializeObject(this.data.account, 'openingBalance', 0);
+            initializeObject(this.data.account, 'interestRateCredit', 0);
+            initializeObject(this.data.account, 'interestRateDebit', 0);
+            initializeObject(this.data.account, 'depreciationRate', 0);
+
+            initializeObject(this.data.models, 'assets', []);
+            initializeObject(this.data.models, 'expenses', []);
+            initializeObject(this.data.models, 'farmValuations', []);
+            initializeObject(this.data.models, 'financials', []);
+            initializeObject(this.data.models, 'income', []);
+            initializeObject(this.data.models, 'legalEntities', []);
+            initializeObject(this.data.models, 'liabilities', []);
+            initializeObject(this.data.models, 'productionSchedules', []);
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -512,6 +514,24 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
                 instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
             }
+
+            /**
+             * Financials
+             */
+            privateProperty(this, 'updateFinancials', function (financials) {
+                this.models.financials = underscore.chain(financials)
+                    .filter(function(financial) {
+                        return Financial.new(financial).validate();
+                    })
+                    .sortBy(function (financial) {
+                        return -financial.year;
+                    })
+                    .first(3)
+                    .sortBy(function (financial) {
+                        return financial.year;
+                    })
+                    .value();
+            });
 
             /**
              * Farm Valuations handling
