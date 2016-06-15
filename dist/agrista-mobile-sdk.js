@@ -8920,7 +8920,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             });
 
             computedProperty(this, 'size', function () {
-                return this.data.size;
+                return (this.type !== 'farmland' ? this.data.size : this.data.area);
             });
 
             // Crop
