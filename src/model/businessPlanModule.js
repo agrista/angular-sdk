@@ -64,6 +64,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             this.docType = 'financial resource plan';
 
+            this.data.startDate = moment(this.data.startDate).format('YYYY-MM-DD');
+            this.data.endDate = moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD');
+
             initializeObject(this.data, 'account', {});
             initializeObject(this.data, 'models', {});
             initializeObject(this.data, 'monthlyStatement', []);
@@ -1361,7 +1364,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             computedProperty(this, 'endDate', function () {
                 this.data.endDate = (this.data.startDate ?
-                    moment(this.data.startDate).add(2, 'y').format() :
+                    moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD') :
                     this.data.endDate);
 
                 return this.data.endDate;
