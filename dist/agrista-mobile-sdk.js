@@ -10221,6 +10221,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             initializeCategoryValues(instance, 'capitalExpenditure', 'Development', numberOfMonths);
 
                             instance.data.capitalExpenditure['Development'][constructionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                        } else if (asset.type === 'farmland') {
+                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'capitalExpenditure', 'Land Purchases', numberOfMonths);
+
+                                instance.data.capitalExpenditure['Land Purchases'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                            }
+
+                            if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'capitalIncome', 'Land Sales', numberOfMonths);
+
+                                instance.data.capitalIncome['Land Sales'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
+                            }
                         }
 
                         if (asset.data.assetValue && !(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
