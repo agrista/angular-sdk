@@ -8899,8 +8899,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
             });
 
-            privateProperty(this, 'getTitle', function (withField) {
-                return getTitle(this, withField);
+            privateProperty(this, 'getTitle', function (withField, farm) {
+                return getTitle(this, withField, farm);
             });
 
             computedProperty(this, 'age', function (asOfDate) {
@@ -9032,7 +9032,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
 
-        function getTitle (instance, withField) {
+        function getTitle (instance, withField, farm) {
             switch (instance.type) {
                 case 'crop':
                 case 'permanent crop':
@@ -9040,7 +9040,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                     return (instance.data.plantedArea ? $filter('number')(instance.data.plantedArea, 2) + 'ha' : '') +
                         (instance.data.plantedArea && instance.data.crop ? ' of ' : '') +
                         (instance.data.crop ? instance.data.crop : '') +
-                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
+                        (farm ? ' on farm ' + farm.name : '');
                 case 'farmland':
                     return (instance.data.label ? instance.data.label :
                         (instance.data.portionLabel ? instance.data.portionLabel :
@@ -9048,19 +9049,24 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 case 'cropland':
                     return (instance.data.irrigation ? instance.data.irrigation + ' irrigated' :
                             (instance.data.irrigated ? 'Irrigated' + (instance.data.equipped ? ', equipped' : ', unequipped') : 'Non irrigable'))
-                        + ' ' + instance.type + (instance.data.waterSource ? ' from ' + instance.data.waterSource : '') + (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                        + ' ' + instance.type + (instance.data.waterSource ? ' from ' + instance.data.waterSource : '') +
+                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
+                        (farm ? ' on farm ' + farm.name : '');
                 case 'livestock':
                     return instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
                 case 'pasture':
                     return (instance.data.intensified ? (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type : 'Natural grazing') +
-                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
+                        (farm ? ' on farm ' + farm.name : '');
                 case 'vme':
                     return instance.data.category + (instance.data.model ? ' model ' + instance.data.model : '');
                 case 'wasteland':
                     return 'Homestead & Wasteland';
                 case 'water source':
                 case 'water right':
-                    return instance.data.waterSource + (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '');
+                    return instance.data.waterSource +
+                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
+                        (farm ? ' on farm ' + farm.name : '');
                 default:
                     return instance.data.name || instance.assetTypes[instance.type];
             }
