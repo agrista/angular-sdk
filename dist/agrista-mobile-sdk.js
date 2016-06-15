@@ -13094,11 +13094,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             });
 
             computedProperty(this, 'assetType', function () {
-                return (this.budget ? this.budget.assetType : undefined);
+                return (this.budget ? this.budget.assetType : this.type);
             });
 
             computedProperty(this, 'commodityType', function () {
-                return (this.budget ? this.budget.commodityType : undefined);
+                return (this.budget ? this.budget.commodityType : this.data.details.commodity);
             });
             
             computedProperty(this, 'allocatedSize', function () {
