@@ -1031,6 +1031,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     extractLivestockBreedingStockComposition(instance, schedule);
                 });
 
+                calculateAssetStatementRMV(instance);
                 totalAssetsAndLiabilities(instance);
             }
 
