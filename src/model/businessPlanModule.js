@@ -1,7 +1,7 @@
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.legal-entity', 'ag.sdk.model.liability', 'ag.sdk.model.farm-valuation', 'ag.sdk.model.production-schedule']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'FarmValuation', 'Financial', 'generateUUID', 'inheritModel', 'LegalEntity', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function (Asset, computedProperty, Document, FarmValuation, Financial, generateUUID, inheritModel, LegalEntity, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function (Asset, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
 
         var _assetYearEndValueAdjustments = {
             'Land and fixed improvements': [
@@ -69,7 +69,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             initializeObject(this.data, 'account', {});
             initializeObject(this.data, 'models', {});
-            initializeObject(this.data, 'monthlyStatement', []);
             initializeObject(this.data, 'adjustmentFactors', {});
             initializeObject(this.data, 'assetStatement', {});
             initializeObject(this.data, 'liabilityStatement', {});
@@ -86,17 +85,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             initializeObject(this.data.models, 'assets', []);
             initializeObject(this.data.models, 'expenses', []);
-            initializeObject(this.data.models, 'farmValuations', []);
             initializeObject(this.data.models, 'financials', []);
             initializeObject(this.data.models, 'income', []);
-            initializeObject(this.data.models, 'legalEntities', []);
             initializeObject(this.data.models, 'liabilities', []);
             initializeObject(this.data.models, 'productionSchedules', []);
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
-                reEvaluateLegalEntities(instance);
-                reEvaluateFarmValuations(instance);
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
                 reEvaluateIncomeAndExpenses(instance);
@@ -166,94 +161,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             function negateArrayValues (array) {
                 return underscore.map(array, function(value) {
                     return value * -1;
-                });
-            }
-
-            /**
-             * Legal Entities handling
-             */
-            privateProperty(this, 'addLegalEntity', function (legalEntity) {
-                var instance = this,
-                    dupLegalEntity = underscore.findWhere(this.models.legalEntities, {uuid: legalEntity.uuid});
-
-                if (underscore.isUndefined(dupLegalEntity) && LegalEntity.new(legalEntity).validate()) {
-                    this.models.legalEntities.push(legalEntity);
-
-                    angular.forEach(legalEntity.assets, function(asset) {
-                        instance.addAsset(asset);
-                    });
-
-                    reEvaluateBusinessPlan(this);
-                }
-            });
-
-            privateProperty(this, 'removeLegalEntity', function (legalEntity) {
-                this.models.legalEntities = underscore.reject(this.models.legalEntities, function (entity) {
-                    return entity.id === legalEntity.id;
-                });
-
-                this.models.assets = underscore.reject(this.models.assets, function (asset) {
-                    return asset.legalEntityId === legalEntity.id;
-                });
-
-                reEvaluateBusinessPlan(this);
-            });
-
-            function reEvaluateLegalEntities (instance) {
-                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
-                    return item.source === 'legal entity';
-                });
-
-                underscore.each(instance.models.legalEntities, function (item) {
-                    var legalEntity = LegalEntity.new(item),
-                        registerAssets = underscore
-                            .chain(instance.data.assets)
-                            .values()
-                            .flatten()
-                            .where({legalEntityId: legalEntity.id})
-                            .value(),
-                        registerLiabilities = underscore
-                            .chain(instance.data.liabilities)
-                            .where({legalEntityId: legalEntity.id})
-                            .value();
-
-                    underscore.each(registerAssets, function (asset) {
-                        var statementAsset = underscore.findWhere(instance.data.monthlyStatement, {uuid: asset.assetKey});
-
-                        if (underscore.isUndefined(statementAsset)) {
-                            asset = Asset.new(asset);
-
-                            instance.data.monthlyStatement.push({
-                                uuid: asset.assetKey,
-                                legalEntityUuid: legalEntity.uuid,
-                                name: asset.title,
-                                description: (asset.type === 'improvement' ? asset.data.category : asset.description),
-                                type: 'asset',
-                                subtype: asset.type,
-                                source: 'legal entity',
-                                value: asset.data.assetValue || 0
-                            });
-                        }
-                    });
-
-                    underscore.each(registerLiabilities, function (liability) {
-                        var statementLiability = underscore.findWhere(instance.data.monthlyStatement, {uuid: liability.uuid});
-
-                        if (underscore.isUndefined(statementLiability)) {
-                            liability = Liability.new(liability);
-
-                            instance.data.monthlyStatement.push({
-                                uuid: liability.uuid,
-                                legalEntityUuid: legalEntity.uuid,
-                                name: Liability.getTypeTitle(liability.type),
-                                type: 'liability',
-                                subtype: liability.type,
-                                source: 'legal entity',
-                                liability: liability.liabilityInRange(instance.startDate, instance.endDate)
-                            });
-                        }
-                    });
-
                 });
             }
 
@@ -537,118 +444,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             });
 
             /**
-             * Farm Valuations handling
-             */
-            privateProperty(this, 'addFarmValuation', function (farmValuation) {
-                var dupFarmValuation = underscore.findWhere(this.models.farmValuations, {documentId: farmValuation.documentId});
-
-                if (underscore.isUndefined(dupFarmValuation) && FarmValuation.new(farmValuation).validate()) {
-                    this.models.farmValuations.push(farmValuation);
-
-                    reEvaluateFarmValuations(this);
-                    recalculate(this);
-                }
-            });
-
-            privateProperty(this, 'removeFarmValuation', function (farmValuation) {
-                this.models.farmValuations = underscore.reject(this.models.farmValuations, function (valuation) {
-                    return valuation.id === farmValuation.id;
-                });
-
-                reEvaluateFarmValuations(this);
-                recalculate(this);
-            });
-
-            function reEvaluateFarmValuations (instance) {
-                // Remove all statements from farm valuation source
-                instance.data.monthlyStatement = underscore.reject(instance.data.monthlyStatement, function (item) {
-                    return item.source === 'farm valuation';
-                });
-
-                underscore.each(instance.models.farmValuations, function (valuationItem) {
-                    var farmValuation = FarmValuation.new(valuationItem);
-
-                    if (farmValuation.data.request && farmValuation.data.report) {
-                        var legalEntity = farmValuation.data.request.legalEntity;
-
-                        // Check legal entity model for farm valuation is included
-                        if (underscore.some(instance.models.legalEntities, function (entity) {
-                                return entity.uuid === legalEntity.uuid;
-                            })) {
-                            // Farm valuation contains a completed report landUseComponents
-                            if (farmValuation.data.report.landUseComponents) {
-                                underscore.each(farmValuation.data.report.landUseComponents, function (landUseComponent, landUse) {
-                                    underscore.each(landUseComponent, function (category) {
-                                        var statementCategory = underscore.findWhere(instance.data.monthlyStatement, {uuid: landUse + '-' + category.name})
-
-                                        if (underscore.isUndefined(statementCategory)) {
-                                            // Add new land use component
-                                            instance.data.monthlyStatement.push({
-                                                uuid: landUse + '-' + category.name,
-                                                legalEntityUuid: legalEntity.uuid,
-                                                name: landUse,
-                                                description: category.name,
-                                                type: 'asset',
-                                                subtype: 'land use',
-                                                source: 'farm valuation',
-                                                value: (category.area * category.valuePerHa)
-                                            });
-                                        } else {
-                                            // Sum two components together
-                                            statementCategory.value += (category.area * category.valuePerHa);
-                                        }
-                                    });
-                                });
-                            }
-
-                            // Farm valuation contains a completed report improvements
-                            if (farmValuation.data.report.improvements) {
-                                // Loop through the valued improvements
-                                underscore.each(farmValuation.data.report.improvements, function (improvementItem) {
-                                    var improvement = Asset.new(improvementItem),
-                                        statementImprovement = underscore.findWhere(instance.data.monthlyStatement, {uuid: improvement.assetKey, type: 'asset'}),
-                                        registerImprovement = underscore.findWhere(instance.data.assets.improvement, {assetKey: improvement.assetKey});
-
-                                    if (underscore.isUndefined(statementImprovement)) {
-                                        // Improvement is still valid
-                                        if (registerImprovement && improvement.validate()) {
-                                            // Find asset in document's asset register
-                                            var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: registerImprovement.legalEntityId});
-
-                                            if (underscore.some(instance.models.legalEntities, function (entity) {
-                                                    return entity.uuid === registerLegalEntity.uuid;
-                                                })) {
-                                                // Legal Entity for this improvement is an included Legal Entity
-
-                                                // Add asset
-                                                instance.data.monthlyStatement.push({
-                                                    uuid: improvement.assetKey,
-                                                    legalEntityUuid: registerLegalEntity.uuid,
-                                                    name: improvement.title,
-                                                    description: improvement.description,
-                                                    type: 'asset',
-                                                    subtype: improvement.type,
-                                                    source: 'farm valuation',
-                                                    value: improvement.data.assetValue || 0
-                                                });
-                                            }
-                                        }
-                                    } else {
-                                        // Add valuation to improvement
-                                        statementImprovement.source = 'farm valuation';
-                                        statementImprovement.value = improvement.data.assetValue;
-                                    }
-                                });
-                            }
-                        }
-                    }
-                });
-            }
-
-            /**
              *   Assets & Liabilities Handling
              */
-
             privateProperty(this, 'addAsset', function (asset) {
                 var instance = this;
 
@@ -1397,10 +1194,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
 
             computedProperty(this, 'models', function () {
                 return this.data.models;
-            });
-
-            computedProperty(this, 'monthlyStatement', function () {
-                return this.data.monthlyStatement;
             });
 
             privateProperty(this, 'reEvaluate', function() {

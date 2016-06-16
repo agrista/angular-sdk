@@ -149,6 +149,12 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'short-term': 'Current'
         });
 
+        readOnlyProperty(Asset, 'liquidityCategories', {
+            'long-term': ['Fixed Improvements', 'Investments', 'Land', 'Other'],
+            'medium-term': ['Breeding Stock', 'Vehicles, Machinery & Equipment', 'Other'],
+            'short-term': ['Crops & Crop Products', 'Cash on Hand', 'Debtors', 'Short-term Investments', 'Prepaid Expenses', 'Production Inputs', 'Life Insurance', 'Livestock Products', 'Marketable Livestock', 'Negotiable Securities', 'Other']
+        });
+
         readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
             'other': 'Other'
         }, Asset.assetTypes));
@@ -199,7 +205,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                         (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
                         (farm ? ' on farm ' + farm.name : '');
                 default:
-                    return instance.data.name || instance.assetTypes[instance.type];
+                    return instance.data.name || instance.data.category || instance.assetTypes[instance.type];
             }
         }
 

@@ -21,14 +21,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
         var _typesWithAmount = ['short-term', 'medium-term', 'long-term'];
 
-        var _subtypes = {
-            'production-credit': {
-                'off-taker': 'Off Taker',
-                'input-supplier': 'Input Supplier',
-                'input-financing': 'Input Financing'
-            }
-        };
-
         function defaultMonth () {
             return {
                 opening: 0,
@@ -58,12 +50,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             underscore.each(monthlyData, function (month, index) {
                 var currentMonth = (index + startMonth) % 12;
 
-                if(moment(instance.startDate).isAfter(instance.openingDate)) {
-                    month.opening = (index === 0 ? instance.amount : monthlyData[index - 1].closing);
-                } else {
-                    month.opening = (index === 0 ? instance.openingBalance : monthlyData[index - 1].closing);
-                }
-
+                month.opening = (index === 0 ? instance.getLiabilityOpening() : monthlyData[index - 1].closing);
 
                 if ((this.frequency === 'once' && index === 0) || (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth))) {
                     var installmentPayment = (this.frequency === 'once' ? month.opening : instance.installmentPayment * paymentsPerMonth);
@@ -89,14 +76,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.data = (attrs && attrs.data) || {};
 
             computedProperty(this, 'title', function () {
-                return this.name || (this.type ? Liability.getTypeTitle(this.type) + ' ' : '') + (this.type === 'rent' ?
-                        (this.installmentPayment ? 'R ' + $filter('number')(this.installmentPayment, 0) + ' installments ' : '') :
-                        (this.amount ? 'R ' + $filter('number')(this.amount, 0) + ' loan ' : '')) +
-                    (this.frequency ? Liability.getFrequencyTitle(this.frequency) + ' repayment ' : '');
-            });
-
-            computedProperty(this, 'subtype', function () {
-                return this.data.subtype;
+                return this.name || this.category;
             });
 
             computedProperty(this, 'paymentMonths', function () {
@@ -298,7 +278,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     rangeEndMonth = moment(rangeEnd, 'YYYY-MM-DD'),
                     appliedStartMonth = rangeStartMonth.diff(startMonth, 'months'),
                     appliedEndMonth = rangeEndMonth.diff(startMonth, 'months'),
-                    paddedOffset = (appliedStartMonth < 0 ? 0 - appliedStartMonth : 0);
+                    paddedOffset = (appliedStartMonth < 0 ? Math.min(rangeEndMonth.diff(rangeStartMonth, 'months'), Math.abs(appliedStartMonth)) : 0);
 
                 var monthlyData = angular.copy(this.data.monthly || []);
                 initializeMonthlyTotals(this, monthlyData, appliedEndMonth);
@@ -317,7 +297,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'getLiabilityOpening', function () {
-                return (moment(this.startDate).isBefore(this.openingDate) ? this.openingBalance : this.amount);
+                return (moment(this.startDate).isBefore(this.openingDate) && !underscore.isUndefined(this.openingBalance) ? this.openingBalance : this.amount);
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -327,6 +307,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.merchantUuid = attrs.merchantUuid;
             this.name = attrs.name;
             this.type = attrs.type;
+            this.category = attrs.category;
             this.openingBalance = attrs.openingBalance || 0;
             this.installmentPayment = attrs.installmentPayment;
             this.interestRate = attrs.interestRate || 0;
@@ -356,18 +337,25 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'custom': 'Custom'
         }, Liability.frequencyTypes));
 
+        privateProperty(Liability, 'getFrequencyTitle', function (type) {
+            return Liability.frequencyTypesWithCustom[type] || '';
+        });
+
         readOnlyProperty(Liability, 'liabilityTypes', _types);
 
         readOnlyProperty(Liability, 'liabilityTypesWithOther', underscore.extend({
             'other': 'Other'
         }, Liability.liabilityTypes));
 
-        privateProperty(Liability, 'getFrequencyTitle', function (type) {
-            return Liability.frequencyTypesWithCustom[type] || '';
-        });
-
         privateProperty(Liability, 'getTypeTitle', function (type) {
             return Liability.liabilityTypesWithOther[type] || '';
+        });
+
+        readOnlyProperty(Liability, 'liabilityCategories', {
+            'long-term': ['Bonds', 'Loans', 'Other'],
+            'medium-term': ['Terms Loans', 'Instalment Sale Credit', 'Leases', 'Other'],
+            'short-term': ['Bank', 'Co-operative', 'Creditors', 'Income Tax', 'Bills Payable', 'Portion of Term Commitments', 'Other'],
+            'production-credit': ['Off Taker', 'Input Supplier', 'Input Financing']
         });
 
         function isLeased (value, instance, field) {
@@ -378,8 +366,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             return instance.type === 'other';
         }
 
-        function hasSubtype (value, instance, field) {
-            return !!(_subtypes[instance.type] && underscore.keys(_subtypes[instance.type]).length > 0);
+        function hasCategory (value, instance, field) {
+            return !underscore.isEmpty(Liability.liabilityCategories[instance.type]);
         }
 
         Liability.validates({
@@ -411,7 +399,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             },
             creditLimit: {
                 requiredIf: function (value, instance, field) {
-                    return (instance.type === 'production-credit' && instance.data.subtype === 'input-financing') ||
+                    return (instance.type === 'production-credit' && instance.data.category === 'Input Financing') ||
                         (instance.type !== 'production-credit' && !angular.isNumber(instance.installmentPayment));
                 },
                 range: {
@@ -439,11 +427,11 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     in: underscore.keys(Liability.liabilityTypesWithOther)
                 }
             },
-            subtype: {
-                requiredIf: hasSubtype,
+            category: {
+                requiredIf: hasCategory,
                 inclusion: {
                     in: function (value, instance, field) {
-                        return _subtypes[instance.type] && underscore.keys(_subtypes[instance.type]) || [];
+                        return Liability.liabilityCategories[instance.type];
                     }
                 }
             },
