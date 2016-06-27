@@ -1100,6 +1100,12 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                 }, promise.reject);
             });
         },
+        listFinancialResourcePlanStatus: function(params) {
+            return pagingService.page(_host + 'api/aggregation/report-frp-summary', params);
+        },
+        listCrossSelling: function(params) {
+            return pagingService.page(_host + 'api/aggregation/report-cross-selling', params);
+        },
         searchProductionSchedules: function(query) {
             query = angular.copy(query);
 
