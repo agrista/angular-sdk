@@ -241,8 +241,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'generateUUID', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, generateUUID, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -250,25 +250,38 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
             privateProperty(this, 'setDate', function (startDate) {
                 startDate = moment(startDate);
+                startDate.date(1);
 
-                var startCycle = (this.budget ? this.budget.cycleStart : startDate.month()),
-                    allocationDate = moment([(startDate.month() < startCycle ? startDate.year() - 1 : startDate.year()), startCycle]);
+                this.startDate = startDate.format('YYYY-MM-DD');
+
+                var monthsPerCycle = 12 / Math.floor(12 / this.numberOfAllocatedMonths),
+                    nearestAllocationMonth = (this.budget ? ((monthsPerCycle * Math.floor((startDate.month() - this.budget.cycleStart) / monthsPerCycle)) + this.budget.cycleStart) : startDate.month()),
+                    allocationDate = moment([startDate.year()]).add(nearestAllocationMonth, 'M');
 
                 this.startDate = allocationDate.format('YYYY-MM-DD');
                 this.endDate = allocationDate.add(1, 'y').format('YYYY-MM-DD');
 
                 if (this.asset) {
-                    this.data.details.assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
+                    var assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
 
-                    this.recalculate();
+                    if (assetAge != this.data.details.assetAge) {
+                        this.data.details.assetAge = assetAge;
+
+                        this.recalculate();
+                    }
                 }
             });
 
             privateProperty(this, 'setAsset', function (asset) {
                 this.asset = underscore.omit(asset, ['liabilities', 'productionSchedules']);
                 this.assetId = this.asset.id || this.asset.$id;
+                this.type = (asset.type === 'cropland' ? 'crop' : (asset.type === 'permanent crop' ? 'horticulture' : 'livestock'));
                 this.data.details.fieldName = this.asset.data.fieldName;
                 this.data.details.assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
+
+                if (asset.data.crop) {
+                    this.data.details.commodity = asset.data.crop;
+                }
 
                 if (this.type === 'livestock') {
                     this.data.details.pastureType = (this.asset.data.irrigated ? 'pasture' : 'grazing');
@@ -303,19 +316,19 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     });
                 }
 
-                if (this.startDate) {
-                    this.setDate(this.startDate);
-                }
-
                 if (this.data.details.pastureType && this.budget.data.details.stockingDensity) {
                     this.setLivestockStockingDensity(this.budget.data.details.stockingDensity[this.data.details.pastureType]);
                 }
 
                 this.recalculate();
+
+                if (this.startDate) {
+                    this.setDate(this.startDate);
+                }
             });
 
             privateProperty(this, 'setLivestockStockingDensity', function (stockingDensity) {
-                if (this.type == 'livestock') {
+                if (this.type == 'livestock' && this.data.details.stockingDensity != stockingDensity) {
                     this.data.details.stockingDensity = stockingDensity;
 
                     this.setSize(this.allocatedSize);
@@ -441,6 +454,26 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 return moment(this.endDate).diff(this.startDate, 'months');
             });
 
+            privateProperty(this, 'getAllocationIndex', function (sectionCode, costStage) {
+                return (this.budget ? this.budget.getAllocationIndex(sectionCode, costStage) : 0);
+            });
+
+            privateProperty(this, 'getLastAllocationIndex', function (sectionCode, costStage) {
+                return (this.budget ? this.budget.getLastAllocationIndex(sectionCode, costStage) : this.numberOfMonths);
+            });
+
+            privateProperty(this, 'getAllocationMonth', function (sectionCode, costStage) {
+                return moment(this.startDate).add(this.getAllocationIndex(sectionCode, costStage), 'M');
+            });
+
+            privateProperty(this, 'getLastAllocationMonth', function (sectionCode, costStage) {
+                return moment(this.startDate).add(this.getLastAllocationIndex(sectionCode, costStage), 'M');
+            });
+
+            computedProperty(this, 'numberOfAllocatedMonths', function () {
+                return (this.budget ? this.budget.numberOfAllocatedMonths : this.numberOfMonths);
+            });
+
             computedProperty(this, 'income', function () {
                 return underscore.findWhere(this.data.sections, {code: 'INC', costStage: this.defaultCostStage});
             });
@@ -456,6 +489,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             this.type = attrs.type;
             this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid || generateUUID();
             this.organizationId = attrs.organizationId;
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
 

@@ -106,9 +106,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             });
 
             interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
-                return (this.assetType == 'livestock' ?
-                    EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] :
-                    EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode]);
+                return (this.assetType ?
+                    (this.assetType == 'livestock' ?
+                        EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] :
+                        EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode]) :
+                    []);
             });
 
             privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {
@@ -791,12 +793,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                 }));
             });
 
-            privateProperty(this, 'getShiftedSchedule', function (scheduleName) {
-                var schedule = this.getSchedule(scheduleName);
-
-                return underscore.rest(schedule, this.data.details.cycleStart).concat(
-                    underscore.first(schedule, this.data.details.cycleStart)
+            privateProperty(this, 'shiftMonthlyArray', function (array) {
+                return underscore.rest(array, this.data.details.cycleStart).concat(
+                    underscore.first(array, this.data.details.cycleStart)
                 );
+            });
+
+            privateProperty(this, 'getShiftedSchedule', function (scheduleName) {
+                return this.shiftMonthlyArray(this.getSchedule(scheduleName));
             });
 
             privateProperty(this, 'getAvailableSchedules', function (includeSchedule) {
@@ -809,6 +813,28 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
             
             computedProperty(this, 'cycleStartMonth', function () {
                 return EnterpriseBudget.cycleMonths[this.data.details.cycleStart].name;
+            });
+
+            privateProperty(this, 'getAllocationIndex', function (sectionCode, costStage) {
+                var section = this.getSection(sectionCode, costStage),
+                    monthIndex = (section && section.total ? underscore.findIndex(this.shiftMonthlyArray(section.total.valuePerMonth), function (value) {
+                    return value != 0;
+                }) : -1);
+
+                return (monthIndex !== -1 ? monthIndex : 0);
+            });
+
+            privateProperty(this, 'getLastAllocationIndex', function (sectionCode, costStage) {
+                var section = this.getSection(sectionCode, costStage),
+                    monthIndex = (section && section.total ? underscore.findLastIndex(this.shiftMonthlyArray(section.total.valuePerMonth), function (value) {
+                        return value != 0;
+                    }) : -1);
+
+                return (monthIndex !== -1 ? monthIndex + 1 : 12);
+            });
+
+            computedProperty(this, 'numberOfAllocatedMonths', function () {
+                return this.getLastAllocationIndex('INC') - this.getAllocationIndex('EXP');
             });
 
             privateProperty(this, 'recalculate', function () {

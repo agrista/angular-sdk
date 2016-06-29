@@ -12136,9 +12136,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             });
 
             interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
-                return (this.assetType == 'livestock' ?
-                    EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] :
-                    EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode]);
+                return (this.assetType ?
+                    (this.assetType == 'livestock' ?
+                        EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] :
+                        EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode]) :
+                    []);
             });
 
             privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {
@@ -12821,12 +12823,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                 }));
             });
 
-            privateProperty(this, 'getShiftedSchedule', function (scheduleName) {
-                var schedule = this.getSchedule(scheduleName);
-
-                return underscore.rest(schedule, this.data.details.cycleStart).concat(
-                    underscore.first(schedule, this.data.details.cycleStart)
+            privateProperty(this, 'shiftMonthlyArray', function (array) {
+                return underscore.rest(array, this.data.details.cycleStart).concat(
+                    underscore.first(array, this.data.details.cycleStart)
                 );
+            });
+
+            privateProperty(this, 'getShiftedSchedule', function (scheduleName) {
+                return this.shiftMonthlyArray(this.getSchedule(scheduleName));
             });
 
             privateProperty(this, 'getAvailableSchedules', function (includeSchedule) {
@@ -12839,6 +12843,28 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
             
             computedProperty(this, 'cycleStartMonth', function () {
                 return EnterpriseBudget.cycleMonths[this.data.details.cycleStart].name;
+            });
+
+            privateProperty(this, 'getAllocationIndex', function (sectionCode, costStage) {
+                var section = this.getSection(sectionCode, costStage),
+                    monthIndex = (section && section.total ? underscore.findIndex(this.shiftMonthlyArray(section.total.valuePerMonth), function (value) {
+                    return value != 0;
+                }) : -1);
+
+                return (monthIndex !== -1 ? monthIndex : 0);
+            });
+
+            privateProperty(this, 'getLastAllocationIndex', function (sectionCode, costStage) {
+                var section = this.getSection(sectionCode, costStage),
+                    monthIndex = (section && section.total ? underscore.findLastIndex(this.shiftMonthlyArray(section.total.valuePerMonth), function (value) {
+                        return value != 0;
+                    }) : -1);
+
+                return (monthIndex !== -1 ? monthIndex + 1 : 12);
+            });
+
+            computedProperty(this, 'numberOfAllocatedMonths', function () {
+                return this.getLastAllocationIndex('INC') - this.getAllocationIndex('EXP');
             });
 
             privateProperty(this, 'recalculate', function () {
@@ -14139,8 +14165,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'generateUUID', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, generateUUID, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -14148,25 +14174,38 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
             privateProperty(this, 'setDate', function (startDate) {
                 startDate = moment(startDate);
+                startDate.date(1);
 
-                var startCycle = (this.budget ? this.budget.cycleStart : startDate.month()),
-                    allocationDate = moment([(startDate.month() < startCycle ? startDate.year() - 1 : startDate.year()), startCycle]);
+                this.startDate = startDate.format('YYYY-MM-DD');
+
+                var monthsPerCycle = 12 / Math.floor(12 / this.numberOfAllocatedMonths),
+                    nearestAllocationMonth = (this.budget ? ((monthsPerCycle * Math.floor((startDate.month() - this.budget.cycleStart) / monthsPerCycle)) + this.budget.cycleStart) : startDate.month()),
+                    allocationDate = moment([startDate.year()]).add(nearestAllocationMonth, 'M');
 
                 this.startDate = allocationDate.format('YYYY-MM-DD');
                 this.endDate = allocationDate.add(1, 'y').format('YYYY-MM-DD');
 
                 if (this.asset) {
-                    this.data.details.assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
+                    var assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
 
-                    this.recalculate();
+                    if (assetAge != this.data.details.assetAge) {
+                        this.data.details.assetAge = assetAge;
+
+                        this.recalculate();
+                    }
                 }
             });
 
             privateProperty(this, 'setAsset', function (asset) {
                 this.asset = underscore.omit(asset, ['liabilities', 'productionSchedules']);
                 this.assetId = this.asset.id || this.asset.$id;
+                this.type = (asset.type === 'cropland' ? 'crop' : (asset.type === 'permanent crop' ? 'horticulture' : 'livestock'));
                 this.data.details.fieldName = this.asset.data.fieldName;
                 this.data.details.assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
+
+                if (asset.data.crop) {
+                    this.data.details.commodity = asset.data.crop;
+                }
 
                 if (this.type === 'livestock') {
                     this.data.details.pastureType = (this.asset.data.irrigated ? 'pasture' : 'grazing');
@@ -14201,19 +14240,19 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     });
                 }
 
-                if (this.startDate) {
-                    this.setDate(this.startDate);
-                }
-
                 if (this.data.details.pastureType && this.budget.data.details.stockingDensity) {
                     this.setLivestockStockingDensity(this.budget.data.details.stockingDensity[this.data.details.pastureType]);
                 }
 
                 this.recalculate();
+
+                if (this.startDate) {
+                    this.setDate(this.startDate);
+                }
             });
 
             privateProperty(this, 'setLivestockStockingDensity', function (stockingDensity) {
-                if (this.type == 'livestock') {
+                if (this.type == 'livestock' && this.data.details.stockingDensity != stockingDensity) {
                     this.data.details.stockingDensity = stockingDensity;
 
                     this.setSize(this.allocatedSize);
@@ -14339,6 +14378,45 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 return moment(this.endDate).diff(this.startDate, 'months');
             });
 
+            privateProperty(this, 'getAllocationIndex', function (sectionCode, costStage) {
+                return (this.budget ? this.budget.getAllocationIndex(sectionCode, costStage) : 0);
+
+
+
+
+
+                /*var section = this.getSection(sectionCode, costStage),
+                    monthIndex = (section && section.total ? underscore.findIndex(section.total.valuePerMonth, function (value) {
+                        return value != 0;
+                    }) : -1);
+
+                return (monthIndex !== -1 ? monthIndex : this.numberOfMonths);*/
+            });
+
+            privateProperty(this, 'getLastAllocationIndex', function (sectionCode, costStage) {
+                return (this.budget ? this.budget.getLastAllocationIndex(sectionCode, costStage) : this.numberOfMonths);
+
+
+                /*var section = this.getSection(sectionCode, costStage),
+                    monthIndex = (section && section.total ? underscore.findLastIndex(section.total.valuePerMonth, function (value) {
+                        return value != 0;
+                    }) : -1);
+
+                return (monthIndex !== -1 ? monthIndex + 1 : this.numberOfMonths);*/
+            });
+
+            privateProperty(this, 'getAllocationMonth', function (sectionCode, costStage) {
+                return moment(this.startDate).add(this.getAllocationIndex(sectionCode, costStage), 'M');
+            });
+
+            privateProperty(this, 'getLastAllocationMonth', function (sectionCode, costStage) {
+                return moment(this.startDate).add(this.getLastAllocationIndex(sectionCode, costStage), 'M');
+            });
+
+            computedProperty(this, 'numberOfAllocatedMonths', function () {
+                return (this.budget ? this.budget.numberOfAllocatedMonths : this.numberOfMonths);
+            });
+
             computedProperty(this, 'income', function () {
                 return underscore.findWhere(this.data.sections, {code: 'INC', costStage: this.defaultCostStage});
             });
@@ -14354,6 +14432,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             this.type = attrs.type;
             this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid || generateUUID();
             this.organizationId = attrs.organizationId;
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
 
