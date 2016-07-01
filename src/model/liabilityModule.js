@@ -121,6 +121,12 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
             });
 
+            privateProperty(this, 'recalculate', function () {
+                this.data.monthly = this.data.monthly || [];
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
             /**
              * Set/add repayment/withdrawal in month
              */

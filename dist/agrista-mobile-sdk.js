@@ -9214,19 +9214,19 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
 
         return Base;
     }])
-    .factory('computedProperty', [function () {
-        return function (object, name, value) {
-            Object.defineProperty(object, name, {
+    .factory('computedProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 get: value
-            });
+            }));
         }
     }])
-    .factory('readOnlyProperty', [function () {
-        return function (object, name, value) {
-            Object.defineProperty(object, name, {
+    .factory('readOnlyProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 writable: false,
                 value: value
-            });
+            }));
         }
     }])
     .factory('inheritModel', ['underscore', function (underscore) {
@@ -9243,11 +9243,11 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             });
         }
     }])
-    .factory('privateProperty', [function () {
-        return function (object, name, value) {
+    .factory('privateProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
             var val;
 
-            Object.defineProperty(object, name, {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 enumerable: false,
                 configurable: false,
                 get: function () {
@@ -9256,18 +9256,18 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 set: function (newVal) {
                     val = newVal;
                 }
-            });
+            }));
 
             if (value !== undefined) {
                 object[name] = value;
             }
         }
     }])
-    .factory('interfaceProperty', [function () {
-        return function (object, name, value) {
+    .factory('interfaceProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
             var val;
 
-            Object.defineProperty(object, name, {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 enumerable: false,
                 configurable: true,
                 get: function () {
@@ -9276,7 +9276,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 set: function (newVal) {
                     val = newVal;
                 }
-            });
+            }));
 
             if (value !== undefined) {
                 object[name] = value;
@@ -12155,6 +12155,12 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
             });
 
+            privateProperty(this, 'recalculate', function () {
+                this.data.monthly = this.data.monthly || [];
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
             /**
              * Set/add repayment/withdrawal in month
              */
@@ -12748,8 +12754,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'generateUUID', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, generateUUID, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -12941,6 +12947,15 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 recalculateProductionSchedule(this);
             });
 
+            computedProperty(this, 'scheduleKey', function () {
+                return (this.budgetUuid ? this.budgetUuid + '-' : '') +
+                    (this.data.details.fieldName ? this.data.details.fieldName + '-' : '') +
+                    (this.startDate ? moment(this.startDate).unix() + '-' : '') +
+                    (this.endDate ? moment(this.endDate).unix() : '');
+            }, {
+                enumerable: true
+            });
+
             computedProperty(this, 'assetType', function () {
                 return (this.budget ? this.budget.assetType : this.type);
             });
@@ -12963,29 +12978,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
             privateProperty(this, 'getAllocationIndex', function (sectionCode, costStage) {
                 return (this.budget ? this.budget.getAllocationIndex(sectionCode, costStage) : 0);
-
-
-
-
-
-                /*var section = this.getSection(sectionCode, costStage),
-                    monthIndex = (section && section.total ? underscore.findIndex(section.total.valuePerMonth, function (value) {
-                        return value != 0;
-                    }) : -1);
-
-                return (monthIndex !== -1 ? monthIndex : this.numberOfMonths);*/
             });
 
             privateProperty(this, 'getLastAllocationIndex', function (sectionCode, costStage) {
                 return (this.budget ? this.budget.getLastAllocationIndex(sectionCode, costStage) : this.numberOfMonths);
-
-
-                /*var section = this.getSection(sectionCode, costStage),
-                    monthIndex = (section && section.total ? underscore.findLastIndex(section.total.valuePerMonth, function (value) {
-                        return value != 0;
-                    }) : -1);
-
-                return (monthIndex !== -1 ? monthIndex + 1 : this.numberOfMonths);*/
             });
 
             privateProperty(this, 'getAllocationMonth', function (sectionCode, costStage) {
@@ -13015,7 +13011,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             this.type = attrs.type;
             this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             this.id = attrs.id || attrs.$id;
-            this.uuid = attrs.uuid || generateUUID();
             this.organizationId = attrs.organizationId;
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
 

@@ -153,7 +153,7 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
 /**
  * Organizational Unit API
  */
-sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -185,7 +185,7 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
         },
         updateOrganizationalUnit: function(data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/organizational-unit/' + data.id, _.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/organizational-unit/' + data.id, underscore.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -251,7 +251,7 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
 /**
  * Task API
  */
-sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -263,7 +263,7 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
         },
         createTask: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task', _.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task', underscore.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -284,7 +284,7 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
         },
         updateTask: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + data.id, _.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task/' + data.id, underscore.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -422,7 +422,7 @@ sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'co
 /**
  * Farmer API
  */
-sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -450,9 +450,9 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                 }
             });
         },
-        createFarmer: function (data) {
+        createFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer', _.omit(data, ['farms', 'legalEntities']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer', (includeDependencies ? data : underscore.omit(data, ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -472,9 +472,9 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                 }, promise.reject);
             });
         },
-        updateFarmer: function (data) {
+        updateFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/' + data.id, _.omit(data, ['farms', 'legalEntities']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer/' + data.id, (includeDependencies ? data : underscore.omit(data, ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -555,7 +555,7 @@ sdkApiApp.factory('financialApi', ['$http', 'promiseService', 'configuration', f
 /**
  * Legal Entity API
  */
-sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -567,9 +567,9 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
 
             return pagingService.page(_host + 'api/legalentities' + (id ? '/' + id : ''), params);
         },
-        updateEntity: function (data) {
+        updateEntity: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity/' + data.id, _.omit(data, ['assets']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity/' + data.id, (includeDependencies ? data : underscore.omit(data, ['assets'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -588,9 +588,9 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                 }, promise.reject);
             });
         },
-        createEntity: function (data) {
+        createEntity: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity', _.omit(data, ['assets']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity', (includeDependencies ? data : underscore.omit(data, ['assets'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -604,7 +604,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
         },
         getDuplicateEntity: function () {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/legalentity/duplicates', {}, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/legalentity/duplicates', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -702,7 +702,7 @@ sdkApiApp.factory('farmApi', ['$http', 'pagingService', 'promiseService', 'confi
 /**
  * Asset API
  */
-sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -714,9 +714,9 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
 
             return pagingService.page(_host + 'api/assets' + (id ? '/' + id : ''), params);
         },
-        createAsset: function (data) {
+        createAsset: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset', (includeDependencies ? data : underscore.omit(data, ['liabilities', 'productionSchedules'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -728,9 +728,9 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                 }, promise.reject);
             });
         },
-        updateAsset: function (data) {
+        updateAsset: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset/' + data.id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset/' + data.id, (includeDependencies ? data : underscore.omit(data, ['liabilities', 'productionSchedules'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

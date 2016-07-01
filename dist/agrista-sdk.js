@@ -153,7 +153,7 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
 /**
  * Organizational Unit API
  */
-sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -185,7 +185,7 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
         },
         updateOrganizationalUnit: function(data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/organizational-unit/' + data.id, _.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/organizational-unit/' + data.id, underscore.omit(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -251,7 +251,7 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
 /**
  * Task API
  */
-sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -263,7 +263,7 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
         },
         createTask: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task', _.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task', underscore.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -284,7 +284,7 @@ sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'confi
         },
         updateTask: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + data.id, _.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task/' + data.id, underscore.omit(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -422,7 +422,7 @@ sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'co
 /**
  * Farmer API
  */
-sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -450,9 +450,9 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                 }
             });
         },
-        createFarmer: function (data) {
+        createFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer', _.omit(data, ['farms', 'legalEntities']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer', (includeDependencies ? data : underscore.omit(data, ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -472,9 +472,9 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
                 }, promise.reject);
             });
         },
-        updateFarmer: function (data) {
+        updateFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/' + data.id, _.omit(data, ['farms', 'legalEntities']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer/' + data.id, (includeDependencies ? data : underscore.omit(data, ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -555,7 +555,7 @@ sdkApiApp.factory('financialApi', ['$http', 'promiseService', 'configuration', f
 /**
  * Legal Entity API
  */
-sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -567,9 +567,9 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
 
             return pagingService.page(_host + 'api/legalentities' + (id ? '/' + id : ''), params);
         },
-        updateEntity: function (data) {
+        updateEntity: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity/' + data.id, _.omit(data, ['assets']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity/' + data.id, (includeDependencies ? data : underscore.omit(data, ['assets'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -588,9 +588,9 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
                 }, promise.reject);
             });
         },
-        createEntity: function (data) {
+        createEntity: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity', _.omit(data, ['assets']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity', (includeDependencies ? data : underscore.omit(data, ['assets'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -604,7 +604,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
         },
         getDuplicateEntity: function () {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/legalentity/duplicates', {}, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/legalentity/duplicates', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -702,7 +702,7 @@ sdkApiApp.factory('farmApi', ['$http', 'pagingService', 'promiseService', 'confi
 /**
  * Asset API
  */
-sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -714,9 +714,9 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
 
             return pagingService.page(_host + 'api/assets' + (id ? '/' + id : ''), params);
         },
-        createAsset: function (data) {
+        createAsset: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset', (includeDependencies ? data : underscore.omit(data, ['liabilities', 'productionSchedules'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -728,9 +728,9 @@ sdkApiApp.factory('assetApi', ['$http', 'pagingService', 'promiseService', 'conf
                 }, promise.reject);
             });
         },
-        updateAsset: function (data) {
+        updateAsset: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset/' + data.id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset/' + data.id, (includeDependencies ? data : underscore.omit(data, ['liabilities', 'productionSchedules'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -10631,19 +10631,19 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
 
         return Base;
     }])
-    .factory('computedProperty', [function () {
-        return function (object, name, value) {
-            Object.defineProperty(object, name, {
+    .factory('computedProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 get: value
-            });
+            }));
         }
     }])
-    .factory('readOnlyProperty', [function () {
-        return function (object, name, value) {
-            Object.defineProperty(object, name, {
+    .factory('readOnlyProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 writable: false,
                 value: value
-            });
+            }));
         }
     }])
     .factory('inheritModel', ['underscore', function (underscore) {
@@ -10660,11 +10660,11 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             });
         }
     }])
-    .factory('privateProperty', [function () {
-        return function (object, name, value) {
+    .factory('privateProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
             var val;
 
-            Object.defineProperty(object, name, {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 enumerable: false,
                 configurable: false,
                 get: function () {
@@ -10673,18 +10673,18 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 set: function (newVal) {
                     val = newVal;
                 }
-            });
+            }));
 
             if (value !== undefined) {
                 object[name] = value;
             }
         }
     }])
-    .factory('interfaceProperty', [function () {
-        return function (object, name, value) {
+    .factory('interfaceProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
             var val;
 
-            Object.defineProperty(object, name, {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 enumerable: false,
                 configurable: true,
                 get: function () {
@@ -10693,7 +10693,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 set: function (newVal) {
                     val = newVal;
                 }
-            });
+            }));
 
             if (value !== undefined) {
                 object[name] = value;
@@ -13572,6 +13572,12 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return (this.type !== 'rent' ? this.balanceInMonth(moment().startOf('month')) : 0);
             });
 
+            privateProperty(this, 'recalculate', function () {
+                this.data.monthly = this.data.monthly || [];
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
             /**
              * Set/add repayment/withdrawal in month
              */
@@ -14165,8 +14171,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'generateUUID', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, generateUUID, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -14358,6 +14364,15 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 recalculateProductionSchedule(this);
             });
 
+            computedProperty(this, 'scheduleKey', function () {
+                return (this.budgetUuid ? this.budgetUuid + '-' : '') +
+                    (this.data.details.fieldName ? this.data.details.fieldName + '-' : '') +
+                    (this.startDate ? moment(this.startDate).unix() + '-' : '') +
+                    (this.endDate ? moment(this.endDate).unix() : '');
+            }, {
+                enumerable: true
+            });
+
             computedProperty(this, 'assetType', function () {
                 return (this.budget ? this.budget.assetType : this.type);
             });
@@ -14380,29 +14395,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
             privateProperty(this, 'getAllocationIndex', function (sectionCode, costStage) {
                 return (this.budget ? this.budget.getAllocationIndex(sectionCode, costStage) : 0);
-
-
-
-
-
-                /*var section = this.getSection(sectionCode, costStage),
-                    monthIndex = (section && section.total ? underscore.findIndex(section.total.valuePerMonth, function (value) {
-                        return value != 0;
-                    }) : -1);
-
-                return (monthIndex !== -1 ? monthIndex : this.numberOfMonths);*/
             });
 
             privateProperty(this, 'getLastAllocationIndex', function (sectionCode, costStage) {
                 return (this.budget ? this.budget.getLastAllocationIndex(sectionCode, costStage) : this.numberOfMonths);
-
-
-                /*var section = this.getSection(sectionCode, costStage),
-                    monthIndex = (section && section.total ? underscore.findLastIndex(section.total.valuePerMonth, function (value) {
-                        return value != 0;
-                    }) : -1);
-
-                return (monthIndex !== -1 ? monthIndex + 1 : this.numberOfMonths);*/
             });
 
             privateProperty(this, 'getAllocationMonth', function (sectionCode, costStage) {
@@ -14432,7 +14428,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             this.type = attrs.type;
             this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             this.id = attrs.id || attrs.$id;
-            this.uuid = attrs.uuid || generateUUID();
             this.organizationId = attrs.organizationId;
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
 

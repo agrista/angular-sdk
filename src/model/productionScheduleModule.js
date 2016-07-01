@@ -241,8 +241,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'generateUUID', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, generateUUID, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -434,6 +434,15 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 recalculateProductionSchedule(this);
             });
 
+            computedProperty(this, 'scheduleKey', function () {
+                return (this.budgetUuid ? this.budgetUuid + '-' : '') +
+                    (this.data.details.fieldName ? this.data.details.fieldName + '-' : '') +
+                    (this.startDate ? moment(this.startDate).unix() + '-' : '') +
+                    (this.endDate ? moment(this.endDate).unix() : '');
+            }, {
+                enumerable: true
+            });
+
             computedProperty(this, 'assetType', function () {
                 return (this.budget ? this.budget.assetType : this.type);
             });
@@ -489,7 +498,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             this.type = attrs.type;
             this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             this.id = attrs.id || attrs.$id;
-            this.uuid = attrs.uuid || generateUUID();
             this.organizationId = attrs.organizationId;
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
 
