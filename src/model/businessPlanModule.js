@@ -531,6 +531,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     liability.resetWithdrawalsInRange(instance.startDate, instance.endDate);
                     liability.$dirty = true;
 
+                    underscore.each(liability.data.customRepayments, function (amount, month) {
+                        if (moment(month).isBefore(liability.startDate)) {
+                            liability.addRepaymentInMonth(amount, month, 'bank');
+                        }
+                    });
+
                     var filteredUnallocatedEnterpriseProductionExpenditure = underscore.chain(instance.data.unallocatedEnterpriseProductionExpenditure)
                         .reduce(function (enterpriseProductionExpenditure, productionExpenditure, enterprise) {
                             if (underscore.isEmpty(liability.data.enterprises) || underscore.contains(liability.data.enterprises, enterprise)) {
@@ -550,7 +556,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         .value();
 
                     for (var i = 0; i < instance.numberOfMonths; i++) {
-                        var month = moment(liability.startDate, 'YYYY-MM-DD').add(i, 'M');
+                        var month = moment(liability.startDate, 'YYYY-MM-DD').add(i, 'M'),
+                            monthFormatted = month.format('YYYY-MM-DD');
 
                         underscore.each(filteredUnallocatedEnterpriseProductionExpenditure, function (productionExpenditure, enterprise) {
                             underscore.each(productionExpenditure, function (expenditure, input) {
@@ -560,11 +567,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                                 instance.data.unallocatedProductionExpenditure[input][i] += (expenditure[i] - opening)
                             });
                         });
-                    }
 
-                    underscore.each(liability.data.customRepayments, function (amount, month) {
-                        liability.addRepaymentInMonth(amount, month, 'bank');
-                    });
+                        if (liability.data.customRepayments && liability.data.customRepayments[monthFormatted]) {
+                            liability.addRepaymentInMonth(liability.data.customRepayments[monthFormatted], month, 'bank');
+                        }
+                    }
                 });
             }
 
