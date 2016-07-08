@@ -452,7 +452,7 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
         },
         createFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer', (includeDependencies ? data : underscore.omit(data, ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer', (includeDependencies ? data : underscore.omit(data, ['farms', 'financials', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -474,7 +474,7 @@ sdkApiApp.factory('farmerApi', ['$http', 'pagingService', 'promiseService', 'con
         },
         updateFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/' + data.id, (includeDependencies ? data : underscore.omit(data, ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer/' + data.id, (includeDependencies ? data : underscore.omit(data, ['farms', 'financials', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -14248,7 +14248,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = (budget instanceof EnterpriseBudget ? budget : EnterpriseBudget.newCopy(budget));
+                this.budget = EnterpriseBudget.new(budget);
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 

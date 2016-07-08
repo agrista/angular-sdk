@@ -295,7 +295,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = (budget instanceof EnterpriseBudget ? budget : EnterpriseBudget.newCopy(budget));
+                this.budget = EnterpriseBudget.new(budget);
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 
