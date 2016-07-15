@@ -8,7 +8,7 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
     };
 
     var _expenseUnits = {
-        area: 'Ha',
+        area: 'ha',
         distance: 'km',
         hours: 'h'
     };

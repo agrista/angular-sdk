@@ -75,6 +75,25 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
             }
         };
 
+        var _revokeApp = function (app) {
+            var group = underscore.findWhere(_groupedApps, {title: app.group});
+
+            if (group !== undefined) {
+                group.items = underscore.reject(group.items, function (item) {
+                    return item.id === app.id;
+                });
+
+                if (group.items.length === 0) {
+                    _groupedApps = underscore.reject(_groupedApps, function (item) {
+                        return item.title === group.title;
+                    });
+                }
+
+                $rootScope.$broadcast('navigation::items__changed', _groupedApps);
+                $rootScope.$broadcast('navigation::app__revoked', app);
+            }
+        };
+
         var _revokeAllApps = function () {
             _groupedApps = [];
 
@@ -133,6 +152,9 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
 
         // Public functions
         return {
+            getApp: function (id) {
+                return underscore.findWhere(_registeredApps, {id: id});
+            },
             getGroupedApps: function () {
                 return _groupedApps;
             },
@@ -163,6 +185,11 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
             allowApp: function (appName) {
                 if (_registeredApps[appName]) {
                     _allowApp(_registeredApps[appName]);
+                }
+            },
+            revokeApp: function (appName) {
+                if (_registeredApps[appName]) {
+                    _revokeApp(_registeredApps[appName]);
                 }
             },
             /*

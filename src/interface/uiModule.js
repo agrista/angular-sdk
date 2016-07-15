@@ -8,10 +8,12 @@ sdkInterfaceUiApp.directive('dynamicName', function() {
             var formCtrl = (controller != null) ? controller :  element.parent().controller('form');
             var currentElementCtrl = formCtrl[element.attr('name')];
 
-            element.attr('name', attrs.name);
-            formCtrl.$removeControl(currentElementCtrl);
-            currentElementCtrl.$name = attrs.name;
-            formCtrl.$addControl(currentElementCtrl);
+            if (formCtrl && currentElementCtrl) {
+                element.attr('name', attrs.name);
+                formCtrl.$removeControl(currentElementCtrl);
+                currentElementCtrl.$name = attrs.name;
+                formCtrl.$addControl(currentElementCtrl);
+            }
         }
     }
 });
