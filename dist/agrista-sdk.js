@@ -3144,7 +3144,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             return valuation;
         },
         generateFarmlandAssetLabels: function(asset) {
-            if (asset.type == 'farmland') {
+            if (asset.data && asset.type == 'farmland') {
                 asset.data.portionLabel = (asset.data.portionNumber ?
                     (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Ptn. ' + asset.data.portionNumber) :
                     'Rem. extent');
