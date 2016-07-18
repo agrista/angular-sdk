@@ -5169,7 +5169,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
 }]);
 
 sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
-    var _taskActions = {
+    var taskActions = {
         accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
         decline: ['assigned'],
         start: ['assigned', 'in progress'],
@@ -5180,9 +5180,20 @@ sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
         release: ['done']
     };
 
+    var taskTypeActions = {
+        parent: {
+            complete: ['in progress'],
+            reject: ['done'],
+            release: ['done']
+        },
+        child: taskActions,
+        external: taskActions
+    };
+
     return {
         canChangeToState: function (task, action) {
-            return (_taskActions[action] ? _taskActions[action].indexOf(task.status) !== -1 : true);
+            return (taskTypeActions[task.type] && taskTypeActions[task.type][action] ?
+                    taskTypeActions[task.type][action].indexOf(task.status) !== -1 : false);
         }
     }
 });
