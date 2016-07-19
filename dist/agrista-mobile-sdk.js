@@ -5168,35 +5168,36 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
     }];
 }]);
 
-sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
-    var taskActions = {
-        accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
-        decline: ['assigned'],
-        start: ['assigned', 'in progress'],
-        assign: ['backlog', 'assigned', 'in progress', 'in review'],
-        complete: ['assigned', 'in progress'],
-        approve: ['in review'],
-        reject: ['assigned', 'in review'],
-        release: ['done']
-    };
-
-    var taskTypeActions = {
-        parent: {
-            complete: ['in progress'],
-            reject: ['done'],
+sdkHelperTaskApp.factory('taskWorkflowHelper', ['underscore', function (underscore) {
+    var taskActions = ['accept', 'decline', 'start', 'assign', 'complete', 'approve', 'reject', 'release'],
+        taskActionsMap = {
+            accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
+            decline: ['assigned'],
+            start: ['assigned', 'in progress'],
+            assign: ['backlog', 'assigned', 'in progress', 'in review'],
+            complete: ['assigned', 'in progress'],
+            approve: ['in review'],
+            reject: ['assigned', 'in review'],
             release: ['done']
         },
-        child: taskActions,
-        external: taskActions
-    };
+        taskTypeActions = {
+            parent: {
+                complete: ['in progress'],
+                reject: ['done'],
+                release: ['done']
+            },
+            child: taskActionsMap,
+            external: taskActionsMap
+        };
 
     return {
         canChangeToState: function (task, action) {
-            return (taskTypeActions[task.type] && taskTypeActions[task.type][action] ?
-                    taskTypeActions[task.type][action].indexOf(task.status) !== -1 : false);
+            return (underscore.contains(taskActions, action) ?
+                (taskTypeActions[task.type] && taskTypeActions[task.type][action] ?
+                taskTypeActions[task.type][action].indexOf(task.status) !== -1 : false) : true);
         }
     }
-});
+}]);
 
 var sdkHelperTeamApp = angular.module('ag.sdk.helper.team', ['ag.sdk.library']);
 
