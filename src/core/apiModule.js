@@ -365,6 +365,13 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
                 }, promise.reject);
             });
         },
+        uploadMerchantAttachments: function (id, data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/merchant/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
+        },
         deleteMerchant: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/merchant/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
