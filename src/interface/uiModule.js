@@ -114,3 +114,38 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
         }
     };
 }]);
+
+sdkInterfaceUiApp.directive('inputDate', ['moment', function (moment) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            var format = attrs.dateFormat || 'YYYY-MM-DD';
+
+            ngModel.$formatters.length = 0;
+            ngModel.$parsers.length = 0;
+
+            ngModel.$formatters.push(function (modelValue) {
+                if (modelValue) {
+                    return moment(modelValue).format(format);
+                } else {
+                    return modelValue;
+                }
+            });
+
+            ngModel.$parsers.push(function (value) {
+                if (value) {
+                    var date = (typeof value == 'string' ? moment(value, ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'], true) : moment(value));
+
+                    if (date && typeof date.isValid == 'function' && date.isValid()) {
+                        ngModel.$setValidity('date-format', true);
+                        return (typeof value == 'string' ? date.format('YYYY-MM-DD') : date);
+                    } else {
+                        ngModel.$setValidity('date-format', false);
+                        return value;
+                    }
+                }
+            });
+        }
+    };
+}]);
