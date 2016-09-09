@@ -68,43 +68,94 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         var roundValue = $filter('round');
 
         function adjustCategory (instance, sectionCode, categoryCode, costStage, property) {
-            var groupCategory = instance.getCategory(sectionCode, categoryCode, costStage),
+            var productionCategory = instance.getCategory(sectionCode, categoryCode, costStage),
                 value = 0;
 
-            if (groupCategory && !underscore.isUndefined(groupCategory[property])) {
+            if (productionCategory && !underscore.isUndefined(productionCategory[property])) {
                 if (underscore.contains(['valuePerLSU', 'pricePerUnit', 'quantityPerLSU', 'quantityPerHa'], property)) {
-                    value = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
+                    value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                         return total + category[property];
-                    }, 0) / groupCategory.scheduleCategories.length, 2);
+                    }, 0) / productionCategory.categories.length, 2);
                 } else if (underscore.contains(['value', 'quantity'], property)) {
-                    value = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
+                    value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                         return total + category[property];
                     }, 0), 2);
                 } else if (property === 'valuePerHa') {
-                    value = roundValue(groupCategory.value / instance.allocatedSize, 2);
+                    value = roundValue(productionCategory.value / instance.allocatedSize, 2);
                 }
 
-                var offset = (100 / value) * groupCategory[property],
-                    remainder = groupCategory[property];
+                var affectedProductionSchedules = underscore.reject(instance.productionSchedules, function (productionSchedule) {
+                    return underscore.isUndefined(productionSchedule.getCategory(sectionCode, categoryCode, costStage));
+                });
 
-                underscore.chain(instance.productionSchedules)
-                    .reject(function (productionSchedule) {
-                        return underscore.isUndefined(productionSchedule.getCategory(sectionCode, categoryCode, costStage));
-                    })
-                    .each(function (productionSchedule, index, list) {
-                        var scheduleCategory = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
+                if (property !== 'schedule') {
+                    var offset = (100 / value) * productionCategory[property],
+                        remainder = productionCategory[property];
 
-                        if (underscore.isFinite(offset) && scheduleCategory[property] != 0) {
-                            scheduleCategory[property] = (scheduleCategory[property] / 100) * offset;
+                    underscore.each(affectedProductionSchedules, function (productionSchedule, index, list) {
+                        var category = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
+
+                        if (underscore.isFinite(offset) && category[property] != 0) {
+                            category[property] = (category[property] / 100) * offset;
                         } else if (index < list.length - 1) {
-                            scheduleCategory[property] = groupCategory[property] / list.length;
+                            category[property] = category[property] / list.length;
                         } else {
-                            scheduleCategory[property] = remainder;
+                            category[property] = remainder;
                         }
 
                         remainder = roundValue(remainder - productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property), 2);
                     });
+                } else if (property === 'schedule') {
+                    var valuePerMonth = underscore.reduce(productionCategory.schedule, function (valuePerMonth, allocation, index) {
+                        //valuePerMonth[index] = roundValue((productionCategory.value / 100) * allocation, 2);
+                        valuePerMonth[index] = (productionCategory.value / 100) * allocation;
+
+                        return valuePerMonth;
+                    }, initializeArray(instance.numberOfMonths));
+
+                    underscore.each(productionCategory.valuePerMonth, function (value, index) {
+                        var categoryCount = underscore.chain(productionCategory.categories)
+                            .filter(function (category) {
+                                return index >= category.offset && index < category.offset + category.valuePerMonth.length;
+                            })
+                            .size();
+
+                        underscore.each(affectedProductionSchedules, function (productionSchedule) {
+                            var startOffset = moment(productionSchedule.startDate).diff(instance.startDate, 'months'),
+                                category = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
+
+                            if (index >= startOffset && index < startOffset + category.valuePerMonth.length) {
+                                //category.valuePerMonth[index - startOffset] = (value == 0 ?
+                                //    roundValue(valuePerMonth[index] / categoryCount, 2) :
+                                //    roundValue(valuePerMonth[index] * (category.valuePerMonth[index - startOffset] / value), 2));
+                                category.valuePerMonth[index - startOffset] = (value == 0 ?
+                                    valuePerMonth[index] / categoryCount :
+                                    valuePerMonth[index] * (category.valuePerMonth[index - startOffset] / value));
+                            }
+                        });
+                    });
+
+                    underscore.each(affectedProductionSchedules, function (productionSchedule) {
+                        var category = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
+
+                        category.value = underscore.reduce(category.valuePerMonth, function (total, value) {
+                            return total + (value || 0);
+                        }, 0);
+
+                        category.schedule = underscore.map(category.valuePerMonth, function (value) {
+                            return (category.value > 0 ? roundValue((100 / category.value) * value, 2) : 0);
+                        });
+
+                        productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property);
+                    });
+                }
             }
+        }
+
+        function initializeArray (size) {
+            return underscore.range(size).map(function () {
+                return 0;
+            });
         }
 
         function recalculateProductionGroup (instance) {
@@ -119,71 +170,74 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                     if (productionSchedule.data.details.applyEstablishmentCosts || section.costStage === productionSchedule.defaultCostStage) {
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
-                                var groupCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
+                                var productionCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
 
-                                groupCategory.per = category.per;
-                                groupCategory.scheduleCategories = groupCategory.scheduleCategories || [];
-                                groupCategory.scheduleCategories.push(underscore.extend({
+                                productionCategory.per = category.per;
+                                productionCategory.categories = productionCategory.categories || [];
+                                productionCategory.categories.push(underscore.extend({
+                                    offset: startOffset,
                                     size: productionSchedule.allocatedSize
                                 }, category));
 
-                                groupCategory.quantity = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
-                                    return total + category.quantity;
+                                productionCategory.valuePerMonth = underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
+                                    valuePerMonth[index + startOffset] = roundValue(valuePerMonth[index + startOffset] + value);
+
+                                    return valuePerMonth;
+                                }, productionCategory.valuePerMonth || initializeArray(instance.numberOfMonths));
+
+                                productionCategory.value = roundValue(underscore.reduce(productionCategory.valuePerMonth, function (total, value) {
+                                    return total + value;
                                 }, 0), 2);
 
-                                groupCategory.value = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
-                                    return total + category.value;
+                                productionCategory.quantityPerMonth = underscore.reduce(category.quantityPerMonth, function (quantityPerMonth, value, index) {
+                                    quantityPerMonth[index + startOffset] = roundValue(quantityPerMonth[index + startOffset] + value);
+
+                                    return quantityPerMonth;
+                                }, productionCategory.quantityPerMonth || initializeArray(instance.numberOfMonths));
+
+                                productionCategory.quantity = roundValue(underscore.reduce(productionCategory.quantityPerMonth, function (total, value) {
+                                    return total + value;
                                 }, 0), 2);
+
+                                productionCategory.pricePerUnit = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
+                                    return total + category.pricePerUnit;
+                                }, 0) / productionCategory.categories.length, 2);
+
+                                productionCategory.schedule = underscore.reduce(productionCategory.valuePerMonth, function (schedule, value, index) {
+                                    schedule[index] = roundValue((100 / productionCategory.value) * value, 2);
+
+                                    return schedule;
+                                }, initializeArray(instance.numberOfMonths));
 
                                 if (productionSchedule.type == 'livestock') {
-                                    groupCategory.quantityPerLSU = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
+                                    productionCategory.quantityPerLSU = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                                         return total + category.quantityPerLSU;
-                                    }, 0) / groupCategory.scheduleCategories.length, 2);
+                                    }, 0) / productionCategory.categories.length, 2);
 
-                                    groupCategory.valuePerLSU = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
+                                    productionCategory.valuePerLSU = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                                         return total + category.valuePerLSU;
-                                    }, 0) / groupCategory.scheduleCategories.length, 2);
+                                    }, 0) / productionCategory.categories.length, 2);
                                 } else {
-                                    groupCategory.quantityPerHa = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
+                                    productionCategory.quantityPerHa = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                                         return total + category.quantityPerHa;
-                                    }, 0) / groupCategory.scheduleCategories.length, 2);
+                                    }, 0) / productionCategory.categories.length, 2);
                                 }
 
                                 if (section.code === 'EXP') {
-                                    groupCategory.valuePerHa = roundValue(groupCategory.value / instance.allocatedSize, 2);
+                                    productionCategory.valuePerHa = roundValue(productionCategory.value / instance.allocatedSize, 2);
                                 }
-
-                                groupCategory.pricePerUnit = roundValue(underscore.reduce(groupCategory.scheduleCategories, function (total, category) {
-                                    return total + category.pricePerUnit;
-                                }, 0) / groupCategory.scheduleCategories.length, 2);
-
-                                groupCategory.valuePerMonth = underscore.reduce(category.valuePerMonth, function (valuePerMonth, value, index) {
-                                    valuePerMonth[index + startOffset] += value;
-
-                                    return valuePerMonth;
-                                }, groupCategory.valuePerMonth || underscore.range(instance.numberOfMonths).map(function () {
-                                    return 0;
-                                }));
-
-                                groupCategory.quantityPerMonth = underscore.reduce(category.quantityPerMonth, function (quantityPerMonth, value, index) {
-                                    quantityPerMonth[index + startOffset] += value;
-
-                                    return quantityPerMonth;
-                                }, groupCategory.quantityPerMonth || underscore.range(instance.numberOfMonths).map(function () {
-                                    return 0;
-                                }));
                             });
 
                             // Group totals
-                            var groupGroup = instance.getGroup(section.code, group.name, section.costStage);
+                            var productionGroup = instance.getGroup(section.code, group.name, section.costStage);
 
-                            if (groupGroup) {
-                                groupGroup.total.value = underscore.reduce(groupGroup.productCategories, function (total, category) {
+                            if (productionGroup) {
+                                productionGroup.total.value = underscore.reduce(productionGroup.productCategories, function (total, category) {
                                     return total + category.value;
                                 }, 0);
 
-                                groupGroup.total.valuePerMonth = underscore
-                                    .chain(groupGroup.productCategories)
+                                productionGroup.total.valuePerMonth = underscore
+                                    .chain(productionGroup.productCategories)
                                     .pluck('valuePerMonth')
                                     .reduce(function (totalPerMonth, valuePerMonth) {
                                         return (totalPerMonth ? underscore.map(valuePerMonth, function (value, index) {
@@ -193,7 +247,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                                     .value();
 
                                 if (productionSchedule.type == 'livestock') {
-                                    groupGroup.total.valuePerLSU = underscore.reduce(groupGroup.productCategories, function (total, category) {
+                                    productionGroup.total.valuePerLSU = underscore.reduce(productionGroup.productCategories, function (total, category) {
                                         return total + category.valuePerLSU;
                                     }, 0);
                                 }
@@ -201,15 +255,15 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                         });
 
                         // Section totals
-                        var groupSection = instance.getSection(section.code, section.costStage);
+                        var productionSection = instance.getSection(section.code, section.costStage);
 
-                        if (groupSection) {
-                            groupSection.total.value = underscore.reduce(groupSection.productCategoryGroups, function (total, group) {
+                        if (productionSection) {
+                            productionSection.total.value = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
                                 return total + group.total.value;
                             }, 0);
 
-                            groupSection.total.valuePerMonth = underscore
-                                .chain(groupSection.productCategoryGroups)
+                            productionSection.total.valuePerMonth = underscore
+                                .chain(productionSection.productCategoryGroups)
                                 .pluck('total')
                                 .pluck('valuePerMonth')
                                 .reduce(function (totalPerMonth, valuePerMonth) {
@@ -220,14 +274,14 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                                 .value();
 
                             if (productionSchedule.type == 'livestock') {
-                                groupSection.total.valuePerLSU = underscore.reduce(groupSection.productCategoryGroups, function (total, group) {
+                                productionSection.total.valuePerLSU = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
                                     return total + group.total.valuePerLSU;
                                 }, 0);
                             }
 
-                            instance.data.details.grossProfit += (groupSection.code == 'INC' ?
-                                (instance.data.details.grossProfit + groupSection.total.value) :
-                                (instance.data.details.grossProfit - groupSection.total.value));
+                            instance.data.details.grossProfit += (productionSection.code == 'INC' ?
+                                (instance.data.details.grossProfit + productionSection.total.value) :
+                                (instance.data.details.grossProfit - productionSection.total.value));
                         }
                     }
                 });
@@ -355,79 +409,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             });
 
             privateProperty(this, 'adjustCategory', function (sectionCode, categoryCode, costStage, property) {
-                var scheduleCategory = this.getCategory(sectionCode, categoryCode, costStage),
-                    budgetCategory = this.budget.getCategory(sectionCode, categoryCode, costStage);
-
-                if (scheduleCategory && budgetCategory) {
-                    if (property === 'value') {
-                        budgetCategory.value = roundValue(scheduleCategory.value / (this.type == 'livestock' ? this.data.details.multiplicationFactor : this.allocatedSize), 2);
-
-                        if (budgetCategory.unit === 'Total') {
-                            budgetCategory.pricePerUnit = budgetCategory.value;
-                            scheduleCategory.pricePerUnit = budgetCategory.value;
-                        } else {
-                            budgetCategory.quantity = roundValue(budgetCategory.value / budgetCategory.pricePerUnit, 2);
-                            scheduleCategory.quantity = roundValue(scheduleCategory.value / scheduleCategory.pricePerUnit, 2);
-                        }
-
-                        scheduleCategory.value = roundValue(budgetCategory.value * (this.type == 'livestock' ? this.data.details.multiplicationFactor : this.allocatedSize), 2);
-                    } else if (property === 'valuePerHa') {
-                        budgetCategory.value = roundValue(scheduleCategory.valuePerHa, 2);
-
-                        if (budgetCategory.unit === 'Total') {
-                            budgetCategory.pricePerUnit = budgetCategory.value;
-                            scheduleCategory.pricePerUnit = budgetCategory.value;
-                        }
-
-                        budgetCategory.quantity = roundValue(budgetCategory.value / budgetCategory.pricePerUnit, 2);
-                        scheduleCategory.value = roundValue(budgetCategory.value * this.allocatedSize, 2);
-                        scheduleCategory.valuePerHa = budgetCategory.value;
-                        scheduleCategory.quantity = roundValue(scheduleCategory.value / scheduleCategory.pricePerUnit, 2);
-                    } else if (property === 'valuePerLSU') {
-                        budgetCategory.valuePerLSU = roundValue(scheduleCategory.valuePerLSU, 2);
-                        budgetCategory.pricePerUnit = budgetCategory.valuePerLSU * this.budget.getConversionRate(budgetCategory.name);
-                        budgetCategory.value = roundValue((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0), 2);
-                        scheduleCategory.value = roundValue(budgetCategory.value * this.data.details.multiplicationFactor, 2);
-                        scheduleCategory.valuePerLSU = roundValue(budgetCategory.valuePerLSU * this.data.details.multiplicationFactor, 2);
-                        scheduleCategory.quantity = roundValue(scheduleCategory.value / scheduleCategory.pricePerUnit, 2);
-                    } else if (property === 'quantityPerHa') {
-                        budgetCategory.quantity = roundValue(scheduleCategory.quantityPerHa, 2);
-                        budgetCategory.value = roundValue((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0), 2);
-                        scheduleCategory.value = roundValue(budgetCategory.value * this.allocatedSize, 2);
-                        scheduleCategory.quantity = roundValue(scheduleCategory.value / scheduleCategory.pricePerUnit, 2);
-                        scheduleCategory.quantityPerHa = budgetCategory.quantity;
-                    } else if (property === 'quantityPerLSU') {
-                        budgetCategory.quantity = roundValue(scheduleCategory.quantityPerLSU, 2);
-                        budgetCategory.value = roundValue((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0), 2);
-                        scheduleCategory.value = roundValue(budgetCategory.value * this.data.details.multiplicationFactor, 2);
-                        scheduleCategory.quantity = roundValue(scheduleCategory.value / scheduleCategory.pricePerUnit, 2);
-                        scheduleCategory.quantityPerLSU = budgetCategory.quantity;
-                    } else if (property === 'quantity') {
-                        budgetCategory.quantity = roundValue(scheduleCategory.quantity / (this.type == 'livestock' ? this.data.details.multiplicationFactor : this.allocatedSize), 2);
-                        budgetCategory.value = roundValue((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0), 2);
-                        scheduleCategory.value = roundValue(budgetCategory.value * (this.type == 'livestock' ? this.data.details.multiplicationFactor : this.allocatedSize), 2);
-                        scheduleCategory.quantity = roundValue(scheduleCategory.value / scheduleCategory.pricePerUnit, 2);
-                    } else if (property === 'pricePerUnit') {
-                        budgetCategory.pricePerUnit = roundValue(scheduleCategory.pricePerUnit, 2);
-                        budgetCategory.value = roundValue((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0), 2);
-                        scheduleCategory.value = roundValue(budgetCategory.value * (this.type == 'livestock' ? this.data.details.multiplicationFactor : this.allocatedSize), 2);
-                        scheduleCategory.pricePerUnit = budgetCategory.pricePerUnit;
-                    } else if (property === 'stock') {
-                        budgetCategory.stock = scheduleCategory.stock;
-                    }
-
-                    if(this.type == 'livestock') {
-                        budgetCategory.valuePerLSU = roundValue((budgetCategory.pricePerUnit || 0) / this.budget.getConversionRate(budgetCategory.name), 2);
-                    }
-
-                    if (sectionCode === 'EXP') {
-                        scheduleCategory.valuePerHa = budgetCategory.value;
-                    }
-
-                    this.$dirty = true;
-
-                    return scheduleCategory[property];
-                }
+                return adjustCategory(this, sectionCode, categoryCode, costStage, property);
             });
 
             privateProperty(this, 'recalculate', function () {
@@ -513,6 +495,109 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
         }
 
         var roundValue = $filter('round');
+        
+        function adjustCategory (instance, sectionCode, categoryCode, costStage, property) {
+            var productionCategory = instance.getCategory(sectionCode, categoryCode, costStage),
+                budgetCategory = instance.budget.getCategory(sectionCode, categoryCode, costStage);
+
+            if (productionCategory && budgetCategory) {
+                if (property === 'value') {
+                    budgetCategory.value = productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+
+                    if (budgetCategory.unit === 'Total') {
+                        budgetCategory.pricePerUnit = budgetCategory.value;
+                        productionCategory.pricePerUnit = budgetCategory.value;
+                    } else {
+                        budgetCategory.quantity = budgetCategory.value / budgetCategory.pricePerUnit;
+                        productionCategory.quantity = productionCategory.value / productionCategory.pricePerUnit;
+                    }
+
+                    productionCategory.value = roundValue(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
+                } else if (property === 'valuePerHa') {
+                    budgetCategory.value = roundValue(productionCategory.valuePerHa, 2);
+
+                    if (budgetCategory.unit === 'Total') {
+                        budgetCategory.pricePerUnit = budgetCategory.value;
+                        productionCategory.pricePerUnit = budgetCategory.value;
+                    }
+
+                    budgetCategory.quantity = roundValue(budgetCategory.value / budgetCategory.pricePerUnit, 2);
+                    productionCategory.value = roundValue(budgetCategory.value * instance.allocatedSize, 2);
+                    productionCategory.valuePerHa = budgetCategory.value;
+                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
+                } else if (property === 'valuePerLSU') {
+                    budgetCategory.valuePerLSU = roundValue(productionCategory.valuePerLSU, 2);
+                    budgetCategory.pricePerUnit = budgetCategory.valuePerLSU * instance.budget.getConversionRate(budgetCategory.name);
+                    budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
+                    productionCategory.value = roundValue(budgetCategory.value * instance.data.details.multiplicationFactor, 2);
+                    productionCategory.valuePerLSU = roundValue(budgetCategory.valuePerLSU * instance.data.details.multiplicationFactor, 2);
+                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
+                } else if (property === 'quantityPerHa') {
+                    budgetCategory.quantity = productionCategory.quantityPerHa;
+                    budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
+                    productionCategory.value = roundValue(budgetCategory.value * instance.allocatedSize, 2);
+                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
+                    productionCategory.quantityPerHa = budgetCategory.quantity;
+                } else if (property === 'quantityPerLSU') {
+                    budgetCategory.quantity = productionCategory.quantityPerLSU;
+                    budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
+                    productionCategory.value = roundValue(budgetCategory.value * instance.data.details.multiplicationFactor, 2);
+                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
+                    productionCategory.quantityPerLSU = budgetCategory.quantity;
+                } else if (property === 'quantity') {
+                    budgetCategory.quantity = productionCategory.quantity / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                    budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
+                    productionCategory.value = roundValue(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
+                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
+                } else if (property === 'pricePerUnit') {
+                    budgetCategory.pricePerUnit = productionCategory.pricePerUnit;
+                    budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
+                    productionCategory.value = roundValue(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
+                    productionCategory.pricePerUnit = budgetCategory.pricePerUnit;
+                } else if (property === 'stock') {
+                    budgetCategory.stock = productionCategory.stock;
+                } else if (property === 'schedule') {
+                    budgetCategory.schedule = instance.budget.unshiftMonthlyArray(productionCategory.schedule);
+                    budgetCategory.value = productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+
+                    if (budgetCategory.unit === 'Total') {
+                        budgetCategory.pricePerUnit = budgetCategory.value;
+                        productionCategory.pricePerUnit = budgetCategory.value;
+                    } else {
+                        budgetCategory.quantity = budgetCategory.value / budgetCategory.pricePerUnit;
+                        productionCategory.quantity = productionCategory.value / productionCategory.pricePerUnit;
+                    }
+
+                    budgetCategory.value = (((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0)) / 100) * underscore.reduce(budgetCategory.schedule, function (total, value) {
+                        return total + (value || 0);
+                    }, 0);
+
+                    budgetCategory.valuePerMonth = underscore.map(budgetCategory.schedule, function (allocation) {
+                        return (budgetCategory.value / 100) * allocation;
+                    });
+
+                    productionCategory.valuePerMonth = underscore.map(instance.budget.shiftMonthlyArray(budgetCategory.valuePerMonth), function (value) {
+                        return value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                    });
+
+                    productionCategory.value = roundValue(underscore.reduce(productionCategory.valuePerMonth, function (total, value) {
+                        return total + value;
+                    }, 0), 2);
+                }
+
+                if(instance.type == 'livestock') {
+                    budgetCategory.valuePerLSU = (budgetCategory.pricePerUnit || 0) / instance.budget.getConversionRate(budgetCategory.name);
+                }
+
+                if (sectionCode === 'EXP') {
+                    productionCategory.valuePerHa = budgetCategory.value;
+                }
+
+                instance.$dirty = true;
+
+                return productionCategory[property];
+            }
+        }
 
         function recalculateProductionSchedule (instance) {
             if (instance.budget) {
@@ -525,50 +610,54 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     if (instance.data.details.applyEstablishmentCosts || section.costStage === instance.defaultCostStage) {
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
-                                var scheduleCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
+                                var productionCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
 
-                                scheduleCategory.pricePerUnit = category.pricePerUnit;
+                                productionCategory.pricePerUnit = category.pricePerUnit;
 
                                 if (instance.type == 'livestock') {
-                                    scheduleCategory.value += roundValue(category.value * instance.data.details.multiplicationFactor, 2);
-                                    scheduleCategory.valuePerLSU += roundValue(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
-                                    scheduleCategory.quantity += roundValue(scheduleCategory.value / category.pricePerUnit, 2);
-                                    scheduleCategory.quantityPerLSU = category.quantity;
+                                    productionCategory.valuePerLSU += roundValue(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
+                                    productionCategory.quantityPerLSU = category.quantity;
 
                                     if (group.code === 'INC-LSS') {
-                                        scheduleCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
+                                        productionCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
                                     }
                                 } else {
-                                    scheduleCategory.value += roundValue(category.value * instance.allocatedSize, 2);
-                                    scheduleCategory.quantity += roundValue(scheduleCategory.value / category.pricePerUnit, 2);
-                                    scheduleCategory.quantityPerHa = category.quantity;
+                                    productionCategory.quantityPerHa = category.quantity;
                                 }
 
                                 if (section.code === 'EXP') {
-                                    scheduleCategory.valuePerHa = category.value;
+                                    productionCategory.valuePerHa = category.value;
                                 }
 
-                                var shiftedSchedule = instance.budget.getShiftedSchedule(category.schedule);
+                                productionCategory.schedule = instance.budget.getShiftedSchedule(category.schedule);
 
-                                scheduleCategory.valuePerMonth = underscore.map(shiftedSchedule, function (monthFactor, index) {
-                                    return ((monthFactor / 100) * scheduleCategory.value) + (scheduleCategory.valuePerMonth ? scheduleCategory.valuePerMonth[index] : 0);
+                                productionCategory.valuePerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.valuePerMonth), function (value) {
+                                    return roundValue(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
                                 });
 
-                                scheduleCategory.quantityPerMonth = underscore.map(shiftedSchedule, function (monthFactor, index) {
-                                    return ((monthFactor / 100) * scheduleCategory.quantity) + (scheduleCategory.quantityPerMonth ? scheduleCategory.quantityPerMonth[index] : 0);
+                                productionCategory.quantityPerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.quantityPerMonth), function (value) {
+                                    return roundValue(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
                                 });
+
+                                productionCategory.value = roundValue(underscore.reduce(productionCategory.valuePerMonth, function (total, value) {
+                                    return total + value;
+                                }, 0), 2);
+
+                                productionCategory.quantity = roundValue(underscore.reduce(productionCategory.quantityPerMonth, function (total, value) {
+                                    return total + value;
+                                }, 0), 2);
                             });
 
                             // Group totals
-                            var scheduleGroup = instance.getGroup(section.code, group.name, section.costStage);
+                            var productionGroup = instance.getGroup(section.code, group.name, section.costStage);
 
-                            if (scheduleGroup) {
-                                scheduleGroup.total.value = underscore.reduce(scheduleGroup.productCategories, function (total, category) {
+                            if (productionGroup) {
+                                productionGroup.total.value = underscore.reduce(productionGroup.productCategories, function (total, category) {
                                     return total + category.value;
                                 }, 0);
 
-                                scheduleGroup.total.valuePerMonth = underscore
-                                    .chain(scheduleGroup.productCategories)
+                                productionGroup.total.valuePerMonth = underscore
+                                    .chain(productionGroup.productCategories)
                                     .pluck('valuePerMonth')
                                     .reduce(function (total, valuePerMonth) {
                                         return (total ? underscore.map(valuePerMonth, function (value, index) {
@@ -577,8 +666,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                     })
                                     .value();
 
-                                scheduleGroup.total.quantityPerMonth = underscore
-                                    .chain(scheduleGroup.productCategories)
+                                productionGroup.total.quantityPerMonth = underscore
+                                    .chain(productionGroup.productCategories)
                                     .pluck('quantityPerMonth')
                                     .reduce(function (total, quantityPerMonth) {
                                         return (total ? underscore.map(quantityPerMonth, function (value, index) {
@@ -588,7 +677,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                     .value();
 
                                 if (instance.type == 'livestock') {
-                                    scheduleGroup.total.valuePerLSU = underscore.reduce(scheduleGroup.productCategories, function (total, category) {
+                                    productionGroup.total.valuePerLSU = underscore.reduce(productionGroup.productCategories, function (total, category) {
                                         return total + category.valuePerLSU;
                                     }, 0);
                                 }
@@ -596,15 +685,15 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         });
 
                         // Section totals
-                        var scheduleSection = instance.getSection(section.code, section.costStage);
+                        var productionSection = instance.getSection(section.code, section.costStage);
 
-                        if (scheduleSection) {
-                            scheduleSection.total.value = underscore.reduce(scheduleSection.productCategoryGroups, function (total, group) {
+                        if (productionSection) {
+                            productionSection.total.value = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
                                 return total + group.total.value;
                             }, 0);
 
-                            scheduleSection.total.valuePerMonth = underscore
-                                .chain(scheduleSection.productCategoryGroups)
+                            productionSection.total.valuePerMonth = underscore
+                                .chain(productionSection.productCategoryGroups)
                                 .pluck('total')
                                 .pluck('valuePerMonth')
                                 .reduce(function (total, valuePerMonth) {
@@ -614,8 +703,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                 })
                                 .value();
 
-                            scheduleSection.total.quantityPerMonth = underscore
-                                .chain(scheduleSection.productCategoryGroups)
+                            productionSection.total.quantityPerMonth = underscore
+                                .chain(productionSection.productCategoryGroups)
                                 .pluck('total')
                                 .pluck('quantityPerMonth')
                                 .reduce(function (total, quantityPerMonth) {
@@ -626,14 +715,14 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                 .value();
 
                             if (instance.type == 'livestock') {
-                                scheduleSection.total.valuePerLSU = underscore.reduce(scheduleSection.productCategoryGroups, function (total, group) {
+                                productionSection.total.valuePerLSU = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
                                     return total + group.total.valuePerLSU;
                                 }, 0);
                             }
 
-                            instance.data.details.grossProfit = (scheduleSection.code == 'INC' ?
-                                (instance.data.details.grossProfit + scheduleSection.total.value) :
-                                (instance.data.details.grossProfit - scheduleSection.total.value));
+                            instance.data.details.grossProfit = (productionSection.code == 'INC' ?
+                                (instance.data.details.grossProfit + productionSection.total.value) :
+                                (instance.data.details.grossProfit - productionSection.total.value));
                         }
                     }
                 });
