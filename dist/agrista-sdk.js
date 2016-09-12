@@ -6990,15 +6990,16 @@ sdkInterfaceGeocledianApp.provider('geocledianService', ['underscore', function 
     var _defaultConfig = {
         key: '46552fa9-6a5v-2346-3z67-s4b8556cxvwp',
         layers: ['vitality', 'visible'],
-        url: 'https://geocledian.com/agknow/'
+        url: 'https://geocledian.com/agknow/api/v3/',
+        source: 'sentinel2'
     };
 
     this.config = function (options) {
         _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
     };
 
-    this.$get = ['$http', 'moment', 'promiseService',
-        function ($http, moment, promiseService) {
+    this.$get = ['$http', 'moment', 'promiseService', 'underscore',
+        function ($http, moment, promiseService, underscore) {
             function GeocledianService () {
                 this.ids = [];
                 this.dates = [];
@@ -7007,6 +7008,18 @@ sdkInterfaceGeocledianApp.provider('geocledianService', ['underscore', function 
 
             GeocledianService.prototype = {
                 config: _defaultConfig,
+                createParcel: function (data) {
+                    return promiseService.wrap(function (promise) {
+                        $http.post(_defaultConfig.url + 'parcels', underscore.extend({key: _defaultConfig.key}, data))
+                            .then(function (result) {
+                                if (result && result.data && underscore.isNumber(result.data.id)) {
+                                    promise.resolve(result.data);
+                                } else {
+                                    promise.reject();
+                                }
+                            }, promise.reject);
+                    });
+                },
                 addParcel: function (parcelId) {
                     return addParcel(this, parcelId);
                 },
@@ -7050,7 +7063,7 @@ sdkInterfaceGeocledianApp.provider('geocledianService', ['underscore', function 
             }
 
             function addParcelType (instance, parcelId, type) {
-                return $http.get(_defaultConfig.url + 'parcels/' + parcelId + '/' + type + '?key=' + _defaultConfig.key).then(function (result) {
+                return $http.get(_defaultConfig.url + 'parcels/' + parcelId + '/' + type + '?key=' + _defaultConfig.key + (_defaultConfig.source ? '&source=' + _defaultConfig.source : '')).then(function (result) {
                     if (result && result.data && result.data.content) {
                         instance.parcels = instance.parcels.concat(underscore.map(result.data.content, function (parcel) {
                             return underscore.extend(parcel, {
