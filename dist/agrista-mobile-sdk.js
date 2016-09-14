@@ -1598,7 +1598,7 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
             _options.fileResolver = $injector.invoke(_options.fileResolver);
         }
 
-        var _getResizedAttachment = function (attachments, size, defaultImage) {
+        var _getResizedAttachment = function (attachments, size, defaultImage, type) {
             if ((attachments instanceof Array) == false) {
                 attachments = [attachments];
             }
@@ -1607,7 +1607,8 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
 
             var src = underscore.chain(attachments)
                 .filter(function (attachment) {
-                    return (attachment.sizes && attachment.sizes[size]);
+                    return (type === undefined || attachment.type == type) &&
+                        (attachment.sizes && attachment.sizes[size]);
                 }).map(function (attachment) {
                     return attachment.sizes[size].src;
                 }).last().value();
@@ -1616,14 +1617,14 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
         };
 
         return {
-            findSize: function (obj, size, defaultImage) {
-                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage);
+            findSize: function (obj, size, defaultImage, type) {
+                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage, type);
             },
-            getSize: function (attachments, size, defaultImage) {
-                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage);
+            getSize: function (attachments, size, defaultImage, type) {
+                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage, type);
             },
-            getThumbnail: function (attachments, defaultImage) {
-                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage);
+            getThumbnail: function (attachments, defaultImage, type) {
+                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage, type);
             },
             resolveUri: function (uri) {
                 return _options.fileResolver(uri);
@@ -8629,6 +8630,41 @@ sdkInterfaceUiApp.directive('inputNumber', ['$filter', function ($filter) {
                     return float;
                 } else {
                     return undefined;
+                }
+            });
+        }
+    };
+}]);
+
+sdkInterfaceUiApp.directive('inputDate', ['moment', function (moment) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function (scope, element, attrs, ngModel) {
+            var format = attrs.dateFormat || 'YYYY-MM-DD';
+
+            ngModel.$formatters.length = 0;
+            ngModel.$parsers.length = 0;
+
+            ngModel.$formatters.push(function (modelValue) {
+                if (modelValue) {
+                    return moment(modelValue).format(format);
+                } else {
+                    return modelValue;
+                }
+            });
+
+            ngModel.$parsers.push(function (value) {
+                if (value) {
+                    var date = (typeof value == 'string' ? moment(value, ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'], true) : moment(value));
+
+                    if (date && typeof date.isValid == 'function' && date.isValid()) {
+                        ngModel.$setValidity('date-format', true);
+                        return (typeof value == 'string' ? date.format('YYYY-MM-DD') : date);
+                    } else {
+                        ngModel.$setValidity('date-format', false);
+                        return value;
+                    }
                 }
             });
         }
