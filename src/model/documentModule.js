@@ -9,7 +9,7 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
 
                 privateProperty(this, 'updateRegister', function (organization) {
                     this.data = underscore.extend(this.data, {
-                        farmer: underscore.omit(organization, ['farms', 'legalEntities', 'primaryContact', 'teams']),
+                        farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
                         farms : organization.farms,
                         legalEntities: underscore
                             .map(organization.legalEntities, function (entity) {

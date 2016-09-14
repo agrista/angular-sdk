@@ -20,7 +20,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.newCopy = function (attrs) {
-                return _constructor.new(angular.copy(attrs));
+                return _constructor.new(underscore.extend({}, angular.copy(attrs)));
             };
 
             _constructor.asJSON = function () {
@@ -79,19 +79,19 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
 
         return Base;
     }])
-    .factory('computedProperty', [function () {
-        return function (object, name, value) {
-            Object.defineProperty(object, name, {
+    .factory('computedProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 get: value
-            });
+            }));
         }
     }])
-    .factory('readOnlyProperty', [function () {
-        return function (object, name, value) {
-            Object.defineProperty(object, name, {
+    .factory('readOnlyProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 writable: false,
                 value: value
-            });
+            }));
         }
     }])
     .factory('inheritModel', ['underscore', function (underscore) {
@@ -108,11 +108,11 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             });
         }
     }])
-    .factory('privateProperty', [function () {
-        return function (object, name, value) {
+    .factory('privateProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
             var val;
 
-            Object.defineProperty(object, name, {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 enumerable: false,
                 configurable: false,
                 get: function () {
@@ -121,18 +121,18 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 set: function (newVal) {
                     val = newVal;
                 }
-            });
+            }));
 
             if (value !== undefined) {
                 object[name] = value;
             }
         }
     }])
-    .factory('interfaceProperty', [function () {
-        return function (object, name, value) {
+    .factory('interfaceProperty', ['underscore', function (underscore) {
+        return function (object, name, value, config) {
             var val;
 
-            Object.defineProperty(object, name, {
+            Object.defineProperty(object, name, underscore.defaults(config || {}, {
                 enumerable: false,
                 configurable: true,
                 get: function () {
@@ -141,7 +141,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 set: function (newVal) {
                     val = newVal;
                 }
-            });
+            }));
 
             if (value !== undefined) {
                 object[name] = value;

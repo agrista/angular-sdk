@@ -16,6 +16,7 @@ angular.module('ag.sdk.helper', [
 ]);
 
 angular.module('ag.sdk.interface', [
+    'ag.sdk.interface.geocledian',
     'ag.sdk.interface.ui',
     'ag.sdk.interface.list',
     'ag.sdk.interface.map',
@@ -29,6 +30,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm-valuation',
+    'ag.sdk.model.financial',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.production-schedule',

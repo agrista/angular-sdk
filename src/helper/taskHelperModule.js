@@ -110,6 +110,9 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
             getTaskActionTitle: _getActionTitle,
             getTaskLabel: _getStatusLabelClass,
 
+            taskStatusTitles: function () {
+                return _taskStatusTitles;
+            },
             filterTasks: function (tasks, excludeStatus) {
                 excludeStatus = excludeStatus || [];
 
@@ -140,21 +143,33 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
     }];
 }]);
 
-sdkHelperTaskApp.factory('taskWorkflowHelper', function() {
-    var _taskActions = {
-        accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
-        decline: ['assigned'],
-        start: ['assigned', 'in progress'],
-        assign: ['backlog', 'assigned', 'in progress', 'in review'],
-        complete: ['assigned', 'in progress'],
-        approve: ['in review'],
-        reject: ['assigned', 'in review'],
-        release: ['done']
-    };
+sdkHelperTaskApp.factory('taskWorkflowHelper', ['underscore', function (underscore) {
+    var taskActions = ['accept', 'decline', 'start', 'assign', 'complete', 'approve', 'reject', 'release'],
+        taskActionsMap = {
+            accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
+            decline: ['assigned'],
+            start: ['assigned', 'in progress'],
+            assign: ['backlog', 'assigned', 'in progress', 'in review'],
+            complete: ['assigned', 'in progress'],
+            approve: ['in review'],
+            reject: ['assigned', 'in review'],
+            release: ['done']
+        },
+        taskTypeActions = {
+            parent: {
+                complete: ['in progress'],
+                reject: ['done'],
+                release: ['done']
+            },
+            child: taskActionsMap,
+            external: taskActionsMap
+        };
 
     return {
         canChangeToState: function (task, action) {
-            return (_taskActions[action] ? _taskActions[action].indexOf(task.status) !== -1 : true);
+            return (underscore.contains(taskActions, action) ?
+                (taskTypeActions[task.type] && taskTypeActions[task.type][action] ?
+                taskTypeActions[task.type][action].indexOf(task.status) !== -1 : false) : true);
         }
     }
-});
+}]);

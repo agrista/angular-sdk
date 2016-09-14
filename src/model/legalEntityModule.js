@@ -25,11 +25,11 @@ sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability'
             this.uuid = attrs.uuid;
 
             this.assets = underscore.map(attrs.assets, function (asset) {
-                return Asset.new(asset);
+                return Asset.newCopy(asset);
             });
 
             this.liabilities = underscore.map(attrs.liabilities, function (liability) {
-                return Liability.new(liability);
+                return Liability.newCopy(liability);
             });
         }
 

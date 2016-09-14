@@ -110,35 +110,46 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     }
                 },
                 request: function (params) {
-                    var currentListId = _listId;
-
-                    params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
-
-                    _scroll.busy = true;
-                    delete params.complete;
-
-                    return requestor(params).then(function(res) {
-                        if (params.search === undefined) {
-                            _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
-                            _scroll.complete = (res.length !== _scroll.page.limit);
+                    return promiseService.wrap(function (promise) {
+                        if (_scroll.disabled()) {
+                            promise.reject();
                         } else {
-                            _scroll.searching = params;
-                            _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
-                            _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                            var currentListId = _listId;
+
+                            params = params || (_scroll.searching ? _scroll.searching : _scroll.page);
+
+                            _scroll.busy = true;
+                            delete params.complete;
+
+                            requestor(params).then(function(res) {
+                                if (params.search === undefined) {
+                                    _scroll.page.offset = (_scroll.page.offset === undefined ? res.length : _scroll.page.offset + res.length);
+                                    _scroll.complete = (res.length !== _scroll.page.limit);
+                                } else {
+                                    _scroll.searching = params;
+                                    _scroll.searching.offset = (_scroll.searching.offset === undefined ? res.length : _scroll.searching.offset + res.length);
+                                    _scroll.searching.complete = (res.length !== _scroll.searching.limit);
+                                }
+
+                                _scroll.busy = false;
+
+                                if (currentListId === _listId) {
+                                    if (dataMap) {
+                                        res = dataMapService(res, dataMap);
+                                    }
+
+                                    itemStore(res);
+                                }
+
+                                promise.resolve(res);
+                            }, function (err) {
+                                _scroll.complete = true;
+                                _scroll.busy = false;
+
+                                promise.reject(err);
+                            });
                         }
-
-                        _scroll.busy = false;
-
-                        if (currentListId === _listId) {
-                            if (dataMap) {
-                                res = dataMapService(res, dataMap);
-                            }
-
-                            itemStore(res);
-                        }
-
-                        return res;
-                    }, promiseService.throwError);
+                    });
                 }
             };
 
@@ -152,12 +163,12 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                 if (params !== undefined) {
                     if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
+                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
                     } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promiseService.throwError);
+                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
                     }
                 } else {
-                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promiseService.throwError);
+                    $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
                 }
             });
         }
@@ -220,7 +231,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
 
         return $q.all(list);
     };
-    
+
     return {
         all: function (promises) {
             return $q.all(promises);
@@ -275,4 +286,12 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
             }
         }
     }
+}]);
+
+skdUtilitiesApp.filter('round', ['$filter', function ($filter) {
+    return function (value, precision) {
+        precision = precision || 2;
+
+        return Number(Math.round(value + 'e' + precision) + 'e-' + precision);
+    };
 }]);
