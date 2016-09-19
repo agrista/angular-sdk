@@ -11367,7 +11367,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     });
 
                 if (!underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey })) {
-                    assetCategory.assets.push(asset);
+                    assetCategory.assets.push(typeof asset.asJSON == 'function' ? asset.asJSON() : asset);
                 }
                 assetCategory.estimatedValue += asset.data.assetValue || 0;
                 instance.data.assetStatement[category].push(assetCategory);
@@ -11396,7 +11396,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 }
 
                 if (!underscore.findWhere(liabilityCategory.liabilities, { uuid: liability.uuid })) {
-                    liabilityCategory.liabilities.push(liability);
+                    liabilityCategory.liabilities.push(typeof liability.asJSON == 'function' ? liability.asJSON() : liability);
                 }
                 instance.data.liabilityStatement[category].push(liabilityCategory);
             }
@@ -13930,7 +13930,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
         Liability.validates({
             amount: {
-                required: false,
+                requiredIf: function (value, instance, field) {
+                    return !isLeased(value, instance, field);
+                },
                 numeric: true
             },
             openingBalance: {

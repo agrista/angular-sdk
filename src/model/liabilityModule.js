@@ -378,7 +378,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
         Liability.validates({
             amount: {
-                required: false,
+                requiredIf: function (value, instance, field) {
+                    return !isLeased(value, instance, field);
+                },
                 numeric: true
             },
             openingBalance: {
