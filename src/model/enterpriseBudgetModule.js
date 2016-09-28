@@ -803,15 +803,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
             });
 
             privateProperty(this, 'shiftMonthlyArray', function (array) {
-                return underscore.rest(array, this.data.details.cycleStart).concat(
+                return (array ? underscore.rest(array, this.data.details.cycleStart).concat(
                     underscore.first(array, this.data.details.cycleStart)
-                );
+                ) : array);
             });
 
             privateProperty(this, 'unshiftMonthlyArray', function (array) {
-                return underscore.rest(array, array.length -this.data.details.cycleStart).concat(
+                return (array ? underscore.rest(array, array.length -this.data.details.cycleStart).concat(
                     underscore.first(array, array.length - this.data.details.cycleStart)
-                );
+                ) : array);
             });
 
             privateProperty(this, 'getShiftedSchedule', function (schedule) {
