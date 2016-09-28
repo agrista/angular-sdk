@@ -29,6 +29,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.business-plan',
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
+    'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.financial',
     'ag.sdk.model.legal-entity',

@@ -11488,15 +11488,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
             });
 
             privateProperty(this, 'shiftMonthlyArray', function (array) {
-                return underscore.rest(array, this.data.details.cycleStart).concat(
+                return (array ? underscore.rest(array, this.data.details.cycleStart).concat(
                     underscore.first(array, this.data.details.cycleStart)
-                );
+                ) : array);
             });
 
             privateProperty(this, 'unshiftMonthlyArray', function (array) {
-                return underscore.rest(array, array.length -this.data.details.cycleStart).concat(
+                return (array ? underscore.rest(array, array.length -this.data.details.cycleStart).concat(
                     underscore.first(array, array.length - this.data.details.cycleStart)
-                );
+                ) : array);
             });
 
             privateProperty(this, 'getShiftedSchedule', function (schedule) {
@@ -11853,6 +11853,44 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
 
         return EnterpriseBudget;
     }]);
+var sdkModelFarm = angular.module('ag.sdk.model.farm', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelFarm.factory('Farm', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Farm (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+
+            // Models
+            this.organization = attrs.organization;
+        }
+
+        inheritModel(Farm, Model.Base);
+
+        Farm.validates({
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return Farm;
+    }]);
+
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
 sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
@@ -12148,6 +12186,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
         var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
         var _typesWithAmount = ['short-term', 'medium-term', 'long-term'];
+        var _typesWithName = ['production-credit', 'other'];
 
         function defaultMonth () {
             return {
@@ -12576,7 +12615,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 object: true
             },
             name: {
-                requiredIf: isOtherType,
+                requiredIf: function (value, instance, field) {
+                    return underscore.contains(_typesWithName, instance.type);
+                },
                 length: {
                     min: 1,
                     max: 255
@@ -13995,17 +14036,28 @@ cordovaToasterApp.factory('toasterService', [function () {
     var _show = function (message, duration, position) {
         var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
 
-        if (_toaster !== undefined) {
-            _toaster.show(message, duration, position);
+        if (_toaster && typeof _toaster.show == 'function') {
+            _toaster.show(message, duration || 'long', position || 'bottom');
         }
     };
+
+    var _hide = function () {
+        var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
+
+        if (_toaster && typeof _toaster.hide == 'function') {
+            _toaster.hide();
+        }
+    }
 
     return {
         show: function (message, duration, position) {
             _show(message, duration, position);
         },
         showLongBottom: function (message) {
-            _show(message, 'long', 'bottom');
+            _show(message);
+        },
+        hide: function () {
+            _hide();
         }
     };
 }]);
@@ -15261,7 +15313,7 @@ mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'un
     };
 }]);
 
-mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -15275,6 +15327,25 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
         getPortionPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchPortions: function (query) {
+            query = underscore.chain(query)
+                .omit(function (value) {
+                    return (value == null || value == '');
+                })
+                .map(function (value, key) {
+                    return key + '=' + encodeURIComponent(value);
+                })
+                .value().join('&');
+
+            return promiseService.wrap(function (promise) {
+                if (!query) {
+                    promise.reject();
+                }
+                $http.get(_host + 'api/geo/portion-polygons?' + query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -17208,6 +17279,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.business-plan',
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
+    'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.financial',
     'ag.sdk.model.legal-entity',
