@@ -1249,7 +1249,7 @@ mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'un
     };
 }]);
 
-mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -1263,6 +1263,25 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
         getPortionPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchPortions: function (query) {
+            query = underscore.chain(query)
+                .omit(function (value) {
+                    return (value == null || value == '');
+                })
+                .map(function (value, key) {
+                    return key + '=' + encodeURIComponent(value);
+                })
+                .value().join('&');
+
+            return promiseService.wrap(function (promise) {
+                if (!query) {
+                    promise.reject();
+                }
+                $http.get(_host + 'api/geo/portion-polygons?' + query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

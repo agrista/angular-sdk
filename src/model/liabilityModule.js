@@ -20,6 +20,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
         var _typesWithInstallmentPayments = ['short-term', 'medium-term', 'long-term', 'rent'];
         var _typesWithAmount = ['short-term', 'medium-term', 'long-term'];
+        var _typesWithName = ['production-credit', 'other'];
 
         function defaultMonth () {
             return {
@@ -448,7 +449,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 object: true
             },
             name: {
-                requiredIf: isOtherType,
+                requiredIf: function (value, instance, field) {
+                    return underscore.contains(_typesWithName, instance.type);
+                },
                 length: {
                     min: 1,
                     max: 255
