@@ -10356,6 +10356,87 @@ sdkInterfaceUiApp.directive('inputDate', ['moment', function (moment) {
         }
     };
 }]);
+
+sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($window, underscore) {
+    return {
+        restrict: 'A',
+        template: '<div class="sparkline"></div>',
+        replace: true,
+        scope: {
+            sparkline: '=',
+            sparklineText: '='
+        },
+        link: function ($scope, $element, $attrs) {
+            var d3 = $window.d3,
+                width = $attrs.width || 100,
+                xExtent = $attrs.xExtent,
+                height = $attrs.height || 20,
+                yExtent = $attrs.yExtent || 100,
+                interpolate = $attrs.interpolate || 'step-before',
+                svg = d3.select($element[0]).append('svg').attr('width', width).attr('height', height),
+                text = svg.append('text').attr('class', 'sparkline-text').attr('x', width / 2).attr('y', (height / 2) + 5),
+                area = svg.append('path').attr('class', 'sparkline-area'),
+                line = svg.append('path').attr('class', 'sparkline-line');
+
+            var xFn = d3.scale.linear().range([0, width]),
+                yFn = d3.scale.linear().range([height, 0]);
+
+            var areaFn = d3.svg.area()
+                .interpolate(interpolate)
+                .x(getDimension(xFn, 'x'))
+                .y0(height)
+                .y1(getDimension(yFn, 'y'));
+
+            var lineFn = d3.svg.line()
+                .interpolate(interpolate)
+                .x(getDimension(xFn, 'x'))
+                .y(getDimension(yFn, 'y'));
+
+            $scope.$watchCollection('sparkline', function () {
+                renderChart();
+            });
+
+            $scope.$watch('sparklineText', function () {
+                text.text(function () {
+                    return $scope.sparklineText;
+                });
+            });
+
+            function getDimension (fn, field) {
+                return function (d) {
+                    return fn(d[field]);
+                }
+            }
+
+            function renderChart () {
+                $scope.data = underscore.map($scope.sparkline, function (data) {
+                    return (underscore.isArray(data) ? {
+                        x: (underscore.isNumber(data[0]) ? data[0] : 0),
+                        y: (underscore.isNumber(data[1]) ? data[1] : 0)
+                    } : {
+                        x: (underscore.isNumber(data.x) ? data.x : 0),
+                        y: (underscore.isNumber(data.y) ? data.y : 0)
+                    });
+                });
+
+                // Pad first element
+                $scope.data.unshift({x: -1, y: 0});
+
+                xFn.domain(xExtent && xExtent != 0 ? [0, xExtent] : d3.extent($scope.data, function (d) {
+                    return d.x;
+                }));
+
+                yFn.domain(yExtent && yExtent != 0 ? [0, yExtent] : d3.extent($scope.data, function (d) {
+                    return d.y;
+                }));
+
+                area.attr('d', areaFn($scope.data));
+                line.attr('d', lineFn($scope.data));
+            }
+        }
+    }
+}]);
+
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
 sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
