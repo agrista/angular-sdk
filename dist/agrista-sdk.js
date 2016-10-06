@@ -10246,6 +10246,12 @@ sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     };
 }]);
 
+sdkInterfaceUiApp.filter('floor', ['$filter', function ($filter) {
+    return function (value) {
+        return $filter('number')(Math.floor(value), 0);
+    };
+}]);
+
 sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
