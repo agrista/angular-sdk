@@ -8560,6 +8560,12 @@ sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     };
 }]);
 
+sdkInterfaceUiApp.filter('floor', ['$filter', function ($filter) {
+    return function (value) {
+        return $filter('number')(Math.floor(value), 0);
+    };
+}]);
+
 sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
@@ -14174,8 +14180,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
         _options = underscore.extend(_options, options);
     };
 
-    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'productionScheduleApi', 'promiseService', 'taskApi',
-        function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, productionScheduleApi, promiseService, taskApi) {
+    this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'financialApi', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'productionScheduleApi', 'promiseService', 'taskApi',
+        function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, financialApi, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, productionScheduleApi, promiseService, taskApi) {
             function _getFarmers (getParams) {
                 getParams = getParams || {limit: 20, resulttype: 'simple'};
 
@@ -14317,6 +14323,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     chain.push(function () {
                         return _postFarms(farmer.id);
                     }, function () {
+                        return _postFinancials(farmer.id);
+                    }, function () {
                         return _postLegalEntities(farmer.id);
                     });
                 });
@@ -14329,6 +14337,20 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             if (farm.$dirty === true) {
                                 chain.push(function () {
                                     return farmApi.postFarm({data: farm});
+                                });
+                            }
+                        });
+                    });
+                }, promiseService.throwError);
+            }
+
+            function _postFinancials (farmerId) {
+                financialApi.getFinancials({id: farmerId, options: _options.local}).then(function (financials) {
+                    return promiseService.chain(function (chain) {
+                        angular.forEach(financials, function (financial) {
+                            if (financial.$dirty === true) {
+                                chain.push(function () {
+                                    return financialApi.postFinancial({data: financial});
                                 });
                             }
                         });
@@ -15016,11 +15038,11 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['activities', 'farms', 'legalEntities', 'primaryContact'];
+        var defaultRelations = ['activities', 'farms', 'financials', 'legalEntities', 'primaryContact'];
         var farmerApi = api({
             plural: 'farmers',
             singular: 'farmer',
-            strip: ['farms', 'legalEntities'],
+            strip: ['farms', 'financials', 'legalEntities'],
             hydrate: function (obj, options) {
                 options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
                 return hydration.hydrate(obj, 'farmer', options);
@@ -15040,6 +15062,48 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
             postFarmer: farmerApi.postItem,
             deleteFarmer: farmerApi.deleteItem,
             purgeFarmer: farmerApi.purgeItem
+        };
+    }];
+}]);
+
+mobileSdkApiApp.provider('financialApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('financials', ['financialApi', function (financialApi) {
+        return function (obj, type) {
+            return financialApi.getFinancials({id: obj.$id, options: {hydrate: true}});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('financials', ['financialApi', 'promiseService', function (financialApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
+
+            return financialApi.purgeFinancial({template: 'financials/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.financials, function (financial) {
+                            promises.push(financialApi.createFinancial({template: 'financials/:id', schema: {id: objId}, data: financial, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var financialApi = api({
+            plural: 'financials',
+            singular: 'financial',
+            strip: ['organization']
+        });
+
+        return {
+            getFinancials: financialApi.getItems,
+            createFinancial: financialApi.createItem,
+            getFinancial: financialApi.getItem,
+            findFinancial: financialApi.findItem,
+            updateFinancial: financialApi.updateItem,
+            postFinancial: financialApi.postItem,
+            deleteFinancial: financialApi.deleteItem,
+            purgeFinancial: financialApi.purgeItem
         };
     }];
 }]);
