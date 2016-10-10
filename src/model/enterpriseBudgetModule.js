@@ -961,6 +961,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
               'Lemon',
               'Lentil',
               'Macadamia Nut',
+              'Mandarin',
               'Mango',
               'Melon',
               'Mulberry',
