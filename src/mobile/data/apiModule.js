@@ -31,8 +31,11 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
     this.$get = ['$http', '$log', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'financialApi', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'productionScheduleApi', 'promiseService', 'taskApi',
         function ($http, $log, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, financialApi, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, productionScheduleApi, promiseService, taskApi) {
-            function _getFarmers (getParams) {
-                getParams = getParams || {limit: 20, resulttype: 'simple'};
+            function _getFarmers (params) {
+                params = params || {resulttype: {
+                    name: 1,
+                    operationType: 1
+                }};
 
                 return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
@@ -44,15 +47,19 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, getParams);
+                        }, params);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getDocuments (getParams) {
-                getParams = getParams || {limit: 20, resulttype: 'simple'};
+            function _getDocuments (params) {
+                params = params || {resulttype: {
+                    docType: 1,
+                    documentId: 1,
+                    organizationId: 1
+                }};
 
                 return documentApi.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
@@ -64,15 +71,15 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, getParams);
+                        }, params);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getExpenses (getParams) {
-                getParams = getParams || {limit: 20, resulttype: 'full'};
+            function _getExpenses (params) {
+                params = params || {limit: 20, resulttype: 'full'};
 
                 return expenseApi.purgeExpense({template: 'expenses', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
@@ -84,49 +91,72 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, getParams);
+                        }, params);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getTasks (getParams) {
-                getParams = getParams || {limit: 20, resulttype: 'simple'};
+            function _getTasks (params) {
+                params = params || {resulttype: {
+                    documentKey: 1,
+                    organizationId: 1,
+                    status: 1,
+                    todo: 1
+                }};
 
                 return taskApi.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
                         var paging = pagingService.initialize(function (page) {
                             return taskApi.getTasks({params: page, options: _options.remote});
                         }, function (tasks) {
-                            promiseService
-                                .chain(function (chain) {
-                                    angular.forEach(tasks, function (task) {
-                                        chain.push(function () {
-                                            return taskApi.findTask({key: task.id, options: {fallbackRemote: true, hydrate: ['organization', 'subtasks']}});
-                                        });
-                                    });
-                                })
-                                .then(function () {
-                                    if (paging.complete) {
-                                        promise.resolve();
-                                    } else {
-                                        paging.request().catch(promise.reject);
-                                    }
-                                });
-                        }, getParams);
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, params);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getEnterpriseBudgets() {
-                return enterpriseBudgetApi.getEnterpriseBudgets({options: _options.remote});
+            function _getEnterpriseBudgets(params) {
+                params = params || {resulttype: {
+                    assetType: 1,
+                    cloneCount: 1,
+                    commodityType: 1,
+                    favoriteCount: 1,
+                    name: 1,
+                    published: 1,
+                    useCount: 1,
+                    uuid: 1
+                }};
+
+                return enterpriseBudgetApi.purgeEnterpriseBudget({template: 'budgets', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return enterpriseBudgetApi.getEnterpriseBudgets({params: page, options: _options.remote});
+                        }, function (expenses) {
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, params);
+
+                        paging.request().catch(promise.reject);
+                    });
+                });
             }
 
-            function _getOrganizationalUnits (getParams) {
-                getParams = getParams || {limit: 20, resulttype: 'simple'};
+            function _getOrganizationalUnits (params) {
+                params = params || {resulttype: {
+                    name: 1,
+                    type: 1
+                }};
 
                 return organizationalUnitApi.purgeOrganizationalUnit({template: 'organizational-units', options: {force: false}}).then(function () {
                     return promiseService.wrap(function (promise) {
@@ -138,15 +168,34 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             } else {
                                 paging.request().catch(promise.reject);
                             }
-                        }, getParams);
+                        }, params);
 
                         paging.request().catch(promise.reject);
                     });
                 });
             }
 
-            function _getMerchants() {
-                return merchantApi.getMerchants({options: _options.remote});
+            function _getMerchants(params) {
+                params = params || {resulttype: {
+                    name: 1,
+                    uuid: 1
+                }};
+
+                return merchantApi.purgeMerchant({template: 'merchants', options: {force: false}}).then(function () {
+                    return promiseService.wrap(function (promise) {
+                        var paging = pagingService.initialize(function (page) {
+                            return merchantApi.getMerchants({params: page, options: _options.remote});
+                        }, function (expenses) {
+                            if (paging.complete) {
+                                promise.resolve();
+                            } else {
+                                paging.request().catch(promise.reject);
+                            }
+                        }, params);
+
+                        paging.request().catch(promise.reject);
+                    });
+                });
             }
 
             function _postFarmers () {
@@ -722,70 +771,77 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
     }
 }]);
 
-mobileSdkApiApp.factory('userApi', ['api', function (api) {
-    var userApi = api({
-        plural: 'users',
-        singular: 'user'
-    });
-
-    return {
-        getUsers: userApi.getItems,
-        createUser: userApi.createItem,
-        getUser: userApi.getItem,
-        findUser: userApi.findItem,
-        updateUser: userApi.updateItem,
-        postUser: userApi.postItem,
-        deleteUser: userApi.deleteItem
-    };
-}]);
-
-mobileSdkApiApp.factory('organizationalUnitApi', ['api', function (api) {
-    var organizationalUnitApi = api({
-        plural: 'organizational-units',
-        singular: 'organizational-unit'
-    });
-
-    return {
-        getOrganizationalUnits: organizationalUnitApi.getItems,
-        createOrganizationalUnit: organizationalUnitApi.createItem,
-        getOrganizationalUnit: organizationalUnitApi.getItem,
-        findOrganizationalUnit: organizationalUnitApi.findItem,
-        updateOrganizationalUnit: organizationalUnitApi.updateItem,
-        postOrganizationalUnit: organizationalUnitApi.postItem,
-        deleteOrganizationalUnit: organizationalUnitApi.deleteItem,
-        purgeOrganizationalUnit: organizationalUnitApi.purgeItem
-    };
-}]);
-
-mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
-    var notificationApi = api({
-        plural: 'notifications',
-        singular: 'notification'
-    });
-
-    return {
-        getNotifications: notificationApi.getItems,
-        getNotification: notificationApi.getItem,
-        deleteNotification: notificationApi.deleteItem
-    };
-}]);
-
-mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationProvider) {
-    hydrationProvider.registerHydrate('subtasks', ['taskApi', function (taskApi) {
+mobileSdkApiApp.provider('activityApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('activities', ['activityApi', 'connectionService', function (activityApi, connectionService) {
         return function (obj, type) {
-            return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.$id}});
+            return activityApi.getActivities({template: 'activities/:id', schema: {id: obj.$id}, options: {one: false, fallbackRemote: connectionService.isOnline(), hydrateRemote: false}});
         }
     }]);
 
-    hydrationProvider.registerDehydrate('subtasks', ['taskApi', 'promiseService', function (taskApi, promiseService) {
+    this.$get = ['api', function (api) {
+        var activityApi = api({
+            plural: 'activities',
+            singular: 'activity'
+        });
+
+        return {
+            getActivities: function (req) {
+                req = req || {};
+                req.params = req.params || {
+                    resulttype: {
+                        action: 1,
+                        actor: {
+                            displayName: 1,
+                            position: 1,
+                            profilePhotoSrc: 1
+                        },
+                        date: 1,
+                        document: {
+                            docType: 1
+                        },
+                        documentId: 1,
+                        organization: {
+                            name: 1
+                        },
+                        referenceType: 1,
+                        task: {
+                            todo: 1
+                        },
+                        taskId: 1
+                    }
+                };
+
+                return activityApi.getItems(req);
+            },
+            createActivity: activityApi.createItem,
+            getActivity: activityApi.getItem,
+            deleteActivity: activityApi.deleteItem
+        };
+    }];
+}]);
+
+mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('asset', ['assetApi', function (assetApi) {
+        return function (obj, type) {
+            return assetApi.findAsset({key: obj.$id, options: {one: true}});
+        }
+    }]);
+
+    hydrationProvider.registerHydrate('assets', ['assetApi', function (assetApi) {
+        return function (obj, type) {
+            return assetApi.getAssets({id: obj.$id, options: {hydrate: ['liabilities', 'productionSchedules']}});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('assets', ['assetApi', 'promiseService', function (assetApi, promiseService) {
         return function (obj, type) {
             var objId = (obj.$id !== undefined ? obj.$id : obj.id);
 
-            return taskApi.purgeTask({template: 'tasks/:id', schema: {id: objId}, options: {force: false}})
+            return assetApi.purgeAsset({template: 'assets/:id', schema: {id: objId}, options: {force: false}})
                 .then(function () {
                     return promiseService.arrayWrap(function (promises) {
-                        angular.forEach(obj.subtasks, function (subtask) {
-                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                        angular.forEach(obj.assets, function (asset) {
+                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
                         });
                     });
                 }, promiseService.throwError);
@@ -793,74 +849,184 @@ mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationPro
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var hydrateRelations = ['document', 'organization', 'subtasks'];
-        var dehydrateRelations = ['document', 'subtasks'];
-        var taskApi = api({
-            plural: 'tasks',
-            singular: 'task',
-            strip: hydrateRelations,
+        var hydrateRelations = ['liabilities', 'productionSchedules'];
+        var assetApi = api({
+            plural: 'assets',
+            singular: 'asset',
+            strip: ['farm', 'legalEntity', 'liabilities', 'productionSchedules'],
             hydrate: function (obj, options) {
                 options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
-                return hydration.hydrate(obj, 'task', options);
+                return hydration.hydrate(obj, 'asset', options);
             },
             dehydrate: function (obj, options) {
-                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
-                return hydration.dehydrate(obj, 'task', options);
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : hydrateRelations));
+                return hydration.dehydrate(obj, 'asset', options);
             }
         });
 
         return {
-            getTasks: taskApi.getItems,
-            createTask: taskApi.createItem,
-            getTask: taskApi.getItem,
-            findTask: taskApi.findItem,
-            updateTask: taskApi.updateItem,
-            postTask: taskApi.postItem,
-            deleteTask: taskApi.deleteItem,
-            purgeTask: taskApi.purgeItem
+            getAssets: assetApi.getItems,
+            createAsset: assetApi.createItem,
+            getAsset: assetApi.getItem,
+            findAsset: assetApi.findItem,
+            updateAsset: assetApi.updateItem,
+            postAsset: assetApi.postItem,
+            deleteAsset: assetApi.deleteItem,
+            purgeAsset: assetApi.purgeItem
         };
     }];
 }]);
 
-mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydrationProvider) {
-    hydrationProvider.registerHydrate('merchant', ['merchantApi', function (merchantApi) {
+mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type, options) {
-            return (obj.merchantUuid ? merchantApi.findMerchant({column: 'data', key: obj.merchantUuid, options: {like: true, one: true}}) : undefined);
+            return documentApi.findDocument({key: obj.documentId, options: {one: true, hydrateRemote: options.remoteHydration}});
         }
     }]);
 
-    hydrationProvider.registerDehydrate('merchant', ['merchantApi', function (merchantApi) {
+    hydrationProvider.registerDehydrate('document', ['documentApi', function (documentApi) {
         return function (obj, type) {
-            return merchantApi.createMerchant({template: 'merchants', data: obj.merchant, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
         }
     }]);
 
-    this.$get = ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
-        var _host = configuration.getServer();
-        var merchantApi = api({
-            plural: 'merchants',
-            singular: 'merchant'
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var hydrateRelations = ['organization'];
+        var dehydrateRelations = [];
+        var documentApi = api({
+            plural: 'documents',
+            singular: 'document',
+            strip: ['organization', 'tasks'],
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'document', options);
+            },
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'document', options);
+            }
         });
 
         return {
-            getMerchants: merchantApi.getItems,
-            createMerchant: merchantApi.createItem,
-            getMerchant: merchantApi.getItem,
-            findMerchant: merchantApi.findItem,
-            updateMerchant: merchantApi.updateItem,
-            postMerchant: merchantApi.postItem,
-            deleteMerchant: merchantApi.deleteItem,
-            searchMerchants: function (query) {
-                query = underscore.map(query, function (value, key) {
-                    return key + '=' + value;
-                }).join('&');
+            getDocuments: documentApi.getItems,
+            createDocument: documentApi.createItem,
+            getDocument: documentApi.getItem,
+            findDocument: documentApi.findItem,
+            updateDocument: documentApi.updateItem,
+            postDocument: documentApi.postItem,
+            deleteDocument: documentApi.deleteItem,
+            purgeDocument: documentApi.purgeItem
+        };
+    }];
+}]);
 
-                return promiseService.wrap(function (promise) {
-                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                        promise.resolve(res.data);
-                    }, promise.reject);
-                });
+mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
+        return function (obj, type, options) {
+            if (obj.budgetUuid) {
+                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {like: true, one: true}});
+            } else {
+                return enterpriseBudgetApi.findEnterpriseBudget({key: obj.budgetId, options: {one: true}});
             }
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
+        return function (obj, type) {
+            return enterpriseBudgetApi.createEnterpriseBudget({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+        }
+    }]);
+
+    this.$get = ['api', function (api) {
+        var budgetApi = api({
+            plural: 'budgets',
+            singular: 'budget'
+        });
+
+        return {
+            getEnterpriseBudgets: budgetApi.getItems,
+            createEnterpriseBudget: budgetApi.createItem,
+            getEnterpriseBudget: budgetApi.getItem,
+            findEnterpriseBudget: budgetApi.findItem,
+            updateEnterpriseBudget: budgetApi.updateItem,
+            postEnterpriseBudget: budgetApi.postItem,
+            deleteEnterpriseBudget: budgetApi.deleteItem,
+            purgeEnterpriseBudget: budgetApi.purgeItem
+        };
+    }];
+}]);
+
+mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'underscore', function (api, hydration, promiseService, underscore) {
+    var defaultRelations = ['document', 'organization'];
+    var expenseApi = api({
+        plural: 'expenses',
+        singular: 'expense',
+        strip: ['document', 'organization', 'user'],
+        hydrate: function (obj, options) {
+            options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
+            return hydration.hydrate(obj, 'expense', options);
+        },
+        dehydrate: function (obj, options) {
+            return promiseService.wrap(function (promise) {
+                promise.resolve(underscore.omit(obj, options.dehydrate || defaultRelations));
+            });
+        }
+    });
+
+    return {
+        getExpenses: expenseApi.getItems,
+        createExpense: expenseApi.createItem,
+        getExpense: expenseApi.getItem,
+        findExpense: expenseApi.findItem,
+        updateExpense: expenseApi.updateItem,
+        postExpense: expenseApi.postItem,
+        purgeExpense: expenseApi.purgeItem
+    };
+}]);
+
+mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
+        return function (obj, type, options) {
+            return (angular.isNumber(obj.farmId) ? farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}}) : null);
+        }
+    }]);
+
+    hydrationProvider.registerHydrate('farms', ['farmApi', function (farmApi) {
+        return function (obj, type) {
+            return farmApi.getFarms({id: obj.$id});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('farms', ['farmApi', 'promiseService', function (farmApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
+
+            return farmApi.purgeFarm({template: 'farms/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.farms, function (farm) {
+                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var farmApi = api({
+            plural: 'farms',
+            singular: 'farm'
+        });
+
+        return {
+            getFarms: farmApi.getItems,
+            createFarm: farmApi.createItem,
+            getFarm: farmApi.getItem,
+            findFarm: farmApi.findItem,
+            updateFarm: farmApi.updateItem,
+            postFarm: farmApi.postItem,
+            deleteFarm: farmApi.deleteItem,
+            purgeFarm: farmApi.purgeItem
         };
     }];
 }]);
@@ -1023,110 +1189,6 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
     }];
 }]);
 
-mobileSdkApiApp.provider('farmApi', ['hydrationProvider', function (hydrationProvider) {
-    hydrationProvider.registerHydrate('farm', ['farmApi', function (farmApi) {
-        return function (obj, type, options) {
-            return (angular.isNumber(obj.farmId) ? farmApi.findFarm({key: obj.farmId, options: {one: true, hydrateRemote: options.remoteHydration}}) : null);
-        }
-    }]);
-
-    hydrationProvider.registerHydrate('farms', ['farmApi', function (farmApi) {
-        return function (obj, type) {
-            return farmApi.getFarms({id: obj.$id});
-        }
-    }]);
-
-    hydrationProvider.registerDehydrate('farms', ['farmApi', 'promiseService', function (farmApi, promiseService) {
-        return function (obj, type) {
-            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
-
-            return farmApi.purgeFarm({template: 'farms/:id', schema: {id: objId}, options: {force: false}})
-                .then(function () {
-                    return promiseService.arrayWrap(function (promises) {
-                        angular.forEach(obj.farms, function (farm) {
-                            promises.push(farmApi.createFarm({template: 'farms/:id', schema: {id: objId}, data: farm, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
-                        });
-                    });
-                }, promiseService.throwError);
-        }
-    }]);
-
-    this.$get = ['api', 'hydration', function (api, hydration) {
-        var farmApi = api({
-            plural: 'farms',
-            singular: 'farm'
-        });
-
-        return {
-            getFarms: farmApi.getItems,
-            createFarm: farmApi.createItem,
-            getFarm: farmApi.getItem,
-            findFarm: farmApi.findItem,
-            updateFarm: farmApi.updateItem,
-            postFarm: farmApi.postItem,
-            deleteFarm: farmApi.deleteItem,
-            purgeFarm: farmApi.purgeItem
-        };
-    }];
-}]);
-
-mobileSdkApiApp.provider('assetApi', ['hydrationProvider', function (hydrationProvider) {
-    hydrationProvider.registerHydrate('asset', ['assetApi', function (assetApi) {
-        return function (obj, type) {
-            return assetApi.findAsset({key: obj.$id, options: {one: true}});
-        }
-    }]);
-
-    hydrationProvider.registerHydrate('assets', ['assetApi', function (assetApi) {
-        return function (obj, type) {
-            return assetApi.getAssets({id: obj.$id, options: {hydrate: ['liabilities', 'productionSchedules']}});
-        }
-    }]);
-
-    hydrationProvider.registerDehydrate('assets', ['assetApi', 'promiseService', function (assetApi, promiseService) {
-        return function (obj, type) {
-            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
-
-            return assetApi.purgeAsset({template: 'assets/:id', schema: {id: objId}, options: {force: false}})
-                .then(function () {
-                    return promiseService.arrayWrap(function (promises) {
-                        angular.forEach(obj.assets, function (asset) {
-                            promises.push(assetApi.createAsset({template: 'assets/:id', schema: {id: objId}, data: asset, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
-                        });
-                    });
-                }, promiseService.throwError);
-        }
-    }]);
-
-    this.$get = ['api', 'hydration', function (api, hydration) {
-        var hydrateRelations = ['liabilities', 'productionSchedules'];
-        var assetApi = api({
-            plural: 'assets',
-            singular: 'asset',
-            strip: ['farm', 'legalEntity', 'liabilities', 'productionSchedules'],
-            hydrate: function (obj, options) {
-                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
-                return hydration.hydrate(obj, 'asset', options);
-            },
-            dehydrate: function (obj, options) {
-                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : hydrateRelations));
-                return hydration.dehydrate(obj, 'asset', options);
-            }
-        });
-
-        return {
-            getAssets: assetApi.getItems,
-            createAsset: assetApi.createItem,
-            getAsset: assetApi.getItem,
-            findAsset: assetApi.findItem,
-            updateAsset: assetApi.updateItem,
-            postAsset: assetApi.postItem,
-            deleteAsset: assetApi.deleteItem,
-            purgeAsset: assetApi.purgeItem
-        };
-    }];
-}]);
-
 mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('liabilities', ['liabilityApi', function (liabilityApi) {
         return function (obj, type) {
@@ -1178,132 +1240,78 @@ mobileSdkApiApp.provider('liabilityApi', ['hydrationProvider', function (hydrati
     }];
 }]);
 
-mobileSdkApiApp.provider('documentApi', ['hydrationProvider', function (hydrationProvider) {
-    hydrationProvider.registerHydrate('document', ['documentApi', function (documentApi) {
+mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('merchant', ['merchantApi', function (merchantApi) {
         return function (obj, type, options) {
-            return documentApi.findDocument({key: obj.documentId, options: {one: true, hydrateRemote: options.remoteHydration}});
+            return (obj.merchantUuid ? merchantApi.findMerchant({column: 'data', key: obj.merchantUuid, options: {like: true, one: true}}) : undefined);
         }
     }]);
 
-    hydrationProvider.registerDehydrate('document', ['documentApi', function (documentApi) {
+    hydrationProvider.registerDehydrate('merchant', ['merchantApi', function (merchantApi) {
         return function (obj, type) {
-            return documentApi.createDocument({template: 'documents', data: obj.document, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
+            return merchantApi.createMerchant({template: 'merchants', data: obj.merchant, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
         }
     }]);
 
-    this.$get = ['api', 'hydration', function (api, hydration) {
-        var hydrateRelations = ['organization'];
-        var dehydrateRelations = [];
-        var documentApi = api({
-            plural: 'documents',
-            singular: 'document',
-            strip: ['organization', 'tasks'],
-            hydrate: function (obj, options) {
-                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
-                return hydration.hydrate(obj, 'document', options);
-            },
-            dehydrate: function (obj, options) {
-                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
-                return hydration.dehydrate(obj, 'document', options);
+    this.$get = ['$http', 'api', 'configuration', 'promiseService', 'underscore', function ($http, api, configuration, promiseService, underscore) {
+        var _host = configuration.getServer();
+        var merchantApi = api({
+            plural: 'merchants',
+            singular: 'merchant'
+        });
+
+        return {
+            getMerchants: merchantApi.getItems,
+            createMerchant: merchantApi.createItem,
+            getMerchant: merchantApi.getItem,
+            findMerchant: merchantApi.findItem,
+            updateMerchant: merchantApi.updateItem,
+            postMerchant: merchantApi.postItem,
+            deleteMerchant: merchantApi.deleteItem,
+            purgeMerchant: merchantApi.purgeItem,
+            searchMerchants: function (query) {
+                query = underscore.map(query, function (value, key) {
+                    return key + '=' + value;
+                }).join('&');
+
+                return promiseService.wrap(function (promise) {
+                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                        promise.resolve(res.data);
+                    }, promise.reject);
+                });
             }
-        });
-
-        return {
-            getDocuments: documentApi.getItems,
-            createDocument: documentApi.createItem,
-            getDocument: documentApi.getItem,
-            findDocument: documentApi.findItem,
-            updateDocument: documentApi.updateItem,
-            postDocument: documentApi.postItem,
-            deleteDocument: documentApi.deleteItem,
-            purgeDocument: documentApi.purgeItem
         };
     }];
 }]);
 
-mobileSdkApiApp.provider('activityApi', ['hydrationProvider', function (hydrationProvider) {
-    hydrationProvider.registerHydrate('activities', ['activityApi', 'connectionService', function (activityApi, connectionService) {
-        return function (obj, type) {
-            return activityApi.getActivities({template: 'activities/:id', schema: {id: obj.$id}, options: {fallbackRemote: connectionService.isOnline()}});
-        }
-    }]);
-
-    this.$get = ['api', function (api) {
-        var activityApi = api({
-            plural: 'activities',
-            singular: 'activity'
-        });
-
-        return {
-            getActivities: activityApi.getItems,
-            createActivity: activityApi.createItem,
-            getActivity: activityApi.getItem,
-            deleteActivity: activityApi.deleteItem
-        };
-    }];
-}]);
-
-mobileSdkApiApp.provider('enterpriseBudgetApi', ['hydrationProvider', function (hydrationProvider) {
-    hydrationProvider.registerHydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
-        return function (obj, type, options) {
-            if (obj.budgetUuid) {
-                return enterpriseBudgetApi.findEnterpriseBudget({column: 'data', key: obj.budgetUuid, options: {like: true, one: true}});
-            } else {
-                return enterpriseBudgetApi.findEnterpriseBudget({key: obj.budgetId, options: {one: true}});
-            }
-        }
-    }]);
-
-    hydrationProvider.registerDehydrate('budget', ['enterpriseBudgetApi', function (enterpriseBudgetApi) {
-        return function (obj, type) {
-            return enterpriseBudgetApi.createEnterpriseBudget({template: 'budgets', data: obj.budget, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}});
-        }
-    }]);
-
-    this.$get = ['api', function (api) {
-        var budgetApi = api({
-            plural: 'budgets',
-            singular: 'budget'
-        });
-
-        return {
-            getEnterpriseBudgets: budgetApi.getItems,
-            createEnterpriseBudget: budgetApi.createItem,
-            getEnterpriseBudget: budgetApi.getItem,
-            findEnterpriseBudget: budgetApi.findItem,
-            updateEnterpriseBudget: budgetApi.updateItem,
-            postEnterpriseBudget: budgetApi.postItem,
-            deleteEnterpriseBudget: budgetApi.deleteItem,
-            purgeEnterpriseBudget: budgetApi.purgeItem
-        };
-    }];
-}]);
-
-mobileSdkApiApp.factory('expenseApi', ['api', 'hydration', 'promiseService', 'underscore', function (api, hydration, promiseService, underscore) {
-    var defaultRelations = ['document', 'organization'];
-    var expenseApi = api({
-        plural: 'expenses',
-        singular: 'expense',
-        strip: ['document', 'organization', 'user'],
-        hydrate: function (obj, options) {
-            options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
-            return hydration.hydrate(obj, 'expense', options);
-        },
-        dehydrate: function (obj, options) {
-            return promiseService.wrap(function (promise) {
-                promise.resolve(underscore.omit(obj, options.dehydrate || defaultRelations));
-            });
-        }
+mobileSdkApiApp.factory('notificationApi', ['api', function (api) {
+    var notificationApi = api({
+        plural: 'notifications',
+        singular: 'notification'
     });
 
     return {
-        getExpenses: expenseApi.getItems,
-        createExpense: expenseApi.createItem,
-        getExpense: expenseApi.getItem,
-        findExpense: expenseApi.findItem,
-        updateExpense: expenseApi.updateItem,
-        postExpense: expenseApi.postItem,
-        purgeExpense: expenseApi.purgeItem
+        getNotifications: notificationApi.getItems,
+        getNotification: notificationApi.getItem,
+        deleteNotification: notificationApi.deleteItem
+    };
+}]);
+
+mobileSdkApiApp.factory('organizationalUnitApi', ['api', function (api) {
+    var organizationalUnitApi = api({
+        plural: 'organizational-units',
+        singular: 'organizational-unit'
+    });
+
+    return {
+        getOrganizationalUnits: organizationalUnitApi.getItems,
+        createOrganizationalUnit: organizationalUnitApi.createItem,
+        getOrganizationalUnit: organizationalUnitApi.getItem,
+        findOrganizationalUnit: organizationalUnitApi.findItem,
+        updateOrganizationalUnit: organizationalUnitApi.updateItem,
+        postOrganizationalUnit: organizationalUnitApi.postItem,
+        deleteOrganizationalUnit: organizationalUnitApi.deleteItem,
+        purgeOrganizationalUnit: organizationalUnitApi.purgeItem
     };
 }]);
 
@@ -1412,4 +1420,73 @@ mobileSdkApiApp.provider('productionScheduleApi', ['hydrationProvider', function
             purgeProductionSchedule: productionScheduleApi.purgeItem
         };
     }];
+}]);
+
+mobileSdkApiApp.provider('taskApi', ['hydrationProvider', function (hydrationProvider) {
+    hydrationProvider.registerHydrate('subtasks', ['taskApi', function (taskApi) {
+        return function (obj, type) {
+            return taskApi.getTasks({template: 'tasks/:id', schema: {id: obj.$id}});
+        }
+    }]);
+
+    hydrationProvider.registerDehydrate('subtasks', ['taskApi', 'promiseService', function (taskApi, promiseService) {
+        return function (obj, type) {
+            var objId = (obj.$id !== undefined ? obj.$id : obj.id);
+
+            return taskApi.purgeTask({template: 'tasks/:id', schema: {id: objId}, options: {force: false}})
+                .then(function () {
+                    return promiseService.arrayWrap(function (promises) {
+                        angular.forEach(obj.subtasks, function (subtask) {
+                            promises.push(taskApi.createTask({template: 'tasks/:id', schema: {id: objId}, data: subtask, options: {replace: obj.$complete, complete: obj.$complete, dirty: false}}));
+                        });
+                    });
+                }, promiseService.throwError);
+        }
+    }]);
+
+    this.$get = ['api', 'hydration', function (api, hydration) {
+        var hydrateRelations = ['document', 'organization', 'subtasks'];
+        var dehydrateRelations = ['document', 'subtasks'];
+        var taskApi = api({
+            plural: 'tasks',
+            singular: 'task',
+            strip: hydrateRelations,
+            hydrate: function (obj, options) {
+                options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? hydrateRelations : []));
+                return hydration.hydrate(obj, 'task', options);
+            },
+            dehydrate: function (obj, options) {
+                options.dehydrate = (options.dehydrate instanceof Array ? options.dehydrate : (options.dehydrate === false ? [] : dehydrateRelations));
+                return hydration.dehydrate(obj, 'task', options);
+            }
+        });
+
+        return {
+            getTasks: taskApi.getItems,
+            createTask: taskApi.createItem,
+            getTask: taskApi.getItem,
+            findTask: taskApi.findItem,
+            updateTask: taskApi.updateItem,
+            postTask: taskApi.postItem,
+            deleteTask: taskApi.deleteItem,
+            purgeTask: taskApi.purgeItem
+        };
+    }];
+}]);
+
+mobileSdkApiApp.factory('userApi', ['api', function (api) {
+    var userApi = api({
+        plural: 'users',
+        singular: 'user'
+    });
+
+    return {
+        getUsers: userApi.getItems,
+        createUser: userApi.createItem,
+        getUser: userApi.getItem,
+        findUser: userApi.findItem,
+        updateUser: userApi.updateItem,
+        postUser: userApi.postItem,
+        deleteUser: userApi.deleteItem
+    };
 }]);

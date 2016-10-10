@@ -488,11 +488,25 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 $log.debug('_getRemote');
 
                 request.options = request.options || {};
+                request.params = request.params || {};
 
                 return promiseService
                     .wrap(function (promise) {
                         if (_config.apiTemplate !== undefined) {
-                            $http.get(_hostApi + uri, {params: request.params, withCredentials: true})
+                            var httpRequest = (underscore.isObject(request.params.resulttype) ? {
+                                    method: 'POST',
+                                    url: _hostApi + uri,
+                                    data: request.params.resulttype,
+                                    params: underscore.omit(request.params, 'resulttype'),
+                                    withCredentials: true
+                                } : {
+                                    method: 'GET',
+                                    url: _hostApi + uri,
+                                    params: request.params,
+                                    withCredentials: true
+                                });
+
+                            $http(httpRequest)
                                 .then(function (res) {
                                     return (res && res.data ? (res.data instanceof Array ? res.data : [res.data]) : []);
                                 }, promiseService.throwError)
@@ -503,7 +517,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 id: _getItemIndex(item),
                                                 uri: request.options.forceUri || uri,
                                                 data: item,
-                                                complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
+                                                complete: (request.options.one || (!underscore.isObject(request.params.resulttype) && request.params.resulttype !== 'simple')),
                                                 dirty: false,
                                                 local: false
                                             }), underscore.defaults(request.options, {
@@ -794,7 +808,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     id: id,
                                                     uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                                     data: item,
-                                                    complete: (request.options.one || request.params === undefined || request.params.resulttype !== 'simple'),
+                                                    complete: (request.options.one || request.params === undefined || (!underscore.isObject(request.params.resulttype) && request.params.resulttype !== 'simple')),
                                                     dirty: false,
                                                     local: false
                                                 });
