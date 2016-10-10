@@ -37,19 +37,36 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     operationType: 1
                 }};
 
-                return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
-                    return promiseService.wrap(function (promise) {
-                        var paging = pagingService.initialize(function (page) {
-                            return farmerApi.getFarmers({params: page, options: _options.remote});
-                        }, function (farmers) {
-                            if (paging.complete) {
-                                promise.resolve();
-                            } else {
-                                paging.request().catch(promise.reject);
-                            }
-                        }, params);
+                return farmerApi.findFarmer({key: 1, column: 'offline', options: {fallbackRemote: false, hydrate: false, one: false, remoteHydration: false}}).then(function (offlineFarmers) {
+                    return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
+                        return promiseService.wrap(function (promise) {
+                            var paging = pagingService.initialize(function (page) {
+                                return farmerApi.getFarmers({params: page, options: _options.remote});
+                            }, function (farmers) {
+                                promiseService.chain(function (chain) {
+                                    underscore.chain(farmers)
+                                        .reject(function (farmer) {
+                                            return underscore.chain(offlineFarmers)
+                                                .findWhere({id: farmer.id})
+                                                .isUndefined()
+                                                .value();
+                                        })
+                                        .each(function (farmer) {
+                                            chain.push(function () {
+                                                return farmerApi.findFarmer({key: farmer.id, options: {availableOffline: true, fallbackRemote: true, hydrate: true}});
+                                            });
+                                        });
+                                }).then(function () {
+                                    if (paging.complete) {
+                                        promise.resolve();
+                                    } else {
+                                        paging.request().catch(promise.reject);
+                                    }
+                                });
+                            }, params);
 
-                        paging.request().catch(promise.reject);
+                            paging.request().catch(promise.reject);
+                        });
                     });
                 });
             }

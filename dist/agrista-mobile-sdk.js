@@ -14588,19 +14588,36 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     operationType: 1
                 }};
 
-                return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
-                    return promiseService.wrap(function (promise) {
-                        var paging = pagingService.initialize(function (page) {
-                            return farmerApi.getFarmers({params: page, options: _options.remote});
-                        }, function (farmers) {
-                            if (paging.complete) {
-                                promise.resolve();
-                            } else {
-                                paging.request().catch(promise.reject);
-                            }
-                        }, params);
+                return farmerApi.findFarmer({key: 1, column: 'offline', options: {fallbackRemote: false, hydrate: false, one: false, remoteHydration: false}}).then(function (offlineFarmers) {
+                    return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
+                        return promiseService.wrap(function (promise) {
+                            var paging = pagingService.initialize(function (page) {
+                                return farmerApi.getFarmers({params: page, options: _options.remote});
+                            }, function (farmers) {
+                                promiseService.chain(function (chain) {
+                                    underscore.chain(farmers)
+                                        .reject(function (farmer) {
+                                            return underscore.chain(offlineFarmers)
+                                                .findWhere({id: farmer.id})
+                                                .isUndefined()
+                                                .value();
+                                        })
+                                        .each(function (farmer) {
+                                            chain.push(function () {
+                                                return farmerApi.findFarmer({key: farmer.id, options: {availableOffline: true, fallbackRemote: true, hydrate: true}});
+                                            });
+                                        });
+                                }).then(function () {
+                                    if (paging.complete) {
+                                        promise.resolve();
+                                    } else {
+                                        paging.request().catch(promise.reject);
+                                    }
+                                });
+                            }, params);
 
-                        paging.request().catch(promise.reject);
+                            paging.request().catch(promise.reject);
+                        });
                     });
                 });
             }
@@ -16105,6 +16122,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
                 $id: item.id,
                 $uri: item.uri,
                 $complete: (item.complete == 1),
+                $offline: (item.offline == 1),
                 $dirty: (item.dirty == 1),
                 $local: (item.local == 1),
                 $saved: true
@@ -16115,9 +16133,10 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
                 id: item.$id,
                 uri: item.$uri,
                 complete: item.$complete,
+                offline: item.$offline,
                 dirty: item.$dirty,
                 local: item.$local,
-                data: underscore.omit(item, ['$id', '$uri', '$complete', '$dirty', '$local', '$saved'])
+                data: underscore.omit(item, ['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'])
             };
         },
         transactionPromise: function(db) {
@@ -16235,6 +16254,22 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
                     });
                 }
+            }, {
+                current: '1',
+                next: '2',
+                process: function (tx) {
+                    return dataStoreUtilities.executeSqlPromise(tx, 'SELECT name FROM sqlite_master WHERE type = ? ', ['table']).then(function (res) {
+                        return promiseService.wrapAll(function (promises) {
+                            for (var i = 0; i < res.rows.length; i++) {
+                                var table = res.rows.item(i);
+
+                                if (table.name.indexOf('__') === -1) {
+                                    promises.push(dataStoreUtilities.executeSqlPromise(tx, 'ALTER TABLE ' + table.name + ' ADD COLUMN offline INT DEFAULT 0'));
+                                }
+                            }
+                        });
+                    });
+                }
             }];
 
             function _processMigration(db) {
@@ -16339,7 +16374,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             function _initializeTable() {
                 return dataStoreUtilities.transactionPromise(_localDatabase).then(function (tx) {
                     return promiseService.all([
-                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, complete INT DEFAULT 0, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', []),
+                        dataStoreUtilities.executeSqlPromise(tx, 'CREATE TABLE IF NOT EXISTS ' + name + ' (id INT UNIQUE, uri TEXT, complete INT DEFAULT 0, offline INT DEFAULT 0, dirty INT DEFAULT 0, local INT DEFAULT 0, data TEXT, updated TIMESTAMP DEFAULT current_timestamp)', []),
                         dataStoreUtilities.executeSqlPromise(tx, 'CREATE TRIGGER IF NOT EXISTS ' + name + '_timestamp AFTER UPDATE ON ' + name + ' BEGIN UPDATE ' + name + '  SET updated = datetime(\'now\') WHERE id = old.id AND uri = old.uri; END', [])
                     ])
                 }, promiseService.throwError);
@@ -16455,16 +16490,16 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     item.dirty = (request.options.dirty === true ? true : item.dirty);
 
                                     promises.push(dataStoreUtilities
-                                        .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, complete, dirty, local) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
+                                        .executeSqlPromise(tx, 'INSERT INTO ' + name + ' (id, uri, data, complete, offline, dirty, local) VALUES (?, ?, ?, ?, ?, ?, ?)', [item.id, item.uri, dataString, (item.complete ? 1 : 0), (item.offline ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0)])
                                         .then(resolveItem, function () {
                                             if (request.options.replace === true) {
                                                 if (item.dirty === true || item.local === true || request.options.force) {
                                                     return dataStoreUtilities
-                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, offline = ?, dirty = ?, local = ? WHERE id = ?', [item.uri, dataString, (item.complete ? 1 : 0), (item.offline ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
                                                         .then(resolveItem);
                                                 } else {
                                                     return dataStoreUtilities
-                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.complete ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
+                                                        .executeSqlPromise(tx, 'UPDATE ' + name + ' SET uri = ?, data = ?, complete = ?, offline = ?, dirty = ?, local = ? WHERE id = ? AND dirty = 0 AND local = 0', [item.uri, dataString, (item.complete ? 1 : 0), (item.offline ? 1 : 0), (item.dirty ? 1 : 0), (item.local ? 1 : 0), item.id])
                                                         .then(resolveItem);
                                                 }
                                             }
@@ -16562,6 +16597,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                 uri: request.options.forceUri || uri,
                                                 data: item,
                                                 complete: (request.options.one || (!underscore.isObject(request.params.resulttype) && request.params.resulttype !== 'simple')),
+                                                offline: request.options.availableOffline,
                                                 dirty: false,
                                                 local: false
                                             }), underscore.defaults(request.options, {
@@ -16622,6 +16658,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     uri: item.uri,
                                                     data: res.data,
                                                     complete: true,
+                                                    offline: item.offline,
                                                     dirty: false,
                                                     local: false
                                                 });
@@ -16742,7 +16779,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             };
 
             var _handleIncompleteResponse = function (data, request, singular) {
-                request.options.one = true;
+                request.options.one = singular;
                 request.schema = request.schema || {};
 
                 return promiseService
@@ -16795,6 +16832,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
 
                         request.options = underscore.defaults(request.options, {
+                            availableOffline: false,
                             replace: true,
                             force: false,
                             complete: true,
@@ -16813,6 +16851,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                         data: data,
                                         complete: request.options.complete,
+                                        offline: request.options.availableOffline,
                                         dirty: request.options.dirty,
                                         local: request.options.dirty
                                     }), request.options));
@@ -16833,6 +16872,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
 
                         request.options = underscore.defaults(request.options, {
+                            availableOffline: false,
                             fallbackRemote: false,
                             one: (request.options.one !== undefined ? request.options.one : (request.schema.id !== undefined)),
                             passThrough: false,
@@ -16853,6 +16893,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                                     uri: dataStoreUtilities.parseRequest(request.template, underscore.defaults(request.schema, {id: id})),
                                                     data: item,
                                                     complete: (request.options.one || request.params === undefined || (!underscore.isObject(request.params.resulttype) && request.params.resulttype !== 'simple')),
+                                                    offline: request.options.availableOffline,
                                                     dirty: false,
                                                     local: false
                                                 });
@@ -16909,14 +16950,15 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                         });
 
                         request.options = underscore.defaults(request.options, {
+                            availableOffline: false,
                             fallbackRemote: true,
                             like: false,
-                            one: false,
+                            one: true,
                             remoteHydration: true
                         });
 
                         return _findLocal(request.key, request.column, request.options).then(function (res) {
-                            return _handleIncompleteResponse(res, request, true);
+                            return _handleIncompleteResponse(res, request, request.options.one);
                         }, promiseService.throwError);
                     },
                     updateItems: function (req) {
