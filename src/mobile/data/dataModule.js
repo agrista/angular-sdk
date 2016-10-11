@@ -347,8 +347,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              */
 
             var _getLocal = function (uri, request) {
-                $log.debug('_getLocal');
-
                 request.options = request.options || {};
 
                 return dataStoreUtilities
@@ -372,8 +370,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             };
 
             var _findLocal = function (key, column, options) {
-                $log.debug('_findLocal');
-
                 return dataStoreUtilities
                     .transactionPromise(_localDatabase)
                     .then(function (tx) {
@@ -389,8 +385,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             };
 
             var _syncLocal = function (dataItems, uri, request) {
-                $log.debug('_syncLocal');
-
                 return _deleteAllLocal(uri)
                     .then(function () {
                         return _updateLocal(dataItems, {});
@@ -401,8 +395,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             };
 
             var _updateLocal = function (dataItems, request) {
-                $log.debug('_updateLocal');
-
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 request.options = underscore.defaults(request.options || {}, {
@@ -459,7 +451,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             };
 
             var _deleteLocal = function (dataItems) {
-                $log.debug('_deleteLocal');
                 if ((dataItems instanceof Array) === false) dataItems = [dataItems];
 
                 return dataStoreUtilities
@@ -479,8 +470,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
             };
 
             var _deleteAllLocal = function (uri, options) {
-                $log.debug('_deleteAllLocal');
-
                 options = underscore.defaults((options || {}), {
                     force: false
                 });
@@ -503,8 +492,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              */
 
             var _getRemote = function (uri, request) {
-                $log.debug('_getRemote');
-
                 request.options = request.options || {};
                 request.params = request.params || {};
 
@@ -559,8 +546,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              * @private
              */
             var _updateRemote = function (dataItems, request) {
-                $log.debug('_updateRemote');
-
                 request.options = request.options || {};
 
                 return promiseService.wrap(function (promise) {
@@ -671,8 +656,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              * @private
              */
             var _deleteRemote = function (dataItems, writeUri, writeSchema) {
-                $log.debug('_deleteRemote');
-
                 return promiseService.wrap(function (promise) {
                     if (dataItems !== undefined && writeUri !== undefined) {
                         if ((dataItems instanceof Array) === false) dataItems = [dataItems];
@@ -731,6 +714,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
 
                                     request.options.force = true;
                                     request.options.forceUri = dataItem.$uri;
+                                    request.options.hydrate = request.options.hydrateRemote || request.options.hydrate;
 
                                     return _getRemote(uri, request).then(function (res) {
                                         return _updateLocal(res, request);
@@ -990,8 +974,6 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
              */
 
             _initializeTable().then(function () {
-                $log.debug('table initialized');
-
                 _tableInitialized = true;
                 _processTransactionQueue();
             });
