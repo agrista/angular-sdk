@@ -14770,44 +14770,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         operationType: 1
                     }
                 });
-
-                /*params = params || {resulttype: {
-                    name: 1,
-                    operationType: 1
-                }};
-
-                return farmerApi.findFarmer({key: 1, column: 'offline', options: {fallbackRemote: false, hydrate: false, one: false, remoteHydration: false}}).then(function (offlineFarmers) {
-                    return farmerApi.purgeFarmer({template: 'farmers', options: {force: false}}).then(function () {
-                        return promiseService.wrap(function (promise) {
-                            var paging = pagingService.initialize(function (page) {
-                                return farmerApi.getFarmers({params: page, options: _options.remote});
-                            }, function (farmers) {
-                                promiseService.chain(function (chain) {
-                                    underscore.chain(farmers)
-                                        .reject(function (farmer) {
-                                            return underscore.chain(offlineFarmers)
-                                                .findWhere({id: farmer.id})
-                                                .isUndefined()
-                                                .value();
-                                        })
-                                        .each(function (farmer) {
-                                            chain.push(function () {
-                                                return farmerApi.findFarmer({key: farmer.id, options: {availableOffline: true, fallbackRemote: true, hydrate: true}});
-                                            });
-                                        });
-                                }).then(function () {
-                                    if (paging.complete) {
-                                        promise.resolve();
-                                    } else {
-                                        paging.request().catch(promise.reject);
-                                    }
-                                });
-                            }, params);
-
-                            paging.request().catch(promise.reject);
-                        });
-                    });
-                 });*/
             }
 
             function _getDocuments (params) {
@@ -14818,45 +14780,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         organizationId: 1
                     }
                 });
-
-                /*params = params || {resulttype: {
-                 docType: 1,
-                 documentId: 1,
-                    organizationId: 1
-                }};
-
-                return documentApi.findDocument({key: 1, column: 'offline', options: {fallbackRemote: false, hydrate: false, one: false, remoteHydration: false}}).then(function (offlineDocuments) {
-                    return documentApi.purgeDocument({template: 'documents', options: {force: false}}).then(function () {
-                        return promiseService.wrap(function (promise) {
-                            var paging = pagingService.initialize(function (page) {
-                                return documentApi.getDocuments({params: page, options: _options.remote});
-                            }, function (documents) {
-                                promiseService.chain(function (chain) {
-                                    underscore.chain(documents)
-                                        .reject(function (document) {
-                                            return underscore.chain(offlineDocuments)
-                                                .findWhere({id: document.id})
-                                                .isUndefined()
-                                                .value();
-                                        })
-                                        .each(function (document) {
-                                            chain.push(function () {
-                                                return documentApi.findDocument({key: document.id, options: {availableOffline: true, fallbackRemote: true, hydrate: true}});
-                                            });
-                                        });
-                                }).then(function () {
-                                    if (paging.complete) {
-                                        promise.resolve();
-                                    } else {
-                                        paging.request().catch(promise.reject);
-                                    }
-                                });
-                            }, params);
-
-                            paging.request().catch(promise.reject);
-                        });
-                    });
-                });*/
             }
 
             function _getExpenses (params) {
@@ -14864,41 +14787,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     limit: 20,
                     resulttype: 'full'
                 });
-
-                /*params = params || {limit: 20, resulttype: 'full'};
-
-                return expenseApi.findExpense({key: 1, column: 'offline', options: {fallbackRemote: false, hydrate: false, one: false, remoteHydration: false}}).then(function (offlineExpenses) {
-                    return expenseApi.purgeExpense({template: 'expenses', options: {force: false}}).then(function () {
-                        return promiseService.wrap(function (promise) {
-                            var paging = pagingService.initialize(function (page) {
-                                return expenseApi.getExpenses({params: page, options: _options.remote});
-                            }, function (expenses) {
-                                promiseService.chain(function (chain) {
-                                    underscore.chain(expenses)
-                                        .reject(function (expense) {
-                                            return underscore.chain(offlineExpenses)
-                                                .findWhere({id: expense.id})
-                                                .isUndefined()
-                                                .value();
-                                        })
-                                        .each(function (expense) {
-                                            chain.push(function () {
-                                                return expenseApi.findExpense({key: expense.id, options: {availableOffline: true, fallbackRemote: true, hydrate: true}});
-                                            });
-                                        });
-                                }).then(function () {
-                                    if (paging.complete) {
-                                        promise.resolve();
-                                    } else {
-                                        paging.request().catch(promise.reject);
-                                    }
-                                });
-                            }, params);
-
-                            paging.request().catch(promise.reject);
-                        });
-                    });
-                });*/
             }
 
             function _getTasks (params) {
@@ -14911,46 +14799,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         todo: 1
                     }
                 });
-
-                /*params = params || {resulttype: {
-                    documentKey: 1,
-                    organizationId: 1,
-                    status: 1,
-                    todo: 1
-                }};
-
-                return taskApi.findTask({key: 1, column: 'offline', options: {fallbackRemote: false, hydrate: false, one: false, remoteHydration: false}}).then(function (offlineTasks) {
-                    return taskApi.purgeTask({template: 'tasks', options: {force: false}}).then(function () {
-                        return promiseService.wrap(function (promise) {
-                            var paging = pagingService.initialize(function (page) {
-                                return taskApi.getTasks({params: page, options: _options.remote});
-                            }, function (tasks) {
-                                promiseService.chain(function (chain) {
-                                    underscore.chain(tasks)
-                                        .reject(function (task) {
-                                            return underscore.chain(offlineTasks)
-                                                .findWhere({id: task.id})
-                                                .isUndefined()
-                                                .value();
-                                        })
-                                        .each(function (task) {
-                                            chain.push(function () {
-                                                return taskApi.findTask({key: task.id, options: {availableOffline: true, fallbackRemote: true, hydrate: true}});
-                                            });
-                                        });
-                                }).then(function () {
-                                    if (paging.complete) {
-                                        promise.resolve();
-                                    } else {
-                                        paging.request().catch(promise.reject);
-                                    }
-                                });
-                            }, params);
-
-                            paging.request().catch(promise.reject);
-                        });
-                    });
-                });*/
             }
 
             function _getEnterpriseBudgets(params) {
@@ -14967,50 +14815,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         uuid: 1
                     }
                 });
-
-                /*params = params || {resulttype: {
-                    assetType: 1,
-                    cloneCount: 1,
-                    commodityType: 1,
-                    favoriteCount: 1,
-                    name: 1,
-                    published: 1,
-                    useCount: 1,
-                    uuid: 1
-                }};
-
-                return enterpriseBudgetApi.findEnterpriseBudget({key: 1, column: 'offline', options: {fallbackRemote: false, hydrate: false, one: false, remoteHydration: false}}).then(function (offlineBudgets) {
-                    return enterpriseBudgetApi.purgeEnterpriseBudget({template: 'budgets', options: {force: false}}).then(function () {
-                        return promiseService.wrap(function (promise) {
-                            var paging = pagingService.initialize(function (page) {
-                                return enterpriseBudgetApi.getEnterpriseBudgets({params: page, options: _options.remote});
-                            }, function (budgets) {
-                                promiseService.chain(function (chain) {
-                                    underscore.chain(budgets)
-                                        .reject(function (budget) {
-                                            return underscore.chain(offlineBudgets)
-                                                .findWhere({id: budget.id})
-                                                .isUndefined()
-                                                .value();
-                                        })
-                                        .each(function (budget) {
-                                            chain.push(function () {
-                                                return enterpriseBudgetApi.findEnterpriseBudget({key: budget.id, options: {availableOffline: true, fallbackRemote: true, hydrate: true}});
-                                            });
-                                        });
-                                }).then(function () {
-                                    if (paging.complete) {
-                                        promise.resolve();
-                                    } else {
-                                        paging.request().catch(promise.reject);
-                                    }
-                                });
-                            }, params);
-
-                            paging.request().catch(promise.reject);
-                        });
-                    });
-                });*/
             }
 
             function _getOrganizationalUnits (params) {
@@ -15020,27 +14824,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         type: 1
                     }
                 });
-
-                /*params = params || {resulttype: {
-                    name: 1,
-                    type: 1
-                }};
-
-                return organizationalUnitApi.purgeOrganizationalUnit({template: 'organizational-units', options: {force: false}}).then(function () {
-                    return promiseService.wrap(function (promise) {
-                        var paging = pagingService.initialize(function (page) {
-                            return organizationalUnitApi.getOrganizationalUnits({params: page, options: _options.remote});
-                        }, function (expenses) {
-                            if (paging.complete) {
-                                promise.resolve();
-                            } else {
-                                paging.request().catch(promise.reject);
-                            }
-                        }, params);
-
-                        paging.request().catch(promise.reject);
-                    });
-                });*/
             }
 
             function _getMerchants(params) {
@@ -15050,27 +14833,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         uuid: 1
                     }
                 });
-
-                /*params = params || {resulttype: {
-                    name: 1,
-                    uuid: 1
-                }};
-
-                return merchantApi.purgeMerchant({template: 'merchants', options: {force: false}}).then(function () {
-                    return promiseService.wrap(function (promise) {
-                        var paging = pagingService.initialize(function (page) {
-                            return merchantApi.getMerchants({params: page, options: _options.remote});
-                        }, function (expenses) {
-                            if (paging.complete) {
-                                promise.resolve();
-                            } else {
-                                paging.request().catch(promise.reject);
-                            }
-                        }, params);
-
-                        paging.request().catch(promise.reject);
-                    });
-                });*/
             }
 
             function _postFarmers () {
