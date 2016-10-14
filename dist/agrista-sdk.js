@@ -1588,12 +1588,19 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
 }]);
 
 /**
- * Import API
+ * Data API
  */
 sdkApiApp.factory('dataApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
+        exportFile: function (data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/data/export-file', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         importFile: function (data) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/data/import-file', data, {withCredentials: true}).then(function (res) {
