@@ -7488,10 +7488,15 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.mapDestroy = function () {
-        for (var layer in this._map._layers) {
-            if (this._map._layers.hasOwnProperty(layer)) {
-                this._map.removeLayer(this._map._layers[layer]);
+        if (this._map) {
+            for (var layer in this._map._layers) {
+                if (this._map._layers.hasOwnProperty(layer)) {
+                    this._map.removeLayer(this._map._layers[layer]);
+                }
             }
+
+            this._map.remove();
+            this._map = null;
         }
 
         this._optionSchema = {};
@@ -7512,9 +7517,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             options: {},
             controls: {}
         };
-
-        this._map.remove();
-        this._map = null;
     };
 
     Mapbox.prototype.broadcast = function (event, data) {
@@ -7594,8 +7596,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     _this._map.addLayer(baselayer.layer);
                 }
             });
-
-
         }
     };
 
