@@ -31,10 +31,11 @@ sdkInterfaceUiApp.directive('defaultSrc', [function () {
 
 sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     return function (value, abs) {
-        var geometry = value && value.geometry || value;
+        var geometry = value && value.geometry || value,
+            coords = (geometry && geometry.coordinates ? {lng: geometry.coordinates[0], lat: geometry.coordinates[1]} : geometry);
 
-        return ((geometry ? ($filter('number')(abs ? Math.abs(geometry.coordinates[1]) : geometry.coordinates[0], 3) + (abs ? '° ' + (geometry.coordinates[1] >= 0 ? 'N' : 'S') : '') + ', '
-        + $filter('number')(abs ? Math.abs(geometry.coordinates[0]) : geometry.coordinates[1], 3) + (abs ? '° ' + (geometry.coordinates[0] <= 0 ? 'W' : 'E') : '')) : '')
+        return ((coords ? ($filter('number')(abs ? Math.abs(coords.lat) : coords.lng, 3) + (abs ? '° ' + (coords.lat >= 0 ? 'N' : 'S') : '') + ', '
+        + $filter('number')(abs ? Math.abs(coords.lng) : coords.lat, 3) + (abs ? '° ' + (coords.lng <= 0 ? 'W' : 'E') : '')) : '')
         + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);
@@ -53,7 +54,7 @@ sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) 
             ngModel.$formatters.push(function (value) {
                 var viewValue = '';
                 if (value !== undefined) {
-                    viewValue = $filter('location')(value);
+                    viewValue = $filter('location')(value, (attrs.locationFormatter === 'true'));
 
                     if (attrs.ngChange) {
                         scope.$eval(attrs.ngChange);
