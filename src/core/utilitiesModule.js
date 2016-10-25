@@ -62,7 +62,7 @@ skdUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', function($rootScope, $http, promiseService, dataMapService, generateUUID) {
+skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
     var _listId = generateUUID();
 
     return {
@@ -161,14 +161,25 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     promise.resolve(res.data);
                 };
 
-                if (params !== undefined) {
-                    if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
-                    } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
-                    }
-                } else {
+                if (underscore.isUndefined(params)) {
                     $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
+                } else if (underscore.isString(params)) {
+                    $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
+                } else {
+                    var httpRequest = (underscore.isObject(params.resulttype) ? {
+                        method: 'POST',
+                        url: endPoint,
+                        data: params.resulttype,
+                        params: underscore.omit(params, 'resulttype'),
+                        withCredentials: true
+                    } : {
+                        method: 'GET',
+                        url: endPoint,
+                        params: params,
+                        withCredentials: true
+                    });
+
+                    $http(httpRequest).then(_handleResponse, promise.reject);
                 }
             });
         }
