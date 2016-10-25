@@ -1008,13 +1008,48 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
 /**
  * Liability API
  */
-sdkApiApp.factory('liabilityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('liabilityApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
         updateLiability: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/liability/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Map Theme API
+ */
+sdkApiApp.factory('mapThemeApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        getMapThemes: function (params) {
+            params = underscore.map(underscore.defaults(params || {}, {resulttype: 'simple'}), function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            }).join('&');
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/map-themes' + (params ? '?' + params : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        createMapTheme: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/map-theme', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateMapTheme: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/map-theme/' + data.id, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -2286,7 +2321,7 @@ skdUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', function($rootScope, $http, promiseService, dataMapService, generateUUID) {
+skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
     var _listId = generateUUID();
 
     return {
@@ -2385,14 +2420,25 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                     promise.resolve(res.data);
                 };
 
-                if (params !== undefined) {
-                    if (typeof params === 'string') {
-                        $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
-                    } else {
-                        $http.get(endPoint, {params: params, withCredentials: true}).then(_handleResponse, promise.reject);
-                    }
-                } else {
+                if (underscore.isUndefined(params)) {
                     $http.get(endPoint, {withCredentials: true}).then(_handleResponse, promise.reject);
+                } else if (underscore.isString(params)) {
+                    $http.get(params, {withCredentials: true}).then(_handleResponse, promise.reject);
+                } else {
+                    var httpRequest = (underscore.isObject(params.resulttype) ? {
+                        method: 'POST',
+                        url: endPoint,
+                        data: params.resulttype,
+                        params: underscore.omit(params, 'resulttype'),
+                        withCredentials: true
+                    } : {
+                        method: 'GET',
+                        url: endPoint,
+                        params: params,
+                        withCredentials: true
+                    });
+
+                    $http(httpRequest).then(_handleResponse, promise.reject);
                 }
             });
         }
@@ -8450,7 +8496,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     _this.removeEventHandler(event);
                     _this._config.events[event] = handler;
 
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::add-event-handler', {
+                    _this.enqueueRequest('mapbox-' + _this._id + '::add-event-handler', {
                         event: event,
                         handler: handler
                     });
@@ -8463,7 +8509,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 angular.forEach(events, function(event) {
                     if (_this._config.events[event] !== undefined) {
-                        $rootScope.$broadcast('mapbox-' + _this._id + '::remove-event-handler', {
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-event-handler', {
                             event: event,
                             handler: _this._config.events[event]
                         });
@@ -8552,7 +8598,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 var _this = this;
 
                 angular.forEach(names, function(name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
                     delete _this._config.leafletLayers[name];
@@ -8562,17 +8608,17 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 var _this = this;
                 
                 angular.forEach(this._config.layers, function(layer, name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
                     delete _this._config.leafletLayers[name];
                 });
             },
             showLayer: function (name) {
-                $rootScope.$broadcast('mapbox-' + this._id + '::show-layer', name);
+                this.enqueueRequest('mapbox-' + this._id + '::show-layer', name);
             },
             hideLayer: function (name) {
-                $rootScope.$broadcast('mapbox-' + this._id + '::hide-layer', name);
+                this.enqueueRequest('mapbox-' + this._id + '::hide-layer', name);
             },
             fitLayer: function (name, options) {
                 this.enqueueRequest('mapbox-' + this._id + '::fit-layer', {
@@ -8633,7 +8679,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 this._config.geojson[layerName] = this._config.geojson[layerName] || {};
                 this._config.geojson[layerName][properties.featureId] = data;
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-geojson', data);
+                this.enqueueRequest('mapbox-' + this._id + '::add-geojson', data);
 
                 return properties.featureId;
             },
@@ -8668,7 +8714,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 this._config.geojson[layerName] = this._config.geojson[layerName] || {};
                 this._config.geojson[layerName][properties.featureId] = data;
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-photo-marker', data);
+                this.enqueueRequest('mapbox-' + this._id + '::add-photo-marker', data);
 
                 return properties.featureId;
             },
@@ -8686,7 +8732,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 angular.forEach(layerNames, function(layerName) {
                     if (_this._config.geojson[layerName]) {
-                        $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
 
                         delete _this._config.leafletLayers[layerName];
                         delete _this._config.geojson[layerName];
@@ -8697,7 +8743,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 var _this = this;
                 
                 angular.forEach(_this._config.geojson, function(layer, name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', name);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', name);
 
                     delete _this._config.leafletLayers[name];
                     delete _this._config.geojson[name];
@@ -8866,6 +8912,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         _this._map.whenReady(function () {
             _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::ready', _this._map);
+        });
+
+        _this._map.on('baselayerchange', function (event) {
+            _this._layerControls.baseTile = event.name;
         });
 
         _this._editableFeature = L.featureGroup();
@@ -9222,16 +9272,32 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     /*
      * Layer Controls
      */
-    Mapbox.prototype.setBaseTile = function (name) {
-        var _this = this;
+    Mapbox.prototype.setBaseTile = function (baseTile) {
+        var _this = this,
+            _hasBaseTile = false;
 
-        _this._layerControls.baseTile = name;
+        if (_this._layerControls.baseTile !== baseTile) {
+            angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
+                if (_this._map.hasLayer(baselayer.layer)) {
+                    _this._map.removeLayer(baselayer.layer);
+                }
+                if (name === baseTile) {
+                    _hasBaseTile = true;
+                }
+            });
 
-        angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
-            if (name === _this._layerControls.baseTile) {
-                baselayer.layer.addTo(_this._map);
+            if (_hasBaseTile) {
+                _this._layerControls.baseTile = baseTile;
             }
-        });
+
+            angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
+                if (name === _this._layerControls.baseTile) {
+                    _this._map.addLayer(baselayer.layer);
+                }
+            });
+
+
+        }
     };
 
     Mapbox.prototype.setBaseLayers = function (layers) {
@@ -10518,10 +10584,11 @@ sdkInterfaceUiApp.directive('defaultSrc', [function () {
 
 sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     return function (value, abs) {
-        var geometry = value && value.geometry || value;
+        var geometry = value && value.geometry || value,
+            coords = (geometry && geometry.coordinates ? {lng: geometry.coordinates[0], lat: geometry.coordinates[1]} : geometry);
 
-        return ((geometry ? ($filter('number')(abs ? Math.abs(geometry.coordinates[1]) : geometry.coordinates[0], 3) + (abs ? '° ' + (geometry.coordinates[1] >= 0 ? 'N' : 'S') : '') + ', '
-        + $filter('number')(abs ? Math.abs(geometry.coordinates[0]) : geometry.coordinates[1], 3) + (abs ? '° ' + (geometry.coordinates[0] <= 0 ? 'W' : 'E') : '')) : '')
+        return ((coords ? ($filter('number')(abs ? Math.abs(coords.lat) : coords.lng, 3) + (abs ? '° ' + (coords.lat >= 0 ? 'N' : 'S') : '') + ', '
+        + $filter('number')(abs ? Math.abs(coords.lng) : coords.lat, 3) + (abs ? '° ' + (coords.lng <= 0 ? 'W' : 'E') : '')) : '')
         + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);
@@ -10540,7 +10607,7 @@ sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) 
             ngModel.$formatters.push(function (value) {
                 var viewValue = '';
                 if (value !== undefined) {
-                    viewValue = $filter('location')(value);
+                    viewValue = $filter('location')(value, (attrs.locationFormatter === 'true'));
 
                     if (attrs.ngChange) {
                         scope.$eval(attrs.ngChange);

@@ -1008,13 +1008,48 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService',
 /**
  * Liability API
  */
-sdkApiApp.factory('liabilityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('liabilityApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
         updateLiability: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/liability/' + data.id, data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Map Theme API
+ */
+sdkApiApp.factory('mapThemeApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
+    var _host = configuration.getServer();
+
+    return {
+        getMapThemes: function (params) {
+            params = underscore.map(underscore.defaults(params || {}, {resulttype: 'simple'}), function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            }).join('&');
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/map-themes' + (params ? '?' + params : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        createMapTheme: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/map-theme', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateMapTheme: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/map-theme/' + data.id, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
