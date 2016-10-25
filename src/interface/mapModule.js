@@ -788,7 +788,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     _this.removeEventHandler(event);
                     _this._config.events[event] = handler;
 
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::add-event-handler', {
+                    _this.enqueueRequest('mapbox-' + _this._id + '::add-event-handler', {
                         event: event,
                         handler: handler
                     });
@@ -801,7 +801,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 angular.forEach(events, function(event) {
                     if (_this._config.events[event] !== undefined) {
-                        $rootScope.$broadcast('mapbox-' + _this._id + '::remove-event-handler', {
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-event-handler', {
                             event: event,
                             handler: _this._config.events[event]
                         });
@@ -890,7 +890,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 var _this = this;
 
                 angular.forEach(names, function(name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
                     delete _this._config.leafletLayers[name];
@@ -900,17 +900,17 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 var _this = this;
                 
                 angular.forEach(this._config.layers, function(layer, name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-layer', name);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
 
                     delete _this._config.layers[name];
                     delete _this._config.leafletLayers[name];
                 });
             },
             showLayer: function (name) {
-                $rootScope.$broadcast('mapbox-' + this._id + '::show-layer', name);
+                this.enqueueRequest('mapbox-' + this._id + '::show-layer', name);
             },
             hideLayer: function (name) {
-                $rootScope.$broadcast('mapbox-' + this._id + '::hide-layer', name);
+                this.enqueueRequest('mapbox-' + this._id + '::hide-layer', name);
             },
             fitLayer: function (name, options) {
                 this.enqueueRequest('mapbox-' + this._id + '::fit-layer', {
@@ -971,7 +971,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 this._config.geojson[layerName] = this._config.geojson[layerName] || {};
                 this._config.geojson[layerName][properties.featureId] = data;
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-geojson', data);
+                this.enqueueRequest('mapbox-' + this._id + '::add-geojson', data);
 
                 return properties.featureId;
             },
@@ -1006,7 +1006,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 this._config.geojson[layerName] = this._config.geojson[layerName] || {};
                 this._config.geojson[layerName][properties.featureId] = data;
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-photo-marker', data);
+                this.enqueueRequest('mapbox-' + this._id + '::add-photo-marker', data);
 
                 return properties.featureId;
             },
@@ -1024,7 +1024,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 angular.forEach(layerNames, function(layerName) {
                     if (_this._config.geojson[layerName]) {
-                        $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
 
                         delete _this._config.leafletLayers[layerName];
                         delete _this._config.geojson[layerName];
@@ -1035,7 +1035,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 var _this = this;
                 
                 angular.forEach(_this._config.geojson, function(layer, name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-geojson-layer', name);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', name);
 
                     delete _this._config.leafletLayers[name];
                     delete _this._config.geojson[name];
@@ -1204,6 +1204,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         _this._map.whenReady(function () {
             _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::ready', _this._map);
+        });
+
+        _this._map.on('baselayerchange', function (event) {
+            _this._layerControls.baseTile = event.name;
         });
 
         _this._editableFeature = L.featureGroup();
@@ -1560,16 +1564,30 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     /*
      * Layer Controls
      */
-    Mapbox.prototype.setBaseTile = function (name) {
-        var _this = this;
+    Mapbox.prototype.setBaseTile = function (baseTile) {
+        var _this = this,
+            _hasBaseTile = false;
 
-        _this._layerControls.baseTile = name;
+        if (_this._layerControls.baseTile !== baseTile) {
+            angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
+                if (_this._map.hasLayer(baselayer.layer)) {
+                    _this._map.removeLayer(baselayer.layer);
+                }
+                if (name === baseTile) {
+                    _hasBaseTile = true;
+                }
+            });
 
-        angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
-            if (name === _this._layerControls.baseTile) {
-                baselayer.layer.addTo(_this._map);
+            if (_hasBaseTile) {
+                _this._layerControls.baseTile = baseTile;
             }
-        });
+
+            angular.forEach(_this._layerControls.baseLayers, function (baselayer, name) {
+                if (name === _this._layerControls.baseTile) {
+                    _this._map.addLayer(baselayer.layer);
+                }
+            });
+        }
     };
 
     Mapbox.prototype.setBaseLayers = function (layers) {
