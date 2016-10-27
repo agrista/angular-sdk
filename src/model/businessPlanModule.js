@@ -764,18 +764,23 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             switch(asset.type) {
                                 case 'cropland':
                                 case 'farmland':
-                                case 'improvement':
                                 case 'pasture':
                                 case 'permanent crop':
                                 case 'plantation':
                                 case 'wasteland':
-                                    updateAssetStatementCategory(instance, 'long-term', 'Land and fixed improvements', asset);
+                                    updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
+                                    break;
+                                case 'improvement':
+                                    updateAssetStatementCategory(instance, 'long-term', 'Fixed Improvements', asset);
+                                    break;
+                                case 'livestock':
+                                    updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', asset);
                                     break;
                                 case 'vme':
-                                    updateAssetStatementCategory(instance, 'medium-term', asset.data.type, asset);
+                                    updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
                                     break;
                                 case 'other':
-                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.name, asset);
+                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.category, asset);
                                     break;
                             }
                         }
