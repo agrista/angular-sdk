@@ -24,6 +24,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 (this.data.identificationNo ? '-in.' + this.data.identificationNo : '') : '') +
                 (this.data.waterSource ? '-ws.' + this.data.waterSource : '') +
                 (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
+
+                return this.assetKey;
             });
 
             privateProperty(this, 'getPhoto', function () {
@@ -311,6 +313,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
 
+        privateProperty(Asset, 'getTitle', function (asset) {
+            return getTitle(asset);
+        });
+
         function getTitle (instance, withField, farm) {
             switch (instance.type) {
                 case 'crop':
@@ -347,7 +353,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                         (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
                         (farm ? ' on farm ' + farm.name : '');
                 default:
-                    return instance.data.name || instance.data.category || instance.assetTypes[instance.type];
+                    return instance.data.name || instance.data.category || Asset.assetTypes[instance.type];
             }
         }
 

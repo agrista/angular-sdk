@@ -2962,35 +2962,83 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             { category: "Wine Cellar", subCategory: "Winery" },
             { category: "Wine Cellar", subCategory: "Barrel Maturation Room" }
         ],
-        'livestock': {
-            Cattle: {
-                Breeding: ['Phase A Bulls', 'Phase B Bulls', 'Phase C Bulls', 'Phase D Bulls', 'Heifers', 'Bull Calves', 'Heifer Calves', 'Tollies 1-2', 'Heifers 1-2', 'Culls'],
-                Dairy: ['Bulls', 'Dry Cows', 'Lactating Cows', 'Heifers', 'Calves', 'Culls'],
-                Slaughter: ['Bulls', 'Cows', 'Heifers', 'Weaners', 'Calves', 'Culls']
-            },
-            Sheep: {
-                Breeding: ['Rams', 'Young Rams', 'Ewes', 'Young Ewes', 'Lambs', 'Wethers', 'Culls'],
-                Slaughter: ['Rams', 'Ewes', 'Lambs', 'Wethers', 'Culls']
-            },
-            Pigs: {
-                Slaughter: ['Boars', 'Breeding Sows', 'Weaned pigs', 'Piglets', 'Porkers', 'Baconers', 'Culls']
-            },
-            Chickens: {
-                Broilers: ['Day Old Chicks', 'Broilers'],
-                Layers: ['Hens', 'Point of Laying Hens', 'Culls']
-            },
-            Ostriches: {
-                Slaughter: ['Breeding Stock', 'Slaughter Birds > 3 months', 'Slaughter Birds < 3 months', 'Chicks']
-            },
-            Goats: {
-                Slaughter: ['Rams', 'Breeding Ewes', 'Young Ewes', 'Kids']
-            }
-        },
-        'vme': {
-            Vehicles: ['Bakkie', 'Car', 'Truck', 'Tractor'],
-            Machinery: ['Mower', 'Mower Conditioner', 'Hay Rake', 'Hay Baler', 'Harvester'],
-            Equipment: ['Plough', 'Harrow', 'Ridgers', 'Rotovator', 'Cultivator', 'Planter', 'Combine', 'Spreader', 'Sprayer', 'Mixer']
-        }
+        livestock: [
+            { category: "Cattle", subCategory: "Phase A Bulls", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Phase B Bulls", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Phase C Bulls", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Phase D Bulls", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Heifers", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Bull Calves", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Heifer Calves", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Tollies 1-2", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Heifers 1-2", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Culls", purpose: "Breeding" },
+            { category: "Cattle", subCategory: "Bulls", purpose: "Dairy" },
+            { category: "Cattle", subCategory: "Dry Cows", purpose: "Dairy" },
+            { category: "Cattle", subCategory: "Lactating Cows", purpose: "Dairy" },
+            { category: "Cattle", subCategory: "Heifers", purpose: "Dairy" },
+            { category: "Cattle", subCategory: "Calves", purpose: "Dairy" },
+            { category: "Cattle", subCategory: "Culls", purpose: "Dairy" },
+            { category: "Cattle", subCategory: "Bulls", purpose: "Slaughter" },
+            { category: "Cattle", subCategory: "Cows", purpose: "Slaughter" },
+            { category: "Cattle", subCategory: "Heifers", purpose: "Slaughter" },
+            { category: "Cattle", subCategory: "Weaners", purpose: "Slaughter" },
+            { category: "Cattle", subCategory: "Calves", purpose: "Slaughter" },
+            { category: "Cattle", subCategory: "Culls", purpose: "Slaughter" },
+            { category: "Sheep", subCategory: "Rams", purpose: "Breeding" },
+            { category: "Sheep", subCategory: "Young Rams", purpose: "Breeding" },
+            { category: "Sheep", subCategory: "Ewes", purpose: "Breeding" },
+            { category: "Sheep", subCategory: "Young Ewes", purpose: "Breeding" },
+            { category: "Sheep", subCategory: "Lambs", purpose: "Breeding" },
+            { category: "Sheep", subCategory: "Wethers", purpose: "Breeding" },
+            { category: "Sheep", subCategory: "Culls", purpose: "Breeding" },
+            { category: "Sheep", subCategory: "Rams", purpose: "Slaughter" },
+            { category: "Sheep", subCategory: "Ewes", purpose: "Slaughter" },
+            { category: "Sheep", subCategory: "Lambs", purpose: "Slaughter" },
+            { category: "Sheep", subCategory: "Wethers", purpose: "Slaughter" },
+            { category: "Sheep", subCategory: "Culls", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Boars", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Breeding Sows", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Weaned pigs", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Piglets", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Porkers", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Baconers", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Culls", purpose: "Slaughter" },
+            { category: "Chickens", subCategory: "Day Old Chicks", purpose: "Broilers" },
+            { category: "Chickens", subCategory: "Broilers", purpose: "Broilers" },
+            { category: "Chickens", subCategory: "Hens", purpose: "Layers" },
+            { category: "Chickens", subCategory: "Point of Laying Hens", purpose: "Layers" },
+            { category: "Chickens", subCategory: "Culls", purpose: "Layers" },
+            { category: "Ostriches", subCategory: "Breeding Stock", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Slaughter Birds > 3 months", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Slaughter Birds < 3 months", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Chicks", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Rams", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Breeding Ewes", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Young Ewes", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Kids", purpose: "Slaughter" }
+        ],
+        vme: [
+            { category: "Vehicles", subCategory: "Bakkie" },
+            { category: "Vehicles", subCategory: "Car" },
+            { category: "Vehicles", subCategory: "Truck" },
+            { category: "Vehicles", subCategory: "Tractor" },
+            { category: "Machinery", subCategory: "Mower" },
+            { category: "Machinery", subCategory: "Mower Conditioner" },
+            { category: "Machinery", subCategory: "Hay Rake" },
+            { category: "Machinery", subCategory: "Hay Baler" },
+            { category: "Machinery", subCategory: "Harvester" },
+            { category: "Equipment", subCategory: "Plough" },
+            { category: "Equipment", subCategory: "Harrow" },
+            { category: "Equipment", subCategory: "Ridgers" },
+            { category: "Equipment", subCategory: "Rotovator" },
+            { category: "Equipment", subCategory: "Cultivator" },
+            { category: "Equipment", subCategory: "Planter" },
+            { category: "Equipment", subCategory: "Combine" },
+            { category: "Equipment", subCategory: "Spreader" },
+            { category: "Equipment", subCategory: "Sprayer" },
+            { category: "Equipment", subCategory: "Mixer" },
+        ]
     };
 
     var _conditionTypes = ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor'];
@@ -3221,7 +3269,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             if (!(categoryObject && categoryObject.category)) {
                 return '';
             }
-            return categoryObject.category + (categoryObject.subCategory ? ' (' + categoryObject.subCategory + ')'  : '');
+            return categoryObject.category + (categoryObject.subCategory ? ' (' + categoryObject.subCategory + (categoryObject.purpose ? ', ' + categoryObject.purpose : '') + ')'  : '');
         },
         getAssetPurposes: function(type, subtype) {
             return (_assetPurposes[type] ? (_assetPurposes[type][subtype] || []) : []);
@@ -3333,11 +3381,10 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             }
         },
         generateAssetName: function(asset, categoryLabel, currentAssetList) {
-            if (asset.type == 'improvement') {
-                var assetCount = underscore.chain(currentAssetList)
-                    .filter(function(asset) {
-                        return asset.type == 'improvement'
-                    }).reduce(function(currentAssetCount, asset) {
+            var assetCount = underscore.chain(currentAssetList)
+                .where({type: asset.type})
+                .reduce(function(currentAssetCount, asset) {
+                    if (asset.data.name) {
                         var index = asset.data.name.search(/\s+[0-9]+$/);
                         var name = asset.data.name;
                         var number;
@@ -3348,12 +3395,13 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
                         if (categoryLabel && name == categoryLabel && (!number || number > currentAssetCount)) {
                             currentAssetCount = number || 1;
                         }
-                        return currentAssetCount;
-                    }, -1)
-                    .value();
+                    }
 
-                asset.data.name = categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
-            }
+                    return currentAssetCount;
+                }, -1)
+                .value();
+
+            asset.data.name = categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
         }
     }
 }]);
@@ -10816,6 +10864,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 (this.data.identificationNo ? '-in.' + this.data.identificationNo : '') : '') +
                 (this.data.waterSource ? '-ws.' + this.data.waterSource : '') +
                 (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
+
+                return this.assetKey;
             });
 
             privateProperty(this, 'getPhoto', function () {
@@ -11103,6 +11153,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
 
+        privateProperty(Asset, 'getTitle', function (asset) {
+            return getTitle(asset);
+        });
+
         function getTitle (instance, withField, farm) {
             switch (instance.type) {
                 case 'crop':
@@ -11139,7 +11193,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                         (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
                         (farm ? ' on farm ' + farm.name : '');
                 default:
-                    return instance.data.name || instance.data.category || instance.assetTypes[instance.type];
+                    return instance.data.name || instance.data.category || Asset.assetTypes[instance.type];
             }
         }
 
@@ -12114,18 +12168,23 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                             switch(asset.type) {
                                 case 'cropland':
                                 case 'farmland':
-                                case 'improvement':
                                 case 'pasture':
                                 case 'permanent crop':
                                 case 'plantation':
                                 case 'wasteland':
-                                    updateAssetStatementCategory(instance, 'long-term', 'Land and fixed improvements', asset);
+                                    updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
+                                    break;
+                                case 'improvement':
+                                    updateAssetStatementCategory(instance, 'long-term', 'Fixed Improvements', asset);
+                                    break;
+                                case 'livestock':
+                                    updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', asset);
                                     break;
                                 case 'vme':
-                                    updateAssetStatementCategory(instance, 'medium-term', asset.data.type, asset);
+                                    updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
                                     break;
                                 case 'other':
-                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.name, asset);
+                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.category, asset);
                                     break;
                             }
                         }
