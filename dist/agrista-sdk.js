@@ -8780,6 +8780,13 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 angular.forEach(layerNames, function(layerName) {
                     if (_this._config.geojson[layerName]) {
+                        angular.forEach(_this._config.geojson[layerName], function(childLayer, childName) {
+                            _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName);
+
+                            delete _this._config.leafletLayers[childName];
+                            delete _this._config.geojson[layerName][childName];
+                        });
+
                         _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
 
                         delete _this._config.leafletLayers[layerName];
@@ -8789,8 +8796,15 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             removeGeoJSON: function() {
                 var _this = this;
-                
+
                 angular.forEach(_this._config.geojson, function(layer, name) {
+                    angular.forEach(layer, function(childLayer, childName) {
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName);
+
+                        delete _this._config.leafletLayers[childName];
+                        delete _this._config.geojson[name][childName];
+                    });
+
                     _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', name);
 
                     delete _this._config.leafletLayers[name];
@@ -9536,45 +9550,60 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.addLayer = function (name) {
-        var layer = this._mapboxServiceInstance.getLayer(name);
+        var layer = this._mapboxServiceInstance.getLayer(name),
+            added = false;
 
         if (layer) {
+            added = (this._layers[name] == undefined);
             this._layers[name] = layer;
-
             this._map.addLayer(layer);
         }
+
+        return added;
     };
 
     Mapbox.prototype.addLayerToLayer = function (name, layer, toLayerName) {
-        var toLayer = this._layers[toLayerName];
+        var toLayer = this._layers[toLayerName],
+            added = false;
         
         if (toLayer) {
+            added = (this._layers[name] == undefined);
             this._layers[name] = layer;
 
             toLayer.addLayer(layer);
         }
+
+        return added;
     };
 
     Mapbox.prototype.removeLayer = function (name) {
-        var layer = this._layers[name];
+        var layer = this._layers[name],
+            removed = false;
 
         if (layer) {
+            removed = (this._layers[name] != undefined);
             this.removeOverlay(name);
             this._map.removeLayer(layer);
 
             delete this._layers[name];
         }
+
+        return removed;
     };
 
     Mapbox.prototype.removeLayerFromLayer = function (name, fromLayerName) {
-        var fromLayer = this._layers[fromLayerName];
-        var layer = this._layers[name];
+        var fromLayer = this._layers[fromLayerName],
+            layer = this._layers[name],
+            removed = false;
 
         if (fromLayer) {
+            removed = (this._layers[name] != undefined);
             fromLayer.removeLayer(layer);
-            
+
             delete this._layers[name];
         }
+
+        return removed;
     };
 
     Mapbox.prototype.showLayer = function (name) {
@@ -9712,9 +9741,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 });
             },
             onEachFeature: function(feature, layer) {
-                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                var added = _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
 
-                if (typeof item.handler === 'function') {
+                if (added && typeof item.handler === 'function') {
                     item.handler(_this._layers[item.layerName], feature, layer);
                 }
 
@@ -9768,10 +9797,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 return marker;
             },
             onEachFeature: function(feature, layer) {
-                _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
+                var added = _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
                 _this.addLabel(geojsonOptions.label, feature, layer);
 
-                if (typeof item.handler === 'function') {
+                if (added && typeof item.handler === 'function') {
                     item.handler(_this._layers[item.layerName], feature, layer);
                 }
 
