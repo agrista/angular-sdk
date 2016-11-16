@@ -6822,7 +6822,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(doc
             if (item[item.referenceType] !== undefined) {
                 if (item.referenceType == 'document') {
                     map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
-                    map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
+                    map.referenceState = 'document.details';
                 } else if (item.referenceType == 'task') {
                     map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
                     map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
