@@ -2392,11 +2392,11 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
                                 _scroll.busy = false;
 
-                                if (currentListId === _listId) {
-                                    if (dataMap) {
-                                        res = dataMapService(res, dataMap);
-                                    }
+                                if (dataMap) {
+                                    res = dataMapService(res, dataMap);
+                                }
 
+                                if (currentListId === _listId) {
                                     itemStore(res);
                                 }
 
