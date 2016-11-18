@@ -1488,6 +1488,25 @@ sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'co
     };
 }]);
 
+
+/**
+ * Share API
+ */
+sdkApiApp.factory('shareApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getDocument: function (code) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/share/document/' + code, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+
 /**
  * SubRegion API
  */
