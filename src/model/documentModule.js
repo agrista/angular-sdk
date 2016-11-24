@@ -37,6 +37,7 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
                 this.docType = attrs.docType;
                 this.documentId = attrs.documentId;
                 this.id = attrs.id || attrs.$id;
+                this.organization = attrs.organization;
                 this.organizationId = attrs.organizationId;
                 this.title = attrs.title;
             }
