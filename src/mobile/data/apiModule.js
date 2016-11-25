@@ -135,6 +135,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 return _getItems('merchant', {
                     resulttype: {
                         name: 1,
+                        services: 1,
                         uuid: 1
                     }
                 });
