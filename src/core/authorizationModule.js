@@ -1,60 +1,53 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'satellizer']);
 
-sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
+sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', 'underscore', function($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
     
     return {
-        login: function (email, password) {
+        requestPasswordReset: function(email) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'login', {email: email, password: password}).then(function (res) {
+                $http.post(_host + 'auth/request-reset', {email: email}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        resetPassword: function (hash, password) {
+        confirmPasswordReset: function (code, email, password) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/password-reset', {hash: hash, password: password}).then(function (res) {
+                $http.post(_host + 'auth/confirm-reset', {code: code, email: email, password: password}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        requestResetPasswordEmail: function(email) {
+        refresh: function (refreshToken) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/password-reset-email', {email: email}).then(function (res) {
+                $http.post(_host + 'auth/refresh-token', {refresh_token: refreshToken}, {skipAuthorization: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        changePassword: function (id, oldPassword, newPassword) {
+        changePassword: function (oldPassword, newPassword) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/user/password', {password: oldPassword, newPassword: newPassword}).then(function (res) {
+                $http.post(_host + 'auth/change-password', {password: oldPassword, newPassword: newPassword}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getUser: function () {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'current-user', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        registerUser: function (data) {
-            return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/register', data).then(function (res) {
+                $http.get(_host + 'api/me').then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'current-user', _.omit(data, 'profilePhotoSrc'), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/me', underscore.omit(data, 'profilePhotoSrc')).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         logout: function() {
-            return $http.post(_host + 'logout');
+            return $http.post(_host + 'logout', {});
         }
     };
 }]);
@@ -77,13 +70,66 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         role: _userRoles.open
     };
 
-    var _lastError = undefined,
-        _sslFingerprint = '',
-        _sslFingerprintAlt = '';
+    var _lastError = undefined;
+
+    var _tokens;
 
     // Intercept any HTTP responses that are not authorized
-    $httpProvider.interceptors.push(['$q', '$injector', '$rootScope', function ($q, $injector, $rootScope) {
+    $httpProvider.interceptors.push(['$injector', '$rootScope', 'localStore', 'promiseService', function ($injector, $rootScope, localStore, promiseService) {
+        var _requestQueue = [];
+
+        function queueRequest (config) {
+            var queueItem = {
+                config: config,
+                defer: promiseService.defer()
+            };
+
+            _requestQueue.push(queueItem);
+
+            return queueItem.defer.promise;
+        }
+
+        function resolveQueue (token) {
+            while (_requestQueue.length > 0) {
+                var queueItem = _requestQueue.shift();
+
+                if (token) {
+                    queueItem.config.headers['Authorization'] = 'Bearer ' + token;
+                }
+
+                queueItem.defer.resolve(queueItem.config);
+            }
+        }
+
         return {
+            request: function (config) {
+                if (config.skipAuthorization || config.headers['Authorization']) {
+                    return config;
+                }
+
+                if (_tokens && _tokens.refresh_token) {
+                    if (_requestQueue.length == 0) {
+                        var $auth = $injector.get('$auth'),
+                            authorizationApi = $injector.get('authorizationApi');
+
+                        authorizationApi.refresh(_tokens.refresh_token).then(function (res) {
+                            if (res) {
+                                $auth.setToken(res.token);
+                                localStore.setItem('tokens', res);
+                                _tokens = res;
+                            }
+
+                            resolveQueue(res && res.token);
+                        }, function () {
+                            resolveQueue();
+                        });
+                    }
+
+                    return queueRequest(config);
+                }
+
+                return config;
+            },
             responseError: function (err) {
                 if (err.status === 401) {
                     $rootScope.$broadcast('authorization::unauthorized', err);
@@ -91,180 +137,181 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     $rootScope.$broadcast('authorization::forbidden', err);
                 }
 
-                return $q.reject(err);
+                return promiseService.reject(err);
             }
         }
     }]);
+
+    var _preAuthenticate = ['promiseService', function (promiseService) {
+        return function () {
+            return promiseService.wrap(function (promise) {
+                promise.resolve();
+            });
+        }
+    }];
 
     return {
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        setFingerprints: function (fingerprint, fingerprintAlt) {
-            _sslFingerprint = fingerprint;
-            _sslFingerprintAlt = fingerprintAlt;
+        setPreAuthenticate: function (fn) {
+            _preAuthenticate = fn;
         },
 
-        $get: ['$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($rootScope, authorizationApi, configuration, localStore, promiseService) {
-            var _user = _getUser();
+        $get: ['$auth', '$injector', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
+            function ($auth, $injector, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
+                var _user = _getUser();
 
-            authorizationApi.getUser().then(function (res) {
-                if (res.user !== null) {
-                    _user = _setUser(res.user);
+                _tokens = localStore.getItem('tokens');
+
+                if (_preAuthenticate instanceof Array) {
+                    _preAuthenticate = $injector.invoke(_preAuthenticate);
+                }
+
+                authorizationApi.getUser().then(function (res) {
+                    _user = _setUser(res);
 
                     $rootScope.$broadcast('authorization::login', _user);
-                } else if (_user.isActive !== true) {
+                }, function () {
                     $rootScope.$broadcast('authorization::unauthorized');
-                }
-            });
+                });
 
-            $rootScope.$on('authorization::unauthorized', function () {
-                localStore.removeItem('user');
-            });
+                $rootScope.$on('authorization::unauthorized', function () {
+                    localStore.removeItem('user');
+                    localStore.removeItem('tokens');
+                    _tokens = undefined;
+                });
 
-            function _getUser() {
-                return localStore.getItem('user') || _defaultUser;
-            }
-
-            function _setUser(user) {
-                user = user || _defaultUser;
-
-                if (user.role === undefined) {
-                    user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
+                function _getUser() {
+                    return localStore.getItem('user') || _defaultUser;
                 }
 
-                localStore.setItem('user', user);
+                function _setUser(user) {
+                    user = user || _defaultUser;
 
-                return user;
-            }
+                    if (user.role === undefined) {
+                        user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
+                    }
 
-            return {
-                userRole: _userRoles,
-                accessLevel: _accessLevels,
-                lastError: function () {
-                    return _lastError;
-                },
-                currentUser: function () {
-                    return _user;
-                },
+                    localStore.setItem('user', user);
 
-                isAllowed: function (level) {
-                    return (level & _user.role) != 0;
-                },
-                isLoggedIn: function () {
-                    return (_accessLevels.user & _user.role) != 0;
-                },
-                login: function (email, password) {
-                    return promiseService.wrap(function (promise) {
-                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
+                    return user;
+                }
 
-                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
-                            window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
-                                    console.log('ERROR: ' + err);
-                                    console.log('ERROR: ' + JSON.stringify(err));
+                function _postAuthenticateSuccess (res) {
+                    if (res && res.data) {
+                        $auth.setToken(res.data.token);
+                        localStore.setItem('tokens', res.data);
+                        _tokens = res.data;
+                    }
 
-                                    _lastError = {
-                                        type: 'error',
-                                        message: 'SSL Certificate Error: Please contact your administrator'
-                                    };
+                    return authorizationApi.getUser();
+                }
 
-                                    localStore.removeItem('user');
-                                    promise.reject({
-                                        data: _lastError
-                                    });
-                                },
-                                configuration.getServer(),
-                                _sslFingerprint, _sslFingerprintAlt);
-                        } else {
-                            promise.resolve();
-                        }
-                    }).then(function () {
-                        return promiseService.wrap(function(promise) {
-                            authorizationApi.login(email, password).then(function (res) {
-                                if (res.user !== null) {
-                                    _lastError = undefined;
-                                    _user = _setUser(res.user);
-                                    promise.resolve(_user);
+                function _postGetUserSuccess (promise) {
+                    return function (res) {
+                        _lastError = undefined;
+                        _user = _setUser(res);
+                        promise.resolve(_user);
 
-                                    $rootScope.$broadcast('authorization::login', _user);
-                                } else {
-                                    console.log('RESULT: ' + res);
-                                    console.log('RESULT: ' + JSON.stringify(res));
+                        $rootScope.$broadcast('authorization::login', _user);
+                    }
+                }
 
-                                    _lastError = {
-                                        type: 'error',
-                                        message: 'The entered e-mail and/or password is incorrect. Please try again.'
-                                    };
+                function _postError (promise) {
+                    return function (err) {
+                        _lastError = {
+                            code: err.status,
+                            type: 'error',
+                            message: err.data && err.data.message || 'Unable to Authenticate. Please try again.'
+                        };
 
-                                    localStore.removeItem('user');
-                                    promise.reject({
-                                        data: _lastError
-                                    });
-                                }
-
-                            }, function (err) {
-                                console.log('ERROR: ' + err);
-                                console.log('ERROR: ' + JSON.stringify(err));
-
-                                _lastError = {
-                                    type: 'error',
-                                    message: err.data && err.data.message || 'Could not connect to the server. Please try again or contact your administrator'
-                                };
-
-                                localStore.removeItem('user');
-                                promise.reject({
-                                    data: _lastError
-                                });
-                            });
-                        });
-                    }, promiseService.throwError);
-                },
-                requestResetPasswordEmail: authorizationApi.requestResetPasswordEmail,
-                resetPassword: authorizationApi.resetPassword,
-                changePassword: function (oldPassword, newPassword) {
-                    return authorizationApi.changePassword(_user.id, oldPassword, newPassword);
-                },
-                changeUserDetails: function (userDetails) {
-                    return authorizationApi.updateUser(userDetails).then(function (result) {
-                        _user = _setUser(result);
-
-                        $rootScope.$broadcast('authorization::user-details__changed', _user);
-
-                        return result;
-                    });
-                },
-                register: function(data) {
-                    return promiseService.wrap(function(promise) {
-                        authorizationApi.registerUser(data).then(function (res) {
-                            if (res !== null) {
-                                _lastError = undefined;
-                                _user = _setUser(res);
-                                promise.resolve(_user);
-
-                                $rootScope.$broadcast('authorization::login', _user);
-                            } else {
-                                localStore.removeItem('user');
-                                promise.reject();
-                            }
-                        }, function (err) {
-                            _lastError = {
-                                type: 'error',
-                                message: 'There is already an Agrista account associated with this email address. Please login.'
-                            };
-
-                            localStore.removeItem('user');
-                            promise.reject(err);
-                        });
-                    });
-                },
-                logout: function () {
-                    $rootScope.$broadcast('authorization::logout');
-
-                    return authorizationApi.logout().then(function () {
                         localStore.removeItem('user');
-                    });
+                        promise.reject({
+                            data: _lastError
+                        });
+                    }
                 }
-            }
-        }]
+
+                return {
+                    userRole: _userRoles,
+                    accessLevel: _accessLevels,
+                    lastError: function () {
+                        return _lastError;
+                    },
+                    currentUser: function () {
+                        return _user;
+                    },
+                    getAuthority: function () {
+                        return _tokens && _tokens.authority;
+                    },
+
+                    isAllowed: function (level) {
+                        return (level & _user.role) != 0;
+                    },
+                    isLoggedIn: function () {
+                        return (_accessLevels.user & _user.role) != 0;
+                    },
+                    login: function (email, password) {
+                        var credentials = {
+                            email: email,
+                            password: password
+                        };
+
+                        return promiseService.wrap(function (promise) {
+                            return _preAuthenticate()
+                                .then(function () {
+                                    return $auth.login(credentials);
+                                }, promiseService.throwError)
+                                .then(_postAuthenticateSuccess, promiseService.throwError)
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+                    },
+                    authenticate: function (name, data) {
+                        return promiseService.wrap(function (promise) {
+                            return _preAuthenticate()
+                                .then(function () {
+                                    return $auth.authenticate(name, data);
+                                }, promiseService.throwError)
+                                .then(_postAuthenticateSuccess, promiseService.throwError)
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+                    },
+                    requestPasswordReset: authorizationApi.requestPasswordReset,
+                    confirmPasswordReset: authorizationApi.confirmPasswordReset,
+                    changePassword: function (oldPassword, newPassword) {
+                        return authorizationApi.changePassword(oldPassword, newPassword);
+                    },
+                    changeUserDetails: function (userDetails) {
+                        return authorizationApi.updateUser(userDetails).then(function (result) {
+                            _user = _setUser(result);
+
+                            $rootScope.$broadcast('authorization::user-details__changed', _user);
+
+                            return result;
+                        });
+                    },
+                    register: function (data) {
+                        return promiseService.wrap(function (promise) {
+                            return _preAuthenticate()
+                                .then(function () {
+                                    return $auth.signup(data);
+                                }, promiseService.throwError)
+                                .then(_postAuthenticateSuccess, promiseService.throwError)
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+                    },
+                    logout: function () {
+                        return authorizationApi.logout().then(function () {
+                            $auth.logout();
+                            localStore.removeItem('user');
+                            localStore.removeItem('tokens');
+                            _tokens = undefined;
+
+                            $rootScope.$broadcast('authorization::logout');
+                        });
+                    }
+                }
+            }]
     }
 }]);

@@ -266,6 +266,9 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         objectWrap: function (action) {
             return _wrapAll(action, {});
         },
+        reject: function (obj) {
+            return $q.reject(obj);
+        },
         throwError: function (err) {
             throw err;
         },

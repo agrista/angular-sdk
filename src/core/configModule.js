@@ -15,6 +15,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         staging: 'https://staging-enterprise.agrista.com/',
         production: 'https://enterprise.agrista.com/'
     };
+    var _sslFingerprints = {};
 
     var _hasModule = function (name) {
         return (_modules.indexOf(name) !== -1);
@@ -40,6 +41,12 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
             });
 
             this.useHost(_host, _version);
+        },
+        setSslFingerprints: function (primary, secondary) {
+            _sslFingerprints = {
+                primary: primary,
+                secondary: secondary
+            };
         },
         useHost: function(host, version, cCallback) {
             if (typeof version === 'function') {
@@ -74,6 +81,9 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
                 },
                 getServer: function() {
                     return _servers[_host];
+                },
+                getSslFingerprint: function(type) {
+                    return _sslFingerprints[type];
                 }
             }
         }
