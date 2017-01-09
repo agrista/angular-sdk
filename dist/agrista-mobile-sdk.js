@@ -4,16 +4,16 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
     var _host = configuration.getServer();
     
     return {
-        requestPasswordReset: function(email) {
+        requestReset: function(email) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'auth/request-reset', {email: email}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        confirmPasswordReset: function (code, email, password) {
+        confirmReset: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'auth/confirm-reset', {code: code, email: email, password: password}).then(function (res) {
+                $http.post(_host + 'auth/confirm-reset', data).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -242,8 +242,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     currentUser: function () {
                         return _user;
                     },
-                    getAuthority: function () {
-                        return _tokens && _tokens.authority;
+                    getAuthenticationResponse: function () {
+                        return _tokens;
                     },
 
                     isAllowed: function (level) {
@@ -277,8 +277,19 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 .then(_postGetUserSuccess(promise), _postError(promise));
                         });
                     },
-                    requestPasswordReset: authorizationApi.requestPasswordReset,
-                    confirmPasswordReset: authorizationApi.confirmPasswordReset,
+                    requestReset: authorizationApi.requestReset,
+                    confirmReset: function (data) {
+                        return promiseService.wrap(function (promise) {
+                            authorizationApi.confirmReset(data).then(function (res) {
+                                if (_tokens) {
+                                    _tokens.confirmed = true;
+                                    localStore.setItem('tokens', _tokens);
+                                }
+
+                                promise.resolve(res);
+                            }, promise.reject);
+                        });
+                    },
                     changePassword: function (oldPassword, newPassword) {
                         return authorizationApi.changePassword(oldPassword, newPassword);
                     },
