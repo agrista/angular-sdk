@@ -1986,7 +1986,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         };
 
                         return promiseService.wrap(function (promise) {
-                            return _preAuthenticate()
+                            return _preAuthenticate(credentials)
                                 .then(function () {
                                     return $auth.login(credentials);
                                 }, promiseService.throwError)
@@ -1996,7 +1996,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     },
                     authenticate: function (name, data) {
                         return promiseService.wrap(function (promise) {
-                            return _preAuthenticate()
+                            return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.authenticate(name, data);
                                 }, promiseService.throwError)
@@ -2031,7 +2031,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     },
                     register: function (data) {
                         return promiseService.wrap(function (promise) {
-                            return _preAuthenticate()
+                            return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.signup(data);
                                 }, promiseService.throwError)
@@ -2082,8 +2082,14 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         }
     };
 
-    var _getServer = function () {
-        return _servers[_host];
+    var _getServer = function (stripTrailingSlash) {
+        var server = _servers[_host];
+
+        if (stripTrailingSlash && server.lastIndexOf('/') === server.length - 1) {
+            server = server.substr(0, server.length - 1);
+        }
+
+        return server;
     };
 
     return {

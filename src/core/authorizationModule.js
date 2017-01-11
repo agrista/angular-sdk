@@ -259,7 +259,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         };
 
                         return promiseService.wrap(function (promise) {
-                            return _preAuthenticate()
+                            return _preAuthenticate(credentials)
                                 .then(function () {
                                     return $auth.login(credentials);
                                 }, promiseService.throwError)
@@ -269,7 +269,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     },
                     authenticate: function (name, data) {
                         return promiseService.wrap(function (promise) {
-                            return _preAuthenticate()
+                            return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.authenticate(name, data);
                                 }, promiseService.throwError)
@@ -304,7 +304,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     },
                     register: function (data) {
                         return promiseService.wrap(function (promise) {
-                            return _preAuthenticate()
+                            return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.signup(data);
                                 }, promiseService.throwError)

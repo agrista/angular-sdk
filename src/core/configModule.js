@@ -26,8 +26,14 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         }
     };
 
-    var _getServer = function () {
-        return _servers[_host];
+    var _getServer = function (stripTrailingSlash) {
+        var server = _servers[_host];
+
+        if (stripTrailingSlash && server.lastIndexOf('/') === server.length - 1) {
+            server = server.substr(0, server.length - 1);
+        }
+
+        return server;
     };
 
     return {
