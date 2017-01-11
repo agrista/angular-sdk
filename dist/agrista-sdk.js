@@ -2071,7 +2071,6 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         staging: 'https://staging-enterprise.agrista.com/',
         production: 'https://enterprise.agrista.com/'
     };
-    var _sslFingerprints = {};
 
     var _hasModule = function (name) {
         return (_modules.indexOf(name) !== -1);
@@ -2081,6 +2080,10 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         if (_hasModule(name) == false) {
             _modules.push(name);
         }
+    };
+
+    var _getServer = function () {
+        return _servers[_host];
     };
 
     return {
@@ -2098,12 +2101,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
 
             this.useHost(_host, _version);
         },
-        setSslFingerprints: function (primary, secondary) {
-            _sslFingerprints = {
-                primary: primary,
-                secondary: secondary
-            };
-        },
+        getServer: _getServer,
         useHost: function(host, version, cCallback) {
             if (typeof version === 'function') {
                 cCallback = version;
@@ -2135,12 +2133,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
                 getHost: function() {
                     return _host;
                 },
-                getServer: function() {
-                    return _servers[_host];
-                },
-                getSslFingerprint: function(type) {
-                    return _sslFingerprints[type];
-                }
+                getServer: _getServer
             }
         }
     }
@@ -8378,6 +8371,9 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
  */
 sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore) {
     var _defaultConfig = {
+        init: {
+            delay: 200
+        },
         options: {
             attributionControl: true,
             layersControl: true,
@@ -8428,7 +8424,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
     };
 
-    this.$get = ['$rootScope', 'objectId', function ($rootScope, objectId) {
+    this.$get = ['$rootScope', '$timeout', 'objectId', 'safeApply', function ($rootScope, $timeout, objectId, safeApply) {
         /**
         * @name MapboxServiceInstance
         * @param id
@@ -8446,8 +8442,10 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             _this._requestQueue = [];
 
             $rootScope.$on('mapbox-' + _this._id + '::init', function () {
-                _this.dequeueRequests();
-                _this._ready = true;
+                $timeout(function () {
+                    _this.dequeueRequests();
+                    _this._ready = true;
+                }, _this._config.init.delay || 0);
             });
 
             $rootScope.$on('mapbox-' + _this._id + '::destroy', function () {
@@ -8462,6 +8460,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         MapboxServiceInstance.prototype = {
             getId: function () {
                 return this._id;
+            },
+            isReady: function () {
+                return this._ready;
             },
             
             /*
@@ -8481,13 +8482,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             /*
              * Queuing requests
              */
-            enqueueRequest: function (event, args) {
+            enqueueRequest: function (event, data, handler) {
+                handler = handler || angular.noop;
+
                 if (this._ready) {
-                    $rootScope.$broadcast(event, args);
+                    $rootScope.$broadcast(event, data);
+
+                    handler();
                 } else {
                     this._requestQueue.push({
                         event: event,
-                        args: args
+                        data: data,
+                        handler: handler
                     });
                 }
             },
@@ -8496,7 +8502,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     do {
                         var request = this._requestQueue.shift();
 
-                        $rootScope.$broadcast(request.event, request.args);
+                        $rootScope.$broadcast(request.event, request.data);
+
+                        request.handler();
                     } while(this._requestQueue.length);
                 }
             },
@@ -8508,12 +8516,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 return this._show;
             },
             hide: function() {
-                this._show = false;
-                this.enqueueRequest('mapbox-' + this._id + '::hide', {});
+                var _this = this;
+
+                this.enqueueRequest('mapbox-' + this._id + '::hide', {}, function () {
+                    _this._show = false;
+                });
             },
             show: function() {
-                this._show = true;
-                this.enqueueRequest('mapbox-' + this._id + '::show', {});
+                var _this = this;
+
+                this.enqueueRequest('mapbox-' + this._id + '::show', {}, function () {
+                    _this._show = true;
+                });
             },
             invalidateSize: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::invalidate-size', {});
@@ -8556,23 +8570,29 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 return this._config.layerControl.baseTile;
             },
             setBaseTile: function (tile) {
-                this._config.layerControl.baseTile = tile;
-                this.enqueueRequest('mapbox-' + this._id + '::set-basetile', tile);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::set-basetile', tile, function () {
+                    _this._config.layerControl.baseTile = tile;
+                });
             },
 
             getBaseLayers: function () {
                 return this._config.layerControl.baseLayers;
             },
             setBaseLayers: function (layers) {
-                this._config.layerControl.baseLayers = layers;
-                this.enqueueRequest('mapbox-' + this._id + '::set-baselayers', layers);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::set-baselayers', layers, function () {
+                    _this._config.layerControl.baseLayers = layers;
+                });
             },
             addBaseLayer: function (name, layer, show) {
-                this._config.layerControl.baseLayers[name] = layer;
-                this.enqueueRequest('mapbox-' + this._id + '::add-baselayer', {
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-baselayer', {
                     name: name,
                     layer: layer,
                     show: show
+                }, function () {
+                    _this._config.layerControl.baseLayers[name] = layer;
                 });
             },
 
@@ -8581,28 +8601,30 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             addOverlay: function (layerName, name) {
                 if (layerName && this._config.layerControl.overlays[layerName] == undefined) {
-                    this._config.layerControl.overlays[layerName] = name;
-
-                    this.enqueueRequest('mapbox-' + this._id + '::add-overlay', {
+                    var _this = this;
+                    _this.enqueueRequest('mapbox-' + _this._id + '::add-overlay', {
                         layerName: layerName,
                         name: name || layerName
+                    }, function () {
+                        _this._config.layerControl.overlays[layerName] = name;
                     });
                 }
             },
             removeOverlay: function (layerName) {
                 if (layerName && this._config.layerControl.overlays[layerName]) {
-                    $rootScope.$broadcast('mapbox-' + this._id + '::remove-overlay', layerName);
-
-                    delete this._config.layerControl.overlays[layerName];
+                    var _this = this;
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-overlay', layerName, function () {
+                        delete _this._config.layerControl.overlays[layerName];
+                    });
                 }
             },
             removeOverlays: function () {
                 var _this = this;
                 
-                angular.forEach(this._config.layerControl.overlays, function(overlay, name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-overlay', name);
-
-                    delete _this._config.layerControl.overlays[name];
+                angular.forEach(_this._config.layerControl.overlays, function(overlay, name) {
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-overlay', name, function () {
+                        delete _this._config.layerControl.overlays[name];
+                    });
                 });
             },
 
@@ -8612,18 +8634,22 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             getControls: function () {
                 return this._config.controls;
             },
-            addControl: function (control, options) {
-                this._config.controls[control] = {
-                    name: control,
+            addControl: function (controlName, options) {
+                var _this = this;
+                var control = {
+                    name: controlName,
                     options: options
                 };
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-control',  this._config.controls[control]);
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-control', control, function () {
+                    _this._config.controls[controlName] = control;
+                });
             },
             removeControl: function (control) {
-                delete this._config.controls[control];
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::remove-control', control);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::remove-control', control, function () {
+                    delete _this._config.controls[control];
+                });
             },
 
             /*
@@ -8637,13 +8663,26 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 var _this = this;
 
-                angular.forEach(events, function(event) {
+                angular.forEach(events, function (event) {
                     _this.removeEventHandler(event);
-                    _this._config.events[event] = handler;
+
+                    var eventHandler = (event !== 'click' ? handler : function (e) {
+                        var clickLocation = e.originalEvent.x + ',' + e.originalEvent.y;
+
+                        if (!_this.lastClick || _this.lastClick !== clickLocation) {
+                            safeApply(function () {
+                                handler(e);
+                            });
+                        }
+
+                        _this.lastClick = clickLocation;
+                    });
 
                     _this.enqueueRequest('mapbox-' + _this._id + '::add-event-handler', {
                         event: event,
-                        handler: handler
+                        handler: eventHandler
+                    }, function () {
+                        _this._config.events[event] = eventHandler;
                     });
                 });
             },
@@ -8652,16 +8691,31 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 var _this = this;
 
-                angular.forEach(events, function(event) {
+                angular.forEach(events, function (event) {
                     if (_this._config.events[event] !== undefined) {
                         _this.enqueueRequest('mapbox-' + _this._id + '::remove-event-handler', {
                             event: event,
                             handler: _this._config.events[event]
+                        }, function () {
+                            delete _this._config.events[event];
                         });
-
-                        delete _this._config.events[event];
                     }
                 });
+            },
+            addLayerEventHandler: function (event, layer, handler) {
+                var _this = this;
+
+                layer.on(event, (event !== 'click' ? handler : function (e) {
+                    var clickLocation = e.originalEvent.x + ',' + e.originalEvent.y;
+
+                    if (!_this.lastClick || _this.lastClick !== clickLocation) {
+                        safeApply(function () {
+                            handler(e);
+                        });
+                    }
+
+                    _this.lastClick = clickLocation;
+                }));
             },
 
             /*
@@ -8675,27 +8729,35 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             setView: function (coordinates, zoom) {
                 if (coordinates instanceof Array) {
-                    this._config.view.coordinates = coordinates;
-                    this._config.view.zoom = zoom || this._config.view.zoom;
+                    var _this = this;
+                    var view = {
+                        coordinates: coordinates,
+                        zoom: zoom || _this._config.view.zoom
+                    };
 
-                    $rootScope.$broadcast('mapbox-' + this._id + '::set-view', this._config.view);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::set-view', view, function () {
+                        _this._config.view = view;
+                    });
                 }
             },
             getBounds: function () {
                 return this._config.bounds;
             },
             setBounds: function (coordinates, options) {
-                this._config.bounds = {
+                var _this = this;
+                var bounds = {
                     coordinates: coordinates,
                     options: options || {
                         reset: false
                     }
                 };
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::set-bounds', this._config.bounds);
+                _this.enqueueRequest('mapbox-' + _this._id + '::set-bounds', bounds, function () {
+                    _this._config.bounds = bounds;
+                });
             },
             zoomTo: function (coordinates, zoom, options) {
-                $rootScope.$broadcast('mapbox-' + this._id + '::zoom-to', {
+                this.enqueueRequest('mapbox-' + this._id + '::zoom-to', {
                     coordinates: coordinates,
                     zoom: zoom,
                     options: options
@@ -8712,8 +8774,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 }
 
                 var _this = this;
-
-                this._config.layers[name] = {
+                var layer = {
                     name: name,
                     type: type,
                     options: options,
@@ -8724,7 +8785,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     }
                 };
 
-                this.enqueueRequest('mapbox-' + this._id + '::create-layer', this._config.layers[name]);
+                _this.enqueueRequest('mapbox-' + _this._id + '::create-layer', layer, function () {
+                    _this._config.layers[name] = layer;
+                });
             },
             getLayer: function (name) {
                 return this._config.leafletLayers[name];
@@ -8733,30 +8796,31 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 return this._config.layers;
             },
             addLayer: function (name, layer) {
-                this._config.leafletLayers[name] = layer;
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-layer', name);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-layer', name, function () {
+                    _this._config.leafletLayers[name] = layer;
+                });
             },
             removeLayer: function (names) {
                 if ((names instanceof Array) === false) names = [names];
 
                 var _this = this;
 
-                angular.forEach(names, function(name) {
-                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
-
-                    delete _this._config.layers[name];
-                    delete _this._config.leafletLayers[name];
+                angular.forEach(names, function (name) {
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name, function () {
+                        delete _this._config.layers[name];
+                        delete _this._config.leafletLayers[name];
+                    });
                 });
             },
             removeLayers: function () {
                 var _this = this;
                 
                 angular.forEach(this._config.layers, function(layer, name) {
-                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
-
-                    delete _this._config.layers[name];
-                    delete _this._config.leafletLayers[name];
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name, function () {
+                        delete _this._config.layers[name];
+                        delete _this._config.leafletLayers[name];
+                    });
                 });
             },
             showLayer: function (name) {
@@ -8821,10 +8885,10 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     }
                 };
 
-                this._config.geojson[layerName] = this._config.geojson[layerName] || {};
-                this._config.geojson[layerName][properties.featureId] = data;
-
-                this.enqueueRequest('mapbox-' + this._id + '::add-geojson', data);
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-geojson', data, function () {
+                    _this._config.geojson[layerName] = _this._config.geojson[layerName] || {};
+                    _this._config.geojson[layerName][properties.featureId] = data;
+                });
 
                 return properties.featureId;
             },
@@ -8856,18 +8920,19 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 data.properties.isMedia = true;
 
-                this._config.geojson[layerName] = this._config.geojson[layerName] || {};
-                this._config.geojson[layerName][properties.featureId] = data;
-
-                this.enqueueRequest('mapbox-' + this._id + '::add-photo-marker', data);
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-photo-marker', data, function () {
+                    _this._config.geojson[layerName] = _this._config.geojson[layerName] || {};
+                    _this._config.geojson[layerName][properties.featureId] = data;
+                });
 
                 return properties.featureId;
             },
             removeGeoJSONFeature: function(layerName, featureId) {
                 if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
-                    $rootScope.$broadcast('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId]);
-
-                    delete this._config.geojson[layerName][featureId];
+                    var _this = this;
+                    _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId], function () {
+                        delete _this._config.geojson[layerName][featureId];
+                    });
                 }
             },
             removeGeoJSONLayer: function(layerNames) {
@@ -8878,16 +8943,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 angular.forEach(layerNames, function(layerName) {
                     if (_this._config.geojson[layerName]) {
                         angular.forEach(_this._config.geojson[layerName], function(childLayer, childName) {
-                            _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName);
-
-                            delete _this._config.leafletLayers[childName];
-                            delete _this._config.geojson[layerName][childName];
+                            _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName, function () {
+                                delete _this._config.leafletLayers[childName];
+                                delete _this._config.geojson[layerName][childName];
+                            });
                         });
 
-                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
-
-                        delete _this._config.leafletLayers[layerName];
-                        delete _this._config.geojson[layerName];
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', layerName, function () {
+                            delete _this._config.leafletLayers[layerName];
+                            delete _this._config.geojson[layerName];
+                        });
                     }
                 });
             },
@@ -8896,16 +8961,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 angular.forEach(_this._config.geojson, function(layer, name) {
                     angular.forEach(layer, function(childLayer, childName) {
-                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName);
-
-                        delete _this._config.leafletLayers[childName];
-                        delete _this._config.geojson[name][childName];
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName, function () {
+                            delete _this._config.leafletLayers[childName];
+                            delete _this._config.geojson[name][childName];
+                        });
                     });
 
-                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', name);
-
-                    delete _this._config.leafletLayers[name];
-                    delete _this._config.geojson[name];
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', name, function () {
+                        delete _this._config.leafletLayers[name];
+                        delete _this._config.geojson[name];
+                    });
                 });
             },
 
@@ -9067,6 +9132,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         var view = _this._mapboxServiceInstance.getView();
         var options = _this._mapboxServiceInstance.getOptions();
 
+        L.mapbox.accessToken = options.accessToken;
+
         _this._map = L.map(_this._id, options).setView(view.coordinates, view.zoom);
 
         _this._map.whenReady(function () {
@@ -9081,11 +9148,11 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this._editableFeature.addTo(_this._map);
 
         _this.setEventHandlers(_this._mapboxServiceInstance.getEventHandlers());
-        _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
         _this.addControls(_this._mapboxServiceInstance.getControls());
         _this.setBounds(_this._mapboxServiceInstance.getBounds());
         _this.resetLayers(_this._mapboxServiceInstance.getLayers());
         _this.resetGeoJSON(_this._mapboxServiceInstance.getGeoJSON());
+        _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
 
         _this._map.on('draw:drawstart', _this.onDrawStart, _this);
         _this._map.on('draw:editstart', _this.onDrawStart, _this);
@@ -9711,8 +9778,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             if (layer.eachLayer) {
                 layer.eachLayer(function (item) {
-                    if (item.bindLabel && item.feature && item.feature.properties && item.feature.properties.label) {
-                        item.bindLabel(item.feature.properties.label.message, item.feature.properties.label.options);
+                    if (item.bindTooltip && item.feature && item.feature.properties && item.feature.properties.label) {
+                        item.bindTooltip(item.feature.properties.label.message, item.feature.properties.label.options);
                     }
                 });
             }
@@ -9770,32 +9837,34 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             labelData.options = labelData.options || {};
 
             if ((labelData.options.centered || labelData.options.noHide) && typeof _this._map.showLabel === 'function') {
-                var label = new L.Label(underscore.extend(labelData.options), {
-                    offset: [6, -15]
+                var label = new L.Tooltip(underscore.extend(labelData.options), {
+                    offset: [6, -15],
+                    permanent: labelData.options.permanent === true,
+                    sticky: labelData.options.sticky === true
                 });
 
                 label.setContent(labelData.message);
                 label.setLatLng(geojson.getCenter());
 
                 if (labelData.options.noHide == true) {
-                    _this._map.showLabel(label);
+                    _this._map.showTooltip(label);
 
                     layer.on('add', function () {
-                        _this._map.showLabel(label);
+                        _this._map.showTooltip(label);
                     });
                     layer.on('remove', function () {
                         _this._map.removeLayer(label);
                     });
                 } else {
                     layer.on('mouseover', function () {
-                        _this._map.showLabel(label);
+                        _this._map.showTooltip(label);
                     });
                     layer.on('mouseout', function () {
                         _this._map.removeLayer(label);
                     });
                 }
-            } else if (typeof layer.bindLabel === 'function') {
-                layer.bindLabel(labelData.message, labelData.options);
+            } else if (typeof layer.bindTooltip === 'function') {
+                layer.bindTooltip(labelData.message, labelData.options);
             }
         }
     };
@@ -9888,7 +9957,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
 
                 if (geojsonOptions.label) {
-                    marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
+                    marker.bindTooltip(geojsonOptions.label.message, geojsonOptions.label.options);
                 }
 
                 return marker;
@@ -10274,17 +10343,22 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             case 'polygon':
                 geojson.geometry = {
                     type: 'Polygon',
-                    coordinates: [[]]
+                    coordinates: []
                 };
 
-                angular.forEach(e.layer._latlngs, function(latlng) {
-                    geojson.geometry.coordinates[0].push([latlng.lng, latlng.lat]);
-                });
+                angular.forEach(e.layer._latlngs, function (latlngs) {
+                    var polygon = [];
 
-                // Add a closing coordinate if there is not a matching starting one
-                if (geojson.geometry.coordinates[0].length > 0 && geojson.geometry.coordinates[0][0] != geojson.geometry.coordinates[0][geojson.geometry.coordinates[0].length - 1]) {
-                    geojson.geometry.coordinates[0].push(geojson.geometry.coordinates[0][0]);
-                }
+                    angular.forEach(latlngs, function (latlng) {
+                        polygon.push([latlng.lng, latlng.lat]);
+                    });
+
+                    if (polygon.length > 0 && polygon[0][0] != polygon[polygon.length - 1][0] && polygon[0][1] != polygon[polygon.length - 1][1]) {
+                        polygon.push(polygon[0]);
+                    }
+
+                    geojson.geometry.coordinates.push(polygon);
+                });
 
                 if (this._draw.controls.polygon.options.draw.polygon.showArea) {
                     var geodesicArea = L.GeometryUtil.geodesicArea(e.layer._latlngs);
