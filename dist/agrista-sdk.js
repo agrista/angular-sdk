@@ -434,9 +434,9 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
-        updateComparable: function (id, data) {
+        updateComparable: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ data.id, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -3464,16 +3464,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
             return valuation;
         },
-        generateFarmlandAssetLabels: function(asset) {
-            if (asset.data && asset.type == 'farmland') {
-                asset.data.portionLabel = (asset.data.portionNumber ?
-                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Ptn. ' + asset.data.portionNumber) :
+        generateFarmlandAssetLabels: function(asset, force) {
+            var portion = (asset.data ? asset.data : asset);
+            
+            if (portion && (portion.type == 'farmland' || force)) {
+                portion.portionLabel = (portion.portionNumber ?
+                    (portion.remainder ? 'Rem. portion ' + portion.portionNumber : 'Ptn. ' + portion.portionNumber) :
                     'Rem. extent');
-                asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
-                    _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
-                asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
-                    " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
-                    "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
+                portion.farmLabel = (portion.officialFarmName && !_(portion.officialFarmName.toLowerCase()).startsWith('farm') ?
+                    _(portion.officialFarmName).titleize() + ' ' : '') + (portion.farmNumber ? portion.farmNumber : '');
+                portion.label = portion.portionLabel + (portion.farmLabel && _.words(portion.farmLabel).length > 0 ?
+                    " of " + (_.words(portion.farmLabel.toLowerCase())[0] == 'farm' ? _(portion.farmLabel).titleize() :
+                    "farm " + _(portion.farmLabel).titleize() ) : 'farm Unknown');
             }
         },
         generateAssetName: function(asset, categoryLabel, currentAssetList) {
@@ -9161,10 +9163,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
 
         _this._map.on('draw:drawstart', _this.onDrawStart, _this);
-        _this._map.on('draw:editstart', _this.onDrawStart, _this);
+        _this._map.on('draw:editstart', _this.onEditStart, _this);
         _this._map.on('draw:deletestart', _this.onDrawStart, _this);
         _this._map.on('draw:drawstop', _this.onDrawStop, _this);
-        _this._map.on('draw:editstop', _this.onDrawStop, _this);
+        _this._map.on('draw:editstop', _this.onEditStop, _this);
         _this._map.on('draw:deletestop', _this.onDrawStop, _this);
     };
 
@@ -9842,35 +9844,26 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (typeof labelData === 'object' && feature.geometry.type !== 'Point') {
             labelData.options = labelData.options || {};
 
-            if ((labelData.options.centered || labelData.options.noHide) && typeof _this._map.showLabel === 'function') {
-                var label = new L.Tooltip(underscore.extend(labelData.options), {
-                    offset: [6, -15],
-                    permanent: labelData.options.permanent === true,
-                    sticky: labelData.options.sticky === true
+            var label = new L.Tooltip(labelData.options);
+            label.setContent(labelData.message);
+            label.setLatLng(geojson.getCenter());
+
+            if (labelData.options.permanent == true) {
+                label.addTo(_this._map);
+
+                layer.on('add', function () {
+                    label.addTo(_this._map);
                 });
-
-                label.setContent(labelData.message);
-                label.setLatLng(geojson.getCenter());
-
-                if (labelData.options.noHide == true) {
-                    _this._map.showTooltip(label);
-
-                    layer.on('add', function () {
-                        _this._map.showTooltip(label);
-                    });
-                    layer.on('remove', function () {
-                        _this._map.removeLayer(label);
-                    });
-                } else {
-                    layer.on('mouseover', function () {
-                        _this._map.showTooltip(label);
-                    });
-                    layer.on('mouseout', function () {
-                        _this._map.removeLayer(label);
-                    });
-                }
-            } else if (typeof layer.bindTooltip === 'function') {
-                layer.bindTooltip(labelData.message, labelData.options);
+                layer.on('remove', function () {
+                    _this._map.removeLayer(label);
+                });
+            } else {
+                layer.on('mouseover', function () {
+                    label.addTo(_this._map);
+                });
+                layer.on('mouseout', function () {
+                    _this._map.removeLayer(label);
+                });
             }
         }
     };
@@ -9963,7 +9956,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
 
                 if (geojsonOptions.label) {
-                    marker.bindTooltip(geojsonOptions.label.message, geojsonOptions.label.options);
+                    marker.bindPopup(geojsonOptions.label.message, geojsonOptions.label.options);
                 }
 
                 return marker;
@@ -10040,8 +10033,25 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         });
     };
 
+    Mapbox.prototype.resetEditable = function () {
+        var _this = this;
+
+        if (_this._editableFeature) {
+            _this._editableFeature.eachLayer(function(layer) {
+                _this._editableFeature.removeLayer(layer);
+
+                if (_this._layers[_this._editableLayer]) {
+                    _this._layers[_this._editableLayer].addLayer(layer);
+                }
+            });
+
+            _this._editableFeature = L.featureGroup();
+            _this._editableFeature.addTo(_this._map);
+        }
+    };
+
     Mapbox.prototype.setDrawControls = function (controls, controlOptions) {
-        this._draw.controlOptions = controlOptions || {};
+        this._draw.controlOptions = controlOptions || this._draw.controlOptions || {};
         this._draw.controls = {};
 
         if(controls instanceof Array && typeof L.Control.Draw == 'function') {
@@ -10081,7 +10091,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
             });
 
-            this._draw.controls.edit = new L.Control.Draw({
+            this._draw.controls.editor = new L.Control.Draw({
                 draw: false,
                 edit: {
                     featureGroup: this._editableFeature,
@@ -10106,7 +10116,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             this._map.removeControl(this._draw.controls.marker);
         } catch(exception) {}
         try {
-            this._map.removeControl(this._draw.controls.edit);
+            this._map.removeControl(this._draw.controls.editor);
         } catch(exception) {}
 
         try {
@@ -10120,8 +10130,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             this._map.on('draw:edited', this.onEdited, this);
             this._map.on('draw:deleted', this.onDeleted, this);
 
-            if(this._draw.controls.edit) {
-                this._map.addControl(this._draw.controls.edit);
+            if(this._draw.controls.editor) {
+                this._draw.controls.editor = new L.Control.Draw({
+                    draw: false,
+                    edit: {
+                        featureGroup: this._editableFeature,
+                        remove: (this._draw.controlOptions.nodelete != true)
+                    }
+                });
+
+                this._map.addControl(this._draw.controls.editor);
             }
         }
 
@@ -10333,6 +10351,33 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             }
         };
 
+        var _getCoordinates = function (latlngs, geojson) {
+            var polygonCoordinates = [];
+
+            angular.forEach(latlngs, function(latlng) {
+                polygonCoordinates.push([latlng.lng, latlng.lat]);
+            });
+
+            // Add a closing coordinate if there is not a matching starting one
+            if (polygonCoordinates.length > 0 && polygonCoordinates[0] != polygonCoordinates[polygonCoordinates.length - 1]) {
+                polygonCoordinates.push(polygonCoordinates[0]);
+            }
+
+            // Add area
+            if (geojson.properties.area !== undefined) {
+                var geodesicArea = L.GeometryUtil.geodesicArea(latlngs);
+                var yards = (geodesicArea * 1.19599);
+
+                geojson.properties.area.m_sq += geodesicArea;
+                geojson.properties.area.ha += (geodesicArea * 0.0001);
+                geojson.properties.area.mi_sq += (yards / 3097600);
+                geojson.properties.area.acres += (yards / 4840);
+                geojson.properties.area.yd_sq += yards;
+            }
+
+            return polygonCoordinates;
+        };
+
         switch (e.layerType) {
             case 'polyline':
                 geojson.geometry = {
@@ -10352,32 +10397,17 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     coordinates: []
                 };
 
+                geojson.properties.area = {
+                    m_sq: 0,
+                    ha: 0,
+                    mi_sq: 0,
+                    acres: 0,
+                    yd_sq: 0
+                };
+
                 angular.forEach(e.layer._latlngs, function (latlngs) {
-                    var polygon = [];
-
-                    angular.forEach(latlngs, function (latlng) {
-                        polygon.push([latlng.lng, latlng.lat]);
-                    });
-
-                    if (polygon.length > 0 && polygon[0][0] != polygon[polygon.length - 1][0] && polygon[0][1] != polygon[polygon.length - 1][1]) {
-                        polygon.push(polygon[0]);
-                    }
-
-                    geojson.geometry.coordinates.push(polygon);
+                    geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
                 });
-
-                if (this._draw.controls.polygon.options.draw.polygon.showArea) {
-                    var geodesicArea = L.GeometryUtil.geodesicArea(e.layer._latlngs);
-                    var yards = (geodesicArea * 1.19599);
-
-                    geojson.properties.area = {
-                        m_sq: geodesicArea,
-                        ha: (geodesicArea * 0.0001),
-                        mi_sq: (yards / 3097600),
-                        acres: (yards / 4840),
-                        yd_sq: yards
-                    };
-                }
 
                 this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
@@ -10391,11 +10421,28 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 break;
         }
 
+        this._editing = false;
+
         if (this._draw.addLayer) {
             this._mapboxServiceInstance.addGeoJSON(this._editableLayer, geojson, this._optionSchema, geojson.properties);
             this.makeEditable(this._editableLayer);
             this.updateDrawControls();
         }
+    };
+
+    Mapbox.prototype.onEditStart = function (e) {
+        this._editing = true;
+
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
+    };
+
+    Mapbox.prototype.onEditStop = function (e) {
+        this._editing = false;
+        this.resetEditable();
+        this.makeEditable(this._editableLayer);
+        this.updateDrawControls();
+
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
 
     Mapbox.prototype.onEdited = function (e) {
@@ -10422,10 +10469,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 };
             }
 
-            var _getCoordinates = function (layer, geojson) {
+            var _getCoordinates = function (latlngs, geojson) {
                 var polygonCoordinates = [];
 
-                angular.forEach(layer._latlngs, function(latlng) {
+                angular.forEach(latlngs, function(latlng) {
                     polygonCoordinates.push([latlng.lng, latlng.lat]);
                 });
 
@@ -10436,7 +10483,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
                 // Add area
                 if (geojson.properties.area !== undefined) {
-                    var geodesicArea = L.GeometryUtil.geodesicArea(layer._latlngs);
+                    var geodesicArea = L.GeometryUtil.geodesicArea(latlngs);
                     var yards = (geodesicArea * 1.19599);
 
                     geojson.properties.area.m_sq += geodesicArea;
@@ -10456,15 +10503,27 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'Polygon':
-                    geojson.geometry.coordinates = [_getCoordinates(layer, geojson)];
+                    geojson.geometry.coordinates = [];
+
+                    angular.forEach(layer._latlngs, function (latlngs) {
+                        geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
+                    });
+
+                    if (geojson.geometry.coordinates.length > 1) {
+                        geojson.geometry.type = 'MultiPolygon';
+                        geojson.geometry.coordinates = [geojson.geometry.coordinates];
+                    }
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'MultiPolygon':
-                    geojson.geometry.coordinates = [[]];
+                    geojson.geometry.coordinates = [];
 
-                    layer.eachLayer(function (childLayer) {
-                        geojson.geometry.coordinates[0].push(_getCoordinates(childLayer, geojson));
+                    angular.forEach(layer._latlngs, function (latlngs, index) {
+                        geojson.geometry.coordinates.push([]);
+                        angular.forEach(latlngs, function (latlngs) {
+                            geojson.geometry.coordinates[index].push(_getCoordinates(latlngs, geojson));
+                        });
                     });
 
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
@@ -11464,7 +11523,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'Storable', 'underscore', 'Validatable', function (Errorable, Storable, underscore, Validatable) {
+    .factory('Base', ['Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (Errorable, privateProperty, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
@@ -11536,6 +11595,16 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             _constructor.include(Errorable);
             _constructor.include(Storable);
         }
+
+        privateProperty(Base, 'initializeArray', function (length) {
+            return underscore.range(length).map(function () {
+                return 0;
+            });
+        });
+
+        privateProperty(Base, 'initializeObject', function (object, property, defaultObject) {
+            return object[property] = object[property] || defaultObject;
+        });
 
         return Base;
     }])
@@ -11610,8 +11679,8 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
     }]);
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function (Asset, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function (Asset, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
 
         var _assetYearEndValueAdjustments = {
             'Land and fixed improvements': [
@@ -11677,28 +11746,28 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             this.data.startDate = moment(this.data.startDate).format('YYYY-MM-DD');
             this.data.endDate = moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD');
 
-            initializeObject(this.data, 'account', {});
-            initializeObject(this.data, 'models', {});
-            initializeObject(this.data, 'adjustmentFactors', {});
-            initializeObject(this.data, 'assetStatement', {});
-            initializeObject(this.data, 'liabilityStatement', {});
+            Base.initializeObject(this.data, 'account', {});
+            Base.initializeObject(this.data, 'models', {});
+            Base.initializeObject(this.data, 'adjustmentFactors', {});
+            Base.initializeObject(this.data, 'assetStatement', {});
+            Base.initializeObject(this.data, 'liabilityStatement', {});
 
-            initializeObject(this.data.assetStatement, 'total', {});
-            initializeObject(this.data.liabilityStatement, 'total', {});
+            Base.initializeObject(this.data.assetStatement, 'total', {});
+            Base.initializeObject(this.data.liabilityStatement, 'total', {});
 
-            initializeObject(this.data.account, 'monthly', []);
-            initializeObject(this.data.account, 'yearly', []);
-            initializeObject(this.data.account, 'openingBalance', 0);
-            initializeObject(this.data.account, 'interestRateCredit', 0);
-            initializeObject(this.data.account, 'interestRateDebit', 0);
-            initializeObject(this.data.account, 'depreciationRate', 0);
+            Base.initializeObject(this.data.account, 'monthly', []);
+            Base.initializeObject(this.data.account, 'yearly', []);
+            Base.initializeObject(this.data.account, 'openingBalance', 0);
+            Base.initializeObject(this.data.account, 'interestRateCredit', 0);
+            Base.initializeObject(this.data.account, 'interestRateDebit', 0);
+            Base.initializeObject(this.data.account, 'depreciationRate', 0);
 
-            initializeObject(this.data.models, 'assets', []);
-            initializeObject(this.data.models, 'expenses', []);
-            initializeObject(this.data.models, 'financials', []);
-            initializeObject(this.data.models, 'income', []);
-            initializeObject(this.data.models, 'liabilities', []);
-            initializeObject(this.data.models, 'productionSchedules', []);
+            Base.initializeObject(this.data.models, 'assets', []);
+            Base.initializeObject(this.data.models, 'expenses', []);
+            Base.initializeObject(this.data.models, 'financials', []);
+            Base.initializeObject(this.data.models, 'income', []);
+            Base.initializeObject(this.data.models, 'liabilities', []);
+            Base.initializeObject(this.data.models, 'productionSchedules', []);
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -11719,16 +11788,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             /**
              * Helper functions
              */
-            function initializeArray(length) {
-                return underscore.range(length).map(function () {
-                    return 0;
-                });
-            }
-
-            function initializeObject(object, property, defaultObject) {
-                return object[property] = object[property] || defaultObject;
-            }
-
             function infinityToZero(value) {
                 return (isFinite(value) ? value : 0);
             }
@@ -11933,7 +11992,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
-                    initializeObject(instance.data.enterpriseProductionExpenditure, schedule.data.details.commodity, {});
+                    Base.initializeObject(instance.data.enterpriseProductionExpenditure, schedule.data.details.commodity, {});
                     extractGroupCategories(instance.data.enterpriseProductionExpenditure[schedule.data.details.commodity], schedule, 'EXP', startMonth, numberOfMonths);
 
                     extractGroupCategories(instance.data.productionIncome, schedule, 'INC', startMonth, numberOfMonths);
@@ -12198,7 +12257,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         name: itemName,
                         estimatedValue: 0,
                         currentRMV: 0,
-                        yearlyRMV: initializeArray(numberOfYears),
+                        yearlyRMV: Base.initializeArray(numberOfYears),
                         assets: []
                     });
 
@@ -12217,7 +12276,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1)[0] : {
                         name: itemName,
                         currentValue: 0,
-                        yearlyValues: initializeArray(numberOfYears),
+                        yearlyValues: Base.initializeArray(numberOfYears),
                         liabilities: []
                     });
 
@@ -12276,7 +12335,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     }, {
                         estimatedValue: 0,
                         currentRMV: 0,
-                        yearlyRMV: initializeArray(numberOfYears)
+                        yearlyRMV: Base.initializeArray(numberOfYears)
                     })
                     .value();
 
@@ -12290,7 +12349,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         return result;
                     }, {
                         currentValue: 0,
-                        yearlyValues: initializeArray(numberOfYears)
+                        yearlyValues: Base.initializeArray(numberOfYears)
                     })
                     .value();
 
@@ -12473,8 +12532,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var defaultObj = (type == 'asset' ? {
                     estimatedValue: 0,
                     currentRMV: 0,
-                    yearlyRMV: initializeArray(numberOfYears)
-                } : { currentValue: 0, yearlyValues: initializeArray(numberOfYears) } );
+                    yearlyRMV: Base.initializeArray(numberOfYears)
+                } : { currentValue: 0, yearlyValues: Base.initializeArray(numberOfYears) } );
                 var statementProperty = (type == 'asset' ? 'assetStatement' : 'liabilityStatement');
 
                 if (!instance.data[statementProperty][subType] || instance.data[statementProperty][subType].length == 0) {
@@ -12501,7 +12560,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         return liabilityTypes.indexOf(liability.type) != -1;
                     });
 
-                if (liabilities.length == 0) return initializeArray(instance.numberOfMonths);
+                if (liabilities.length == 0) return Base.initializeArray(instance.numberOfMonths);
 
                 return underscore.chain(liabilities)
                     .map(function(liability) {
@@ -12547,7 +12606,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     .pluck('yearlyRMV')
                     .reduce(function(result, rmvArray) {
                         if (result.length == 0) {
-                            result = initializeArray(rmvArray.length);
+                            result = Base.initializeArray(rmvArray.length);
                         }
                         return addArrayValues(result, rmvArray);
                     }, [])
@@ -12564,26 +12623,26 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.summary = {};
                 instance.data.summary.monthly = {
                     // Income
-                    unallocatedProductionIncome: calculateMonthlySectionsTotal([instance.data.unallocatedProductionIncome], initializeArray(numberOfMonths)),
-                    productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], initializeArray(numberOfMonths)),
-                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], initializeArray(numberOfMonths)),
-                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
-                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.unallocatedProductionIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    unallocatedProductionIncome: calculateMonthlySectionsTotal([instance.data.unallocatedProductionIncome], Base.initializeArray(numberOfMonths)),
+                    productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], Base.initializeArray(numberOfMonths)),
+                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], Base.initializeArray(numberOfMonths)),
+                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.unallocatedProductionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
 
                     // Expenses
-                    unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], initializeArray(numberOfMonths)),
-                    productionExpenditure: calculateMonthlySectionsTotal([instance.data.productionExpenditure], initializeArray(numberOfMonths)),
-                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], initializeArray(numberOfMonths)),
-                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
-                    debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
-                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.debtRedemption, instance.data.otherExpenditure], initializeArray(numberOfMonths)),
+                    unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], Base.initializeArray(numberOfMonths)),
+                    productionExpenditure: calculateMonthlySectionsTotal([instance.data.productionExpenditure], Base.initializeArray(numberOfMonths)),
+                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], Base.initializeArray(numberOfMonths)),
+                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
+                    debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], Base.initializeArray(numberOfMonths)),
+                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.debtRedemption, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
 
                     // Interest
-                    primaryAccountInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
+                    primaryAccountInterest: Base.initializeArray(numberOfMonths), //Calculated when primary account is recalculated
                     productionCreditInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'interest', startMonth, endMonth),
                     mediumTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'interest', startMonth, endMonth),
                     longTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'interest', startMonth, endMonth),
-                    totalInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
+                    totalInterest: Base.initializeArray(numberOfMonths), //Calculated when primary account is recalculated
 
                     // Liabilities
                     currentLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'closing', startMonth, endMonth),
@@ -12610,11 +12669,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
 
                     // Interest
-                    primaryAccountInterest: initializeArray(2),
+                    primaryAccountInterest: Base.initializeArray(2),
                     productionCreditInterest: [calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 2)],
                     mediumTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 2)],
                     longTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 2)],
-                    totalInterest: initializeArray(2),
+                    totalInterest: Base.initializeArray(2),
 
                     // Liabilities
                     currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
@@ -12627,7 +12686,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     currentAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'short-term'),
                     movableAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'medium-term'),
                     fixedAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'long-term'),
-                    totalAssets: instance.data.assetStatement.total.yearlyRMV || initializeArray(2),
+                    totalAssets: instance.data.assetStatement.total.yearlyRMV || Base.initializeArray(2),
 
                     depreciation: getDepreciation(instance)
                 };
@@ -12660,7 +12719,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     instance.account.yearly.push(underscore.extend(defaultMonthObj, { worstBalance: 0, bestBalance: 0, openingMonth: null, closingMonth: null }));
                 }
 
-                instance.data.summary.monthly.primaryAccountInterest = initializeArray(instance.numberOfMonths);
+                instance.data.summary.monthly.primaryAccountInterest = Base.initializeArray(instance.numberOfMonths);
                 instance.data.summary.monthly.totalInterest = calculateMonthlyLiabilityPropertyTotal(instance, [], 'interest', startMonth, endMonth);
 
                 underscore.each(instance.account.monthly, function (month, index) {
@@ -12870,84 +12929,405 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
         return BusinessPlan;
     }]);
 
-var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
-            function Document (attrs, organization) {
-                Model.Base.apply(this, arguments);
+sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritModel', 'landUseHelper', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, landUseHelper, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
+        function ComparableSale (attrs) {
+            Model.Base.apply(this, arguments);
 
-                this.data = (attrs && attrs.data) || {};
-
-                privateProperty(this, 'updateRegister', function (organization) {
-                    this.data = underscore.extend(this.data, {
-                        farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farms : organization.farms,
-                        legalEntities: underscore
-                            .map(organization.legalEntities, function (entity) {
-                                return underscore.omit(entity, ['assets', 'farms']);
-                            }),
-                        assets: underscore
-                            .chain(organization.legalEntities)
-                            .pluck('assets')
-                            .flatten()
-                            .compact()
-                            .groupBy('type')
-                            .value(),
-                        liabilities: underscore
-                            .chain(organization.legalEntities)
-                            .pluck('liabilities')
-                            .flatten()
-                            .compact()
-                            .value()
-                    });
-                });
-
-                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-                this.author = attrs.author;
-                this.docType = attrs.docType;
-                this.documentId = attrs.documentId;
-                this.id = attrs.id || attrs.$id;
-                this.organization = attrs.organization;
-                this.organizationId = attrs.organizationId;
-                this.title = attrs.title;
-            }
-
-            inheritModel(Document, Model.Base);
-
-            readOnlyProperty(Document, 'docTypes', {
-                'asset register': 'Asset Register',
-                'emergence report': 'Emergence Report',
-                'farm valuation': 'Farm Valuation',
-                'financial resource plan': 'Financial Resource Plan',
-                'insurance policy': 'Insurance Policy',
-                'production plan': 'Production Plan',
-                'progress report': 'Progress Report'
+            computedProperty(this, 'area', function () {
+                return underscore.reduce(this.portions, function(total, portion) {
+                    return total + (portion.area || 0);
+                }, 0);
             });
 
-            Document.validates({
-                author: {
-                    required: true,
-                    length: {
-                        min: 1,
-                        max: 255
-                    }
-                },
-                docType: {
-                    required: true,
-                    inclusion: {
-                        in: underscore.keys(Document.docTypes)
-                    }
-                },
-                organizationId: {
-                    required: true,
-                    numeric: true
+            computedProperty(this, 'distanceInKm', function () {
+                return (this.distance ? this.distance / 1000.0 : '-');
+            });
+
+            computedProperty(this, 'improvedRatePerHa', function () {
+                return this.purchasePrice / this.area;
+            });
+
+            computedProperty(this, 'vacantLandValue', function () {
+                return this.valueMinusImprovements / this.area;
+            });
+
+            computedProperty(this, 'valueMinusImprovements', function () {
+                return this.purchasePrice - this.depImpValue;
+            });
+
+            computedProperty(this, 'farmName', function () {
+                return underscore.chain(this.portions)
+                    .groupBy('farmLabel')
+                    .map(function (portions, farmName) {
+                        farmName = (farmName || '').toLowerCase();
+
+                        var portionSentence = underscore.chain(portions)
+                                .sortBy('portionLabel')
+                                .pluck('portionLabel')
+                                .toSentence()
+                                .value();
+
+                        return (portionSentence + (farmName.length ? ' of ' + (underscore.startsWith(farmName, 'farm') ? '' : 'farm ') + underscore.titleize(farmName) : ''));
+                    })
+                    .toSentence()
+                    .value();
+            });
+
+
+            computedProperty(this, 'totalLandComponentArea', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return total + (landComponent.area || 0);
+                }, 0);
+            });
+
+            computedProperty(this, 'totalLandComponentValue', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return total + (landComponent.assetValue || 0);
+                }, 0);
+            });
+
+            /**
+             * Attachment Handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.attachments = underscore.reject(this.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            privateProperty(this, 'removeNewAttachments', function () {
+                var attachments = this.attachments;
+
+                this.attachments = underscore.reject(attachments, function (attachment) {
+                    return underscore.isObject(attachment.archive);
+                });
+
+                return underscore.difference(attachments, this.attachments);
+            });
+
+            /**
+             * Land Component Handling
+             */
+            privateProperty(this, 'addLandComponent', function (type) {
+                if (underscore.chain(this.landComponents).pluck('type').contains(type).value() == false) {
+                    this.landComponents.push({
+                        type: type,
+                        assetValue: 0
+                    });
                 }
             });
 
-            return Document;
-        }]);
+            privateProperty(this, 'removeLandComponent', function (type) {
+                this.landComponents = underscore.reject(this.landComponents, function (landComponent) {
+                    return landComponent.type === type;
+                });
+            });
+
+            /**
+             * Portion Handling
+             */
+            privateProperty(this, 'addPortion', function (portion) {
+                this.removePortionBySgKey(portion.sgKey);
+
+                this.portions.push(portion);
+            });
+
+            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
+                this.portions = underscore.reject(this.portions, function (portion) {
+                    return (portion.sgKey === sgKey);
+                });
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.area = attrs.area;
+            this.attachments = attrs.attachments || [];
+            this.authorData = attrs.authorData;
+            this.centroid = attrs.centroid;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.depImpValue = attrs.depImpValue;
+            this.distance = attrs.distance || 0;
+            this.geometry = attrs.geometry;
+            this.landComponents = attrs.landComponents || [];
+            this.portions = attrs.portions || [];
+            this.propertyKnowledge = attrs.propertyKnowledge;
+            this.purchasedAt = attrs.purchasedAt;
+            this.purchasePrice = attrs.purchasePrice || 0;
+            this.useCount = attrs.useCount || 0;
+        }
+
+        inheritModel(ComparableSale, Model.Base);
+
+        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(landUseHelper.landUseTypes())
+            .without('Cropland')
+            .union(['Cropland (Dry)', 'Cropland (Equipped, Irrigable)', 'Cropland (Irrigable)'])
+            .value()
+            .sort(naturalSort));
+
+        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
+            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
+            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
+
+        ComparableSale.validates({
+            area: {
+                required: true,
+                numeric: true
+            },
+            landComponents: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            portions: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            purchasePrice: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return ComparableSale;
+    }]);
+
+var sdkModelDesktopValuationDocument = angular.module('ag.sdk.model.desktop-valuation', ['ag.sdk.model.comparable-sale', 'ag.sdk.model.document']);
+
+sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'ComparableSale', 'computedProperty', 'Document', 'inheritModel', 'privateProperty', 'underscore',
+    function (Base, ComparableSale, computedProperty, Document, inheritModel, privateProperty, underscore) {
+        function DesktopValuation (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'desktop valuation';
+
+            var defaultReportBody = '<div class="tinymce-container pdf-container">' +
+                '<h2 id="property-description">Property Description</h2><br/><br/>' +
+                '<h2 id="farmland-value">Estimated Farmland Value</h2><br/><br/>' +
+                '<h2 id="regional-value">Regional Value Development</h2><br/><br/>' +
+                '<h2 id="comparable-sales">Comparable Sales</h2><div id="comparable-sales-table"></div><br/>' +
+                '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
+                '</div>';
+
+            Base.initializeObject(this.data, 'attachments', []);
+            Base.initializeObject(this.data, 'request', {});
+            Base.initializeObject(this.data, 'report', {});
+
+            Base.initializeObject(this.data.request, 'farmland', []);
+
+            Base.initializeObject(this.data.report, 'body', defaultReportBody);
+            Base.initializeObject(this.data.report, 'comparableSales', []);
+            Base.initializeObject(this.data.report, 'improvements', []);
+            Base.initializeObject(this.data.report, 'improvementsValue', {});
+            Base.initializeObject(this.data.report, 'landUseComponents', {});
+            Base.initializeObject(this.data.report, 'landUseValue', {});
+            Base.initializeObject(this.data.report, 'summary', {});
+
+            /**
+             * Legal Entity handling
+             */
+            privateProperty(this, 'setLegalEntity', function (entity) {
+                this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
+            });
+
+            /**
+             * Farmland handling
+             */
+            privateProperty(this, 'getFarmland', function () {
+                return this.data.request.farmland;
+            });
+
+            privateProperty(this, 'hasFarmland', function (farmland) {
+                return underscore.some(this.data.request.farmland, function (asset) {
+                    return asset.assetKey === farmland.assetKey;
+                });
+            });
+
+            privateProperty(this, 'addFarmland', function (farmland) {
+                this.removeFarmland(farmland);
+
+                this.data.request.farmland.push(farmland);
+            });
+
+            privateProperty(this, 'removeFarmland', function (farmland) {
+                this.data.request.farmland = underscore.reject(this.data.request.farmland, function (asset) {
+                    return asset.assetKey === farmland.assetKey;
+                });
+            });
+
+            privateProperty(this, 'getFarmlandSummary', function () {
+                return underscore.chain(this.data.request.farmland)
+                    .groupBy(function (farmland) {
+                        return (farmland.data.farmLabel ? farmland.data.farmLabel :
+                            (farmland.data.officialFarmName ? underscore.titleize(farmland.data.officialFarmName) : 'Unknown'));
+                    })
+                    .mapObject(function (farmGroup) {
+                        return {
+                            portionList: (underscore.size(farmGroup) > 1 ? underscore.chain(farmGroup)
+                                .map(function (farmland) {
+                                    return (farmland.data.portionNumber ? farmland.data.portionNumber : farmland.data.portionLabel);
+                                })
+                                .sort()
+                                .toSentence()
+                                .value() : underscore.first(farmGroup).data.portionLabel),
+                            town: underscore.chain(farmGroup)
+                                .map(function (farmland) {
+                                    return (farmland.data.town ? underscore.titleize(farmland.data.town) : '');
+                                })
+                                .first()
+                                .value(),
+                            province: underscore.chain(farmGroup)
+                                .map(function (farmland) {
+                                    return (farmland.data.province ? underscore.titleize(farmland.data.province) : '');
+                                })
+                                .first()
+                                .value(),
+                            area: underscore.reduce(farmGroup, function (total, farmland) {
+                                return total + (farmland.data.area || 0);
+                            }, 0)
+                        }
+                    })
+                    .value();
+            });
+
+            /**
+             * Comparable Handling
+             */
+            privateProperty(this, 'addComparableSale', function (comparableSale) {
+                comparableSale = ComparableSale.new(comparableSale);
+
+                this.removeComparableSale(comparableSale);
+
+                this.data.report.comparableSales.push(comparableSale.asJSON());
+            });
+
+            privateProperty(this, 'removeComparableSale', function (comparableSale) {
+                this.data.report.comparableSales = underscore.reject(this.data.report.comparableSales, function (comparable) {
+                    return comparable.id === comparableSale.id;
+                });
+            });
+        }
+
+        inheritModel(DesktopValuation, Document);
+
+        DesktopValuation.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'desktop valuation'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return DesktopValuation;
+    }]);
+
+var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Document (attrs, organization) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+
+            privateProperty(this, 'updateRegister', function (organization) {
+                this.organization = organization;
+                this.organizationId = organization.id;
+                this.data = underscore.extend(this.data, {
+                    farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
+                    farms : organization.farms,
+                    legalEntities: underscore
+                        .map(organization.legalEntities, function (entity) {
+                            return underscore.omit(entity, ['assets', 'farms']);
+                        }),
+                    assets: underscore
+                        .chain(organization.legalEntities)
+                        .pluck('assets')
+                        .flatten()
+                        .compact()
+                        .groupBy('type')
+                        .value(),
+                    liabilities: underscore
+                        .chain(organization.legalEntities)
+                        .pluck('liabilities')
+                        .flatten()
+                        .compact()
+                        .value()
+                });
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.author = attrs.author;
+            this.docType = attrs.docType;
+            this.documentId = attrs.documentId;
+            this.id = attrs.id || attrs.$id;
+            this.organization = attrs.organization;
+            this.organizationId = attrs.organizationId;
+            this.title = attrs.title;
+        }
+
+        inheritModel(Document, Model.Base);
+
+        readOnlyProperty(Document, 'docTypes', {
+            'asset register': 'Asset Register',
+            'desktop valuation': 'Desktop Valuation',
+            'emergence report': 'Emergence Report',
+            'farm valuation': 'Farm Valuation',
+            'financial resource plan': 'Financial Resource Plan',
+            'insurance policy': 'Insurance Policy',
+            'production plan': 'Production Plan',
+            'progress report': 'Progress Report'
+        });
+
+        Document.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Document.docTypes)
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return Document;
+    }]);
 
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
@@ -16390,11 +16770,10 @@ sdkModelValidators.factory('Validator.length', ['Validatable.Validator', 'Valida
         }
 
         length.message = 'does not meet the length requirement';
+        length.options = {};
 
-        length.options = {
-            min: min,
-            max: max
-        };
+        if (min) length.options.min = min;
+        if (max) length.options.max = max;
 
         return new Validator(length);
     }]);
@@ -16410,7 +16789,7 @@ sdkModelValidators.factory('Validator.length.min', ['underscore', 'Validatable.V
         }
 
         min.message = function () {
-            return 'Must be at least ' + this.min + ' characters';
+            return 'Length must be at least ' + this.min;
         };
 
         return new Validator(min);
@@ -16427,7 +16806,7 @@ sdkModelValidators.factory('Validator.length.max', ['underscore', 'Validatable.V
         }
 
         max.message = function () {
-            return 'Must be no more than ' + this.max + ' characters';
+            return 'Length must be at most ' + this.max;
         };
 
         return new Validator(max);
@@ -16656,6 +17035,8 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.asset',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
+    'ag.sdk.model.comparable-sale',
+    'ag.sdk.model.desktop-valuation',
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm',

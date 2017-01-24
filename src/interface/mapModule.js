@@ -1309,10 +1309,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
 
         _this._map.on('draw:drawstart', _this.onDrawStart, _this);
-        _this._map.on('draw:editstart', _this.onDrawStart, _this);
+        _this._map.on('draw:editstart', _this.onEditStart, _this);
         _this._map.on('draw:deletestart', _this.onDrawStart, _this);
         _this._map.on('draw:drawstop', _this.onDrawStop, _this);
-        _this._map.on('draw:editstop', _this.onDrawStop, _this);
+        _this._map.on('draw:editstop', _this.onEditStop, _this);
         _this._map.on('draw:deletestop', _this.onDrawStop, _this);
     };
 
@@ -1990,35 +1990,26 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (typeof labelData === 'object' && feature.geometry.type !== 'Point') {
             labelData.options = labelData.options || {};
 
-            if ((labelData.options.centered || labelData.options.noHide) && typeof _this._map.showLabel === 'function') {
-                var label = new L.Tooltip(underscore.extend(labelData.options), {
-                    offset: [6, -15],
-                    permanent: labelData.options.permanent === true,
-                    sticky: labelData.options.sticky === true
+            var label = new L.Tooltip(labelData.options);
+            label.setContent(labelData.message);
+            label.setLatLng(geojson.getCenter());
+
+            if (labelData.options.permanent == true) {
+                label.addTo(_this._map);
+
+                layer.on('add', function () {
+                    label.addTo(_this._map);
                 });
-
-                label.setContent(labelData.message);
-                label.setLatLng(geojson.getCenter());
-
-                if (labelData.options.noHide == true) {
-                    _this._map.showTooltip(label);
-
-                    layer.on('add', function () {
-                        _this._map.showTooltip(label);
-                    });
-                    layer.on('remove', function () {
-                        _this._map.removeLayer(label);
-                    });
-                } else {
-                    layer.on('mouseover', function () {
-                        _this._map.showTooltip(label);
-                    });
-                    layer.on('mouseout', function () {
-                        _this._map.removeLayer(label);
-                    });
-                }
-            } else if (typeof layer.bindTooltip === 'function') {
-                layer.bindTooltip(labelData.message, labelData.options);
+                layer.on('remove', function () {
+                    _this._map.removeLayer(label);
+                });
+            } else {
+                layer.on('mouseover', function () {
+                    label.addTo(_this._map);
+                });
+                layer.on('mouseout', function () {
+                    _this._map.removeLayer(label);
+                });
             }
         }
     };
@@ -2111,7 +2102,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
 
                 if (geojsonOptions.label) {
-                    marker.bindTooltip(geojsonOptions.label.message, geojsonOptions.label.options);
+                    marker.bindPopup(geojsonOptions.label.message, geojsonOptions.label.options);
                 }
 
                 return marker;
@@ -2188,8 +2179,25 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         });
     };
 
+    Mapbox.prototype.resetEditable = function () {
+        var _this = this;
+
+        if (_this._editableFeature) {
+            _this._editableFeature.eachLayer(function(layer) {
+                _this._editableFeature.removeLayer(layer);
+
+                if (_this._layers[_this._editableLayer]) {
+                    _this._layers[_this._editableLayer].addLayer(layer);
+                }
+            });
+
+            _this._editableFeature = L.featureGroup();
+            _this._editableFeature.addTo(_this._map);
+        }
+    };
+
     Mapbox.prototype.setDrawControls = function (controls, controlOptions) {
-        this._draw.controlOptions = controlOptions || {};
+        this._draw.controlOptions = controlOptions || this._draw.controlOptions || {};
         this._draw.controls = {};
 
         if(controls instanceof Array && typeof L.Control.Draw == 'function') {
@@ -2229,7 +2237,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
             });
 
-            this._draw.controls.edit = new L.Control.Draw({
+            this._draw.controls.editor = new L.Control.Draw({
                 draw: false,
                 edit: {
                     featureGroup: this._editableFeature,
@@ -2254,7 +2262,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             this._map.removeControl(this._draw.controls.marker);
         } catch(exception) {}
         try {
-            this._map.removeControl(this._draw.controls.edit);
+            this._map.removeControl(this._draw.controls.editor);
         } catch(exception) {}
 
         try {
@@ -2268,8 +2276,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             this._map.on('draw:edited', this.onEdited, this);
             this._map.on('draw:deleted', this.onDeleted, this);
 
-            if(this._draw.controls.edit) {
-                this._map.addControl(this._draw.controls.edit);
+            if(this._draw.controls.editor) {
+                this._draw.controls.editor = new L.Control.Draw({
+                    draw: false,
+                    edit: {
+                        featureGroup: this._editableFeature,
+                        remove: (this._draw.controlOptions.nodelete != true)
+                    }
+                });
+
+                this._map.addControl(this._draw.controls.editor);
             }
         }
 
@@ -2481,6 +2497,33 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             }
         };
 
+        var _getCoordinates = function (latlngs, geojson) {
+            var polygonCoordinates = [];
+
+            angular.forEach(latlngs, function(latlng) {
+                polygonCoordinates.push([latlng.lng, latlng.lat]);
+            });
+
+            // Add a closing coordinate if there is not a matching starting one
+            if (polygonCoordinates.length > 0 && polygonCoordinates[0] != polygonCoordinates[polygonCoordinates.length - 1]) {
+                polygonCoordinates.push(polygonCoordinates[0]);
+            }
+
+            // Add area
+            if (geojson.properties.area !== undefined) {
+                var geodesicArea = L.GeometryUtil.geodesicArea(latlngs);
+                var yards = (geodesicArea * 1.19599);
+
+                geojson.properties.area.m_sq += geodesicArea;
+                geojson.properties.area.ha += (geodesicArea * 0.0001);
+                geojson.properties.area.mi_sq += (yards / 3097600);
+                geojson.properties.area.acres += (yards / 4840);
+                geojson.properties.area.yd_sq += yards;
+            }
+
+            return polygonCoordinates;
+        };
+
         switch (e.layerType) {
             case 'polyline':
                 geojson.geometry = {
@@ -2500,32 +2543,17 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     coordinates: []
                 };
 
+                geojson.properties.area = {
+                    m_sq: 0,
+                    ha: 0,
+                    mi_sq: 0,
+                    acres: 0,
+                    yd_sq: 0
+                };
+
                 angular.forEach(e.layer._latlngs, function (latlngs) {
-                    var polygon = [];
-
-                    angular.forEach(latlngs, function (latlng) {
-                        polygon.push([latlng.lng, latlng.lat]);
-                    });
-
-                    if (polygon.length > 0 && polygon[0][0] != polygon[polygon.length - 1][0] && polygon[0][1] != polygon[polygon.length - 1][1]) {
-                        polygon.push(polygon[0]);
-                    }
-
-                    geojson.geometry.coordinates.push(polygon);
+                    geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
                 });
-
-                if (this._draw.controls.polygon.options.draw.polygon.showArea) {
-                    var geodesicArea = L.GeometryUtil.geodesicArea(e.layer._latlngs);
-                    var yards = (geodesicArea * 1.19599);
-
-                    geojson.properties.area = {
-                        m_sq: geodesicArea,
-                        ha: (geodesicArea * 0.0001),
-                        mi_sq: (yards / 3097600),
-                        acres: (yards / 4840),
-                        yd_sq: yards
-                    };
-                }
 
                 this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
@@ -2539,11 +2567,28 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 break;
         }
 
+        this._editing = false;
+
         if (this._draw.addLayer) {
             this._mapboxServiceInstance.addGeoJSON(this._editableLayer, geojson, this._optionSchema, geojson.properties);
             this.makeEditable(this._editableLayer);
             this.updateDrawControls();
         }
+    };
+
+    Mapbox.prototype.onEditStart = function (e) {
+        this._editing = true;
+
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
+    };
+
+    Mapbox.prototype.onEditStop = function (e) {
+        this._editing = false;
+        this.resetEditable();
+        this.makeEditable(this._editableLayer);
+        this.updateDrawControls();
+
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
 
     Mapbox.prototype.onEdited = function (e) {
@@ -2570,10 +2615,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 };
             }
 
-            var _getCoordinates = function (layer, geojson) {
+            var _getCoordinates = function (latlngs, geojson) {
                 var polygonCoordinates = [];
 
-                angular.forEach(layer._latlngs, function(latlng) {
+                angular.forEach(latlngs, function(latlng) {
                     polygonCoordinates.push([latlng.lng, latlng.lat]);
                 });
 
@@ -2584,7 +2629,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
                 // Add area
                 if (geojson.properties.area !== undefined) {
-                    var geodesicArea = L.GeometryUtil.geodesicArea(layer._latlngs);
+                    var geodesicArea = L.GeometryUtil.geodesicArea(latlngs);
                     var yards = (geodesicArea * 1.19599);
 
                     geojson.properties.area.m_sq += geodesicArea;
@@ -2604,15 +2649,27 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'Polygon':
-                    geojson.geometry.coordinates = [_getCoordinates(layer, geojson)];
+                    geojson.geometry.coordinates = [];
+
+                    angular.forEach(layer._latlngs, function (latlngs) {
+                        geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
+                    });
+
+                    if (geojson.geometry.coordinates.length > 1) {
+                        geojson.geometry.type = 'MultiPolygon';
+                        geojson.geometry.coordinates = [geojson.geometry.coordinates];
+                    }
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'MultiPolygon':
-                    geojson.geometry.coordinates = [[]];
+                    geojson.geometry.coordinates = [];
 
-                    layer.eachLayer(function (childLayer) {
-                        geojson.geometry.coordinates[0].push(_getCoordinates(childLayer, geojson));
+                    angular.forEach(layer._latlngs, function (latlngs, index) {
+                        geojson.geometry.coordinates.push([]);
+                        angular.forEach(latlngs, function (latlngs) {
+                            geojson.geometry.coordinates[index].push(_getCoordinates(latlngs, geojson));
+                        });
                     });
 
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);

@@ -801,16 +801,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
             return valuation;
         },
-        generateFarmlandAssetLabels: function(asset) {
-            if (asset.data && asset.type == 'farmland') {
-                asset.data.portionLabel = (asset.data.portionNumber ?
-                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Ptn. ' + asset.data.portionNumber) :
+        generateFarmlandAssetLabels: function(asset, force) {
+            var portion = (asset.data ? asset.data : asset);
+            
+            if (portion && (portion.type == 'farmland' || force)) {
+                portion.portionLabel = (portion.portionNumber ?
+                    (portion.remainder ? 'Rem. portion ' + portion.portionNumber : 'Ptn. ' + portion.portionNumber) :
                     'Rem. extent');
-                asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
-                    _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
-                asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
-                    " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
-                    "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
+                portion.farmLabel = (portion.officialFarmName && !_(portion.officialFarmName.toLowerCase()).startsWith('farm') ?
+                    _(portion.officialFarmName).titleize() + ' ' : '') + (portion.farmNumber ? portion.farmNumber : '');
+                portion.label = portion.portionLabel + (portion.farmLabel && _.words(portion.farmLabel).length > 0 ?
+                    " of " + (_.words(portion.farmLabel.toLowerCase())[0] == 'farm' ? _(portion.farmLabel).titleize() :
+                    "farm " + _(portion.farmLabel).titleize() ) : 'farm Unknown');
             }
         },
         generateAssetName: function(asset, categoryLabel, currentAssetList) {
