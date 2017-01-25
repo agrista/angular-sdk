@@ -465,6 +465,13 @@ sdkApiApp.factory('dataApi', ['$http', 'promiseService', 'configuration', functi
     var _host = configuration.getServer();
 
     return {
+        aggregateAll: function () {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/data/aggregate-all', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         exportFile: function (data) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/data/export-file', data, {withCredentials: true}).then(function (res) {
