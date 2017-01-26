@@ -1366,14 +1366,8 @@ sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'pro
     var _host = configuration.getServer();
 
     return {
-        getProductionRegions: function (withGeometries, paging) {
-            if (withGeometries && typeof withGeometries != 'boolean') {
-                $log.debug(withGeometries);
-                paging = withGeometries;
-                withGeometries = undefined;
-            }
-
-            return pagingService.page(_host + 'api/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
+        getProductionRegions: function (params) {
+            return pagingService.page(_host + 'api/subregions', params);
         },
         getProductionRegion: function(subregionId) {
             return promiseService.wrap(function(promise) {
@@ -1528,14 +1522,8 @@ sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseSer
     var _host = configuration.getServer();
 
     return {
-        getSubRegions: function (withGeometries, paging) {
-            if (withGeometries && typeof withGeometries != 'boolean') {
-                $log.debug(withGeometries);
-                paging = withGeometries;
-                withGeometries = undefined;
-            }
-
-            return pagingService.page(_host + 'api/guidelines/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
+        getSubRegions: function (params) {
+            return pagingService.page(_host + 'api/guidelines/subregions', params);
         },
         getSubRegion: function(subregionId, versionId) {
             return promiseService.wrap(function(promise) {
