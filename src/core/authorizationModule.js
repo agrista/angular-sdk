@@ -181,6 +181,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 $rootScope.$on('authorization::unauthorized', function () {
                     localStore.removeItem('user');
                     localStore.removeItem('tokens');
+                    $auth.removeToken();
                     _tokens = undefined;
                 });
 
