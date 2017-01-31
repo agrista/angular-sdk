@@ -403,6 +403,17 @@ sdkApiApp.factory('benefitApi', ['$http', 'pagingService', 'promiseService', 'co
 sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
+    function uriEncodeQuery (query) {
+        return underscore.chain(query)
+            .defaults({
+                resulttype: 'simple'
+            })
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+
     return {
         createComparable: function (comparable) {
             return promiseService.wrap(function (promise) {
@@ -411,15 +422,17 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
+        aggregateComparables: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         searchComparables: function (query) {
-            query = underscore.chain(query)
-                .defaults({
-                    resulttype: 'simple'
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
+            query = uriEncodeQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
