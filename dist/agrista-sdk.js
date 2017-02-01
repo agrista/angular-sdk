@@ -13126,7 +13126,7 @@ sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'Comparabl
 
             var defaultReportBody = '<div class="tinymce-container pdf-container">' +
                 '<h2 id="property-description">Property Description</h2><br/><table id="property-description-table" width="100%"></table><br/>' +
-                '<h2 id="farmland-value">Estimated Farmland Value</h2><br/><div id="farmland-value-data"></div><br/>' +
+                '<h2 id="farmland-value">Estimated Farmland Value</h2><br/><div id="farmland-value-table"></div><br/>' +
                 '<h2 id="regional-value">Regional Value Development</h2><br/><div id="regional-value-graph"></div><br/>' +
                 '<h2 id="comparable-sales">Comparable Sales</h2><table id="comparable-sales-table" width="100%"></table><br/>' +
                 '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
