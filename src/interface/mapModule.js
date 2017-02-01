@@ -799,6 +799,12 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     _this._config.controls[controlName] = control;
                 });
             },
+            showControls: function () {
+                this.enqueueRequest('mapbox-' + this._id + '::show-controls');
+            },
+            hideControls: function () {
+                this.enqueueRequest('mapbox-' + this._id + '::hide-controls');
+            },
             removeControl: function (control) {
                 var _this = this;
                 _this.enqueueRequest('mapbox-' + _this._id + '::remove-control', control, function () {
@@ -1379,6 +1385,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             _this.removeControl(args);
         });
 
+        scope.$on('mapbox-' + id + '::show-controls', function (event, args) {
+            _this.showControls(args);
+        });
+
+        scope.$on('mapbox-' + id + '::hide-controls', function (event, args) {
+            _this.hideControls(args);
+        });
+
         // Event Handlers
         scope.$on('mapbox-' + id + '::add-event-handler', function (event, args) {
             _this.addEventHandler(args.event, args.handler);
@@ -1781,6 +1795,34 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
                 _this._controls[control.name] = L.control[control.name](control.options);
                 _this._map.addControl(_this._controls[control.name]);
+            }
+        });
+    };
+
+    Mapbox.prototype.showControls = function () {
+        var _this = this;
+
+        if (_this._layerControls.control) {
+            _this._map.addControl(_this._layerControls.control);
+        }
+
+        angular.forEach(_this._controls, function (control, key) {
+            control.addTo(_this._map);
+            delete _this._controls[key];
+        });
+    };
+
+    Mapbox.prototype.hideControls = function () {
+        var _this = this;
+
+        if (_this._layerControls.control) {
+            _this._layerControls.control.remove();
+        }
+
+        angular.forEach(_this._map.options, function (option, key) {
+            if (option === true && _this._map[key] && typeof _this._map[key].disable == 'function') {
+                _this._controls[key] = _this._map[key];
+                _this._map[key].remove();
             }
         });
     };
