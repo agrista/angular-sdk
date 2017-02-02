@@ -1186,27 +1186,27 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                                 return total + (value || 0);
                             }, 0);
 
-                        category.value = (((category.pricePerUnit || 0) * (category.quantity || 0)) / 100) * scheduleTotalAllocation;
+                        category.value = roundValue(((category.pricePerUnit || 0) * (category.quantity || 0)) * (scheduleTotalAllocation / 100));
 
                         category.valuePerMonth = underscore.map(schedule, function (allocation) {
-                            return (category.value / 100) * allocation;
+                            return roundValue(category.value * (allocation / 100));
                         });
 
                         category.quantityPerMonth = underscore.map(schedule, function (allocation) {
-                            return (category.quantity / 100) * allocation;
+                            return roundValue(category.quantity * (allocation / 100));
                         });
 
                         group.total.value += category.value;
                         group.total.valuePerMonth = (group.total.valuePerMonth ?
                             underscore.map(group.total.valuePerMonth, function (value, index) {
-                                return value + category.valuePerMonth[index];
+                                return roundValue(value + category.valuePerMonth[index]);
                             }) : angular.copy(category.valuePerMonth));
                     });
 
                     section.total.value += group.total.value;
                     section.total.valuePerMonth = (section.total.valuePerMonth ?
                         underscore.map(section.total.valuePerMonth, function (value, index) {
-                            return value + group.total.valuePerMonth[index];
+                            return roundValue(value + group.total.valuePerMonth[index]);
                         }) : angular.copy(group.total.valuePerMonth));
 
                     if(instance.assetType == 'livestock') {
