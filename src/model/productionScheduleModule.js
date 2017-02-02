@@ -108,7 +108,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                 } else if (property === 'schedule') {
                     var valuePerMonth = underscore.reduce(productionCategory.schedule, function (valuePerMonth, allocation, index) {
                         //valuePerMonth[index] = roundValue((productionCategory.value / 100) * allocation, 2);
-                        valuePerMonth[index] = (productionCategory.value / 100) * allocation;
+                        valuePerMonth[index] = productionCategory.value * (allocation / 100);
 
                         return valuePerMonth;
                     }, initializeArray(instance.numberOfMonths));
@@ -568,12 +568,12 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         productionCategory.quantity = productionCategory.value / productionCategory.pricePerUnit;
                     }
 
-                    budgetCategory.value = (((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0)) / 100) * underscore.reduce(budgetCategory.schedule, function (total, value) {
+                    budgetCategory.value = ((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0)) * (underscore.reduce(budgetCategory.schedule, function (total, value) {
                         return total + (value || 0);
-                    }, 0);
+                    }, 0) / 100);
 
                     budgetCategory.valuePerMonth = underscore.map(budgetCategory.schedule, function (allocation) {
-                        return (budgetCategory.value / 100) * allocation;
+                        return budgetCategory.value * (allocation / 100);
                     });
 
                     productionCategory.valuePerMonth = underscore.map(instance.budget.shiftMonthlyArray(budgetCategory.valuePerMonth), function (value) {
