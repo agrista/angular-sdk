@@ -8920,6 +8920,14 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
+            element.on('mouseover', function () {
+                map.dragging.disable();
+            });
+
+            element.on('mouseout', function () {
+                map.dragging.enable();
+            });
+
             parent.find('.leaflet-control-container ' + _positions[scope.position]).prepend(element);
 
             scope.hidden = false;
