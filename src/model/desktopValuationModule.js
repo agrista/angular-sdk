@@ -109,7 +109,7 @@ sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'Comparabl
 
             privateProperty(this, 'removeComparableSale', function (comparableSale) {
                 this.data.report.comparableSales = underscore.reject(this.data.report.comparableSales, function (comparable) {
-                    return comparable.id === comparableSale.id;
+                    return comparable.uuid === comparableSale.uuid;
                 });
             });
         }

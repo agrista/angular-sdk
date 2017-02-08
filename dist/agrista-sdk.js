@@ -440,30 +440,37 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
-        getComparable: function (id) {
+        getComparable: function (uuid) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/comparable/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/comparable/' + uuid, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateComparable: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ data.id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ data.uuid, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        useComparable: function (id) {
+        uploadComparableAttachments: function (uuid, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id + '/use', {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/' + uuid + '/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
+        },
+        useComparable: function (uuid) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ uuid + '/use', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        deleteComparable: function (id) {
+        deleteComparable: function (uuid) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ uuid + '/delete', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -13109,6 +13116,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid;
             this.area = attrs.area;
             this.attachments = attrs.attachments || [];
             this.authorData = attrs.authorData;
@@ -13121,6 +13129,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
             this.geometry = attrs.geometry;
             this.landComponents = attrs.landComponents || [];
             this.portions = attrs.portions || [];
+            this.regions = attrs.regions || [];
             this.propertyKnowledge = attrs.propertyKnowledge;
             this.purchasedAt = attrs.purchasedAt;
             this.purchasePrice = attrs.purchasePrice || 0;
@@ -13276,7 +13285,7 @@ sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'Comparabl
 
             privateProperty(this, 'removeComparableSale', function (comparableSale) {
                 this.data.report.comparableSales = underscore.reject(this.data.report.comparableSales, function (comparable) {
-                    return comparable.id === comparableSale.id;
+                    return comparable.uuid === comparableSale.uuid;
                 });
             });
         }

@@ -119,6 +119,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid;
             this.area = attrs.area;
             this.attachments = attrs.attachments || [];
             this.authorData = attrs.authorData;
@@ -131,6 +132,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
             this.geometry = attrs.geometry;
             this.landComponents = attrs.landComponents || [];
             this.portions = attrs.portions || [];
+            this.regions = attrs.regions || [];
             this.propertyKnowledge = attrs.propertyKnowledge;
             this.purchasedAt = attrs.purchasedAt;
             this.purchasePrice = attrs.purchasePrice || 0;

@@ -440,30 +440,37 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
-        getComparable: function (id) {
+        getComparable: function (uuid) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/comparable/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/comparable/' + uuid, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateComparable: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ data.id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ data.uuid, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        useComparable: function (id) {
+        uploadComparableAttachments: function (uuid, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id + '/use', {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/' + uuid + '/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
+        },
+        useComparable: function (uuid) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ uuid + '/use', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        deleteComparable: function (id) {
+        deleteComparable: function (uuid) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ uuid + '/delete', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
