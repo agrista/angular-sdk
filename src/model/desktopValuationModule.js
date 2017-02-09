@@ -37,6 +37,21 @@ sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'Comparabl
             });
 
             /**
+             * Attachment handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.data.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.data.attachments = underscore.reject(this.data.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            /**
              * Farmland handling
              */
             privateProperty(this, 'getFarmland', function () {
@@ -100,16 +115,28 @@ sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'Comparabl
              * Comparable Handling
              */
             privateProperty(this, 'addComparableSale', function (comparableSale) {
+                var _this = this;
+
                 comparableSale = ComparableSale.new(comparableSale);
 
-                this.removeComparableSale(comparableSale);
+                _this.removeComparableSale(comparableSale);
 
-                this.data.report.comparableSales.push(comparableSale.asJSON());
+                _this.data.report.comparableSales.push(comparableSale.asJSON());
+
+                underscore.each(comparableSale.attachments, function (attachment) {
+                    _this.addAttachment(attachment);
+                });
             });
 
             privateProperty(this, 'removeComparableSale', function (comparableSale) {
-                this.data.report.comparableSales = underscore.reject(this.data.report.comparableSales, function (comparable) {
+                var _this = this;
+
+                _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, function (comparable) {
                     return comparable.uuid === comparableSale.uuid;
+                });
+
+                underscore.each(comparableSale.attachments, function (attachment) {
+                    _this.removeAttachment(attachment);
                 });
             });
         }

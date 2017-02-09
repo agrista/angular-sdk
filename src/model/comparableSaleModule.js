@@ -9,7 +9,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
                 return underscore.reduce(this.portions, function(total, portion) {
                     return total + (portion.area || 0);
                 }, 0);
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'distanceInKm', function () {
                 return (this.distance ? this.distance / 1000.0 : '-');
@@ -17,15 +17,15 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
 
             computedProperty(this, 'improvedRatePerHa', function () {
                 return this.purchasePrice / this.area;
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'vacantLandValue', function () {
                 return this.valueMinusImprovements / this.area;
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'valueMinusImprovements', function () {
                 return this.purchasePrice - this.depImpValue;
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'farmName', function () {
                 return underscore.chain(this.portions)
@@ -43,7 +43,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
                     })
                     .toSentence()
                     .value();
-            });
+            }, {enumerable: true});
 
 
             computedProperty(this, 'totalLandComponentArea', function () {

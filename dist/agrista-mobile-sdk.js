@@ -11526,7 +11526,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
                 return underscore.reduce(this.portions, function(total, portion) {
                     return total + (portion.area || 0);
                 }, 0);
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'distanceInKm', function () {
                 return (this.distance ? this.distance / 1000.0 : '-');
@@ -11534,15 +11534,15 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
 
             computedProperty(this, 'improvedRatePerHa', function () {
                 return this.purchasePrice / this.area;
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'vacantLandValue', function () {
                 return this.valueMinusImprovements / this.area;
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'valueMinusImprovements', function () {
                 return this.purchasePrice - this.depImpValue;
-            });
+            }, {enumerable: true});
 
             computedProperty(this, 'farmName', function () {
                 return underscore.chain(this.portions)
@@ -11560,7 +11560,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
                     })
                     .toSentence()
                     .value();
-            });
+            }, {enumerable: true});
 
 
             computedProperty(this, 'totalLandComponentArea', function () {
@@ -11733,6 +11733,21 @@ sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'Comparabl
             });
 
             /**
+             * Attachment handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.data.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.data.attachments = underscore.reject(this.data.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            /**
              * Farmland handling
              */
             privateProperty(this, 'getFarmland', function () {
@@ -11796,16 +11811,28 @@ sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'Comparabl
              * Comparable Handling
              */
             privateProperty(this, 'addComparableSale', function (comparableSale) {
+                var _this = this;
+
                 comparableSale = ComparableSale.new(comparableSale);
 
-                this.removeComparableSale(comparableSale);
+                _this.removeComparableSale(comparableSale);
 
-                this.data.report.comparableSales.push(comparableSale.asJSON());
+                _this.data.report.comparableSales.push(comparableSale.asJSON());
+
+                underscore.each(comparableSale.attachments, function (attachment) {
+                    _this.addAttachment(attachment);
+                });
             });
 
             privateProperty(this, 'removeComparableSale', function (comparableSale) {
-                this.data.report.comparableSales = underscore.reject(this.data.report.comparableSales, function (comparable) {
+                var _this = this;
+
+                _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, function (comparable) {
                     return comparable.uuid === comparableSale.uuid;
+                });
+
+                underscore.each(comparableSale.attachments, function (attachment) {
+                    _this.removeAttachment(attachment);
                 });
             });
         }
