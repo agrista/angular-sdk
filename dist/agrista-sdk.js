@@ -7778,7 +7778,7 @@ var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utiliti
 /*
  * GeoJson
  */
-sdkInterfaceMapApp.factory('geoJSONHelper', function () {
+sdkInterfaceMapApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
             return new GeojsonHelper(json, properties);
@@ -7903,6 +7903,10 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                     }
 
                     if (this._json.type == 'Feature') {
+                        this._json.properties = underscore.defaults(this._json.properties || {}, {
+                            featureId: objectId().toString()
+                        });
+
                         this._json = {
                             type: 'FeatureCollection',
                             features: [this._json]
@@ -7913,7 +7917,9 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                         this._json.features.push({
                             type: 'Feature',
                             geometry: geometry,
-                            properties: properties
+                            properties: underscore.defaults(properties || {}, {
+                                featureId: objectId().toString()
+                            })
                         });
                     }
                 }
@@ -7986,7 +7992,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
     return function (json, properties) {
         return new GeojsonHelper(json, properties);
     }
-});
+}]);
 
 sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (underscore) {
     var _createMarker = function (name, state, options) {
