@@ -46,6 +46,20 @@ sdkInterfaceUiApp.filter('floor', ['$filter', function ($filter) {
     };
 }]);
 
+sdkInterfaceUiApp.filter('htmlEncode', [function () {
+    return function (text) {
+        return (text || '').replace(/[\u00A0-\u9999<>&'"]/gim, function (i) {
+            return '&#' + i.charCodeAt(0) + ';';
+        });
+    }
+}]);
+
+sdkInterfaceUiApp.filter('newlines', ['$filter', '$sce', function ($filter, $sce) {
+    return function(msg, isXHTML) {
+        return $sce.trustAsHtml($filter('htmlEncode')(msg).replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1'+ (isXHTML === undefined || isXHTML ? '<br />' : '<br>') +'$2'));
+    }
+}]);
+
 sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
