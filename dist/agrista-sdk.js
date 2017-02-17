@@ -1802,9 +1802,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         _sslFingerprintAlt = '';
 
     // Intercept any HTTP responses that are not authorized
-    $httpProvider.interceptors.push(['$q', '$injector', '$rootScope', function ($q, $injector, $rootScope) {
+    $httpProvider.interceptors.push(['$log', '$q', '$injector', '$rootScope', function ($log, $q, $injector, $rootScope) {
         return {
             responseError: function (err) {
+                $log.debug(err);
+
                 if (err.status === 401) {
                     $rootScope.$broadcast('authorization::unauthorized', err);
                 } else if (err.status === 403) {
@@ -1825,7 +1827,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             _sslFingerprintAlt = fingerprintAlt;
         },
 
-        $get: ['$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($rootScope, authorizationApi, configuration, localStore, promiseService) {
+        $get: ['$log', '$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($log, $rootScope, authorizationApi, configuration, localStore, promiseService) {
             var _user = _getUser();
 
             authorizationApi.getUser().then(function (res) {
@@ -1876,12 +1878,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
-                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
+                        $log.debug('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
 
                         if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
-                                    console.log('ERROR: ' + err);
-                                    console.log('ERROR: ' + JSON.stringify(err));
+                                    $log.error(err);
 
                                     _lastError = {
                                         type: 'error',
@@ -1908,8 +1909,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                                     $rootScope.$broadcast('authorization::login', _user);
                                 } else {
-                                    console.log('RESULT: ' + res);
-                                    console.log('RESULT: ' + JSON.stringify(res));
+                                    $log.error(res);
 
                                     _lastError = {
                                         type: 'error',
@@ -1923,8 +1923,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 }
 
                             }, function (err) {
-                                console.log('ERROR: ' + err);
-                                console.log('ERROR: ' + JSON.stringify(err));
+                                $log.error(err);
 
                                 _lastError = {
                                     type: 'error',
@@ -2206,6 +2205,71 @@ sdkLibraryApp.constant('geojsonUtils', window.gju);
 sdkLibraryApp.constant('naturalSort', window.naturalSort);
 
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
+
+sdkMonitorApp.config(['$provide', function ($provide) {
+    $provide.decorator('$log', ['$delegate', '$filter', 'logStore', 'moment', 'underscore', function ($delegate, $filter, logStore, moment, underscore) {
+        function prepareLogLevelFunction (log, level) {
+            var levelFunction = log[level];
+
+            log[level] = function () {
+                var args = [].slice.call(arguments),
+                    caller = (arguments.callee && arguments.callee.caller && arguments.callee.caller.name.length > 0 ? arguments.callee.caller.name + ' :: ' : ''),
+                    output = (underscore.isObject(args[0]) ? '\n' + $filter('json')(args[0]) : args[0]);
+
+                args[0] = moment().format('YYYY-MM-DDTHH:mm:ss.SSS') + underscore.lpad(' [' + level.toUpperCase() + '] ', 7, ' ') +  caller + output;
+
+                logStore.log(level, args[0]);
+                levelFunction.apply(null, args);
+            };
+        }
+
+        prepareLogLevelFunction($delegate, 'log');
+        prepareLogLevelFunction($delegate, 'info');
+        prepareLogLevelFunction($delegate, 'warn');
+        prepareLogLevelFunction($delegate, 'debug');
+        prepareLogLevelFunction($delegate, 'error');
+
+        return $delegate;
+    }]);
+}]);
+
+sdkMonitorApp.provider('logStore', [function () {
+    var _items = [],
+        _defaultConfig = {
+            maxItems: 1000
+        },
+        _config = _defaultConfig;
+
+    return {
+        config: function (config) {
+            _config = config;
+        },
+        $get: ['underscore', function (underscore) {
+            _config = underscore.defaults(_config, _defaultConfig);
+
+            return {
+                log: function (level, entry) {
+                    var item = {
+                        level: level,
+                        entry: entry
+                    };
+
+                    _items.splice(0, 0, item);
+
+                    if (_items.length > _config.maxItems) {
+                        _items.pop();
+                    }
+                },
+                clear: function () {
+                    _items = [];
+                },
+                list: function () {
+                    return _items;
+                }
+            }
+        }]
+    };
+}]);
 
 sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
     function PromiseMonitor(callback) {
@@ -7935,7 +7999,6 @@ sdkInterfaceMapApp.factory('geoJSONHelper', ['objectId', 'underscore', function 
                     // type of Feature
                     case 'feature':
                         if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
-                            console.log(geoJson.geometry);
                             return geoJson.geometry;
                         }
                         break;
@@ -10699,6 +10762,20 @@ sdkInterfaceUiApp.filter('floor', ['$filter', function ($filter) {
     return function (value) {
         return $filter('number')(Math.floor(value), 0);
     };
+}]);
+
+sdkInterfaceUiApp.filter('htmlEncode', [function () {
+    return function (text) {
+        return (text || '').replace(/[\u00A0-\u9999<>&'"]/gim, function (i) {
+            return '&#' + i.charCodeAt(0) + ';';
+        });
+    }
+}]);
+
+sdkInterfaceUiApp.filter('newlines', ['$filter', '$sce', function ($filter, $sce) {
+    return function(msg, isXHTML) {
+        return $sce.trustAsHtml($filter('htmlEncode')(msg).replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1'+ (isXHTML === undefined || isXHTML ? '<br />' : '<br>') +'$2'));
+    }
 }]);
 
 sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {

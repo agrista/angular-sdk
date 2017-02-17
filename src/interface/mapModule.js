@@ -160,7 +160,6 @@ sdkInterfaceMapApp.factory('geoJSONHelper', ['objectId', 'underscore', function 
                     // type of Feature
                     case 'feature':
                         if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
-                            console.log(geoJson.geometry);
                             return geoJson.geometry;
                         }
                         break;

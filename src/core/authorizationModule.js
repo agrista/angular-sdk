@@ -82,9 +82,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         _sslFingerprintAlt = '';
 
     // Intercept any HTTP responses that are not authorized
-    $httpProvider.interceptors.push(['$q', '$injector', '$rootScope', function ($q, $injector, $rootScope) {
+    $httpProvider.interceptors.push(['$log', '$q', '$injector', '$rootScope', function ($log, $q, $injector, $rootScope) {
         return {
             responseError: function (err) {
+                $log.debug(err);
+
                 if (err.status === 401) {
                     $rootScope.$broadcast('authorization::unauthorized', err);
                 } else if (err.status === 403) {
@@ -105,7 +107,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             _sslFingerprintAlt = fingerprintAlt;
         },
 
-        $get: ['$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($rootScope, authorizationApi, configuration, localStore, promiseService) {
+        $get: ['$log', '$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($log, $rootScope, authorizationApi, configuration, localStore, promiseService) {
             var _user = _getUser();
 
             authorizationApi.getUser().then(function (res) {
@@ -156,12 +158,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 },
                 login: function (email, password) {
                     return promiseService.wrap(function (promise) {
-                        console.log('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
+                        $log.debug('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
 
                         if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
                             window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
-                                    console.log('ERROR: ' + err);
-                                    console.log('ERROR: ' + JSON.stringify(err));
+                                    $log.error(err);
 
                                     _lastError = {
                                         type: 'error',
@@ -188,8 +189,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                                     $rootScope.$broadcast('authorization::login', _user);
                                 } else {
-                                    console.log('RESULT: ' + res);
-                                    console.log('RESULT: ' + JSON.stringify(res));
+                                    $log.error(res);
 
                                     _lastError = {
                                         type: 'error',
@@ -203,8 +203,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 }
 
                             }, function (err) {
-                                console.log('ERROR: ' + err);
-                                console.log('ERROR: ' + JSON.stringify(err));
+                                $log.error(err);
 
                                 _lastError = {
                                     type: 'error',
