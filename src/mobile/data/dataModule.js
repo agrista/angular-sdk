@@ -165,9 +165,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
         };
 
         function _errorCallback(err) {
-            $log.error('_errorCallback');
             $log.error(err);
-            $log.error(JSON.stringify(err));
         }
 
         /**
@@ -511,6 +509,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     withCredentials: true
                                 });
 
+                            $log.debug(httpRequest.method + ' ' + httpRequest.url);
+                            $log.debug(httpRequest);
+
                             $http(httpRequest)
                                 .then(function (res) {
                                     return (res && res.data ? (res.data instanceof Array ? res.data : [res.data]) : []);
@@ -574,6 +575,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                         if (cachedAttachments && toBeAttached.length > 0) {
                                             obj.data.attachments = underscore.difference(cachedAttachments, toBeAttached);
                                         }
+
+                                        $log.debug('POST ' + _hostApi + uri);
 
                                         promises.push($http.post(_hostApi + uri, obj, {withCredentials: true})
                                             .then(function (res) {
@@ -666,6 +669,8 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                                     if (dataItem.$local === false) {
                                         var item = dataStoreUtilities.extractMetadata(dataItem);
                                         var uri = dataStoreUtilities.parseRequest(writeUri, underscore.defaults(writeSchema, {id: item.id}));
+
+                                        $log.debug('POST ' + _hostApi + uri);
 
                                         promises.push($http.post(_hostApi + uri, {withCredentials: true})
                                             .then(function () {
