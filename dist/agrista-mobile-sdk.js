@@ -14938,8 +14938,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
         _options = underscore.extend(_options, options);
     };
 
-    this.$get = ['$http', '$log', 'api', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'financialApi', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'productionScheduleApi', 'promiseService', 'taskApi',
-        function ($http, $log, api, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, financialApi, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, productionScheduleApi, promiseService, taskApi) {
+    this.$get = ['$http', '$log', 'api', 'assetApi', 'authorizationApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'financialApi', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'productionScheduleApi', 'promiseService', 'taskApi',
+        function ($http, $log, api, assetApi, authorizationApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, financialApi, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, productionScheduleApi, promiseService, taskApi) {
             function _getItems(apiName, params) {
                 var apiInstance = api(apiName);
 
@@ -14968,7 +14968,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                                     } else {
                                         paging.request().catch(promise.reject);
                                     }
-                                });
+                                }, promise.reject);
                             }, params);
 
                             paging.request().catch(promise.reject);
@@ -15295,8 +15295,16 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
                     $log.debug('Attempting data synchronization');
 
-                    return _this.upload(models).then(function () {
-                        return _this.download(models);
+                    return promiseService.wrap(function (promise) {
+                        authorizationApi.getUser().then(function (res) {
+                            if (res.user) {
+                                _this.upload(models).then(function () {
+                                    _this.download(models).then(promise.resolve, promise.reject);
+                                }, promise.reject);
+                            } else {
+                                promise.reject();
+                            }
+                        }, promise.reject);
                     });
                 },
                 upload: function (models) {
