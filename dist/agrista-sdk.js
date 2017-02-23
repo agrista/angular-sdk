@@ -1812,12 +1812,14 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         role: _userRoles.open
     };
 
-    var _lastError = undefined;
-
-    var _tokens;
+    var _lastError,
+        _tokens,
+        _expiry = {
+            expiresIn: 60
+        };
 
     // Intercept any HTTP responses that are not authorized
-    $httpProvider.interceptors.push(['$injector', '$log', '$rootScope', 'localStore', 'promiseService', function ($injector, $log, $rootScope, localStore, promiseService) {
+    $httpProvider.interceptors.push(['$injector', '$log', '$rootScope', 'localStore', 'moment', 'promiseService', function ($injector, $log, $rootScope, localStore, moment, promiseService) {
         var _requestQueue = [];
 
         function queueRequest (config) {
@@ -1846,16 +1848,22 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return {
             request: function (config) {
                 if (config.skipAuthorization || config.headers['Authorization']) {
+                    _expiry.lastRequest = moment();
+
                     return config;
                 }
 
-                if (_tokens && _tokens.refresh_token) {
+                if (_tokens && _tokens.refresh_token && _preReauthenticate(_expiry)) {
                     if (_requestQueue.length == 0) {
                         var $auth = $injector.get('$auth'),
                             authorizationApi = $injector.get('authorizationApi');
 
                         authorizationApi.refresh(_tokens.refresh_token).then(function (res) {
                             if (res) {
+                                if (res.expires_at) {
+                                    _expiry.expiresIn = moment(res.expires_at).diff(moment(), 'm');
+                                }
+
                                 $auth.setToken(res.token);
                                 localStore.setItem('tokens', res);
                                 _tokens = res;
@@ -1892,7 +1900,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 promise.resolve();
             });
         }
-    }];
+    }], _preReauthenticate = function () {
+        return true;
+    };
 
     return {
         userRole: _userRoles,
@@ -1900,6 +1910,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
         setPreAuthenticate: function (fn) {
             _preAuthenticate = fn;
+        },
+
+        setPreReauthenticate: function (fn) {
+            _preReauthenticate = fn;
         },
 
         $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
@@ -1945,6 +1959,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 function _postAuthenticateSuccess (res) {
                     if (res && res.data) {
+                        if (res.data.expires_at) {
+                            _expiry.expiresIn = moment(res.data.expires_at).diff(moment(), 'm');
+                        }
+
                         $auth.setToken(res.data.token);
                         localStore.setItem('tokens', res.data);
                         _tokens = res.data;
