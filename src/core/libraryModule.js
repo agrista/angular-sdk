@@ -7,6 +7,6 @@ sdkLibraryApp.constant('underscore', window._);
 
 sdkLibraryApp.constant('moment', window.moment);
 
-sdkLibraryApp.constant('geojsonUtils', window.gju);
+sdkLibraryApp.constant('topologySuite', window.jsts);
 
 sdkLibraryApp.constant('naturalSort', window.naturalSort);

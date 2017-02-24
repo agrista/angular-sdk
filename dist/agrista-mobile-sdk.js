@@ -440,6 +440,246 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         }
     }
 }]);
+var sdkGeospatialApp = angular.module('ag.sdk.geospatial', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
+
+sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
+    function GeojsonHelper(json, properties) {
+        if (!(this instanceof GeojsonHelper)) {
+            return new GeojsonHelper(json, properties);
+        }
+
+        this.addGeometry(json, properties);
+    }
+
+    function _recursiveCoordinateFinder (bounds, coordinates) {
+        if (coordinates) {
+            if (angular.isArray(coordinates[0])) {
+                angular.forEach(coordinates, function(coordinate) {
+                    _recursiveCoordinateFinder(bounds, coordinate);
+                });
+            } else if (angular.isArray(coordinates)) {
+                bounds.push([coordinates[1], coordinates[0]]);
+            }
+        }
+    }
+
+    GeojsonHelper.prototype = {
+        getJson: function () {
+            return this._json;
+        },
+        getType: function () {
+            return this._json.type;
+        },
+        getGeometryType: function () {
+            return (this._json.geometry ? this._json.geometry.type : this._json.type);
+        },
+        getBounds: function () {
+            var bounds = [];
+
+            if (this._json) {
+                var features = this._json.features || [this._json];
+
+                angular.forEach(features, function(feature) {
+                    var geometry = feature.geometry || feature;
+
+                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                });
+            }
+
+            return bounds;
+        },
+        getBoundingBox: function (bounds) {
+            bounds = bounds || this.getBounds();
+
+            var lat1 = 0, lat2 = 0,
+                lng1 = 0, lng2 = 0;
+
+            angular.forEach(bounds, function(coordinate, index) {
+                if (index == 0) {
+                    lat1 = lat2 = coordinate[0];
+                    lng1 = lng2 = coordinate[1];
+                } else {
+                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
+                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
+                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
+                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
+                }
+            });
+
+            return [[lat1, lng1], [lat2, lng2]];
+        },
+        getCenter: function (bounds) {
+            var boundingBox = this.getBoundingBox(bounds);
+
+            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
+        },
+        getCenterAsGeojson: function (bounds) {
+            return {
+                coordinates: this.getCenter(bounds).reverse(),
+                type: 'Point'
+            }
+        },
+        getProperty: function (name) {
+            return (this._json && this._json.properties ? this._json.properties[name] : undefined);
+        },
+        setCoordinates: function (coordinates) {
+            if (this._json && this._json.type != 'FeatureCollection') {
+                if (this._json.geometry) {
+                    this._json.geometry.coordinates = coordinates;
+                } else {
+                    this._json.coordinates = coordinates;
+                }
+            }
+        },
+        addProperties: function (properties) {
+            var _this = this;
+
+            if (this._json && properties) {
+                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
+                    _this._json = {
+                        type: 'Feature',
+                        geometry: _this._json,
+                        properties: properties
+                    };
+                } else {
+                    _this._json.properties = _this._json.properties || {};
+
+                    angular.forEach(properties, function(property, key) {
+                        _this._json.properties[key] = property;
+                    });
+                }
+            }
+
+            return _this;
+        },
+        addGeometry: function (geometry, properties) {
+            if (geometry) {
+                if (this._json === undefined) {
+                    this._json = geometry;
+
+                    this.addProperties(properties);
+                } else {
+                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                        this._json = {
+                            type: 'Feature',
+                            geometry: this._json
+                        };
+                    }
+
+                    if (this._json.type == 'Feature') {
+                        this._json.properties = underscore.defaults(this._json.properties || {}, {
+                            featureId: objectId().toString()
+                        });
+
+                        this._json = {
+                            type: 'FeatureCollection',
+                            features: [this._json]
+                        };
+                    }
+
+                    if (this._json.type == 'FeatureCollection') {
+                        this._json.features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: underscore.defaults(properties || {}, {
+                                featureId: objectId().toString()
+                            })
+                        });
+                    }
+                }
+            }
+
+            return this;
+        },
+        formatGeoJson: function (geoJson, toType) {
+            // TODO: REFACTOR
+            //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
+            if(toType.toLowerCase() == 'point') {
+                switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
+                    // type of Feature
+                    case 'feature':
+                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                            return geoJson.geometry;
+                        }
+                        break;
+                    // type of FeatureCollection
+                    case 'featurecollection':
+                        break;
+                    // type of GeometryCollection
+                    case 'geometrycollection':
+                        break;
+                    // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                    default:
+                        break;
+                }
+            }
+
+            return geoJson;
+        },
+        validGeoJson: function (geoJson, typeRestriction) {
+            // TODO: REFACTOR
+            var validate = true;
+            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+                return false;
+            }
+
+            // valid type, and type matches the restriction, then validate the geometry / features / geometries / coordinates fields
+            switch (geoJson.type.toLowerCase()) {
+                // type of Feature
+                case 'feature':
+                    break;
+                // type of FeatureCollection
+                case 'featurecollection':
+                    break;
+                // type of GeometryCollection
+                case 'geometrycollection':
+                    break;
+                // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                default:
+                    if(!geoJson.coordinates || !geoJson.coordinates instanceof Array) {
+                        return false;
+                    }
+                    var flattenedCoordinates = _.flatten(geoJson.coordinates);
+                    flattenedCoordinates.forEach(function(element, i) {
+                        if(typeof element != 'number') {
+                            validate = false;
+                        }
+                    });
+                    break;
+            }
+
+            return validate;
+        }
+    };
+
+    return function (json, properties) {
+        return new GeojsonHelper(json, properties);
+    }
+}]);
+
+sdkGeospatialApp.factory('topologyHelper', ['topologySuite', function (topologySuite) {
+    var geometryFactory = new topologySuite.geom.GeometryFactory(),
+        geoJSONReader = new topologySuite.io.GeoJSONReader(geometryFactory),
+        geoJSONWriter = new topologySuite.io.GeoJSONWriter(geometryFactory);
+
+    return {
+        getGeometryFactory: function () {
+            return geometryFactory;
+        },
+        getGeoJSONReader: function () {
+            return geoJSONReader;
+        },
+        getGeoJSONWriter: function () {
+            return geoJSONWriter;
+        },
+        readGeoJSON: function (geojson) {
+            return (geojson ? geoJSONReader.read(geojson) : undefined);
+        },
+        writeGeoJSON: function (geometry) {
+            return (geometry ? geoJSONWriter.write(geometry) : undefined);
+        }
+    };
+}]);
 var sdkIdApp = angular.module('ag.sdk.id', ['ag.sdk.utilities']);
 
 sdkIdApp.factory('objectId', ['localStore', function(localStore) {
@@ -571,7 +811,7 @@ sdkLibraryApp.constant('underscore', window._);
 
 sdkLibraryApp.constant('moment', window.moment);
 
-sdkLibraryApp.constant('geojsonUtils', window.gju);
+sdkLibraryApp.constant('topologySuite', window.jsts);
 
 sdkLibraryApp.constant('naturalSort', window.naturalSort);
 
@@ -4791,7 +5031,7 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
         }
     };
 }]);
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.geospatial', 'ag.sdk.library', 'ag.sdk.interface.map', 'ag.sdk.helper.attachment']);
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
@@ -5170,7 +5410,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     }
 });
 
-sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
+sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'topologyHelper', 'underscore', function(geoJSONHelper, topologyHelper, underscore) {
     var _listServiceMap = function(item) {
         return {
             id: item.id || item.$id,
@@ -5184,17 +5424,11 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
         },
 
         containsPoint: function (geometry, assets, farm) {
-            var found = false;
+            var point = topologyHelper.readGeojson(geometry);
 
-            angular.forEach(assets, function (asset) {
-                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                    if (geojsonUtils.pointInPolygon(geometry, asset.data.loc)) {
-                        found = true;
-                    }
-                }
+            return underscore.some(assets, function (asset) {
+                return (asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id && asset.data.loc && point.within(topologyHelper.readGeojson(asset.data.loc)));
             });
-
-            return found;
         },
         getCenter: function (farmer, farm) {
             var geojson = geoJSONHelper();
@@ -5515,31 +5749,6 @@ sdkHelperProductionPlanApp.factory('productionPlanHelper', [function () {
             });
 
             return assetType;
-        }
-    }
-}]);
-var sdkHelperRegionApp = angular.module('ag.sdk.helper.region', []);
-
-sdkHelperRegionApp.factory('regionHelper', [function() {
-    var _listServiceMap = function(item) {
-        var map = {
-            title: item.name,
-            subtitle: item.region.province,
-            region: item.region.name
-        };
-        if(item.subRegionNumber) {
-            map.subtitle += ' - ' +item.subRegionNumber;
-        }
-        if(item.plotCode) {
-            map.subtitle += ' - ' +item.plotCode;
-        }
-
-        return map;
-    };
-
-    return {
-        listServiceMap: function() {
-            return _listServiceMap;
         }
     }
 }]);
@@ -6213,225 +6422,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     }
 }]);
 
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config', 'ag.sdk.library']);
-
-/*
- * GeoJson
- */
-sdkInterfaceMapApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
-    function GeojsonHelper(json, properties) {
-        if (!(this instanceof GeojsonHelper)) {
-            return new GeojsonHelper(json, properties);
-        }
-
-        this.addGeometry(json, properties);
-    }
-
-    function _recursiveCoordinateFinder (bounds, coordinates) {
-        if (coordinates) {
-            if (angular.isArray(coordinates[0])) {
-                angular.forEach(coordinates, function(coordinate) {
-                    _recursiveCoordinateFinder(bounds, coordinate);
-                });
-            } else if (angular.isArray(coordinates)) {
-                bounds.push([coordinates[1], coordinates[0]]);
-            }
-        }
-    }
-
-    GeojsonHelper.prototype = {
-        getJson: function () {
-            return this._json;
-        },
-        getType: function () {
-            return this._json.type;
-        },
-        getGeometryType: function () {
-            return (this._json.geometry ? this._json.geometry.type : this._json.type);
-        },
-        getBounds: function () {
-            var bounds = [];
-
-            if (this._json) {
-                var features = this._json.features || [this._json];
-
-                angular.forEach(features, function(feature) {
-                    var geometry = feature.geometry || feature;
-
-                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
-                });
-            }
-
-            return bounds;
-        },
-        getBoundingBox: function (bounds) {
-            bounds = bounds || this.getBounds();
-
-            var lat1 = 0, lat2 = 0,
-                lng1 = 0, lng2 = 0;
-
-            angular.forEach(bounds, function(coordinate, index) {
-                if (index == 0) {
-                    lat1 = lat2 = coordinate[0];
-                    lng1 = lng2 = coordinate[1];
-                } else {
-                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
-                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
-                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
-                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
-                }
-            });
-
-            return [[lat1, lng1], [lat2, lng2]];
-        },
-        getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds);
-
-            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
-        },
-        getCenterAsGeojson: function (bounds) {
-            return {
-                coordinates: this.getCenter(bounds).reverse(),
-                type: 'Point'
-            }
-        },
-        getProperty: function (name) {
-            return (this._json && this._json.properties ? this._json.properties[name] : undefined);
-        },
-        setCoordinates: function (coordinates) {
-            if (this._json && this._json.type != 'FeatureCollection') {
-                if (this._json.geometry) {
-                    this._json.geometry.coordinates = coordinates;
-                } else {
-                    this._json.coordinates = coordinates;
-                }
-            }
-        },
-        addProperties: function (properties) {
-            var _this = this;
-
-            if (this._json && properties) {
-                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
-                    _this._json = {
-                        type: 'Feature',
-                        geometry: _this._json,
-                        properties: properties
-                    };
-                } else {
-                    _this._json.properties = _this._json.properties || {};
-
-                    angular.forEach(properties, function(property, key) {
-                        _this._json.properties[key] = property;
-                    });
-                }
-            }
-
-            return _this;
-        },
-        addGeometry: function (geometry, properties) {
-            if (geometry) {
-                if (this._json === undefined) {
-                    this._json = geometry;
-
-                    this.addProperties(properties);
-                } else {
-                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
-                        this._json = {
-                            type: 'Feature',
-                            geometry: this._json
-                        };
-                    }
-
-                    if (this._json.type == 'Feature') {
-                        this._json.properties = underscore.defaults(this._json.properties || {}, {
-                            featureId: objectId().toString()
-                        });
-
-                        this._json = {
-                            type: 'FeatureCollection',
-                            features: [this._json]
-                        };
-                    }
-
-                    if (this._json.type == 'FeatureCollection') {
-                        this._json.features.push({
-                            type: 'Feature',
-                            geometry: geometry,
-                            properties: underscore.defaults(properties || {}, {
-                                featureId: objectId().toString()
-                            })
-                        });
-                    }
-                }
-            }
-
-            return this;
-        },
-        formatGeoJson: function (geoJson, toType) {
-            // TODO: REFACTOR
-            //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
-            if(toType.toLowerCase() == 'point') {
-                switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
-                    // type of Feature
-                    case 'feature':
-                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
-                            return geoJson.geometry;
-                        }
-                        break;
-                    // type of FeatureCollection
-                    case 'featurecollection':
-                        break;
-                    // type of GeometryCollection
-                    case 'geometrycollection':
-                        break;
-                    // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
-                    default:
-                        break;
-                }
-            }
-
-            return geoJson;
-        },
-        validGeoJson: function (geoJson, typeRestriction) {
-            // TODO: REFACTOR
-            var validate = true;
-            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
-                return false;
-            }
-
-            // valid type, and type matches the restriction, then validate the geometry / features / geometries / coordinates fields
-            switch (geoJson.type.toLowerCase()) {
-                // type of Feature
-                case 'feature':
-                    break;
-                // type of FeatureCollection
-                case 'featurecollection':
-                    break;
-                // type of GeometryCollection
-                case 'geometrycollection':
-                    break;
-                // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
-                default:
-                    if(!geoJson.coordinates || !geoJson.coordinates instanceof Array) {
-                        return false;
-                    }
-                    var flattenedCoordinates = _.flatten(geoJson.coordinates);
-                    flattenedCoordinates.forEach(function(element, i) {
-                        if(typeof element != 'number') {
-                            validate = false;
-                        }
-                    });
-                    break;
-            }
-
-            return validate;
-        }
-    };
-
-    return function (json, properties) {
-        return new GeojsonHelper(json, properties);
-    }
-}]);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config', 'ag.sdk.geospatial', 'ag.sdk.library']);
 
 sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (underscore) {
     var _createMarker = function (name, state, options) {
@@ -13503,6 +13494,151 @@ sdkModelFinancial.factory('Financial', ['$filter', 'inheritModel', 'Model', 'pri
         return Financial;
     }]);
 
+var sdkModelLayer= angular.module('ag.sdk.model.layer', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.geospatial']);
+
+sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Layer (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.geometry = attrs.geometry;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+            this.province = attrs.province;
+            this.type = attrs.type;
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
+
+            this.organization = attrs.organization;
+            this.sublayers = attrs.sublayers;
+        }
+
+        inheritModel(Layer, Model.Base);
+
+        privateProperty(Layer, 'listMap', function (item) {
+            return {
+                title: item.name,
+                subtitle: item.province
+            }
+        });
+
+        Layer.validates({
+            comments: {
+                required: false,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: false,
+                numeric: true
+            },
+            province: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            type: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return Layer;
+    }]);
+
+
+sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologySuite', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, topologySuite, underscore) {
+        function Sublayer (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.code = attrs.code;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.geometry = attrs.geometry;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+            this.regionId = attrs.regionId;
+            this.type = attrs.type;
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
+
+            this.organization = attrs.organization;
+            this.layer = attrs.layer;
+        }
+
+        inheritModel(Sublayer, Model.Base);
+
+        privateProperty(Sublayer, 'listMap', function (item) {
+            return {
+                title: item.name,
+                subtitle: item.layer.province + (item.code ? ' - ' + item.code : ''),
+                region: item.layer.name
+            }
+        });
+
+        Sublayer.validates({
+            code: {
+                required: false,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            comments: {
+                required: false,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: false,
+                numeric: true
+            },
+            type: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return Sublayer;
+    }]);
+
 var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
 sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
@@ -18860,7 +18996,6 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
     'ag.sdk.helper.production-plan',
-    'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',
     'ag.sdk.helper.user'
@@ -18885,6 +19020,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.financial',
+    'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.production-schedule',
@@ -18901,6 +19037,7 @@ angular.module('ag.sdk.test', [
 angular.module('ag.mobile-sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
+    'ag.sdk.geospatial',
     'ag.sdk.utilities',
     'ag.sdk.model',
     'ag.sdk.monitor',

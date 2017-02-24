@@ -1,4 +1,4 @@
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.geospatial', 'ag.sdk.library', 'ag.sdk.interface.map', 'ag.sdk.helper.attachment']);
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
@@ -377,7 +377,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     }
 });
 
-sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
+sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'topologyHelper', 'underscore', function(geoJSONHelper, topologyHelper, underscore) {
     var _listServiceMap = function(item) {
         return {
             id: item.id || item.$id,
@@ -391,17 +391,11 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
         },
 
         containsPoint: function (geometry, assets, farm) {
-            var found = false;
+            var point = topologyHelper.readGeojson(geometry);
 
-            angular.forEach(assets, function (asset) {
-                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                    if (geojsonUtils.pointInPolygon(geometry, asset.data.loc)) {
-                        found = true;
-                    }
-                }
+            return underscore.some(assets, function (asset) {
+                return (asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id && asset.data.loc && point.within(topologyHelper.readGeojson(asset.data.loc)));
             });
-
-            return found;
         },
         getCenter: function (farmer, farm) {
             var geojson = geoJSONHelper();

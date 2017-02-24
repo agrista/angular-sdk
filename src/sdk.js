@@ -9,7 +9,6 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
     'ag.sdk.helper.production-plan',
-    'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',
     'ag.sdk.helper.user'
@@ -34,6 +33,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.financial',
+    'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.production-schedule',
@@ -50,6 +50,7 @@ angular.module('ag.sdk.test', [
 angular.module('ag.sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
+    'ag.sdk.geospatial',
     'ag.sdk.utilities',
     'ag.sdk.model',
     'ag.sdk.api',
