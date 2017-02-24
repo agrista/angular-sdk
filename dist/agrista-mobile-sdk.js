@@ -15931,13 +15931,9 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
                     return promiseService.wrap(function (promise) {
                         authorizationApi.getUser().then(function (res) {
-                            if (res.user) {
-                                _this.upload(models).then(function () {
-                                    _this.download(models).then(promise.resolve, promise.reject);
-                                }, promise.reject);
-                            } else {
-                                promise.reject();
-                            }
+                            _this.upload(models).then(function () {
+                                _this.download(models).then(promise.resolve, promise.reject);
+                            }, promise.reject);
                         }, promise.reject);
                     });
                 },
