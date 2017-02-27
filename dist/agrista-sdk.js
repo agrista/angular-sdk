@@ -15070,7 +15070,7 @@ sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', '
             return {
                 title: item.name,
                 subtitle: item.layer.province + (item.code ? ' - ' + item.code : ''),
-                region: item.layer.name
+                layer: item.layer.name
             }
         });
 
