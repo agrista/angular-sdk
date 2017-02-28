@@ -2138,14 +2138,19 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
 
             this.useHost(_host, _version);
         },
+        setVersion: function (version) {
+            if (version) {
+                _version = version;
+            }
+        },
         getServer: _getServer,
         useHost: function(host, version, cCallback) {
             if (typeof version === 'function') {
                 cCallback = version;
-                version = '';
+                version = _version;
             }
 
-            _version = version || '';
+            _version = version || _version;
 
             if (_servers[host] !== undefined) {
                 _host = host;
