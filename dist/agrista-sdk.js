@@ -1549,6 +1549,23 @@ sdkApiApp.factory('shareApi', ['$http', 'promiseService', 'configuration', funct
 }]);
 
 /**
+ * Tag API
+ */
+sdkApiApp.factory('tagApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getTags: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/tags', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
+/**
  * Task API
  */
 sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
@@ -2004,6 +2021,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _tokens;
                     },
 
+                    isAdmin: function () {
+                        return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
+                    },
                     isAllowed: function (level) {
                         return (level & _user.role) != 0;
                     },

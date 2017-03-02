@@ -269,6 +269,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _tokens;
                     },
 
+                    isAdmin: function () {
+                        return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
+                    },
                     isAllowed: function (level) {
                         return (level & _user.role) != 0;
                     },
