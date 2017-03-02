@@ -1534,6 +1534,23 @@ sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseSer
 }]);
 
 /**
+ * Tag API
+ */
+sdkApiApp.factory('tagApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getTags: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/tags', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
+/**
  * Task API
  */
 sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
