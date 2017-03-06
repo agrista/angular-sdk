@@ -74,7 +74,7 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
 /**
  * Aggregation API
  */
-sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($log, $http, configuration, promiseService, pagingService, underscore) {
+sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($http, configuration, promiseService, pagingService, underscore) {
     // TODO: Refactor so that the aggregationApi can be extended for downstream platforms
     var _host = configuration.getServer();
 
@@ -120,18 +120,13 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
         },
-        getProductionRegionByPoint: function (x, y) {
+        getSublayerByPoint: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            }).join('&');
+
             return promiseService.wrap(function(promise) {
-                var param = '';
-
-                if (typeof x == 'number' && typeof y == 'number') {
-                    param = '?x=' + x + '&y=' + y;
-                } else {
-                    promise.reject();
-                }
-
-                $http.get(_host + 'api/aggregation/production-region' + param, {withCredentials: true}).then(function (res) {
-                    $log.debug(res.data);
+                $http.get(_host + 'api/aggregation/sublayer' +  + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -153,18 +148,8 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
             return pagingService.page(_host + 'api/aggregation/report-cross-selling', params);
         },
         searchProductionSchedules: function(query) {
-            query = angular.copy(query);
-
-            if (query.horticultureStage) {
-                query.horticulturestage = query.horticultureStage;
-                delete query['horticultureStage'];
-            }
-            if (query.regionName) {
-                query.regionname = query.regionName;
-                delete query['regionName'];
-            }
             query = underscore.map(query, function (value, key) {
-                return key + '=' + encodeURIComponent(value);
+                return (underscore.isString(key) ? key.toLowerCase() : key) + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
@@ -722,7 +707,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 /**
  * Expense API
  */
-sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+sdkApiApp.factory('expenseApi', ['$http', 'pagingService', 'promiseService', 'configuration', function($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -961,7 +946,7 @@ sdkApiApp.factory('financialApi', ['$http', 'promiseService', 'configuration', f
 /**
  * Layers API
  */
-sdkApiApp.factory('layerApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function ($http, $log, pagingService, promiseService, configuration) {
+sdkApiApp.factory('layerApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
