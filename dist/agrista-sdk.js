@@ -126,7 +126,7 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
             }).join('&');
 
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/aggregation/sublayer' +  + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/aggregation/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
