@@ -4,7 +4,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'Storable', 'underscore', 'Validatable', function (Errorable, Storable, underscore, Validatable) {
+    .factory('Base', ['Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (Errorable, privateProperty, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
@@ -76,6 +76,16 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             _constructor.include(Errorable);
             _constructor.include(Storable);
         }
+
+        privateProperty(Base, 'initializeArray', function (length) {
+            return underscore.range(length).map(function () {
+                return 0;
+            });
+        });
+
+        privateProperty(Base, 'initializeObject', function (object, property, defaultObject) {
+            return object[property] = object[property] || defaultObject;
+        });
 
         return Base;
     }])
