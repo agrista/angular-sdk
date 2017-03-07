@@ -165,10 +165,10 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                 productionSchedule.recalculate();
 
                 angular.forEach(productionSchedule.data.sections, function (section) {
-                    if (productionSchedule.data.details.applyEstablishmentCosts || section.costStage === productionSchedule.defaultCostStage) {
+                    if (section.costStage === productionSchedule.costStage) {
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
-                                var productionCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
+                                var productionCategory = instance.addCategory(section.code, group.name, category.code, instance.defaultCostStage);
 
                                 productionCategory.per = category.per;
                                 productionCategory.categories = productionCategory.categories || [];
@@ -225,7 +225,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                             });
 
                             // Group totals
-                            var productionGroup = instance.getGroup(section.code, group.name, section.costStage);
+                            var productionGroup = instance.getGroup(section.code, group.name, instance.defaultCostStage);
 
                             if (productionGroup) {
                                 productionGroup.total.value = underscore.reduce(productionGroup.productCategories, function (total, category) {
@@ -251,7 +251,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                         });
 
                         // Section totals
-                        var productionSection = instance.getSection(section.code, section.costStage);
+                        var productionSection = instance.getSection(section.code, instance.defaultCostStage);
 
                         if (productionSection) {
                             productionSection.total.value = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
@@ -299,7 +299,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             this.data.details = this.data.details || {};
 
             computedProperty(this, 'costStage', function () {
-                return (this.type == 'horticulture' && this.data.details.assetAge ? this.defaultCostStage : underscore.first(ProductionSchedule.costStages));
+                return (this.type != 'horticulture' || this.data.details.assetAge != 0 ? this.defaultCostStage : underscore.first(ProductionSchedule.costStages));
             });
 
             privateProperty(this, 'setDate', function (startDate) {
@@ -355,7 +355,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
                 this.data.budget = this.budget;
                 this.data.details = underscore.extend(this.data.details, {
-                    applyEstablishmentCosts: false,
                     commodity: this.budget.commodityType,
                     grossProfit: 0
                 });
@@ -623,7 +622,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 instance.data.details.grossProfit = 0;
                 
                 angular.forEach(instance.budget.data.sections, function (section) {
-                    if (instance.data.details.applyEstablishmentCosts || section.costStage === instance.costStage) {
+                    if (section.costStage === instance.costStage) {
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
                                 var productionCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
