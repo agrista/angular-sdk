@@ -11179,7 +11179,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
                     numberOfYears = Math.ceil(endMonth.diff(startMonth, 'years', true)),
-                    defaultMonthObj = {
+                    defaultObject = {
                         opening: 0,
                         inflow: 0,
                         outflow: 0,
@@ -11189,52 +11189,66 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         closing: 0
                     };
 
-                while (instance.account.monthly.length < instance.numberOfMonths) {
-                    instance.account.monthly.push(defaultMonthObj);
-                }
-                while (instance.account.yearly.length < numberOfYears) {
-                    instance.account.yearly.push(underscore.extend(defaultMonthObj, { worstBalance: 0, bestBalance: 0, openingMonth: null, closingMonth: null }));
-                }
-
                 instance.data.summary.monthly.primaryAccountInterest = initializeArray(instance.numberOfMonths);
                 instance.data.summary.monthly.totalInterest = calculateMonthlyLiabilityPropertyTotal(instance, [], 'interest', startMonth, endMonth);
 
-                underscore.each(instance.account.monthly, function (month, index) {
-                    month.opening = (index === 0 ? instance.account.openingBalance : instance.account.monthly[index - 1].closing);
-                    month.inflow = instance.data.summary.monthly.totalIncome[index];
-                    month.outflow = instance.data.summary.monthly.totalExpenditure[index];
-                    month.balance = month.opening + month.inflow - month.outflow;
-                    month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
-                    month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
-                    month.closing = month.balance + month.interestPayable + month.interestReceivable;
+                instance.account.monthly = underscore.chain(underscore.range(instance.numberOfMonths))
+                    .map(function () {
+                        return underscore.extend({}, defaultObject);
+                    })
+                    .reduce(function (monthly, month, index) {
+                        month.opening = (index === 0 ? instance.account.openingBalance : monthly[monthly.length - 1].closing);
+                        month.inflow = instance.data.summary.monthly.totalIncome[index];
+                        month.outflow = instance.data.summary.monthly.totalExpenditure[index];
+                        month.balance = month.opening + month.inflow - month.outflow;
+                        month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
+                        month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
+                        month.closing = month.balance + month.interestPayable + month.interestReceivable;
 
-                    instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
-                    instance.data.summary.monthly.primaryAccountInterest[index] += -month.interestPayable;
-                });
+                        instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
+                        instance.data.summary.monthly.primaryAccountInterest[index] += -month.interestPayable;
 
-                underscore.each(instance.account.yearly, function(year, index) {
-                    var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
-                    year.opening = months[0].opening;
-                    year.inflow = sumCollectionProperty(months, 'inflow');
-                    year.outflow = sumCollectionProperty(months, 'outflow');
-                    year.balance = year.opening + year.inflow - year.outflow;
-                    year.interestPayable = sumCollectionProperty(months, 'interestPayable');
-                    year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
-                    year.closing = year.balance + year.interestPayable + year.interestReceivable;
-                    year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').format('YYYY-MM-DD');
-                    year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('YYYY-MM-DD');
+                        monthly.push(month);
+                        return monthly;
+                    }, [])
+                    .value();
 
-                    var bestBalance = underscore.max(months, function (month) { return month.closing; }),
-                        worstBalance = underscore.min(months, function (month) { return month.closing; });
-                    year.bestBalance = {
-                        balance: bestBalance.closing,
-                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('YYYY-MM-DD')
-                    };
-                    year.worstBalance = {
-                        balance: worstBalance.closing,
-                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('YYYY-MM-DD')
-                    };
-                });
+                instance.account.yearly = underscore.chain(underscore.range(numberOfYears))
+                    .map(function () {
+                        return underscore.extend({
+                            worstBalance: 0,
+                            bestBalance: 0,
+                            openingMonth: null,
+                            closingMonth: null
+                        }, defaultObject);
+                    })
+                    .reduce(function (yearly, year, index) {
+                        var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
+                        year.opening = months[0].opening;
+                        year.inflow = sumCollectionProperty(months, 'inflow');
+                        year.outflow = sumCollectionProperty(months, 'outflow');
+                        year.balance = year.opening + year.inflow - year.outflow;
+                        year.interestPayable = sumCollectionProperty(months, 'interestPayable');
+                        year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
+                        year.closing = year.balance + year.interestPayable + year.interestReceivable;
+                        year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').format('YYYY-MM-DD');
+                        year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('YYYY-MM-DD');
+
+                        var bestBalance = underscore.max(months, function (month) { return month.closing; }),
+                            worstBalance = underscore.min(months, function (month) { return month.closing; });
+                        year.bestBalance = {
+                            balance: bestBalance.closing,
+                            month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('YYYY-MM-DD')
+                        };
+                        year.worstBalance = {
+                            balance: worstBalance.closing,
+                            month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('YYYY-MM-DD')
+                        };
+
+                        yearly.push(year);
+                        return yearly;
+                    }, [])
+                    .value();
 
                 instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
                 instance.data.summary.yearly.totalInterest = [calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 2)];
