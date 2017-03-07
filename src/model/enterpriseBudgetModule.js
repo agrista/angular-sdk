@@ -763,16 +763,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data.details = this.data.details || {};
-            this.data.details.cycleStart = this.data.details.cycleStart || 0;
-            this.data.details.productionArea = this.data.details.productionArea || '1 Hectare';
-
-            this.data.schedules = this.data.schedules || {};
+            Base.initializeObject(this.data, 'details', {});
+            Base.initializeObject(this.data, 'schedules', []);
+            Base.initializeObject(this.data.details, 'cycleStart', 0);
+            Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
 
             computedProperty(this, 'commodityTitle', function () {
                 return getCommodityTitle(this.assetType);
@@ -889,8 +888,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
             } else if (this.assetType === 'horticulture') {
-                this.data.details.yearsToMaturity = this.data.details.yearsToMaturity || getYearsToMaturity(this);
-                this.data.details.maturityFactor = this.data.details.maturityFactor || [];
+                Base.initializeObject(this.data.details, 'yearsToMaturity', getYearsToMaturity(this));
+                Base.initializeObject(this.data.details, 'maturityFactor', []);
             }
 
             this.recalculate();
@@ -1159,19 +1158,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
 
                     angular.forEach(group.productCategories, function(category) {
                         if(category.unit == '%') {
-                            var groupSum = underscore
-                                .chain(instance.data.sections)
-                                .filter(function (groupingSection) {
-                                    return (groupingSection.costStage === section.costStage);
-                                })
-                                .pluck('productCategoryGroups')
-                                .flatten()
-                                .reduce(function(total, group) {
-                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
-                                }, 0)
-                                .value();
-
-                            category.quantity = roundValue(groupSum / 100);
+                            // Convert percentage to total
+                            category.unit = 'Total';
+                            category.pricePerUnit = category.quantity;
+                            category.quantity = 1;
                         } else {
                             category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
                         }
