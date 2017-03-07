@@ -1812,17 +1812,20 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.addLayerToLayer = function (name, layer, toLayerName) {
-        var toLayer = this._layers[toLayerName],
-            added = false;
+        var toLayer = this._layers[toLayerName];
         
         if (toLayer) {
-            added = (this._layers[name] == undefined);
-            this._layers[name] = layer;
+            if (this._layers[name]) {
+                toLayer.removeLayer(layer);
+            }
 
+            this._layers[name] = layer;
             toLayer.addLayer(layer);
+
+            return true;
         }
 
-        return added;
+        return false;
     };
 
     Mapbox.prototype.removeLayer = function (name) {
