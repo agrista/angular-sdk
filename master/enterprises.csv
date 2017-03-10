@@ -1,83 +1,87 @@
-enterprise_type,enterprise,land_use_classes
-Barley,Field Crops,
-Bean (Dry),Field Crops,
-Bean (Green),Field Crops,
-Canola,Field Crops,
-Cotton,Field Crops,
-Cowpea,Field Crops,
-Grain Sorghum,Field Crops,
-Groundnut,Field Crops,
-Lucerne,Field Crops,
-Maize (Fodder),Field Crops,
-Maize (Green),Field Crops,
-Maize (Seed),Field Crops,
-Maize (White),Field Crops,
-Maize (Yellow),Field Crops,
-"Oats""Potato",Field Crops,
-Rye,Field Crops,
-Soya Bean,Field Crops,
-Sunflower,Field Crops,
-Sweet Corn,Field Crops,
-Tobacco,Field Crops,
-Triticale,Field Crops,
-Wheat,Field Crops,
-Almond,Horticulture,
-Apple,Horticulture,
-Apricot,Horticulture,
-Avocado,Horticulture,
-Banana,Horticulture,
-Cherry,Horticulture,
-Chicory,Horticulture,
-Chili,Horticulture,
-Citrus (Hardpeel),Horticulture,
-Citrus (Softpeel),Horticulture,
-Coffee,Horticulture,
-Fig,Horticulture,
-Garlic,Horticulture,
-Grapes (Table),Horticulture,
-Grapes (Wine),Horticulture,
-Guava,Horticulture,
-Hops,Horticulture,
-Kiwi,Horticulture,
-Lemon,Horticulture,
-Lentil,Horticulture,
-Macadamia Nut,Horticulture,
-Mango,Horticulture,
-Melon,Horticulture,
-Nectarine,Horticulture,
-Olive,Horticulture,
-Onion,Horticulture,
-Orange,Horticulture,
-Papaya,Horticulture,
-Pea,Horticulture,
-Peach,Horticulture,
-Peanut,Horticulture,
-Pear,Horticulture,
-Pecan Nut,Horticulture,
-Persimmon,Horticulture,
-Pineapple,Horticulture,
-Pistachio Nut,Horticulture,
-Plum,Horticulture,
-Pomegranate,Horticulture,
-Prune,Horticulture,
-Pumpkin,Horticulture,
-Quince,Horticulture,
-Rooibos,Horticulture,
-Strawberry,Horticulture,
-Sugarcane,Horticulture,
-Tomato,Horticulture,
-Watermelon,Horticulture,
-Cattle (Extensive),Livestock,
-Cattle (Feedlot),Livestock,
-Cattle (Stud),Livestock,
-Chicken (Broilers),Livestock,
-Chicken (Layers),Livestock,
-Dairy,Livestock,
-Game,Livestock,
-Goats,Livestock,
-Horses,Livestock,
-Ostrich,Livestock,
-Pigs,Livestock,
-Sheep (Extensive),Livestock,
-Sheep (Feedlot),Livestock,
-Sheep (Stud),Livestock,
+enterprise, enterprise_type
+"Barley","crop"
+"Bean (Dry)","crop"
+"Bean (Green)","crop"
+"Canola","crop"
+"Cotton","crop"
+"Cowpea","crop"
+"Grain Sorghum","crop"
+"Groundnut","crop"
+"Lucerne","crop"
+"Lupin","crop"
+"Maize (Fodder)","crop"
+"Maize (Green)","crop"
+"Maize (Seed)","crop"
+"Maize (White)","crop"
+"Maize (Yellow)","crop"
+"Oat","crop"
+"Potato","crop"
+"Rye","crop"
+"Soya Bean","crop"
+"Sunflower","crop"
+"Sweet Corn","crop"
+"Tobacco","crop"
+"Triticale","crop"
+"Wheat","crop"
+"Almond","permanentCrop"
+"Apple","permanentCrop"
+"Apricot","permanentCrop"
+"Avocado","permanentCrop"
+"Banana","permanentCrop"
+"Blueberry","permanentCrop"
+"Cherry","permanentCrop"
+"Chicory","permanentCrop"
+"Chili","permanentCrop"
+"Citrus (Hardpeel)","permanentCrop"
+"Citrus (Softpeel)","permanentCrop"
+"Coffee","permanentCrop"
+"Fig","permanentCrop"
+"Garlic","permanentCrop"
+"Grape (Table)","permanentCrop"
+"Grape (Wine)","permanentCrop"
+"Guava","permanentCrop"
+"Hops","permanentCrop"
+"Kiwi","permanentCrop"
+"Lemon","permanentCrop"
+"Lentil","permanentCrop"
+"Macadamia Nut","permanentCrop"
+"Mango","permanentCrop"
+"Melon","permanentCrop"
+"Nectarine","permanentCrop"
+"Olive","permanentCrop"
+"Onion","permanentCrop"
+"Orange","permanentCrop"
+"Papaya","permanentCrop"
+"Pea","permanentCrop"
+"Peach","permanentCrop"
+"Peanut","permanentCrop"
+"Pear","permanentCrop"
+"Prickly Pear","permanentCrop"
+"Pecan Nut","permanentCrop"
+"Persimmon","permanentCrop"
+"Pineapple","permanentCrop"
+"Pistachio Nut","permanentCrop"
+"Plum","permanentCrop"
+"Pomegranate","permanentCrop"
+"Prune","permanentCrop"
+"Pumpkin","permanentCrop"
+"Quince","permanentCrop"
+"Rooibos","permanentCrop"
+"Strawberry","permanentCrop"
+"Sugarcane","permanentCrop"
+"Tomato","permanentCrop"
+"Watermelon","permanentCrop"
+"Cattle (Extensive)","livestock"
+"Cattle (Feedlot)","livestock"
+"Cattle (Stud)","livestock"
+"Chicken (Broilers)","livestock"
+"Chicken (Layers)","livestock"
+"Dairy","livestock"
+"Game","livestock"
+"Goats","livestock"
+"Horses","livestock"
+"Ostrich","livestock"
+"Pigs","livestock"
+"Sheep (Extensive)","livestock"
+"Sheep (Feedlot)","livestock"
+"Sheep (Stud)","livestock"
