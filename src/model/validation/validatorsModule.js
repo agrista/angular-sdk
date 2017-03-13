@@ -355,6 +355,10 @@ sdkModelValidators.factory('Validator.range.to', ['underscore', 'Validatable.Val
 sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function required (value, instance, field) {
+            if (!this.required) {
+                return true;
+            }
+
             if (underscore.isUndefined(value) || underscore.isNull(value)) {
                 return false;
             }

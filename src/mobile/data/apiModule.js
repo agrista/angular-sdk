@@ -1282,14 +1282,14 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
     return {
         getFieldPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/field?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getPortionPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/portion?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1308,21 +1308,21 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
                 if (!query) {
                     promise.reject();
                 }
-                $http.get(_host + 'api/geo/portion-polygons?' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/portions?' + query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getDistrictPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/district?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getProvincePolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/province?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

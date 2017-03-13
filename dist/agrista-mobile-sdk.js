@@ -6540,7 +6540,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     color: 'white',
                     opacity: 0.8,
                     fillColor: "#0094D6",
-                    fillOpacity: 0.5
+                    fillOpacity: 0.6
                 }
             },
             farmland: {
@@ -7212,7 +7212,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     handler: function (layer) {
                         _this._config.leafletLayers[name] = layer;
 
-                        handler(layer);
+                        if (typeof handler === 'function') {
+                            handler(layer);
+                        }
                     }
                 };
 
@@ -8230,7 +8232,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             layer = this._layers[name],
             removed = false;
 
-        if (fromLayer) {
+        if (fromLayer && layer) {
             removed = (this._layers[name] != undefined);
             fromLayer.removeLayer(layer);
 
@@ -8669,7 +8671,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion-polygon' + params)
+            $http.get(host + 'api/geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -8690,7 +8692,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion-polygon' + params)
+            $http.get(host + 'api/geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
@@ -8712,7 +8714,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district-polygon' + params)
+            $http.get(host + 'api/geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -8733,7 +8735,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district-polygon' + params)
+            $http.get(host + 'api/geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -8756,7 +8758,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field-polygon' + params)
+            $http.get(host + 'api/geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -8776,7 +8778,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field-polygon' + params)
+            $http.get(host + 'api/geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
@@ -9066,6 +9068,14 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
+            element.on('click', function (e) {
+                if (e.originalEvent) {
+                    e.originalEvent._stopped = true;
+                    e.originalEvent.preventDefault();
+                    e.originalEvent.stopPropagation();
+                }
+            });
+
             element.on('mouseover', function () {
                 map.dragging.disable();
             });
@@ -13600,9 +13610,13 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
             comments: {
                 required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
+            },
+            geometry: {
+                required: false,
+                object: true
             },
             name: {
                 required: true,
@@ -13616,9 +13630,9 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
                 numeric: true
             },
             province: {
-                required: true,
+                required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
             },
@@ -13635,14 +13649,64 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
     }]);
 
 
-sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologySuite', 'underscore',
-    function (inheritModel, Model, privateProperty, readOnlyProperty, topologySuite, underscore) {
+sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Sublayer (attrs) {
             Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'geom', function () {
+                return topologyHelper.readGeoJSON(this.geometry);
+            });
+
+            privateProperty(this, 'contains', function (geometry) {
+                return geometryRelation(this, 'contains', geometry);
+            });
+
+            privateProperty(this, 'covers', function (geometry) {
+                return geometryRelation(this, 'covers', geometry);
+            });
+
+            privateProperty(this, 'crosses', function (geometry) {
+                return geometryRelation(this, 'crosses', geometry);
+            });
+
+            privateProperty(this, 'intersects', function (geometry) {
+                return geometryRelation(this, 'intersects', geometry);
+            });
+
+            privateProperty(this, 'overlaps', function (geometry) {
+                return geometryRelation(this, 'overlaps', geometry);
+            });
+
+            privateProperty(this, 'touches', function (geometry) {
+                return geometryRelation(this, 'touches', geometry);
+            });
+
+            privateProperty(this, 'within', function (geometry) {
+                return geometryRelation(this, 'within', geometry);
+            });
+
+            privateProperty(this, 'withinOrCovers', function (geometry) {
+                return (geometryRelation(this, 'within', geometry) ||
+                    (geometryRelation(this, 'intersects', geometry) && geometryArea(geometryManipluation(this, 'difference', geometry)) < 0.001));
+            });
+
+            privateProperty(this, 'subtract', function (geometry) {
+                var geom = saveGeometryManipluation(this, 'difference', geometry);
+
+                if (geometryArea(geom) == 0) {
+                    this.geometry = undefined;
+                }
+            });
+
+            privateProperty(this, 'add', function (geometry) {
+                saveGeometryManipluation(this, 'union', geometry);
+            });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
+            this.data = attrs.data;
             this.code = attrs.code;
             this.comments = attrs.comments;
             this.createdAt = attrs.createdAt;
@@ -13650,7 +13714,7 @@ sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', '
             this.geometry = attrs.geometry;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
-            this.regionId = attrs.regionId;
+            this.layerId = attrs.layerId;
             this.type = attrs.type;
             this.updatedAt = attrs.updatedAt;
             this.updatedBy = attrs.updatedBy;
@@ -13669,20 +13733,63 @@ sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', '
             }
         });
 
+        function geometryArea (geometry) {
+            return (geometry && geometry.getArea());
+        }
+
+        function geometryEmpty (geometry) {
+            return (geometry && geometry.isEmpty());
+        }
+
+        function geometryRelation (instance, relation, geometry) {
+            var geom = instance.geom;
+
+            return (geom && geometry && geom[relation] ? geom[relation](geometry) : false);
+        }
+
+        function geometryManipluation (instance, manipluation, geometry) {
+            var geom = instance.geom;
+
+            return (geom && geometry && geom[manipluation] ? geom[manipluation](geometry) : geom);
+        }
+
+        function saveGeometryManipluation (instance, manipluation, geometry) {
+            var geom = geometryManipluation(instance, manipluation, geometry);
+
+            if (geom) {
+                instance.$dirty = true;
+                instance.geometry = topologyHelper.writeGeoJSON(geom);
+            }
+
+            return geom;
+        }
+
         Sublayer.validates({
+            data: {
+                required: false,
+                object: true
+            },
             code: {
                 required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
             },
             comments: {
                 required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
+            },
+            geometry: {
+                required: true,
+                object: true
+            },
+            layerId: {
+                required: true,
+                numeric: true
             },
             name: {
                 required: true,
@@ -17039,14 +17146,14 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
     return {
         getFieldPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/field?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getPortionPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/portion?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -17065,21 +17172,21 @@ mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration'
                 if (!query) {
                     promise.reject();
                 }
-                $http.get(_host + 'api/geo/portion-polygons?' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/portions?' + query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getDistrictPolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/district?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getProvincePolygon: function (lng, lat) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/province?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -19022,6 +19129,10 @@ sdkModelValidators.factory('Validator.range.to', ['underscore', 'Validatable.Val
 sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function required (value, instance, field) {
+            if (!this.required) {
+                return true;
+            }
+
             if (underscore.isUndefined(value) || underscore.isNull(value)) {
                 return false;
             }
