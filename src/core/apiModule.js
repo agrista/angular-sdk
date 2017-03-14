@@ -1000,6 +1000,13 @@ sdkApiApp.factory('layerApi', ['$http', 'pagingService', 'promiseService', 'conf
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        deleteSublayer: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/sublayer/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         }
     };
 }]);
