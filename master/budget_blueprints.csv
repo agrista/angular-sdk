@@ -1,0 +1,25 @@
+commodity_type,name,asset_type
+Maize (White),Maize (White) Blueprint,crop
+Canola,Canola Blueprint,crop
+Lupin,Lupin Blueprint,crop
+Maize (Yellow),Maize (Yellow) Blueprint,crop
+Citrus (Softpeel),Citrus (Softpeel) Blueprint,horticulture
+Lucerne,Lucerne Blueprint,crop
+Soya Bean,Soya Bean Blueprint,crop
+Barley,Barley Blueprint,crop
+Peach,Peaches Blueprint,horticulture
+Cattle (Extensive),Cattle (Extensive) Blueprint,livestock
+Apple,Apple Blueprint,horticulture
+Goats,Goats Blueprint,livestock
+Sheep (Extensive),Sheep (Extensive) Blueprint,livestock
+Olive,Olives Blueprint,horticulture
+Orange,Oranges Blueprint,horticulture
+Grain Sorghum,Grain Sorghum Blueprint,crop
+Citrus (Hardpeel),Citrus (Hardpeel) Blueprint,horticulture
+Macadamia Nut,Macadamia Nut Blueprint,horticulture
+Pecan Nut,Pecan Nuts Blueprint,horticulture
+Pear,Pears Blueprint,horticulture
+Wheat,Wheat Blueprint,crop
+Sunflower,Sunflower Blueprint,crop
+Grape (Wine),Grape (Wine) Blueprint,horticulture
+Grape (Table),Grape (Table) Blueprint,horticulture
