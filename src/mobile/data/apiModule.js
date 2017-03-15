@@ -29,8 +29,8 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
         _options = underscore.extend(_options, options);
     };
 
-    this.$get = ['$http', '$log', 'api', 'assetApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'financialApi', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'productionScheduleApi', 'promiseService', 'taskApi',
-        function ($http, $log, api, assetApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, financialApi, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, productionScheduleApi, promiseService, taskApi) {
+    this.$get = ['$http', '$log', 'api', 'assetApi', 'authorizationApi', 'configuration', 'connectionService', 'documentApi', 'enterpriseBudgetApi', 'expenseApi', 'farmApi', 'farmerApi', 'fileStorageService', 'financialApi', 'legalEntityApi', 'liabilityApi', 'merchantApi', 'organizationalUnitApi', 'pagingService', 'productionScheduleApi', 'promiseService', 'taskApi',
+        function ($http, $log, api, assetApi, authorizationApi, configuration, connectionService, documentApi, enterpriseBudgetApi, expenseApi, farmApi, farmerApi, fileStorageService, financialApi, legalEntityApi, liabilityApi, merchantApi, organizationalUnitApi, pagingService, productionScheduleApi, promiseService, taskApi) {
             function _getItems(apiName, params) {
                 var apiInstance = api(apiName);
 
@@ -59,7 +59,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                                     } else {
                                         paging.request().catch(promise.reject);
                                     }
-                                });
+                                }, promise.reject);
                             }, params);
 
                             paging.request().catch(promise.reject);
@@ -384,8 +384,18 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
                     models = models || _options.models;
 
-                    return _this.upload(models).then(function () {
-                        return _this.download(models);
+                    $log.debug('Attempting data synchronization');
+
+                    return promiseService.wrap(function (promise) {
+                        authorizationApi.getUser().then(function (res) {
+                            if (res.user) {
+                                _this.upload(models).then(function () {
+                                    _this.download(models).then(promise.resolve, promise.reject);
+                                }, promise.reject);
+                            } else {
+                                promise.reject();
+                            }
+                        }, promise.reject);
                     });
                 },
                 upload: function (models) {
@@ -393,12 +403,14 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
                     return promiseService.wrap(function (promise) {
                         if (_busy) {
+                            $log.debug('Upload - Already syncing with server');
                             promise.reject({
                                 data: {
                                     message: 'Syncing with server. Please wait'
                                 }
                             });
                         } else if (connectionService.isOnline() == false) {
+                            $log.debug('Upload - Device is offline');
                             promise.reject({
                                 data: {
                                     message: 'Cannot connect to the server. Please try again later'
@@ -406,6 +418,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             });
                         } else {
                             _busy = true;
+                            $log.debug('Uploading');
 
                             promiseService
                                 .chain(function (chain) {
@@ -434,6 +447,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                                     promise.resolve(res);
                                 }, function (err) {
                                     _busy = false;
+                                    $log.error(error);
                                     promise.reject(err);
                                 });
                         }
@@ -444,12 +458,14 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
                     return promiseService.wrap(function (promise) {
                         if (_busy) {
+                            $log.debug('Download - Already syncing with server');
                             promise.reject({
                                 data: {
                                     message: 'Syncing with server. Please wait'
                                 }
                             });
                         } else if (connectionService.isOnline() == false) {
+                            $log.debug('Download - Device is offline');
                             promise.reject({
                                 data: {
                                     message: 'Cannot connect to the server. Please try again later'
@@ -457,6 +473,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             });
                         } else {
                             _busy = true;
+                            $log.debug('Downloading');
 
                             promiseService
                                 .chain(function (chain) {
@@ -493,6 +510,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                                     promise.resolve(res);
                                 }, function (err) {
                                     _busy = false;
+                                    $log.error(err);
                                     promise.reject(err);
                                 });
                         }

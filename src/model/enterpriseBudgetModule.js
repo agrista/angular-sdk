@@ -763,16 +763,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data.details = this.data.details || {};
-            this.data.details.cycleStart = this.data.details.cycleStart || 0;
-            this.data.details.productionArea = this.data.details.productionArea || '1 Hectare';
-
-            this.data.schedules = this.data.schedules || {};
+            Base.initializeObject(this.data, 'details', {});
+            Base.initializeObject(this.data, 'schedules', []);
+            Base.initializeObject(this.data.details, 'cycleStart', 0);
+            Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
 
             computedProperty(this, 'commodityTitle', function () {
                 return getCommodityTitle(this.assetType);
@@ -889,8 +888,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
             } else if (this.assetType === 'horticulture') {
-                this.data.details.yearsToMaturity = this.data.details.yearsToMaturity || getYearsToMaturity(this);
-                this.data.details.maturityFactor = this.data.details.maturityFactor || [];
+                Base.initializeObject(this.data.details, 'yearsToMaturity', getYearsToMaturity(this));
+                Base.initializeObject(this.data.details, 'maturityFactor', []);
             }
 
             this.recalculate();
@@ -907,108 +906,108 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
 
         readOnlyProperty(EnterpriseBudget, 'assetCommodities', {
             crop: [
-              'Barley',
-              'Bean (Dry)',
-              'Bean (Green)',
-              'Canola',
-              'Cotton',
-              'Cowpea',
-              'Grain Sorghum',
-              'Groundnut',
-              'Lucerne',
-              'Lupin',
-              'Maize (Fodder)',
-              'Maize (Green)',
-              'Maize (Seed)',
-              'Maize (White)',
-              'Maize (Yellow)',
-              'Oat',
-              'Potato',
-              'Rye',
-              'Soya Bean',
-              'Sunflower',
-              'Sweet Corn',
-              'Tobacco',
-              'Triticale',
-              'Wheat'
+                'Barley',
+                'Bean (Dry)',
+                'Bean (Green)',
+                'Canola',
+                'Cotton',
+                'Cowpea',
+                'Grain Sorghum',
+                'Groundnut',
+                'Lucerne',
+                'Lupin',
+                'Maize (Fodder)',
+                'Maize (Green)',
+                'Maize (Seed)',
+                'Maize (White)',
+                'Maize (Yellow)',
+                'Oat',
+                'Potato',
+                'Rye',
+                'Soya Bean',
+                'Sunflower',
+                'Sweet Corn',
+                'Tobacco',
+                'Triticale',
+                'Wheat'
             ],
             horticulture: [
-              'Almond',
-              'Apple',
-              'Apricot',
-              'Avocado',
-              'Banana',
-              'Barberry',
-              'Berry',
-              'Bilberry',
-              'Blackberry',
-              'Blueberry',
-              'Cherry',
-              'Chicory',
-              'Chili',
-              'Cloudberry',
-              'Citrus (Hardpeel)',
-              'Citrus (Softpeel)',
-              'Coffee',
-              'Fig',
-              'Garlic',
-              'Gooseberry',
-              'Grape (Table)',
-              'Grape (Wine)',
-              'Guava',
-              'Hops',
-              'Kiwi',
-              'Lemon',
-              'Lentil',
-              'Macadamia Nut',
-              'Mandarin',
-              'Mango',
-              'Melon',
-              'Mulberry',
-              'Nectarine',
-              'Olive',
-              'Onion',
-              'Orange',
-              'Papaya',
-              'Pea',
-              'Peach',
-              'Peanut',
-              'Pear',
-              'Prickly Pear',
-              'Pecan Nut',
-              'Persimmon',
-              'Pineapple',
-              'Pistachio Nut',
-              'Plum',
-              'Pomegranate',
-              'Protea',
-              'Prune',
-              'Pumpkin',
-              'Quince',
-              'Raspberry',
-              'Rooibos',
-              'Strawberry',
-              'Sugarcane',
-              'Tea',
-              'Tomato',
-              'Watermelon',
-              'Wineberry'
+                'Almond',
+                'Apple',
+                'Apricot',
+                'Avocado',
+                'Banana',
+                'Barberry',
+                'Berry',
+                'Bilberry',
+                'Blackberry',
+                'Blueberry',
+                'Cherry',
+                'Chicory',
+                'Chili',
+                'Cloudberry',
+                'Citrus (Hardpeel)',
+                'Citrus (Softpeel)',
+                'Coffee',
+                'Fig',
+                'Garlic',
+                'Gooseberry',
+                'Grape (Table)',
+                'Grape (Wine)',
+                'Guava',
+                'Hops',
+                'Kiwi',
+                'Lemon',
+                'Lentil',
+                'Macadamia Nut',
+                'Mandarin',
+                'Mango',
+                'Melon',
+                'Mulberry',
+                'Nectarine',
+                'Olive',
+                'Onion',
+                'Orange',
+                'Papaya',
+                'Pea',
+                'Peach',
+                'Peanut',
+                'Pear',
+                'Prickly Pear',
+                'Pecan Nut',
+                'Persimmon',
+                'Pineapple',
+                'Pistachio Nut',
+                'Plum',
+                'Pomegranate',
+                'Protea',
+                'Prune',
+                'Pumpkin',
+                'Quince',
+                'Raspberry',
+                'Rooibos',
+                'Strawberry',
+                'Sugarcane',
+                'Tea',
+                'Tomato',
+                'Watermelon',
+                'Wineberry'
             ],
             livestock: [
-              'Cattle (Extensive)',
-              'Cattle (Feedlot)',
-              'Cattle (Stud)',
-              'Chicken (Broilers)',
-              'Chicken (Layers)',
-              'Dairy',
-              'Game',
-              'Goats',
-              'Horses',
-              'Ostrich',
-              'Pigs',
-              'Sheep (Extensive)',
-              'Sheep (Feedlot)',
-              'Sheep (Stud)'
+                'Cattle (Extensive)',
+                'Cattle (Feedlot)',
+                'Cattle (Stud)',
+                'Chicken (Broilers)',
+                'Chicken (Layers)',
+                'Dairy',
+                'Game',
+                'Goats',
+                'Horses',
+                'Ostrich',
+                'Pigs',
+                'Sheep (Extensive)',
+                'Sheep (Feedlot)',
+                'Sheep (Stud)'
             ]
         });
 
@@ -1159,19 +1158,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
 
                     angular.forEach(group.productCategories, function(category) {
                         if(category.unit == '%') {
-                            var groupSum = underscore
-                                .chain(instance.data.sections)
-                                .filter(function (groupingSection) {
-                                    return (groupingSection.costStage === section.costStage);
-                                })
-                                .pluck('productCategoryGroups')
-                                .flatten()
-                                .reduce(function(total, group) {
-                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
-                                }, 0)
-                                .value();
-
-                            category.quantity = roundValue(groupSum / 100);
+                            // Convert percentage to total
+                            category.unit = 'Total';
+                            category.pricePerUnit = category.quantity;
+                            category.quantity = 1;
                         } else {
                             category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
                         }
@@ -1186,27 +1176,27 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                                 return total + (value || 0);
                             }, 0);
 
-                        category.value = (((category.pricePerUnit || 0) * (category.quantity || 0)) / 100) * scheduleTotalAllocation;
+                        category.value = roundValue(((category.pricePerUnit || 0) * (category.quantity || 0)) * (scheduleTotalAllocation / 100));
 
                         category.valuePerMonth = underscore.map(schedule, function (allocation) {
-                            return (category.value / 100) * allocation;
+                            return roundValue(category.value * (allocation / 100));
                         });
 
                         category.quantityPerMonth = underscore.map(schedule, function (allocation) {
-                            return (category.quantity / 100) * allocation;
+                            return roundValue(category.quantity * (allocation / 100));
                         });
 
                         group.total.value += category.value;
                         group.total.valuePerMonth = (group.total.valuePerMonth ?
                             underscore.map(group.total.valuePerMonth, function (value, index) {
-                                return value + category.valuePerMonth[index];
+                                return roundValue(value + category.valuePerMonth[index]);
                             }) : angular.copy(category.valuePerMonth));
                     });
 
                     section.total.value += group.total.value;
                     section.total.valuePerMonth = (section.total.valuePerMonth ?
                         underscore.map(section.total.valuePerMonth, function (value, index) {
-                            return value + group.total.valuePerMonth[index];
+                            return roundValue(value + group.total.valuePerMonth[index]);
                         }) : angular.copy(group.total.valuePerMonth));
 
                     if(instance.assetType == 'livestock') {

@@ -75,7 +75,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
     var _tokens;
 
     // Intercept any HTTP responses that are not authorized
-    $httpProvider.interceptors.push(['$injector', '$rootScope', 'localStore', 'promiseService', function ($injector, $rootScope, localStore, promiseService) {
+    $httpProvider.interceptors.push(['$injector', '$log', '$rootScope', 'localStore', 'promiseService', function ($injector, $log, $rootScope, localStore, promiseService) {
         var _requestQueue = [];
 
         function queueRequest (config) {
@@ -131,6 +131,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 return config;
             },
             responseError: function (err) {
+                $log.debug(err);
+
                 if (err.status === 401) {
                     $rootScope.$broadcast('authorization::unauthorized', err);
                 } else if (err.status === 403) {
@@ -158,8 +160,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             _preAuthenticate = fn;
         },
 
-        $get: ['$auth', '$injector', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
-            function ($auth, $injector, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
+        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
+            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
                 var _user = _getUser();
 
                 _tokens = localStore.getItem('tokens');
@@ -220,6 +222,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 function _postError (promise) {
                     return function (err) {
+                        $log.error(err);
+
                         _lastError = {
                             code: err.status,
                             type: 'error',
@@ -246,6 +250,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _tokens;
                     },
 
+                    isAdmin: function () {
+                        return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
+                    },
                     isAllowed: function (level) {
                         return (level & _user.role) != 0;
                     },

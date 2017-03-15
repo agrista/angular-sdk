@@ -9,6 +9,7 @@ var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk
 cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', function ($log, promiseService) {
     var _fileSystem = undefined;
     var _errors = {
+        noFileEntry: {err: 'noFileEntry', msg: 'Could not initialize file entry'},
         noFileSystem: {err: 'NoFileSystem', msg: 'Could not initialize file system'},
         directoryNotFound: {err: 'directoryNotFound', msg: 'Could not find requested directory'},
         fileNotFound: {err: 'FileNotFound', msg: 'Could not find requested file'},
@@ -45,18 +46,24 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
             defer.resolve(fileEntry);
         };
 
-        var _reject = function () {
-            defer.reject(_errors.fileNotFound);
+        var _reject = function (err) {
+            $log.error(err);
+            defer.reject(_errors.noFileEntry);
         };
+
+        $log.debug(fileURI);
 
         // Initialize the file system
         _initFileSystem(function () {
             // Request the file entry
-            if (fileURI.indexOf('file://') === 0) {
-                window.resolveLocalFileSystemURI(fileURI, _resolve, _reject);
-            } else {
-                _fileSystem.root.getFile(fileURI, options, _resolve, _reject);
-            }
+            _fileSystem.root.getFile(fileURI, options, _resolve, function () {
+                var filePath = fileURI.substr(0, fileURI.lastIndexOf('/')),
+                    fileName = fileURI.substr(fileURI.lastIndexOf('/') + 1);
+
+                window.resolveLocalFileSystemURI(filePath, function (directoryEntry) {
+                    directoryEntry.getFile(fileName, options, _resolve, _reject);
+                }, _reject);
+            });
         }, function () {
             defer.reject(_errors.noFileSystem);
         });
@@ -67,6 +74,9 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
     $log.debug('Initialized storageService');
 
     return {
+        getBaseDirectory: function (directory) {
+            return (cordova.file && cordova.file[directory] ? cordova.file[directory] : '');
+        },
         /**
          * Check if a file exists
          * @param {string} fileURI The file to check

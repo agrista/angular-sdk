@@ -3,7 +3,7 @@ var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utiliti
 /*
  * GeoJson
  */
-sdkInterfaceMapApp.factory('geoJSONHelper', function () {
+sdkInterfaceMapApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
             return new GeojsonHelper(json, properties);
@@ -128,6 +128,10 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                     }
 
                     if (this._json.type == 'Feature') {
+                        this._json.properties = underscore.defaults(this._json.properties || {}, {
+                            featureId: objectId().toString()
+                        });
+
                         this._json = {
                             type: 'FeatureCollection',
                             features: [this._json]
@@ -138,7 +142,9 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                         this._json.features.push({
                             type: 'Feature',
                             geometry: geometry,
-                            properties: properties
+                            properties: underscore.defaults(properties || {}, {
+                                featureId: objectId().toString()
+                            })
                         });
                     }
                 }
@@ -154,7 +160,6 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                     // type of Feature
                     case 'feature':
                         if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
-                            console.log(geoJson.geometry);
                             return geoJson.geometry;
                         }
                         break;
@@ -211,7 +216,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
     return function (json, properties) {
         return new GeojsonHelper(json, properties);
     }
-});
+}]);
 
 sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (underscore) {
     var _createMarker = function (name, state, options) {
@@ -1881,17 +1886,20 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.addLayerToLayer = function (name, layer, toLayerName) {
-        var toLayer = this._layers[toLayerName],
-            added = false;
+        var toLayer = this._layers[toLayerName];
         
         if (toLayer) {
-            added = (this._layers[name] == undefined);
-            this._layers[name] = layer;
+            if (this._layers[name]) {
+                toLayer.removeLayer(layer);
+            }
 
+            this._layers[name] = layer;
             toLayer.addLayer(layer);
+
+            return true;
         }
 
-        return added;
+        return false;
     };
 
     Mapbox.prototype.removeLayer = function (name) {

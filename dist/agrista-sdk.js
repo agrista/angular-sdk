@@ -1541,6 +1541,23 @@ sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseSer
 }]);
 
 /**
+ * Tag API
+ */
+sdkApiApp.factory('tagApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getTags: function () {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/tags', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
+/**
  * Task API
  */
 sdkApiApp.factory('taskApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
@@ -1802,7 +1819,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
     var _tokens;
 
     // Intercept any HTTP responses that are not authorized
-    $httpProvider.interceptors.push(['$injector', '$rootScope', 'localStore', 'promiseService', function ($injector, $rootScope, localStore, promiseService) {
+    $httpProvider.interceptors.push(['$injector', '$log', '$rootScope', 'localStore', 'promiseService', function ($injector, $log, $rootScope, localStore, promiseService) {
         var _requestQueue = [];
 
         function queueRequest (config) {
@@ -1858,6 +1875,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 return config;
             },
             responseError: function (err) {
+                $log.debug(err);
+
                 if (err.status === 401) {
                     $rootScope.$broadcast('authorization::unauthorized', err);
                 } else if (err.status === 403) {
@@ -1885,8 +1904,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             _preAuthenticate = fn;
         },
 
-        $get: ['$auth', '$injector', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
-            function ($auth, $injector, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
+        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
+            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
                 var _user = _getUser();
 
                 _tokens = localStore.getItem('tokens');
@@ -1947,6 +1966,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 function _postError (promise) {
                     return function (err) {
+                        $log.error(err);
+
                         _lastError = {
                             code: err.status,
                             type: 'error',
@@ -1973,6 +1994,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _tokens;
                     },
 
+                    isAdmin: function () {
+                        return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
+                    },
                     isAllowed: function (level) {
                         return (level & _user.role) != 0;
                     },
@@ -2280,6 +2304,71 @@ sdkLibraryApp.constant('geojsonUtils', window.gju);
 sdkLibraryApp.constant('naturalSort', window.naturalSort);
 
 var sdkMonitorApp = angular.module('ag.sdk.monitor', ['ag.sdk.utilities']);
+
+sdkMonitorApp.config(['$provide', function ($provide) {
+    $provide.decorator('$log', ['$delegate', '$filter', 'logStore', 'moment', 'underscore', function ($delegate, $filter, logStore, moment, underscore) {
+        function prepareLogLevelFunction (log, level) {
+            var levelFunction = log[level];
+
+            log[level] = function () {
+                var args = [].slice.call(arguments),
+                    caller = (arguments.callee && arguments.callee.caller && arguments.callee.caller.name.length > 0 ? arguments.callee.caller.name + ' :: ' : ''),
+                    output = (underscore.isObject(args[0]) ? '\n' + $filter('json')(args[0]) : args[0]);
+
+                args[0] = moment().format('YYYY-MM-DDTHH:mm:ss.SSS') + underscore.lpad(' [' + level.toUpperCase() + '] ', 7, ' ') +  caller + output;
+
+                logStore.log(level, args[0]);
+                levelFunction.apply(null, args);
+            };
+        }
+
+        prepareLogLevelFunction($delegate, 'log');
+        prepareLogLevelFunction($delegate, 'info');
+        prepareLogLevelFunction($delegate, 'warn');
+        prepareLogLevelFunction($delegate, 'debug');
+        prepareLogLevelFunction($delegate, 'error');
+
+        return $delegate;
+    }]);
+}]);
+
+sdkMonitorApp.provider('logStore', [function () {
+    var _items = [],
+        _defaultConfig = {
+            maxItems: 1000
+        },
+        _config = _defaultConfig;
+
+    return {
+        config: function (config) {
+            _config = config;
+        },
+        $get: ['underscore', function (underscore) {
+            _config = underscore.defaults(_config, _defaultConfig);
+
+            return {
+                log: function (level, entry) {
+                    var item = {
+                        level: level,
+                        entry: entry
+                    };
+
+                    _items.splice(0, 0, item);
+
+                    if (_items.length > _config.maxItems) {
+                        _items.pop();
+                    }
+                },
+                clear: function () {
+                    _items = [];
+                },
+                list: function () {
+                    return _items;
+                }
+            }
+        }]
+    };
+}]);
 
 sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, safeApply) {
     function PromiseMonitor(callback) {
@@ -3166,158 +3255,209 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'water right': ['Water Right']
     };
 
-    var _grazingCropTypes = ['Bahia-Notatum', 'Birdsfoot Trefoil', 'Bottle Brush', 'Buffalo', 'Buffalo (Blue)', 'Buffalo (White)', 'Bush', 'Carribean Stylo', 'Clover', 'Clover (Arrow Leaf)', 'Clover (Crimson)', 'Clover (Persian)', 'Clover (Red)', 'Clover (Rose)', 'Clover (Strawberry)', 'Clover (Subterranean)', 'Clover (White)', 'Cocksfoot', 'Common Setaria', 'Dallis', 'Kikuyu', 'Lucerne', 'Lupin', 'Lupin (Narrow Leaf)', 'Lupin (White)', 'Lupin (Yellow)', 'Medic', 'Medic (Barrel)', 'Medic (Burr)', 'Medic (Gama)', 'Medic (Snail)', 'Medic (Strand)', 'Phalaris', 'Rescue', 'Rhodes', 'Russian Grass', 'Ryegrass', 'Ryegrass (Hybrid)', 'Ryegrass (Italian)', 'Ryegrass (Westerwolds)', 'Serradella', 'Serradella (Yellow)', 'Silver Leaf Desmodium', 'Smuts Finger', 'Soutbos', 'Tall Fescue', 'Teff', 'Veld', 'Weeping Lovegrass'];
+    var _grazingCropTypes = [
+        'Bahia-Notatum',
+        'Birdsfoot Trefoil',
+        'Bottle Brush',
+        'Buffalo',
+        'Buffalo (Blue)',
+        'Buffalo (White)',
+        'Bush',
+        'Carribean Stylo',
+        'Clover',
+        'Clover (Arrow Leaf)',
+        'Clover (Crimson)',
+        'Clover (Persian)',
+        'Clover (Red)',
+        'Clover (Rose)',
+        'Clover (Strawberry)',
+        'Clover (Subterranean)',
+        'Clover (White)',
+        'Cocksfoot',
+        'Common Setaria',
+        'Dallis',
+        'Kikuyu',
+        'Lucerne',
+        'Lupin',
+        'Lupin (Narrow Leaf)',
+        'Lupin (White)',
+        'Lupin (Yellow)',
+        'Medic',
+        'Medic (Barrel)',
+        'Medic (Burr)',
+        'Medic (Gama)',
+        'Medic (Snail)',
+        'Medic (Strand)',
+        'Multi-species',
+        'Phalaris',
+        'Rescue',
+        'Rhodes',
+        'Russian Grass',
+        'Ryegrass',
+        'Ryegrass (Hybrid)',
+        'Ryegrass (Italian)',
+        'Ryegrass (Westerwolds)',
+        'Serradella',
+        'Serradella (Yellow)',
+        'Silver Leaf Desmodium',
+        'Smuts Finger',
+        'Soutbos',
+        'Tall Fescue',
+        'Teff',
+        'Veld',
+        'Weeping Lovegrass'
+    ];
 
     var _landUseCropTypes = {
         'Cropland': [
-          'Barley',
-          'Bean',
-          'Bean (Broad)',
-          'Bean (Dry)',
-          'Bean (Sugar)',
-          'Bean (Green)',
-          'Bean (Kidney)',
-          'Canola',
-          'Cassava',
-          'Cotton',
-          'Cowpea',
-          'Grain Sorghum',
-          'Groundnut',
-          'Lucerne',
-          'Maize',
-          'Maize (White)',
-          'Maize (Yellow)',
-          'Oat',
-          'Peanut',
-          'Pearl Millet',
-          'Potato',
-          'Rape',
-          'Rice',
-          'Rye',
-          'Soya Bean',
-          'Sunflower',
-          'Sweet Corn',
-          'Sweet Potato',
-          'Tobacco',
-          'Triticale',
-          'Wheat',
-          'Wheat (Durum)'
+            'Barley',
+            'Bean',
+            'Bean (Broad)',
+            'Bean (Dry)',
+            'Bean (Sugar)',
+            'Bean (Green)',
+            'Bean (Kidney)',
+            'Canola',
+            'Cassava',
+            'Cotton',
+            'Cowpea',
+            'Grain Sorghum',
+            'Groundnut',
+            'Lucerne',
+            'Maize',
+            'Maize (White)',
+            'Maize (Yellow)',
+            'Oat',
+            'Peanut',
+            'Pearl Millet',
+            'Potato',
+            'Rape',
+            'Rice',
+            'Rye',
+            'Soya Bean',
+            'Sunflower',
+            'Sweet Corn',
+            'Sweet Potato',
+            'Tobacco',
+            'Triticale',
+            'Wheat',
+            'Wheat (Durum)'
         ],
         'Grazing': _grazingCropTypes,
         'Horticulture (Perennial)': [
-          'Almond',
-          'Aloe',
-          'Apple',
-          'Apricot',
-          'Avocado',
-          'Banana',
-          'Barberry',
-          'Berry',
-          'Bilberry',
-          'Blackberry',
-          'Blueberry',
-          'Cherry',
-          'Cloudberry',
-          'Coconut',
-          'Coffee',
-          'Fig',
-          'Gooseberry',
-          'Grape',
-          'Grape (Bush Vine)',
-          'Grape (Red)',
-          'Grape (Table)',
-          'Grape (White)',
-          'Grapefruit',
-          'Guava',
-          'Hops',
-          'Kiwi Fruit',
-          'Lemon',
-          'Litchi',
-          'Macadamia Nut',
-          'Mandarin',
-          'Mango',
-          'Nectarine',
-          'Olive',
-          'Orange',
-          'Papaya',
-          'Peach',
-          'Pear',
-          'Prickly Pear',
-          'Pecan Nut',
-          'Persimmon',
-          'Pineapple',
-          'Pistachio Nut',
-          'Plum',
-          'Pomegranate',
-          'Protea',
-          'Raspberry',
-          'Rooibos',
-          'Sisal',
-          'Strawberry',
-          'Sugarcane',
-          'Tea',
-          'Walnut',
-          'Wineberry'
+            'Almond',
+            'Aloe',
+            'Apple',
+            'Apricot',
+            'Avocado',
+            'Banana',
+            'Barberry',
+            'Berry',
+            'Bilberry',
+            'Blackberry',
+            'Blueberry',
+            'Cherry',
+            'Cloudberry',
+            'Coconut',
+            'Coffee',
+            'Fig',
+            'Gooseberry',
+            'Grape',
+            'Grape (Bush Vine)',
+            'Grape (Red)',
+            'Grape (Table)',
+            'Grape (White)',
+            'Grapefruit',
+            'Guava',
+            'Hops',
+            'Kiwi Fruit',
+            'Lemon',
+            'Litchi',
+            'Macadamia Nut',
+            'Mandarin',
+            'Mango',
+            'Nectarine',
+            'Olive',
+            'Orange',
+            'Papaya',
+            'Peach',
+            'Pear',
+            'Prickly Pear',
+            'Pecan Nut',
+            'Persimmon',
+            'Pineapple',
+            'Pistachio Nut',
+            'Plum',
+            'Pomegranate',
+            'Protea',
+            'Raspberry',
+            'Rooibos',
+            'Sisal',
+            'Strawberry',
+            'Sugarcane',
+            'Tea',
+            'Walnut',
+            'Wineberry'
         ],
         'Horticulture (Seasonal)': [
-          'Asparagus',
-          'Beet',
-          'Beetroot',
-          'Blackberry',
-          'Borecole',
-          'Brinjal',
-          'Broccoli',
-          'Brussel Sprout',
-          'Cabbage',
-          'Cabbage (Chinese)',
-          'Cabbage (Savoy)',
-          'Cactus Pear',
-          'Carrot',
-          'Cauliflower',
-          'Celery',
-          'Chicory',
-          'Chili',
-          'Cucumber',
-          'Cucurbit',
-          'Garlic',
-          'Ginger',
-          'Granadilla',
-          'Kale',
-          'Kohlrabi',
-          'Leek',
-          'Lentil',
-          'Lespedeza',
-          'Lettuce',
-          'Makataan',
-          'Mustard',
-          'Mustard (White)',
-          'Onion',
-          'Paprika',
-          'Parsley',
-          'Parsnip',
-          'Pea',
-          'Pea (Dry)',
-          'Pepper',
-          'Pumpkin',
-          'Quince',
-          'Radish',
-          'Squash',
-          'Strawberry',
-          'Swede',
-          'Sweet Melon',
-          'Swiss Chard',
-          'Tea',
-          'Tomato',
-          'Turnip',
-          'Vetch (Common)',
-          'Vetch (Hairy)',
-          'Watermelon',
-          'Youngberry'
+            'Asparagus',
+            'Beet',
+            'Beetroot',
+            'Blackberry',
+            'Borecole',
+            'Brinjal',
+            'Broccoli',
+            'Brussel Sprout',
+            'Cabbage',
+            'Cabbage (Chinese)',
+            'Cabbage (Savoy)',
+            'Cactus Pear',
+            'Carrot',
+            'Cauliflower',
+            'Celery',
+            'Chicory',
+            'Chili',
+            'Cucumber',
+            'Cucurbit',
+            'Garlic',
+            'Ginger',
+            'Granadilla',
+            'Kale',
+            'Kohlrabi',
+            'Leek',
+            'Lentil',
+            'Lespedeza',
+            'Lettuce',
+            'Makataan',
+            'Mustard',
+            'Mustard (White)',
+            'Onion',
+            'Paprika',
+            'Parsley',
+            'Parsnip',
+            'Pea',
+            'Pea (Dry)',
+            'Pepper',
+            'Pumpkin',
+            'Quince',
+            'Radish',
+            'Squash',
+            'Strawberry',
+            'Swede',
+            'Sweet Melon',
+            'Swiss Chard',
+            'Tea',
+            'Tomato',
+            'Turnip',
+            'Vetch (Common)',
+            'Vetch (Hairy)',
+            'Watermelon',
+            'Youngberry'
         ],
         'Plantation': [
-          'Bluegum',
-          'Pine',
-          'Wattle'],
+            'Bluegum',
+            'Pine',
+            'Wattle'],
         'Planted Pastures': _grazingCropTypes
     };
 
@@ -6543,165 +6683,166 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
     // When updating, also update the _commodities list in the enterpriseBudgetHelper
     var _enterpriseTypes = {
         'Field Crops': [
-          'Barley',
-          'Bean',
-          'Bean (Broad)',
-          'Bean (Dry)',
-          'Bean (Sugar)',
-          'Bean (Green)',
-          'Bean (Kidney)',
-          'Canola',
-          'Cassava',
-          'Cotton',
-          'Cowpea',
-          'Grain Sorghum',
-          'Groundnut',
-          'Lucerne',
-          'Maize',
-          'Maize (White)',
-          'Maize (Yellow)',
-          'Oat',
-          'Peanut',
-          'Pearl Millet',
-          'Potato',
-          'Rape',
-          'Rice',
-          'Rye',
-          'Soya Bean',
-          'Sunflower',
-          'Sweet Corn',
-          'Sweet Potato',
-          'Tobacco',
-          'Triticale',
-          'Wheat',
-          'Wheat (Durum)'
+            'Barley',
+            'Bean',
+            'Bean (Broad)',
+            'Bean (Dry)',
+            'Bean (Sugar)',
+            'Bean (Green)',
+            'Bean (Kidney)',
+            'Canola',
+            'Cassava',
+            'Cotton',
+            'Cowpea',
+            'Grain Sorghum',
+            'Groundnut',
+            'Lucerne',
+            'Maize',
+            'Maize (White)',
+            'Maize (Yellow)',
+            'Oat',
+            'Peanut',
+            'Pearl Millet',
+            'Potato',
+            'Rape',
+            'Rice',
+            'Rye',
+            'Soya Bean',
+            'Sunflower',
+            'Sweet Corn',
+            'Sweet Potato',
+            'Tobacco',
+            'Triticale',
+            'Wheat',
+            'Wheat (Durum)'
         ],
         'Grazing': [
-          'Bahia-Notatum',
-          'Birdsfoot Trefoil',
-          'Bottle Brush',
-          'Buffalo',
-          'Buffalo (Blue)',
-          'Buffalo (White)',
-          'Bush',
-          'Carribean Stylo',
-          'Clover',
-          'Clover (Arrow Leaf)',
-          'Clover (Crimson)',
-          'Clover (Persian)',
-          'Clover (Red)',
-          'Clover (Rose)',
-          'Clover (Strawberry)',
-          'Clover (Subterranean)',
-          'Clover (White)',
-          'Cocksfoot',
-          'Common Setaria',
-          'Dallis',
-          'Kikuyu',
-          'Lucerne',
-          'Lupin',
-          'Lupin (Narrow Leaf)',
-          'Lupin (White)',
-          'Lupin (Yellow)',
-          'Medic',
-          'Medic (Barrel)',
-          'Medic (Burr)',
-          'Medic (Gama)',
-          'Medic (Snail)',
-          'Medic (Strand)',
-          'Phalaris',
-          'Rescue',
-          'Rhodes',
-          'Russian Grass',
-          'Ryegrass',
-          'Ryegrass (Hybrid)',
-          'Ryegrass (Italian)',
-          'Ryegrass (Westerwolds)',
-          'Serradella',
-          'Serradella (Yellow)',
-          'Silver Leaf Desmodium',
-          'Smuts Finger',
-          'Soutbos',
-          'Tall Fescue',
-          'Teff',
-          'Veld',
-          'Weeping Lovegrass'],
+            'Bahia-Notatum',
+            'Birdsfoot Trefoil',
+            'Bottle Brush',
+            'Buffalo',
+            'Buffalo (Blue)',
+            'Buffalo (White)',
+            'Bush',
+            'Carribean Stylo',
+            'Clover',
+            'Clover (Arrow Leaf)',
+            'Clover (Crimson)',
+            'Clover (Persian)',
+            'Clover (Red)',
+            'Clover (Rose)',
+            'Clover (Strawberry)',
+            'Clover (Subterranean)',
+            'Clover (White)',
+            'Cocksfoot',
+            'Common Setaria',
+            'Dallis',
+            'Kikuyu',
+            'Lucerne',
+            'Lupin',
+            'Lupin (Narrow Leaf)',
+            'Lupin (White)',
+            'Lupin (Yellow)',
+            'Medic',
+            'Medic (Barrel)',
+            'Medic (Burr)',
+            'Medic (Gama)',
+            'Medic (Snail)',
+            'Medic (Strand)',
+            'Multi-species',
+            'Phalaris',
+            'Rescue',
+            'Rhodes',
+            'Russian Grass',
+            'Ryegrass',
+            'Ryegrass (Hybrid)',
+            'Ryegrass (Italian)',
+            'Ryegrass (Westerwolds)',
+            'Serradella',
+            'Serradella (Yellow)',
+            'Silver Leaf Desmodium',
+            'Smuts Finger',
+            'Soutbos',
+            'Tall Fescue',
+            'Teff',
+            'Veld',
+            'Weeping Lovegrass'],
         'Horticulture': [
-          'Almond',
-          'Aloe',
-          'Apple',
-          'Apricot',
-          'Avocado',
-          'Banana',
-          'Barberry',
-          'Berry',
-          'Bilberry',
-          'Blackberry',
-          'Blueberry',
-          'Cherry',
-          'Cloudberry',
-          'Coconut',
-          'Coffee',
-          'Fig',
-          'Gooseberry',
-          'Grape',
-          'Grape (Bush Vine)',
-          'Grape (Red)',
-          'Grape (Table)',
-          'Grape (White)',
-          'Grapefruit',
-          'Guava',
-          'Hops',
-          'Kiwi Fruit',
-          'Lemon',
-          'Litchi',
-          'Macadamia Nut',
-          'Mandarin',
-          'Mango',
-          'Mulberry',
-          'Nectarine',
-          'Olive',
-          'Orange',
-          'Papaya',
-          'Peach',
-          'Pear',
-          'Pomegranate',
-          'Prickly Pear',
-          'Pecan Nut',
-          'Persimmon',
-          'Pineapple',
-          'Pistachio Nut',
-          'Plum',
-          'Protea',
-          'Raspberry',
-          'Rooibos',
-          'Sisal',
-          'Strawberry',
-          'Sugarcane',
-          'Tea',
-          'Walnut',
-          'Wineberry'
+            'Almond',
+            'Aloe',
+            'Apple',
+            'Apricot',
+            'Avocado',
+            'Banana',
+            'Barberry',
+            'Berry',
+            'Bilberry',
+            'Blackberry',
+            'Blueberry',
+            'Cherry',
+            'Cloudberry',
+            'Coconut',
+            'Coffee',
+            'Fig',
+            'Gooseberry',
+            'Grape',
+            'Grape (Bush Vine)',
+            'Grape (Red)',
+            'Grape (Table)',
+            'Grape (White)',
+            'Grapefruit',
+            'Guava',
+            'Hops',
+            'Kiwi Fruit',
+            'Lemon',
+            'Litchi',
+            'Macadamia Nut',
+            'Mandarin',
+            'Mango',
+            'Mulberry',
+            'Nectarine',
+            'Olive',
+            'Orange',
+            'Papaya',
+            'Peach',
+            'Pear',
+            'Pomegranate',
+            'Prickly Pear',
+            'Pecan Nut',
+            'Persimmon',
+            'Pineapple',
+            'Pistachio Nut',
+            'Plum',
+            'Protea',
+            'Raspberry',
+            'Rooibos',
+            'Sisal',
+            'Strawberry',
+            'Sugarcane',
+            'Tea',
+            'Walnut',
+            'Wineberry'
         ],
         'Livestock': [
-          'Cattle (Extensive)',
-          'Cattle (Feedlot)',
-          'Cattle (Stud)',
-          'Chicken (Broilers)',
-          'Chicken (Layers)',
-          'Dairy',
-          'Game',
-          'Goats',
-          'Horses',
-          'Ostrich',
-          'Pigs',
-          'Sheep (Extensive)',
-          'Sheep (Feedlot)',
-          'Sheep (Stud)'
+            'Cattle (Extensive)',
+            'Cattle (Feedlot)',
+            'Cattle (Stud)',
+            'Chicken (Broilers)',
+            'Chicken (Layers)',
+            'Dairy',
+            'Game',
+            'Goats',
+            'Horses',
+            'Ostrich',
+            'Pigs',
+            'Sheep (Extensive)',
+            'Sheep (Feedlot)',
+            'Sheep (Stud)'
         ],
         'Plantation': [
-          'Bluegum',
-          'Pine',
-          'Wattle'
+            'Bluegum',
+            'Pine',
+            'Wattle'
         ]
     };
 
@@ -7855,7 +7996,7 @@ var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utiliti
 /*
  * GeoJson
  */
-sdkInterfaceMapApp.factory('geoJSONHelper', function () {
+sdkInterfaceMapApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
             return new GeojsonHelper(json, properties);
@@ -7980,6 +8121,10 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                     }
 
                     if (this._json.type == 'Feature') {
+                        this._json.properties = underscore.defaults(this._json.properties || {}, {
+                            featureId: objectId().toString()
+                        });
+
                         this._json = {
                             type: 'FeatureCollection',
                             features: [this._json]
@@ -7990,7 +8135,9 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                         this._json.features.push({
                             type: 'Feature',
                             geometry: geometry,
-                            properties: properties
+                            properties: underscore.defaults(properties || {}, {
+                                featureId: objectId().toString()
+                            })
                         });
                     }
                 }
@@ -8006,7 +8153,6 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
                     // type of Feature
                     case 'feature':
                         if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
-                            console.log(geoJson.geometry);
                             return geoJson.geometry;
                         }
                         break;
@@ -8063,7 +8209,7 @@ sdkInterfaceMapApp.factory('geoJSONHelper', function () {
     return function (json, properties) {
         return new GeojsonHelper(json, properties);
     }
-});
+}]);
 
 sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (underscore) {
     var _createMarker = function (name, state, options) {
@@ -9733,17 +9879,20 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.addLayerToLayer = function (name, layer, toLayerName) {
-        var toLayer = this._layers[toLayerName],
-            added = false;
+        var toLayer = this._layers[toLayerName];
         
         if (toLayer) {
-            added = (this._layers[name] == undefined);
-            this._layers[name] = layer;
+            if (this._layers[name]) {
+                toLayer.removeLayer(layer);
+            }
 
+            this._layers[name] = layer;
             toLayer.addLayer(layer);
+
+            return true;
         }
 
-        return added;
+        return false;
     };
 
     Mapbox.prototype.removeLayer = function (name) {
@@ -10853,6 +11002,20 @@ sdkInterfaceUiApp.filter('floor', ['$filter', function ($filter) {
     };
 }]);
 
+sdkInterfaceUiApp.filter('htmlEncode', [function () {
+    return function (text) {
+        return (text || '').replace(/[\u00A0-\u9999<>&'"]/gim, function (i) {
+            return '&#' + i.charCodeAt(0) + ';';
+        });
+    }
+}]);
+
+sdkInterfaceUiApp.filter('newlines', ['$filter', '$sce', function ($filter, $sce) {
+    return function(msg, isXHTML) {
+        return $sce.trustAsHtml($filter('htmlEncode')(msg).replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1'+ (isXHTML === undefined || isXHTML ? '<br />' : '<br>') +'$2'));
+    }
+}]);
+
 sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
@@ -11178,150 +11341,151 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
         });
 
         var _croplandCrops = [
-          'Barley',
-          'Bean',
-          'Bean (Broad)',
-          'Bean (Dry)',
-          'Bean (Sugar)',
-          'Bean (Green)',
-          'Bean (Kidney)',
-          'Canola',
-          'Cassava',
-          'Cotton',
-          'Cowpea',
-          'Grain Sorghum',
-          'Groundnut',
-          'Lucerne',
-          'Maize',
-          'Maize (White)',
-          'Maize (Yellow)',
-          'Oat',
-          'Peanut',
-          'Pearl Millet',
-          'Potato',
-          'Rape',
-          'Rice',
-          'Rye',
-          'Soya Bean',
-          'Sunflower',
-          'Sweet Corn',
-          'Sweet Potato',
-          'Tobacco',
-          'Triticale',
-          'Wheat',
-          'Wheat (Durum)'
+            'Barley',
+            'Bean',
+            'Bean (Broad)',
+            'Bean (Dry)',
+            'Bean (Sugar)',
+            'Bean (Green)',
+            'Bean (Kidney)',
+            'Canola',
+            'Cassava',
+            'Cotton',
+            'Cowpea',
+            'Grain Sorghum',
+            'Groundnut',
+            'Lucerne',
+            'Maize',
+            'Maize (White)',
+            'Maize (Yellow)',
+            'Oat',
+            'Peanut',
+            'Pearl Millet',
+            'Potato',
+            'Rape',
+            'Rice',
+            'Rye',
+            'Soya Bean',
+            'Sunflower',
+            'Sweet Corn',
+            'Sweet Potato',
+            'Tobacco',
+            'Triticale',
+            'Wheat',
+            'Wheat (Durum)'
         ];
         var _grazingCrops = [
-          'Bahia-Notatum',
-          'Birdsfoot Trefoil',
-          'Bottle Brush',
-          'Buffalo',
-          'Buffalo (Blue)',
-          'Buffalo (White)',
-          'Bush',
-          'Carribean Stylo',
-          'Clover',
-          'Clover (Arrow Leaf)',
-          'Clover (Crimson)',
-          'Clover (Persian)',
-          'Clover (Red)',
-          'Clover (Rose)',
-          'Clover (Strawberry)',
-          'Clover (Subterranean)',
-          'Clover (White)',
-          'Cocksfoot',
-          'Common Setaria',
-          'Dallis',
-          'Kikuyu',
-          'Lucerne',
-          'Lupin',
-          'Lupin (Narrow Leaf)',
-          'Lupin (White)',
-          'Lupin (Yellow)',
-          'Medic',
-          'Medic (Barrel)',
-          'Medic (Burr)',
-          'Medic (Gama)',
-          'Medic (Snail)',
-          'Medic (Strand)',
-          'Phalaris',
-          'Rescue',
-          'Rhodes',
-          'Russian Grass',
-          'Ryegrass',
-          'Ryegrass (Hybrid)',
-          'Ryegrass (Italian)',
-          'Ryegrass (Westerwolds)',
-          'Serradella',
-          'Serradella (Yellow)',
-          'Silver Leaf Desmodium',
-          'Smuts Finger',
-          'Soutbos',
-          'Tall Fescue',
-          'Teff',
-          'Veld',
-          'Weeping Lovegrass'
+            'Bahia-Notatum',
+            'Birdsfoot Trefoil',
+            'Bottle Brush',
+            'Buffalo',
+            'Buffalo (Blue)',
+            'Buffalo (White)',
+            'Bush',
+            'Carribean Stylo',
+            'Clover',
+            'Clover (Arrow Leaf)',
+            'Clover (Crimson)',
+            'Clover (Persian)',
+            'Clover (Red)',
+            'Clover (Rose)',
+            'Clover (Strawberry)',
+            'Clover (Subterranean)',
+            'Clover (White)',
+            'Cocksfoot',
+            'Common Setaria',
+            'Dallis',
+            'Kikuyu',
+            'Lucerne',
+            'Lupin',
+            'Lupin (Narrow Leaf)',
+            'Lupin (White)',
+            'Lupin (Yellow)',
+            'Medic',
+            'Medic (Barrel)',
+            'Medic (Burr)',
+            'Medic (Gama)',
+            'Medic (Snail)',
+            'Medic (Strand)',
+            'Multi-species',
+            'Phalaris',
+            'Rescue',
+            'Rhodes',
+            'Russian Grass',
+            'Ryegrass',
+            'Ryegrass (Hybrid)',
+            'Ryegrass (Italian)',
+            'Ryegrass (Westerwolds)',
+            'Serradella',
+            'Serradella (Yellow)',
+            'Silver Leaf Desmodium',
+            'Smuts Finger',
+            'Soutbos',
+            'Tall Fescue',
+            'Teff',
+            'Veld',
+            'Weeping Lovegrass'
         ];
         var _perennialCrops = [
-          'Almond',
-          'Aloe',
-          'Apple',
-          'Apricot',
-          'Avocado',
-          'Banana',
-          'Barberry',
-          'Berry',
-          'Bilberry',
-          'Blackberry',
-          'Blueberry',
-          'Cherry',
-          'Cloudberry',
-          'Coconut',
-          'Coffee',
-          'Fig',
-          'Gooseberry',
-          'Grape',
-          'Grape (Bush Vine)',
-          'Grape (Red)',
-          'Grape (Table)',
-          'Grape (White)',
-          'Grapefruit',
-          'Guava',
-          'Hops',
-          'Kiwi Fruit',
-          'Lemon',
-          'Litchi',
-          'Macadamia Nut',
-          'Mandarin',
-          'Mango',
-          'Mulberry',
-          'Nectarine',
-          'Olive',
-          'Orange',
-          'Papaya',
-          'Peach',
-          'Pear',
-          'Prickly Pear',
-          'Pecan Nut',
-          'Persimmon',
-          'Pineapple',
-          'Pistachio Nut',
-          'Plum',
-          'Pomegranate',
-          'Protea',
-          'Raspberry',
-          'Rooibos',
-          'Sisal',
-          'Strawberry',
-          'Sugarcane',
-          'Tea',
-          'Walnut',
-          'Wineberry'
+            'Almond',
+            'Aloe',
+            'Apple',
+            'Apricot',
+            'Avocado',
+            'Banana',
+            'Barberry',
+            'Berry',
+            'Bilberry',
+            'Blackberry',
+            'Blueberry',
+            'Cherry',
+            'Cloudberry',
+            'Coconut',
+            'Coffee',
+            'Fig',
+            'Gooseberry',
+            'Grape',
+            'Grape (Bush Vine)',
+            'Grape (Red)',
+            'Grape (Table)',
+            'Grape (White)',
+            'Grapefruit',
+            'Guava',
+            'Hops',
+            'Kiwi Fruit',
+            'Lemon',
+            'Litchi',
+            'Macadamia Nut',
+            'Mandarin',
+            'Mango',
+            'Mulberry',
+            'Nectarine',
+            'Olive',
+            'Orange',
+            'Papaya',
+            'Peach',
+            'Pear',
+            'Prickly Pear',
+            'Pecan Nut',
+            'Persimmon',
+            'Pineapple',
+            'Pistachio Nut',
+            'Plum',
+            'Pomegranate',
+            'Protea',
+            'Raspberry',
+            'Rooibos',
+            'Sisal',
+            'Strawberry',
+            'Sugarcane',
+            'Tea',
+            'Walnut',
+            'Wineberry'
         ];
         var _plantationCrops = [
-          'Bluegum',
-          'Pine',
-          'Wattle'
+            'Bluegum',
+            'Pine',
+            'Wattle'
         ];
 
         readOnlyProperty(Asset, 'cropsByType', {
@@ -11464,7 +11628,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'Storable', 'underscore', 'Validatable', function (Errorable, Storable, underscore, Validatable) {
+    .factory('Base', ['Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (Errorable, privateProperty, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
@@ -11536,6 +11700,16 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             _constructor.include(Errorable);
             _constructor.include(Storable);
         }
+
+        privateProperty(Base, 'initializeArray', function (length) {
+            return underscore.range(length).map(function () {
+                return 0;
+            });
+        });
+
+        privateProperty(Base, 'initializeObject', function (object, property, defaultObject) {
+            return object[property] = object[property] || defaultObject;
+        });
 
         return Base;
     }])
@@ -12643,7 +12817,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
                     numberOfYears = Math.ceil(endMonth.diff(startMonth, 'years', true)),
-                    defaultMonthObj = {
+                    defaultObject = {
                         opening: 0,
                         inflow: 0,
                         outflow: 0,
@@ -12653,52 +12827,66 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         closing: 0
                     };
 
-                while (instance.account.monthly.length < instance.numberOfMonths) {
-                    instance.account.monthly.push(defaultMonthObj);
-                }
-                while (instance.account.yearly.length < numberOfYears) {
-                    instance.account.yearly.push(underscore.extend(defaultMonthObj, { worstBalance: 0, bestBalance: 0, openingMonth: null, closingMonth: null }));
-                }
-
                 instance.data.summary.monthly.primaryAccountInterest = initializeArray(instance.numberOfMonths);
                 instance.data.summary.monthly.totalInterest = calculateMonthlyLiabilityPropertyTotal(instance, [], 'interest', startMonth, endMonth);
 
-                underscore.each(instance.account.monthly, function (month, index) {
-                    month.opening = (index === 0 ? instance.account.openingBalance : instance.account.monthly[index - 1].closing);
-                    month.inflow = instance.data.summary.monthly.totalIncome[index];
-                    month.outflow = instance.data.summary.monthly.totalExpenditure[index];
-                    month.balance = month.opening + month.inflow - month.outflow;
-                    month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
-                    month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
-                    month.closing = month.balance + month.interestPayable + month.interestReceivable;
+                instance.account.monthly = underscore.chain(underscore.range(instance.numberOfMonths))
+                    .map(function () {
+                        return underscore.extend({}, defaultObject);
+                    })
+                    .reduce(function (monthly, month, index) {
+                        month.opening = (index === 0 ? instance.account.openingBalance : monthly[monthly.length - 1].closing);
+                        month.inflow = instance.data.summary.monthly.totalIncome[index];
+                        month.outflow = instance.data.summary.monthly.totalExpenditure[index];
+                        month.balance = month.opening + month.inflow - month.outflow;
+                        month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
+                        month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
+                        month.closing = month.balance + month.interestPayable + month.interestReceivable;
 
-                    instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
-                    instance.data.summary.monthly.primaryAccountInterest[index] += -month.interestPayable;
-                });
+                        instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
+                        instance.data.summary.monthly.primaryAccountInterest[index] += -month.interestPayable;
 
-                underscore.each(instance.account.yearly, function(year, index) {
-                    var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
-                    year.opening = months[0].opening;
-                    year.inflow = sumCollectionProperty(months, 'inflow');
-                    year.outflow = sumCollectionProperty(months, 'outflow');
-                    year.balance = year.opening + year.inflow - year.outflow;
-                    year.interestPayable = sumCollectionProperty(months, 'interestPayable');
-                    year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
-                    year.closing = year.balance + year.interestPayable + year.interestReceivable;
-                    year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').format('YYYY-MM-DD');
-                    year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('YYYY-MM-DD');
+                        monthly.push(month);
+                        return monthly;
+                    }, [])
+                    .value();
 
-                    var bestBalance = underscore.max(months, function (month) { return month.closing; }),
-                        worstBalance = underscore.min(months, function (month) { return month.closing; });
-                    year.bestBalance = {
-                        balance: bestBalance.closing,
-                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('YYYY-MM-DD')
-                    };
-                    year.worstBalance = {
-                        balance: worstBalance.closing,
-                        month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('YYYY-MM-DD')
-                    };
-                });
+                instance.account.yearly = underscore.chain(underscore.range(numberOfYears))
+                    .map(function () {
+                        return underscore.extend({
+                            worstBalance: 0,
+                            bestBalance: 0,
+                            openingMonth: null,
+                            closingMonth: null
+                        }, defaultObject);
+                    })
+                    .reduce(function (yearly, year, index) {
+                        var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
+                        year.opening = months[0].opening;
+                        year.inflow = sumCollectionProperty(months, 'inflow');
+                        year.outflow = sumCollectionProperty(months, 'outflow');
+                        year.balance = year.opening + year.inflow - year.outflow;
+                        year.interestPayable = sumCollectionProperty(months, 'interestPayable');
+                        year.interestReceivable = sumCollectionProperty(months, 'interestReceivable');
+                        year.closing = year.balance + year.interestPayable + year.interestReceivable;
+                        year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').format('YYYY-MM-DD');
+                        year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('YYYY-MM-DD');
+
+                        var bestBalance = underscore.max(months, function (month) { return month.closing; }),
+                            worstBalance = underscore.min(months, function (month) { return month.closing; });
+                        year.bestBalance = {
+                            balance: bestBalance.closing,
+                            month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('YYYY-MM-DD')
+                        };
+                        year.worstBalance = {
+                            balance: worstBalance.closing,
+                            month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('YYYY-MM-DD')
+                        };
+
+                        yearly.push(year);
+                        return yearly;
+                    }, [])
+                    .value();
 
                 instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
                 instance.data.summary.yearly.totalInterest = [calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 2)];
@@ -13714,16 +13902,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data.details = this.data.details || {};
-            this.data.details.cycleStart = this.data.details.cycleStart || 0;
-            this.data.details.productionArea = this.data.details.productionArea || '1 Hectare';
-
-            this.data.schedules = this.data.schedules || {};
+            Base.initializeObject(this.data, 'details', {});
+            Base.initializeObject(this.data, 'schedules', []);
+            Base.initializeObject(this.data.details, 'cycleStart', 0);
+            Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
 
             computedProperty(this, 'commodityTitle', function () {
                 return getCommodityTitle(this.assetType);
@@ -13840,8 +14027,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
             } else if (this.assetType === 'horticulture') {
-                this.data.details.yearsToMaturity = this.data.details.yearsToMaturity || getYearsToMaturity(this);
-                this.data.details.maturityFactor = this.data.details.maturityFactor || [];
+                Base.initializeObject(this.data.details, 'yearsToMaturity', getYearsToMaturity(this));
+                Base.initializeObject(this.data.details, 'maturityFactor', []);
             }
 
             this.recalculate();
@@ -13858,108 +14045,108 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
 
         readOnlyProperty(EnterpriseBudget, 'assetCommodities', {
             crop: [
-              'Barley',
-              'Bean (Dry)',
-              'Bean (Green)',
-              'Canola',
-              'Cotton',
-              'Cowpea',
-              'Grain Sorghum',
-              'Groundnut',
-              'Lucerne',
-              'Lupin',
-              'Maize (Fodder)',
-              'Maize (Green)',
-              'Maize (Seed)',
-              'Maize (White)',
-              'Maize (Yellow)',
-              'Oat',
-              'Potato',
-              'Rye',
-              'Soya Bean',
-              'Sunflower',
-              'Sweet Corn',
-              'Tobacco',
-              'Triticale',
-              'Wheat'
+                'Barley',
+                'Bean (Dry)',
+                'Bean (Green)',
+                'Canola',
+                'Cotton',
+                'Cowpea',
+                'Grain Sorghum',
+                'Groundnut',
+                'Lucerne',
+                'Lupin',
+                'Maize (Fodder)',
+                'Maize (Green)',
+                'Maize (Seed)',
+                'Maize (White)',
+                'Maize (Yellow)',
+                'Oat',
+                'Potato',
+                'Rye',
+                'Soya Bean',
+                'Sunflower',
+                'Sweet Corn',
+                'Tobacco',
+                'Triticale',
+                'Wheat'
             ],
             horticulture: [
-              'Almond',
-              'Apple',
-              'Apricot',
-              'Avocado',
-              'Banana',
-              'Barberry',
-              'Berry',
-              'Bilberry',
-              'Blackberry',
-              'Blueberry',
-              'Cherry',
-              'Chicory',
-              'Chili',
-              'Cloudberry',
-              'Citrus (Hardpeel)',
-              'Citrus (Softpeel)',
-              'Coffee',
-              'Fig',
-              'Garlic',
-              'Gooseberry',
-              'Grape (Table)',
-              'Grape (Wine)',
-              'Guava',
-              'Hops',
-              'Kiwi',
-              'Lemon',
-              'Lentil',
-              'Macadamia Nut',
-              'Mandarin',
-              'Mango',
-              'Melon',
-              'Mulberry',
-              'Nectarine',
-              'Olive',
-              'Onion',
-              'Orange',
-              'Papaya',
-              'Pea',
-              'Peach',
-              'Peanut',
-              'Pear',
-              'Prickly Pear',
-              'Pecan Nut',
-              'Persimmon',
-              'Pineapple',
-              'Pistachio Nut',
-              'Plum',
-              'Pomegranate',
-              'Protea',
-              'Prune',
-              'Pumpkin',
-              'Quince',
-              'Raspberry',
-              'Rooibos',
-              'Strawberry',
-              'Sugarcane',
-              'Tea',
-              'Tomato',
-              'Watermelon',
-              'Wineberry'
+                'Almond',
+                'Apple',
+                'Apricot',
+                'Avocado',
+                'Banana',
+                'Barberry',
+                'Berry',
+                'Bilberry',
+                'Blackberry',
+                'Blueberry',
+                'Cherry',
+                'Chicory',
+                'Chili',
+                'Cloudberry',
+                'Citrus (Hardpeel)',
+                'Citrus (Softpeel)',
+                'Coffee',
+                'Fig',
+                'Garlic',
+                'Gooseberry',
+                'Grape (Table)',
+                'Grape (Wine)',
+                'Guava',
+                'Hops',
+                'Kiwi',
+                'Lemon',
+                'Lentil',
+                'Macadamia Nut',
+                'Mandarin',
+                'Mango',
+                'Melon',
+                'Mulberry',
+                'Nectarine',
+                'Olive',
+                'Onion',
+                'Orange',
+                'Papaya',
+                'Pea',
+                'Peach',
+                'Peanut',
+                'Pear',
+                'Prickly Pear',
+                'Pecan Nut',
+                'Persimmon',
+                'Pineapple',
+                'Pistachio Nut',
+                'Plum',
+                'Pomegranate',
+                'Protea',
+                'Prune',
+                'Pumpkin',
+                'Quince',
+                'Raspberry',
+                'Rooibos',
+                'Strawberry',
+                'Sugarcane',
+                'Tea',
+                'Tomato',
+                'Watermelon',
+                'Wineberry'
             ],
             livestock: [
-              'Cattle (Extensive)',
-              'Cattle (Feedlot)',
-              'Cattle (Stud)',
-              'Chicken (Broilers)',
-              'Chicken (Layers)',
-              'Dairy',
-              'Game',
-              'Goats',
-              'Horses',
-              'Ostrich',
-              'Pigs',
-              'Sheep (Extensive)',
-              'Sheep (Feedlot)',
-              'Sheep (Stud)'
+                'Cattle (Extensive)',
+                'Cattle (Feedlot)',
+                'Cattle (Stud)',
+                'Chicken (Broilers)',
+                'Chicken (Layers)',
+                'Dairy',
+                'Game',
+                'Goats',
+                'Horses',
+                'Ostrich',
+                'Pigs',
+                'Sheep (Extensive)',
+                'Sheep (Feedlot)',
+                'Sheep (Stud)'
             ]
         });
 
@@ -14110,19 +14297,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
 
                     angular.forEach(group.productCategories, function(category) {
                         if(category.unit == '%') {
-                            var groupSum = underscore
-                                .chain(instance.data.sections)
-                                .filter(function (groupingSection) {
-                                    return (groupingSection.costStage === section.costStage);
-                                })
-                                .pluck('productCategoryGroups')
-                                .flatten()
-                                .reduce(function(total, group) {
-                                    return (group.name == category.incomeGroup && group.total !== undefined ? total + group.total.value : total);
-                                }, 0)
-                                .value();
-
-                            category.quantity = roundValue(groupSum / 100);
+                            // Convert percentage to total
+                            category.unit = 'Total';
+                            category.pricePerUnit = category.quantity;
+                            category.quantity = 1;
                         } else {
                             category.quantity = (category.unit == 'Total' ? 1 : category.quantity);
                         }
@@ -14137,27 +14315,27 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'computedProper
                                 return total + (value || 0);
                             }, 0);
 
-                        category.value = (((category.pricePerUnit || 0) * (category.quantity || 0)) / 100) * scheduleTotalAllocation;
+                        category.value = roundValue(((category.pricePerUnit || 0) * (category.quantity || 0)) * (scheduleTotalAllocation / 100));
 
                         category.valuePerMonth = underscore.map(schedule, function (allocation) {
-                            return (category.value / 100) * allocation;
+                            return roundValue(category.value * (allocation / 100));
                         });
 
                         category.quantityPerMonth = underscore.map(schedule, function (allocation) {
-                            return (category.quantity / 100) * allocation;
+                            return roundValue(category.quantity * (allocation / 100));
                         });
 
                         group.total.value += category.value;
                         group.total.valuePerMonth = (group.total.valuePerMonth ?
                             underscore.map(group.total.valuePerMonth, function (value, index) {
-                                return value + category.valuePerMonth[index];
+                                return roundValue(value + category.valuePerMonth[index]);
                             }) : angular.copy(category.valuePerMonth));
                     });
 
                     section.total.value += group.total.value;
                     section.total.valuePerMonth = (section.total.valuePerMonth ?
                         underscore.map(section.total.valuePerMonth, function (value, index) {
-                            return value + group.total.valuePerMonth[index];
+                            return roundValue(value + group.total.valuePerMonth[index]);
                         }) : angular.copy(group.total.valuePerMonth));
 
                     if(instance.assetType == 'livestock') {
@@ -15107,26 +15285,24 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                 });
 
                 if (property !== 'schedule') {
-                    var offset = (100 / value) * productionCategory[property],
+                    var offset = productionCategory[property] / value,
                         remainder = productionCategory[property];
 
                     underscore.each(affectedProductionSchedules, function (productionSchedule, index, list) {
                         var category = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
 
                         if (underscore.isFinite(offset) && category[property] != 0) {
-                            category[property] = (category[property] / 100) * offset;
-                        } else if (index < list.length - 1) {
-                            category[property] = category[property] / list.length;
+                            category[property] = category[property] * offset;
                         } else {
-                            category[property] = remainder;
+                            category[property] = (index < list.length - 1 ? category[property] / list.length : remainder);
                         }
 
-                        remainder = roundValue(remainder - productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property), 2);
+                        remainder -= productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property);
                     });
                 } else if (property === 'schedule') {
                     var valuePerMonth = underscore.reduce(productionCategory.schedule, function (valuePerMonth, allocation, index) {
                         //valuePerMonth[index] = roundValue((productionCategory.value / 100) * allocation, 2);
-                        valuePerMonth[index] = (productionCategory.value / 100) * allocation;
+                        valuePerMonth[index] = productionCategory.value * (allocation / 100);
 
                         return valuePerMonth;
                     }, initializeArray(instance.numberOfMonths));
@@ -15185,10 +15361,10 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                 productionSchedule.recalculate();
 
                 angular.forEach(productionSchedule.data.sections, function (section) {
-                    if (productionSchedule.data.details.applyEstablishmentCosts || section.costStage === productionSchedule.defaultCostStage) {
+                    if (section.costStage === productionSchedule.costStage) {
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
-                                var productionCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
+                                var productionCategory = instance.addCategory(section.code, group.name, category.code, instance.defaultCostStage);
 
                                 productionCategory.per = category.per;
                                 productionCategory.categories = productionCategory.categories || [];
@@ -15203,8 +15379,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                                     return valuePerMonth;
                                 }, productionCategory.valuePerMonth || initializeArray(instance.numberOfMonths));
 
-                                productionCategory.value = roundValue(underscore.reduce(productionCategory.valuePerMonth, function (total, value) {
-                                    return total + value;
+                                productionCategory.value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
+                                    return total + category.value;
                                 }, 0), 2);
 
                                 productionCategory.quantityPerMonth = underscore.reduce(category.quantityPerMonth, function (quantityPerMonth, value, index) {
@@ -15213,13 +15389,11 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                                     return quantityPerMonth;
                                 }, productionCategory.quantityPerMonth || initializeArray(instance.numberOfMonths));
 
-                                productionCategory.quantity = roundValue(underscore.reduce(productionCategory.quantityPerMonth, function (total, value) {
-                                    return total + value;
+                                productionCategory.quantity = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
+                                    return total + category.quantity;
                                 }, 0), 2);
 
-                                productionCategory.pricePerUnit = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                                    return total + category.pricePerUnit;
-                                }, 0) / productionCategory.categories.length, 2);
+                                productionCategory.pricePerUnit = roundValue(productionCategory.value / productionCategory.quantity, 2);
 
                                 productionCategory.schedule = underscore.reduce(productionCategory.valuePerMonth, function (schedule, value, index) {
                                     schedule[index] = roundValue((100 / productionCategory.value) * value, 2);
@@ -15247,7 +15421,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                             });
 
                             // Group totals
-                            var productionGroup = instance.getGroup(section.code, group.name, section.costStage);
+                            var productionGroup = instance.getGroup(section.code, group.name, instance.defaultCostStage);
 
                             if (productionGroup) {
                                 productionGroup.total.value = underscore.reduce(productionGroup.productCategories, function (total, category) {
@@ -15273,7 +15447,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                         });
 
                         // Section totals
-                        var productionSection = instance.getSection(section.code, section.costStage);
+                        var productionSection = instance.getSection(section.code, instance.defaultCostStage);
 
                         if (productionSection) {
                             productionSection.total.value = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
@@ -15319,6 +15493,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             EnterpriseBudgetBase.apply(this, arguments);
 
             this.data.details = this.data.details || {};
+
+            computedProperty(this, 'costStage', function () {
+                return (this.type != 'horticulture' || this.data.details.assetAge != 0 ? this.defaultCostStage : underscore.first(ProductionSchedule.costStages));
+            });
 
             privateProperty(this, 'setDate', function (startDate) {
                 startDate = moment(startDate);
@@ -15373,7 +15551,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
                 this.data.budget = this.budget;
                 this.data.details = underscore.extend(this.data.details, {
-                    applyEstablishmentCosts: false,
                     commodity: this.budget.commodityType,
                     grossProfit: 0
                 });
@@ -15385,6 +15562,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         herdSize: this.budget.data.details.herdSize || 0,
                         stockingDensity: 0,
                         multiplicationFactor: 0
+                    });
+                } else if (this.type === 'horticulture') {
+                    this.data.details = underscore.extend(this.data.details, {
+                        maturityFactor: this.budget.data.details.maturityFactor || []
                     });
                 }
 
@@ -15428,6 +15609,20 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
             privateProperty(this, 'adjustCategory', function (sectionCode, categoryCode, costStage, property) {
                 return adjustCategory(this, sectionCode, categoryCode, costStage, property);
+            });
+
+            privateProperty(this, 'applyMaturityFactor', function (value) {
+                var factor = (this.type == 'horticulture' && this.costStage === 'Yearly' && this.data.details.maturityFactor ?
+                    (this.data.details.maturityFactor[this.data.details.assetAge - 1] || 0) : 100);
+
+                return (factor ? (value * (factor / 100)) : factor);
+            });
+
+            privateProperty(this, 'reverseMaturityFactor', function (value) {
+                var factor = (this.type == 'horticulture' && this.costStage === 'Yearly' && this.data.details.maturityFactor ?
+                    (this.data.details.maturityFactor[this.data.details.assetAge - 1] || 0) : 100);
+
+                return (factor ? (value * (100 / factor)) : factor);
             });
 
             privateProperty(this, 'recalculate', function () {
@@ -15484,11 +15679,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             });
 
             computedProperty(this, 'income', function () {
-                return underscore.findWhere(this.data.sections, {code: 'INC', costStage: this.defaultCostStage});
+                return underscore.findWhere(this.data.sections, {code: 'INC', costStage: this.costStage});
             });
 
             computedProperty(this, 'expenses', function () {
-                return underscore.findWhere(this.data.sections, {code: 'EXP', costStage: this.defaultCostStage});
+                return underscore.findWhere(this.data.sections, {code: 'EXP', costStage: this.costStage});
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -15520,7 +15715,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
             if (productionCategory && budgetCategory) {
                 if (property === 'value') {
-                    budgetCategory.value = productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                    budgetCategory.value = instance.reverseMaturityFactor(productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
 
                     if (budgetCategory.unit === 'Total') {
                         budgetCategory.pricePerUnit = budgetCategory.value;
@@ -15530,18 +15725,18 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         productionCategory.quantity = productionCategory.value / productionCategory.pricePerUnit;
                     }
 
-                    productionCategory.value = roundValue(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                 } else if (property === 'valuePerHa') {
-                    budgetCategory.value = roundValue(productionCategory.valuePerHa, 2);
+                    budgetCategory.value = instance.reverseMaturityFactor(productionCategory.valuePerHa);
 
                     if (budgetCategory.unit === 'Total') {
                         budgetCategory.pricePerUnit = budgetCategory.value;
                         productionCategory.pricePerUnit = budgetCategory.value;
                     }
 
-                    budgetCategory.quantity = roundValue(budgetCategory.value / budgetCategory.pricePerUnit, 2);
-                    productionCategory.value = roundValue(budgetCategory.value * instance.allocatedSize, 2);
-                    productionCategory.valuePerHa = budgetCategory.value;
+                    budgetCategory.quantity = budgetCategory.value / budgetCategory.pricePerUnit;
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * instance.allocatedSize), 2);
+                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(budgetCategory.value));
                     productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
                 } else if (property === 'valuePerLSU') {
                     budgetCategory.valuePerLSU = roundValue(productionCategory.valuePerLSU, 2);
@@ -15551,56 +15746,54 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     productionCategory.valuePerLSU = roundValue(budgetCategory.valuePerLSU * instance.data.details.multiplicationFactor, 2);
                     productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
                 } else if (property === 'quantityPerHa') {
-                    budgetCategory.quantity = productionCategory.quantityPerHa;
+                    budgetCategory.quantity = instance.reverseMaturityFactor(productionCategory.quantityPerHa);
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.value = roundValue(budgetCategory.value * instance.allocatedSize, 2);
-                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
-                    productionCategory.quantityPerHa = budgetCategory.quantity;
+                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(budgetCategory.quantity * instance.allocatedSize), 2);
+                    productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(budgetCategory.quantity), 2);
+                    productionCategory.value = roundValue(productionCategory.quantity * productionCategory.pricePerUnit, 2);
                 } else if (property === 'quantityPerLSU') {
                     budgetCategory.quantity = productionCategory.quantityPerLSU;
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.value = roundValue(budgetCategory.value * instance.data.details.multiplicationFactor, 2);
-                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
+                    productionCategory.quantity = roundValue(budgetCategory.quantity * instance.data.details.multiplicationFactor, 2);
                     productionCategory.quantityPerLSU = budgetCategory.quantity;
+                    productionCategory.value = roundValue(productionCategory.quantity * productionCategory.pricePerUnit, 2);
                 } else if (property === 'quantity') {
-                    budgetCategory.quantity = productionCategory.quantity / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                    budgetCategory.quantity = instance.reverseMaturityFactor(productionCategory.quantity / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.value = roundValue(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
-                    productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
+                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(budgetCategory.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                    productionCategory.value = roundValue(productionCategory.pricePerUnit * productionCategory.quantity, 2);
                 } else if (property === 'pricePerUnit') {
                     budgetCategory.pricePerUnit = productionCategory.pricePerUnit;
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.value = roundValue(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                     productionCategory.pricePerUnit = budgetCategory.pricePerUnit;
                 } else if (property === 'stock') {
                     budgetCategory.stock = productionCategory.stock;
                 } else if (property === 'schedule') {
                     budgetCategory.schedule = instance.budget.unshiftMonthlyArray(productionCategory.schedule);
-                    budgetCategory.value = productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                    budgetCategory.value = instance.reverseMaturityFactor(productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
 
                     if (budgetCategory.unit === 'Total') {
                         budgetCategory.pricePerUnit = budgetCategory.value;
                         productionCategory.pricePerUnit = budgetCategory.value;
                     } else {
                         budgetCategory.quantity = budgetCategory.value / budgetCategory.pricePerUnit;
-                        productionCategory.quantity = productionCategory.value / productionCategory.pricePerUnit;
                     }
 
-                    budgetCategory.value = (((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0)) / 100) * underscore.reduce(budgetCategory.schedule, function (total, value) {
+                    budgetCategory.value = ((budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0)) * (underscore.reduce(budgetCategory.schedule, function (total, value) {
                         return total + (value || 0);
-                    }, 0);
+                    }, 0) / 100);
 
                     budgetCategory.valuePerMonth = underscore.map(budgetCategory.schedule, function (allocation) {
-                        return (budgetCategory.value / 100) * allocation;
+                        return budgetCategory.value * (allocation / 100);
                     });
 
                     productionCategory.valuePerMonth = underscore.map(instance.budget.shiftMonthlyArray(budgetCategory.valuePerMonth), function (value) {
-                        return value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                        return instance.applyMaturityFactor(value) * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
                     });
 
-                    productionCategory.value = roundValue(underscore.reduce(productionCategory.valuePerMonth, function (total, value) {
-                        return total + value;
-                    }, 0), 2);
+                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(budgetCategory.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                 }
 
                 if(instance.type == 'livestock') {
@@ -15608,7 +15801,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 }
 
                 if (sectionCode === 'EXP') {
-                    productionCategory.valuePerHa = budgetCategory.value;
+                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(budgetCategory.value), 2);
                 }
 
                 instance.$dirty = true;
@@ -15625,7 +15818,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 instance.data.details.grossProfit = 0;
                 
                 angular.forEach(instance.budget.data.sections, function (section) {
-                    if (instance.data.details.applyEstablishmentCosts || section.costStage === instance.defaultCostStage) {
+                    if (section.costStage === instance.costStage) {
                         angular.forEach(section.productCategoryGroups, function (group) {
                             angular.forEach(group.productCategories, function (category) {
                                 var productionCategory = instance.addCategory(section.code, group.name, category.code, section.costStage);
@@ -15640,30 +15833,25 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                         productionCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
                                     }
                                 } else {
-                                    productionCategory.quantityPerHa = category.quantity;
+                                    productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(category.quantity), 2);
                                 }
 
                                 if (section.code === 'EXP') {
-                                    productionCategory.valuePerHa = category.value;
+                                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(category.value), 2);
                                 }
 
                                 productionCategory.schedule = instance.budget.getShiftedSchedule(category.schedule);
 
                                 productionCategory.valuePerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.valuePerMonth), function (value) {
-                                    return roundValue(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
+                                    return roundValue(instance.applyMaturityFactor(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                                 });
 
                                 productionCategory.quantityPerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.quantityPerMonth), function (value) {
-                                    return roundValue(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize), 2);
+                                    return roundValue(instance.applyMaturityFactor(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                                 });
 
-                                productionCategory.value = roundValue(underscore.reduce(productionCategory.valuePerMonth, function (total, value) {
-                                    return total + value;
-                                }, 0), 2);
-
-                                productionCategory.quantity = roundValue(underscore.reduce(productionCategory.quantityPerMonth, function (total, value) {
-                                    return total + value;
-                                }, 0), 2);
+                                productionCategory.quantity = roundValue(instance.applyMaturityFactor(category.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                                productionCategory.value = roundValue(productionCategory.pricePerUnit * productionCategory.quantity, 2);
                             });
 
                             // Group totals
