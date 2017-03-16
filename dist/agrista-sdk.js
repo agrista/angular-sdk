@@ -1979,7 +1979,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 function _postError (promise) {
                     return function (err) {
                         $log.error(err);
-                    
+
                         _lastError = {
                             code: err.status,
                             type: 'error',
