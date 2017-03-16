@@ -1,0 +1,37 @@
+class,current,proposed
+1,,Water
+2,,Water (Seasonal)
+3,,Wetland
+4,,Forest
+5,,Erosion
+6,Wasteland,Non-vegetated
+10,Grazing,Grazing
+11,,Grazing (Shrubland)
+12,Conservation,Grazing (Bush)
+13,,Grazing (Fynbos)
+14,Planted Pastures,Planted Pastures
+20,Cropland (Dry),Cropland
+21,'Cropland (Equipped, Irrigable)',Cropland (Irrigated)
+22,Cropland (Irrigable),Cropland (Smallholding)
+23,,Cropland (Emerging)
+24,Horticulture (Seasonal),Vegetables
+25,,Horticulture
+26,Horticulture (Intensive),Greenhouses
+30,Horticulture (Perennial),Orchard
+31,,Orchard (Shadenet)
+32,,Vineyard
+40,,Sugarcane
+41,,Sugarcane (Irrigated)
+42,,Sugarcane (Emerging)
+43,,Pineapple
+44,,Tea
+50,Plantation,Plantation
+51,,Plantation (Smallholding)
+60,Housing,Homestead
+61,Structures (Processing),Structures (Processing)
+62,Structures (Storage),Structures (Storage)
+63,Structures (Handling),Structures (Handling)
+64,Utilities,Utilities
+70,,Mining
+80,,'Built-up
+'

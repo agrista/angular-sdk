@@ -1,0 +1,163 @@
+type,current,suggested
+field_crop,Barley,Barley
+field_crop,Bean,Bean
+field_crop,Bean (Broad),Broad Bean
+field_crop,Bean (Dry),Dry Bean
+field_crop,Bean (Sugar),Sugar Bean
+field_crop,Bean (Green),Green Bean
+field_crop,Bean (Kidney),Kidney Bean
+field_crop,Canola,Canola
+field_crop,Cassava,Cassava
+field_crop,Cotton,Cotton
+field_crop,Cowpea,Cowpea
+field_crop,Grain Sorghum,Grain Sorghum
+field_crop,Groundnut,Groundnut
+field_crop,Lucerne,Lucerne
+field_crop,Maize,Maize
+field_crop,Maize (White),Maize
+field_crop,Maize (Yellow),Maize
+field_crop,Oat,Oats
+field_crop,Peanut,Peanut
+field_crop,Pearl Millet,Pearl Millet
+field_crop,Potato,Potato
+field_crop,Rape,Rapeseed
+field_crop,Rice,Rice
+field_crop,Rye,Rye
+field_crop,Soya Bean,Soya Bean
+field_crop,Sunflower,Sunflower
+field_crop,Sweet Corn,Sweet Corn
+field_crop,Sweet Potato,Sweet Potato
+field_crop,Tobacco,Tobacco
+field_crop,Triticale,Triticale
+field_crop,Wheat,Wheat
+field_crop,Wheat (Durum),Wheat
+grazing,Bahia-Notatum,Bahia Grass
+grazing,Birdsfoot Trefoil,Birdsfoot Trefoil
+grazing,Bottle Brush,Bottle Brush
+grazing,Buffalo,Buffalo Grass
+grazing,Buffalo (Blue),Buffalo Grass
+grazing,Buffalo (White),Buffalo Grass
+grazing,Bush,Bush
+grazing,Carribean Stylo,Carribean Stylo
+grazing,Clover,Clover
+grazing,Clover (Arrow Leaf),Clover
+grazing,Clover (Crimson),Clover
+grazing,Clover (Persian),Clover
+grazing,Clover (Red),Clover
+grazing,Clover (Rose),Clover
+grazing,Clover (Strawberry),Clover
+grazing,Clover (Subterranean),Clover
+grazing,Clover (White),Clover
+grazing,Cocksfoot,Cocksfoot
+grazing,Common Setaria,Common Setaria
+grazing,Dallis,Dallis
+grazing,Kikuyu,Kikuyu
+grazing,Lucerne,Lucerne
+grazing,Lupin,Lupin
+grazing,Lupin (Narrow Leaf),Lupin
+grazing,Lupin (White),Lupin
+grazing,Lupin (Yellow),Lupin
+grazing,Medic,Medic
+grazing,Medic (Barrel),Medic
+grazing,Medic (Burr),Medic
+grazing,Medic (Gama),Medic
+grazing,Medic (Snail),Medic
+grazing,Medic (Strand),Medic
+grazing,Multi-species,Multispecies Pasture
+grazing,Phalaris,Phalaris
+grazing,Rescue,Rescue
+grazing,Rhodes,Rhodes
+grazing,Russian Grass,Russian Grass
+grazing,Ryegrass,Ryegrass
+grazing,Ryegrass (Hybrid),Ryegrass
+grazing,Ryegrass (Italian),Ryegrass
+grazing,Ryegrass (Westerwolds),Ryegrass
+grazing,Serradella,Serradella
+grazing,Serradella (Yellow),Serradella
+grazing,Silver Leaf Desmodium,Silverleaf Desmodium
+grazing,Smuts Finger,Smuts Finger
+grazing,Soutbos,Soutbos
+grazing,Tall Fescue,Tall Fescue
+grazing,Teff,Teff
+grazing,Veld,Veld
+grazing,Weeping Lovegrass,Weeping Lovegrass
+fruit_nuts,Almond,Almond
+fruit_nuts,Aloe,Aloe
+fruit_nuts,Apple,Apple
+fruit_nuts,Apricot,Apricot
+fruit_nuts,Avocado,Avocado
+fruit_nuts,Banana,Banana
+fruit_nuts,Barberry,Barberry
+fruit_nuts,Berry,Berry
+fruit_nuts,Bilberry,Bilberry
+fruit_nuts,Blackberry,Blackberry
+fruit_nuts,Blueberry,Blueberry
+fruit_nuts,Cherry,Cherry
+fruit_nuts,Cloudberry,Cloudberry
+fruit_nuts,Coconut,Coconut
+fruit_nuts,Coffee,Coffee
+fruit_nuts,Fig,Fig
+fruit_nuts,Gooseberry,Gooseberry
+fruit_nuts,Grape,Grape
+fruit_nuts,Grape (Bush Vine),Grape
+fruit_nuts,Grape (Red),Grape
+fruit_nuts,Grape (Table),Grape
+fruit_nuts,Grape (White),Grape
+fruit_nuts,Grapefruit,Grapefruit
+fruit_nuts,Guava,Guava
+fruit_nuts,Kiwi Fruit,Kiwi Fruit
+fruit_nuts,Lemon,Lemon
+fruit_nuts,Litchi,Litchi
+fruit_nuts,Macadamia Nut,Macadamia Nut
+fruit_nuts,Mandarin,Mandarin
+fruit_nuts,Mango,Mango
+fruit_nuts,Mulberry,Mulberry
+fruit_nuts,Nectarine,Nectarine
+fruit_nuts,Olive,Olive
+fruit_nuts,Orange,Orange
+fruit_nuts,Papaya,Papaya
+fruit_nuts,Peach,Peach
+fruit_nuts,Pear,Pear
+fruit_nuts,Pomegranate,Pomegranate
+fruit_nuts,Prickly Pear,Prickly Pear
+fruit_nuts,Pecan Nut,Pecan Nut
+fruit_nuts,Persimmon,Persimmon
+fruit_nuts,Pistachio Nut,Pistachio Nut
+fruit_nuts,Plum,Plum
+fruit_nuts,Raspberry,Raspberry
+fruit_nuts,Strawberry,Strawberry
+permanent_crop,Walnut,Walnut
+permanent_crop,Wineberry,Wineberry
+horticulture,Protea,Protea
+plantation,Hops,Hops
+plantation,Sisal,Sisal
+plantation,Tea,Tea
+plantation,Pineapple,Pineapple
+plantation,Rooibos,Rooibos
+plantation,Sugarcane,Sugarcane
+livestock,Cattle (Extensive),Cattle
+livestock,Cattle (Feedlot),Cattle
+livestock,Cattle (Stud),Cattle
+livestock,Chicken (Broilers),Chicken
+livestock,Chicken (Layers),Chicken
+livestock,Dairy,Cattle
+livestock,Game,Game
+livestock,Goats,Goats
+livestock,Horses,Horses
+livestock,Ostrich,Ostrich
+livestock,Pigs,Pigs
+livestock,Sheep (Extensive),Sheep
+livestock,Sheep (Feedlot),Sheep
+livestock,Sheep (Stud),Sheep
+livestock,,Rabbits
+timber,Bluegum,Eucalyptus
+timber,Pine,Pine
+timber,Wattle,Wattle
+vegetable,,Carrots
+vegetable,,Beet
+vegetable,,Cauliflower
+vegetable,,Watermelon
+vegetable,,Broccoli
+vegetable,,Leeks
+vegetable,,Butternut
+vegetable,,Cabbage
