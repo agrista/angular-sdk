@@ -1,12 +1,9 @@
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudgetBase(attrs) {
             Model.Base.apply(this, arguments);
-
-            this.data = (attrs && attrs.data ? attrs.data : {});
-            this.data.sections = this.data.sections || [];
 
             computedProperty(this, 'defaultCostStage', function () {
                 return underscore.last(EnterpriseBudgetBase.costStages);
@@ -19,6 +16,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 return (sections.length > 0 ? sections : underscore.filter(this.data.sections, function (section) {
                     return section.code === sectionCode && underscore.isUndefined(section.costStage);
                 }));
+            });
+
+            privateProperty(this, 'sortSections', function () {
+                this.data.sections = underscore.chain(this.data.sections)
+                    .sortBy('name')
+                    .reverse()
+                    .value();
             });
 
             privateProperty(this, 'getSection', function (sectionCode, costStage) {
@@ -49,6 +53,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                     }
 
                     this.data.sections.push(section);
+                    this.sortSections();
                 }
 
                 return section;
@@ -214,6 +219,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             privateProperty(this, 'getUnitAbbreviation', function (unit) {
                 return unitAbbreviations[unit] || unit;
             });
+
+            // Properties
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'sections', []);
+
+            this.sortSections();
         }
 
         inheritModel(EnterpriseBudgetBase, Model.Base);
@@ -773,7 +784,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             EnterpriseBudgetBase.apply(this, arguments);
 
             Base.initializeObject(this.data, 'details', {});
-            Base.initializeObject(this.data, 'schedules', []);
+            Base.initializeObject(this.data, 'schedules', {});
             Base.initializeObject(this.data.details, 'cycleStart', 0);
             Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
 
@@ -1125,6 +1136,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                         budgetSection.productCategoryGroups = [];
 
                         instance.data.sections.push(budgetSection);
+                        instance.sortSections();
                     }
 
                     budgetSection.costStage = EnterpriseBudget.costStages[i];

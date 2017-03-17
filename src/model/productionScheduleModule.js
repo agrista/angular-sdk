@@ -283,6 +283,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                 });
             });
 
+            instance.sortSections();
+
             instance.data.details.grossProfit = underscore.reduce(instance.data.sections, function (total, section) {
                 return (section.code == 'INC' ? total + section.total.value : total - section.total.value);
             }, 0);
@@ -736,6 +738,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         }
                     }
                 });
+
+                instance.sortSections();
 
                 if (instance.type == 'livestock') {
                     instance.data.details.grossProfitPerLSU = (instance.data.details.calculatedLSU ? instance.data.details.grossProfit / instance.data.details.calculatedLSU : 0);

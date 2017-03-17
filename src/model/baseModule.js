@@ -83,8 +83,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             });
         });
 
-        privateProperty(Base, 'initializeObject', function (object, property, defaultObject) {
-            return object[property] = object[property] || defaultObject;
+        privateProperty(Base, 'initializeObject', function (object, property, defaultValue) {
+            object[property] = (object[property] && Object.prototype.toString.call(object[property]) == Object.prototype.toString.call(defaultValue))
+                ? object[property]
+                : defaultValue;
         });
 
         return Base;
