@@ -2,11 +2,25 @@
 
 ## Enterprise Types
 
-This is the enterprise master list.
+This can be considerd enterprise master list.
 
-References:
+Suggest that this list is replaced with ```commodities.csv```
 
-[List of Alternative Crops and Enterprises for Small Farm Diversification](https://www.nal.usda.gov/afsic/list-alternative-crops-and-enterprises-small-farm-diversification)
+## Commodities
+
+As above.
+
+Rule of thumb for commodities:
+
+| Commodity Type | Description |
+| --- | --- | 
+| Crop | Is a seasonal plant |
+| Fruit & Nuts | Permanent crops with carry fruit and have a stem or are shrubs |
+| Vegetables | Are seasonal fruits and tubers |
+| Pastures | Crops used for grazing or feed |
+| Plantations | Permanent crops where the whole plant material is harvested |
+| Livestock | All forms of animals |
+| Horticulture | Flowers and nurseries |
 
 ## Land Cover Classes
 
@@ -21,3 +35,9 @@ Each enterprise is also associated with one or more land cover classes to allow 
 ## Budget Blueprints
 
 This list containes all published budgets. Ideally this should match ```entperprises.csv```.
+
+## References
+
+[List of Alternative Crops and Enterprises for Small Farm Diversification](https://www.nal.usda.gov/afsic/list-alternative-crops-and-enterprises-small-farm-diversification)
+
+[Understanding citrus](http://www.farmersweekly.co.za/farm-basics/how-to-crop-production/understanding-citrus-2/)

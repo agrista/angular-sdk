@@ -1,103 +1,104 @@
-enterprise_type,current,proposed, enterprise_model,land_cover,land_cover_2
-Barley,Barley,Barley,crop,Cropland,
-Dry Bean,Bean (Dry),Dry Bean,crop,Cropland,
-Green Bean,Bean (Green),Green Bean,crop,Cropland,
-Canola,Canola,Canola,crop,Cropland,
-Cotton,Cotton,Cotton,crop,Cropland,
-Cowpea,Cowpea,Cowpea,crop,Cropland,
-Grain Sorghum,Grain Sorghum,Grain Sorghum,crop,Cropland,
-Groundnut,Groundnut,Groundnut,crop,Cropland,
-Lucerne,Lucerne,Lucerne,crop,Cropland,
-Lucerne,,Lucerne (Feed),crop,Cropland,
-Lupin,Lupin,Lupin,crop,Cropland,
-Maize,Maize (Fodder),Maize (Fodder),crop,Cropland,
-Maize,Maize (Green),Maize (Silage),crop,Cropland,
-Maize,Maize (Seed),Maize (Seed),crop,Cropland,
-Maize,Maize (White),Maize,crop,Cropland,
-Maize,Maize (Yellow),Maize (Irrigated),crop,Cropland (Irrigated),
-Oat,Oat,Oats,crop,Cropland,
-Oat,Oat,Oats (Feed),crop,Cropland,
-Potato,Potato,Potato,crop,,
-Rye,Rye,Rye,crop,,
-Soya Bean,Soya Bean,Soya Bean,crop,,
-Sunflower,Sunflower,Sunflower,crop,,
-Sweet Corn,Sweet Corn,Sweet Corn,crop,,
-Tobacco,Tobacco,Tobacco,crop,,
-Triticale,Triticale,Triticale,crop,,
-Wheat,Wheat,Wheat,crop,,
-Wheat,,Wheat (Irrigated),crop,Cropland (Irrigated),
-Teff,,Teff,crop,,
-Teff,,Teff (Feed),crop,,
-Multispecies Pasture,,Multispecies Pasture,crop,,
-Almond,Almond,Almond,permanentCrop,Orchard,
-Apple,Apple,Apple,permanentCrop,Orchard,
-Apricot,Apricot,Apricot,permanentCrop,Orchard,
-Avocado,Avocado,Avocado,permanentCrop,Orchard,
-Banana,Banana,Banana,permanentCrop,Plantation,Orchard
-Blueberry,Blueberry,Blueberry,permanentCrop,Plantation,Orchard
-Cherry,Cherry,Cherry,permanentCrop,Orchard,
-Chicory,Chicory,Chicory,permanentCrop,Vegetables,Cropland
-Chili,Chili,Chili,permanentCrop,Vegetables,Cropland
-,Citrus (Hardpeel),,permanentCrop,,
-,Citrus (Softpeel),,permanentCrop,,
-Coffee,Coffee,Coffee,permanentCrop,Plantation,
-Fig,Fig,Fig,permanentCrop,Orchard,
-Garlic,Garlic,Garlic,permanentCrop,Vegetables,Cropland
-Grape,Grape (Table),Grape (Table),permanentCrop,Vineyard,
-Grape,Grape (Wine),Grape (Wine),permanentCrop,Vineyard,
-Grape,,Grape (Bush Vine),permanentCrop,Vineyard,
-Guava,Guava,Guava,permanentCrop,Orchard,
-Hops,Hops,Hops,permanentCrop,Plantation,
-Kiwi,Kiwi,Kiwi,permanentCrop,Orchard,
-Lemon,Lemon,Lemon,permanentCrop,Orchard,
-Lentil,Lentil,Lentil,permanentCrop,Vegetables,Cropland
-Macadamia Nut,Macadamia Nut,Macadamia Nut,permanentCrop,Orchard,
-Mango,Mango,Mango,permanentCrop,Orchard,
-Melon,Melon,Melon,permanentCrop,Vegetables,Cropland
-Nectarine,Nectarine,Nectarine,permanentCrop,Orchard,
-Olive,Olive,Olive,permanentCrop,Vegetables,Cropland
-Onion,Onion,Onion,permanentCrop,Vegetables,
-Orange,Orange,Orange,permanentCrop,Plantation,Orchard
-Papaya,Papaya,Papaya,permanentCrop,Plantation,Orchard
-Pea,Pea,Peas,permanentCrop,Vegetables,
-Peach,Peach,Peach,permanentCrop,Orchard,
-Peanut,Peanut,Peanut,permanentCrop,Cropland,
-Pear,Pear,Pear,permanentCrop,Orchard,
-Prickly Pear,Prickly Pear,Prickly Pear,permanentCrop,Plantation,
-Pecan Nut,Pecan Nut,Pecan Nut,permanentCrop,Orchard,
-Persimmon,Persimmon,Persimmon,permanentCrop,Orchard,
-Pineapple,Pineapple,Pineapple,permanentCrop,Plantation,Cropland
-Pistachio Nut,Pistachio Nut,Pistachio Nut,permanentCrop,Orchard,
-Plum,Plum,Plum,permanentCrop,Orchard,
-Pomegranate,Pomegranate,Pomegranate,permanentCrop,Orchard,
-Prune,Prune,Prune,permanentCrop,Orchard,
-Pumpkin,Pumpkin,Pumpkin,permanentCrop,Vegetables,Cropland
-Quince,Quince,Quince,permanentCrop,Vegetables,Cropland
-Rooibos,Rooibos,Rooibos,permanentCrop,Plantation,
-Strawberry,Strawberry,Strawberry,permanentCrop,Vegetables,Cropland
-Sugarcane,Sugarcane,Sugarcane,permanentCrop,Plantation,
-Tomato,Tomato,Tomato,permanentCrop,Vegetables,Cropland
-Watermelon,Watermelon,Watermelon,permanentCrop,Vegetables,Cropland
-Cattle,Cattle (Extensive),Cattle (Extensive),livestock,,
-Cattle,Cattle (Feedlot),Cattle (Feedlot),livestock,,
-Cattle,Cattle (Stud),Cattle (Stud),livestock,,
-Chicken,Chicken (Broilers),Chicken (Broilers),livestock,,
-Chicken,Chicken (Layers),Chicken (Layers),livestock,,
-Cattle,Dairy,Cattle (Dairy),livestock,,
-Game,Game,Game,livestock,,
-Goats,Goats,Goats,livestock,,
-Horses,Horses,Horses,livestock,,
-Ostrich,Ostrich,Ostrich,livestock,,
-Pigs,Pigs,Pigs,livestock,,
-Sheep,Sheep (Extensive),Sheep (Extensive),livestock,,
-Sheep,Sheep (Feedlot),Sheep (Feedlot),livestock,,
-Sheep,Sheep (Stud),Sheep (Stud),livestock,,
-Rabbits,,Rabbits,livestock,,
-Carrots,,Carrots,crop,Vegetables,Cropland
-Beet,,Beet,crop,Vegetables,Cropland
-Cauliflower,,Cauliflower,crop,Vegetables,Cropland
-Broccoli,,Broccoli,crop,Vegetables,Cropland
-Leeks,,Leeks,crop,Vegetables,Cropland
-Butternut,,Butternut,crop,Vegetables,Cropland
-Cabbage,,Cabbage,crop,Vegetables,Cropland
-Rapeseed,,Rapeseed,crop,Vegetables,Cropland
+'enterprise_type','current','proposed',' enterprise_model','land_cover','land_cover_2'
+'Barley','Barley','Barley','crop','Cropland',
+'Dry Bean','Bean (Dry)','Dry Bean','crop','Cropland',
+'Green Bean','Bean (Green)','Green Bean','crop','Cropland',
+'Canola','Canola','Canola','crop','Cropland',
+'Cotton','Cotton','Cotton','crop','Cropland',
+'Cowpea','Cowpea','Cowpea','crop','Cropland',
+'Grain Sorghum','Grain Sorghum','Grain Sorghum','crop','Cropland',
+'Groundnut','Groundnut','Groundnut','crop','Cropland',
+'Lucerne','Lucerne','Lucerne','crop','Cropland',
+'Lucerne',,'Lucerne (Feed)','crop','Cropland',
+'Lupin','Lupin','Lupin','crop','Cropland',
+'Maize','Maize (Fodder)','Maize (Fodder)','crop','Cropland',
+'Maize','Maize (Green)','Maize (Silage)','crop','Cropland',
+'Maize','Maize (Seed)','Maize (Seed)','crop','Cropland',
+'Maize','Maize (White)','Maize','crop','Cropland',
+'Maize','Maize (Yellow)','Maize (Irrigated)','crop','Cropland (Irrigated)',
+'Oat','Oat','Oats','crop','Cropland',
+'Oat','Oat','Oats (Feed)','crop','Cropland',
+'Potato','Potato','Potato','crop','Cropland',
+'Rye','Rye','Rye','crop',,
+'Soya Bean','Soya Bean','Soya Bean','crop',,
+,,'Soya Bean (Irrigated)','crop',,
+'Sunflower','Sunflower','Sunflower','crop',,
+'Sweet Corn','Sweet Corn','Sweet Corn','crop',,
+'Tobacco','Tobacco','Tobacco','crop',,
+'Triticale','Triticale','Triticale','crop',,
+'Wheat','Wheat','Wheat','crop',,
+'Wheat',,'Wheat (Irrigated)','crop','Cropland (Irrigated)',
+'Teff',,'Teff','crop',,
+'Teff',,'Teff (Feed)','crop',,
+'Multispecies Pasture',,'Multispecies Pasture','crop',,
+'Almond','Almond','Almond','permanentCrop','Orchard',
+'Apple','Apple','Apple','permanentCrop','Orchard',
+'Apricot','Apricot','Apricot','permanentCrop','Orchard',
+'Avocado','Avocado','Avocado','permanentCrop','Orchard',
+'Banana','Banana','Banana','permanentCrop','Plantation','Orchard'
+'Blueberry','Blueberry','Blueberry','permanentCrop','Plantation','Orchard'
+'Cherry','Cherry','Cherry','permanentCrop','Orchard',
+'Chicory','Chicory','Chicory','permanentCrop','Vegetables','Cropland'
+'Chili','Chili','Chili','permanentCrop','Vegetables','Cropland'
+,'Citrus (Hardpeel)',,'permanentCrop',,
+,'Citrus (Softpeel)',,'permanentCrop',,
+'Coffee','Coffee','Coffee','permanentCrop','Plantation',
+'Fig','Fig','Fig','permanentCrop','Orchard',
+'Garlic','Garlic','Garlic','permanentCrop','Vegetables','Cropland'
+'Grape','Grape (Table)','Grape (Table)','permanentCrop','Vineyard',
+'Grape','Grape (Wine)','Grape (Wine)','permanentCrop','Vineyard',
+'Grape',,'Grape (Bush Vine)','permanentCrop','Vineyard',
+'Guava','Guava','Guava','permanentCrop','Orchard',
+'Hops','Hops','Hops','permanentCrop','Plantation',
+'Kiwi','Kiwi','Kiwi','permanentCrop','Orchard',
+'Lemon','Lemon','Lemon','permanentCrop','Orchard',
+'Lentil','Lentil','Lentil','permanentCrop','Vegetables','Cropland'
+'Macadamia Nut','Macadamia Nut','Macadamia Nut','permanentCrop','Orchard',
+'Mango','Mango','Mango','permanentCrop','Orchard',
+'Melon','Melon','Melon','permanentCrop','Vegetables','Cropland'
+'Nectarine','Nectarine','Nectarine','permanentCrop','Orchard',
+'Olive','Olive','Olive','permanentCrop','Vegetables','Cropland'
+'Onion','Onion','Onion','permanentCrop','Vegetables',
+'Orange','Orange','Orange','permanentCrop','Plantation','Orchard'
+'Papaya','Papaya','Papaya','permanentCrop','Plantation','Orchard'
+'Pea','Pea','Peas','permanentCrop','Vegetables',
+'Peach','Peach','Peach','permanentCrop','Orchard',
+'Peanut','Peanut','Peanut','permanentCrop','Cropland',
+'Pear','Pear','Pear','permanentCrop','Orchard',
+'Prickly Pear','Prickly Pear','Prickly Pear','permanentCrop','Plantation',
+'Pecan Nut','Pecan Nut','Pecan Nut','permanentCrop','Orchard',
+'Persimmon','Persimmon','Persimmon','permanentCrop','Orchard',
+'Pineapple','Pineapple','Pineapple','permanentCrop','Plantation','Cropland'
+'Pistachio Nut','Pistachio Nut','Pistachio Nut','permanentCrop','Orchard',
+'Plum','Plum','Plum','permanentCrop','Orchard',
+'Pomegranate','Pomegranate','Pomegranate','permanentCrop','Orchard',
+'Prune','Prune','Prune','permanentCrop','Orchard',
+'Pumpkin','Pumpkin','Pumpkin','permanentCrop','Vegetables','Cropland'
+'Quince','Quince','Quince','permanentCrop','Vegetables','Cropland'
+'Rooibos','Rooibos','Rooibos','permanentCrop','Plantation',
+'Strawberry','Strawberry','Strawberry','permanentCrop','Vegetables','Cropland'
+'Sugarcane','Sugarcane','Sugarcane','permanentCrop','Plantation',
+'Tomato','Tomato','Tomato','permanentCrop','Vegetables','Cropland'
+'Watermelon','Watermelon','Watermelon','permanentCrop','Vegetables','Cropland'
+'Cattle','Cattle (Extensive)','Cattle (Extensive)','livestock',,
+'Cattle','Cattle (Feedlot)','Cattle (Feedlot)','livestock',,
+'Cattle','Cattle (Stud)','Cattle (Stud)','livestock',,
+'Chicken','Chicken (Broilers)','Chicken (Broilers)','livestock',,
+'Chicken','Chicken (Layers)','Chicken (Layers)','livestock',,
+'Cattle','Dairy','Cattle (Dairy)','livestock',,
+'Game','Game','Game','livestock',,
+'Goats','Goats','Goats','livestock',,
+'Horses','Horses','Horses','livestock',,
+'Ostrich','Ostrich','Ostrich','livestock',,
+'Pigs','Pigs','Pigs','livestock',,
+'Sheep','Sheep (Extensive)','Sheep (Extensive)','livestock',,
+'Sheep','Sheep (Feedlot)','Sheep (Feedlot)','livestock',,
+'Sheep','Sheep (Stud)','Sheep (Stud)','livestock',,
+'Rabbits',,'Rabbits','livestock',,
+'Carrots',,'Carrots','crop','Vegetables','Cropland'
+'Beet',,'Beet','crop','Vegetables','Cropland'
+'Cauliflower',,'Cauliflower','crop','Vegetables','Cropland'
+'Broccoli',,'Broccoli','crop','Vegetables','Cropland'
+'Leeks',,'Leeks','crop','Vegetables','Cropland'
+'Butternut',,'Butternut','crop','Vegetables','Cropland'
+'Cabbage',,'Cabbage','crop','Vegetables','Cropland'
+'Rapeseed',,'Rapeseed','crop','Vegetables','Cropland'

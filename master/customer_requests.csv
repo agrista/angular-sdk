@@ -1,42 +1,42 @@
-requested,enterprise
-Mielies (Droëland),Maize
-Mielies (Bespr),Maize (Irrigated)
-Sonneblom,Sunflower
-Sojabone (droëland),Soya Bean
-Sojabone (bespr),Soya Bean
-Droëbone,Dry Bean
-Sorghum,Grain Sorghum
-Koring (droëland),Wheat
-Koring (bespr),Wheat (Irrigated)
-Grondboontjies,Peanut
-Teff (Om te stroop),Teff (Feed)
-Teff (Om te baal en as kontantgewas te verkoop),Teff
-Lusern (as voer),Lucerne (Feed)
-Lusern (as kontantgewas),Lucerne
-Hawer (Voer),Oats (Feed)
-Hawer (Kontantgewas),Oat
-Grasweiding,Multispecies Pasture
-Aartappels,Potato
-Kool,Cabbage
-Uie,Onion
-Wortels,Carrots
-Beet,Beet
-Rape,Rapeseed
-Blomkool,Cauliflower
-Waatlemoen,Watermelon
-Brocolli,Broccoli
-Leeks,Leeks
-Butternut,Butternut
-Pampoen,Pumpkin
-Pekaneute,Pecan Nut
-Wild,Game
-Vleisbeeste,Cattle (Extensive)
-Skaap (vleis),Sheep (Extensive)
-Skaap (wol),Sheep (Extensive)
-Bokke,Goats
-Konyne,Rabbits
-Voerkraal,Cattle (Feedlot)
-Canola,Canola
-Gars,Barley
-Korog,Triticale
-Lupiene,Lupin
+'requested','enterprise'
+'Mielies (Droëland)','Maize'
+'Mielies (Bespr)','Maize (Irrigated)'
+'Sonneblom','Sunflower'
+'Sojabone (droëland)','Soya Bean'
+'Sojabone (bespr)','Soya Bean (Irrigated)'
+'Droëbone','Dry Bean'
+'Sorghum','Grain Sorghum'
+'Koring (droëland)','Wheat'
+'Koring (bespr)','Wheat (Irrigated)'
+'Grondboontjies','Peanut'
+'Teff (Om te stroop)','Teff (Feed)'
+'Teff (Om te baal en as kontantgewas te verkoop)','Teff'
+'Lusern (as voer)','Lucerne (Feed)'
+'Lusern (as kontantgewas)','Lucerne'
+'Hawer (Voer)','Oats (Feed)'
+'Hawer (Kontantgewas)','Oats'
+'Grasweiding','Multispecies Pasture'
+'Aartappels','Potato'
+'Kool','Cabbage'
+'Uie','Onion'
+'Wortels','Carrots'
+'Beet','Beet'
+'Rape','Rapeseed'
+'Blomkool','Cauliflower'
+'Waatlemoen','Watermelon'
+'Brocolli','Broccoli'
+'Leeks','Leeks'
+'Butternut','Butternut'
+'Pampoen','Pumpkin'
+'Pekaneute','Pecan Nut'
+'Wild','Game'
+'Vleisbeeste','Cattle (Extensive)'
+'Skaap (vleis)','Sheep (Extensive)'
+'Skaap (wol)','Sheep (Extensive)'
+'Bokke','Goats'
+'Konyne','Rabbits'
+'Voerkraal','Cattle (Feedlot)'
+'Canola','Canola'
+'Gars','Barley'
+'Korog','Triticale'
+'Lupiene','Lupin'

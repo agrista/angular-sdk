@@ -1,25 +1,52 @@
-commodity_type,name,asset_type
-Maize (White),Maize (White) Blueprint,crop
-Canola,Canola Blueprint,crop
-Lupin,Lupin Blueprint,crop
-Maize (Yellow),Maize (Yellow) Blueprint,crop
-Citrus (Softpeel),Citrus (Softpeel) Blueprint,horticulture
-Lucerne,Lucerne Blueprint,crop
-Soya Bean,Soya Bean Blueprint,crop
-Barley,Barley Blueprint,crop
-Peach,Peaches Blueprint,horticulture
-Cattle (Extensive),Cattle (Extensive) Blueprint,livestock
-Apple,Apple Blueprint,horticulture
-Goats,Goats Blueprint,livestock
-Sheep (Extensive),Sheep (Extensive) Blueprint,livestock
-Olive,Olives Blueprint,horticulture
-Orange,Oranges Blueprint,horticulture
-Grain Sorghum,Grain Sorghum Blueprint,crop
-Citrus (Hardpeel),Citrus (Hardpeel) Blueprint,horticulture
-Macadamia Nut,Macadamia Nut Blueprint,horticulture
-Pecan Nut,Pecan Nuts Blueprint,horticulture
-Pear,Pears Blueprint,horticulture
-Wheat,Wheat Blueprint,crop
-Sunflower,Sunflower Blueprint,crop
-Grape (Wine),Grape (Wine) Blueprint,horticulture
-Grape (Table),Grape (Table) Blueprint,horticulture
+'commodity_type','name','asset_type','proposed_commodity_type','proposed_name'
+'Maize (White)','Maize (White) Blueprint','crop','Maize','Maize Blueprint'
+'Canola','Canola Blueprint','crop','Canola','Canola Blueprint'
+'Lupin','Lupin Blueprint','crop','Lupin','Lupin Blueprint'
+'Maize (Yellow)','Maize (Yellow) Blueprint','crop','Maize','Maize Blueprint'
+'Citrus (Softpeel)','Citrus (Softpeel) Blueprint','horticulture','Mandarin','Mandarin Blueprint'
+'Lucerne','Lucerne Blueprint','crop','Lucerne','Lucerne Blueprint'
+'Soya Bean','Soya Bean Blueprint','crop','Soya Bean','Soya Bean Blueprint'
+'Barley','Barley Blueprint','crop','Barley','Barley Blueprint'
+'Peach','Peaches Blueprint','horticulture',,'Peaches Blueprint'
+'Cattle (Extensive)','Cattle (Extensive) Blueprint','livestock','Peaches','Cattle (Extensive) Blueprint'
+'Apple','Apple Blueprint','horticulture','Apple','Apple Blueprint'
+'Goats','Goats Blueprint','livestock','Goats','Goats Blueprint'
+'Sheep (Extensive)','Sheep (Extensive) Blueprint','livestock','Sheep','Sheep (Extensive) Blueprint'
+'Olive','Olives Blueprint','horticulture','Olives','Olives Blueprint'
+'Orange','Oranges Blueprint','horticulture','Orange','Oranges Blueprint'
+'Grain Sorghum','Grain Sorghum Blueprint','crop','Grain Sorghum','Grain Sorghum Blueprint'
+'Citrus (Hardpeel)','Citrus (Hardpeel) Blueprint','horticulture','Orange','Orange Blueprint'
+'Macadamia Nut','Macadamia Nut Blueprint','horticulture','Macadamia Nut','Macadamia Nut Blueprint'
+'Pecan Nut','Pecan Nuts Blueprint','horticulture','Pecan Nut','Pecan Nut Blueprint'
+'Pear','Pears Blueprint','horticulture','Pear','Pear Blueprint'
+'Wheat','Wheat Blueprint','crop','Wheat','Wheat Blueprint'
+'Sunflower','Sunflower Blueprint','crop','Sunflower','Sunflower Blueprint'
+'Grape (Wine)','Grape (Wine) Blueprint','horticulture','Grape','Grape (Wine) Blueprint'
+'Grape (Table)','Grape (Table) Blueprint','horticulture','Grape','Grape (Table) Blueprint'
+,,'crop','Maize','Maize (Irrigated) Blueprint'
+,,'crop','Soya Bean','Soya Bean (Irrigated) Blueprint'
+,,'crop','Dry Bean','Dry Bean Blueprint'
+,,'crop','Wheat','Wheat (Irrigated) Blueprint'
+,,'crop','Lucerne','Peanut Blueprint'
+,,'crop','Teff','Teff (Feed) Blueprint'
+,,'crop','Teff','Teff Blueprint'
+,,'crop','Triticale','Triticale Blueprint'
+,,'crop','Lucerne','Lucerne (Feed) Blueprint'
+,,'crop','Oats','Oats (Feed) Blueprint'
+,,'crop','Oats','Oats Blueprint'
+,,'crop','Potato','Potato Blueprint'
+,,'crop','Cabbage','Cabbage Blueprint'
+,,'crop','Onion','Onion Blueprint'
+,,'crop','Carrots','Carrots Blueprint'
+,,'crop','Beet','Beet Blueprint'
+,,'crop','Rapeseed','Rapeseed Blueprint'
+,,'crop','Cauliflower','Cauliflower Blueprint'
+,,'crop','Watermelon','Watermelon Blueprint'
+,,'crop','Broccoli','Broccoli Blueprint'
+,,'crop','Leeks','Leeks Blueprint'
+,,'crop','Butternut','Butternut Blueprint'
+,,'crop','Pumpkin','Pumpkin Blueprint'
+,,'crop','Pecan Nut','Pecan Nut Blueprint'
+,,'livestock','Game','Game Blueprint'
+,,'livestock','Rabbits','Rabbits Blueprint'
+,,'livestock','Cattle','Cattle (Feedlot) Blueprint'
