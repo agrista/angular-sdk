@@ -25,6 +25,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 return underscore.first(this.getSections(sectionCode, costStage));
             });
 
+            privateProperty(this, 'getSectionTitle', function (sectionCode) {
+                return (EnterpriseBudgetBase.sections[sectionCode] ? EnterpriseBudgetBase.sections[sectionCode].name : '');
+            });
+
             privateProperty(this, 'addSection', function (sectionCode, costStage) {
                 var section = this.getSection(sectionCode, costStage);
 
@@ -888,8 +892,16 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
             } else if (this.assetType === 'horticulture') {
+                if (this.data.details.maturityFactor instanceof Array) {
+                    this.data.details.maturityFactor = {
+                        'INC': this.data.details.maturityFactor
+                    };
+                }
+
                 Base.initializeObject(this.data.details, 'yearsToMaturity', getYearsToMaturity(this));
-                Base.initializeObject(this.data.details, 'maturityFactor', []);
+                Base.initializeObject(this.data.details, 'maturityFactor', {});
+                Base.initializeObject(this.data.details.maturityFactor, 'INC', []);
+                Base.initializeObject(this.data.details.maturityFactor, 'EXP', []);
             }
 
             this.recalculate();
@@ -1121,11 +1133,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             // Validate maturity
             if (instance.assetType == 'horticulture' && instance.data.details.yearsToMaturity) {
-                while (instance.data.details.maturityFactor.length < instance.data.details.yearsToMaturity) {
-                    instance.data.details.maturityFactor.push(Math.floor((100 / instance.data.details.yearsToMaturity) * (instance.data.details.maturityFactor.length + 1)));
-                }
+                var yearsToMaturity = instance.data.details.yearsToMaturity;
 
-                instance.data.details.maturityFactor = instance.data.details.maturityFactor.slice(0, instance.data.details.yearsToMaturity);
+                instance.data.details.maturityFactor = underscore.mapObject(instance.data.details.maturityFactor, function (maturityFactor) {
+                    return underscore.first(maturityFactor.concat(underscore.range(maturityFactor.length < yearsToMaturity ? (yearsToMaturity - maturityFactor.length) : 0)
+                        .map(function () {
+                            return 100;
+                        })), yearsToMaturity);
+                });
             }
         }
 
