@@ -87,18 +87,14 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
              * Land Component Handling
              */
             privateProperty(this, 'addLandComponent', function (type) {
-                if (underscore.chain(this.landComponents).pluck('type').contains(type).value() == false) {
-                    this.landComponents.push({
-                        type: type,
-                        assetValue: 0
-                    });
-                }
+                this.landComponents.push({
+                    type: type,
+                    assetValue: 0
+                });
             });
 
-            privateProperty(this, 'removeLandComponent', function (type) {
-                this.landComponents = underscore.reject(this.landComponents, function (landComponent) {
-                    return landComponent.type === type;
-                });
+            privateProperty(this, 'removeLandComponent', function (landComponent) {
+                this.landComponents = underscore.without(this.landComponents, landComponent);
             });
 
             /**
