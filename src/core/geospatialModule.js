@@ -1,6 +1,6 @@
 var sdkGeospatialApp = angular.module('ag.sdk.geospatial', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
-sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
+sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'underscore', function (objectId, topologyHelper, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
             return new GeojsonHelper(json, properties);
@@ -9,17 +9,25 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
         this.addGeometry(json, properties);
     }
 
-    function _recursiveCoordinateFinder (bounds, coordinates) {
+    function recursiveCoordinateFinder (bounds, coordinates) {
         if (coordinates) {
             if (angular.isArray(coordinates[0])) {
                 angular.forEach(coordinates, function(coordinate) {
-                    _recursiveCoordinateFinder(bounds, coordinate);
+                    recursiveCoordinateFinder(bounds, coordinate);
                 });
             } else if (angular.isArray(coordinates)) {
                 bounds.push([coordinates[1], coordinates[0]]);
             }
         }
     }
+
+    function geometryRelation (instance, relation, geometry) {
+        var geom1 = topologyHelper.readGeoJSON(instance._json),
+            geom2 = topologyHelper.readGeoJSON(geometry);
+
+        return (geom1 && geom2 && geom1[relation] ? geom1[relation](geom2) : false);
+    }
+    
 
     GeojsonHelper.prototype = {
         getJson: function () {
@@ -40,7 +48,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                 angular.forEach(features, function(feature) {
                     var geometry = feature.geometry || feature;
 
-                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                    recursiveCoordinateFinder(bounds, geometry.coordinates);
                 });
             }
 
@@ -66,6 +74,18 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
 
             return [[lat1, lng1], [lat2, lng2]];
         },
+        /**
+         * Geometry Relations
+         */
+        contains: function (geometry) {
+            return geometryRelation(this, 'contains', geometry);
+        },
+        within: function (geometry) {
+            return geometryRelation(this, 'within', geometry);
+        },
+        /**
+         * Get Center
+         */
         getCenter: function (bounds) {
             var boundingBox = this.getBoundingBox(bounds);
 
