@@ -116,6 +116,13 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
                 });
             });
 
+            /**
+             * Edit Authorisation
+             */
+            privateProperty(this, 'isEditable', function (user) {
+                return (user && user.username === this.createdBy && this.authorData && user.company === this.authorData.company);
+            });
+
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;

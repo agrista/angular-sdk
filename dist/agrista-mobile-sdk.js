@@ -242,7 +242,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 function _postError (promise) {
                     return function (err) {
                         $log.error(err);
-                    
+
                         _lastError = {
                             code: err.status,
                             type: 'error',
@@ -11852,6 +11852,13 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
                 this.portions = underscore.reject(this.portions, function (portion) {
                     return (portion.sgKey === sgKey);
                 });
+            });
+
+            /**
+             * Edit Authorisation
+             */
+            privateProperty(this, 'isEditable', function (user) {
+                return (user && user.username === this.createdBy && this.authorData && user.company === this.authorData.company);
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
