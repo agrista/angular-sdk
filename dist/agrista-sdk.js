@@ -9060,41 +9060,6 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 return properties.featureId;
             },
-            addPhotoMarker: function(layerName, geojson, options, properties, onAddCallback) {
-                if (typeof properties == 'function') {
-                    onAddCallback = properties;
-                    properties = {};
-                }
-
-                var _this = this;
-
-                properties = underscore.defaults(properties || {},  {
-                    featureId: objectId().toString()
-                });
-
-                var data = {
-                    layerName: layerName,
-                    geojson: geojson,
-                    options: options,
-                    properties: properties,
-                    handler: function (layer, feature, featureLayer) {
-                        _this._config.leafletLayers[layerName] = layer;
-
-                        if (typeof onAddCallback == 'function') {
-                            onAddCallback(feature, featureLayer);
-                        }
-                    }
-                };
-
-                data.properties.isMedia = true;
-
-                _this.enqueueRequest('mapbox-' + _this._id + '::add-photo-marker', data, function () {
-                    _this._config.geojson[layerName] = _this._config.geojson[layerName] || {};
-                    _this._config.geojson[layerName][properties.featureId] = data;
-                });
-
-                return properties.featureId;
-            },
             removeGeoJSONFeature: function(layerName, featureId) {
                 if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
                     var _this = this;
@@ -9453,11 +9418,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         // GeoJSON
         scope.$on('mapbox-' + id + '::add-geojson', function (event, args) {
             _this.addGeoJSONFeature(args);
-        });
-
-        // photoMarker
-        scope.$on('mapbox-' + id + '::add-photo-marker', function (event, args) {
-            _this.addPhotoMarker(args);
         });
 
         scope.$on('mapbox-' + id + '::remove-geojson-feature', function (event, args) {
@@ -10065,65 +10025,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 });
             }
         }
-    };
-
-    Mapbox.prototype.addPhotoMarker = function (item) {
-        var _this = this;
-        var geojson = geoJSONHelper(item.geojson, item.properties);
-
-        _this.createLayer(item.layerName, item.type, item.options);
-
-        _this._geoJSON[item.layerName] = _this._geoJSON[item.layerName] || {};
-        _this._geoJSON[item.layerName][item.properties.featureId] = item;
-
-        var image = item;
-        var icon = {
-            iconSize: [40, 40],
-            className: 'leaflet-marker-agrista-photo'
-        };
-        var fancyboxOptions = {
-            helpers: {
-                overlay : {
-                    css : {
-                        'background' : 'rgba(0,0,0,0.7)'
-                    }
-                }
-            },
-            aspectRatio: true,
-            autoSize: false,
-            width: 640,
-            height: 640
-        };
-
-        L.geoJson(geojson.getJson(), {
-            pointToLayer: function(feature, latlng) {
-                return L.marker(latlng, {
-                    icon: L.icon(L.extend({
-                        iconUrl: image.geojson.properties.data.src
-                    }, icon)),
-                    title: image.caption || ''
-                });
-            },
-            onEachFeature: function(feature, layer) {
-                var added = _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-
-                if (added && typeof item.handler === 'function') {
-                    item.handler(_this._layers[item.layerName], feature, layer);
-                }
-
-                layer.on('click', function(e) {
-                    //todo: video
-                    //image
-                    $.fancybox({
-                        href: feature.properties.data.src,
-                        title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
-                            + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
-                            + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
-                        type: 'image'
-                    }, fancyboxOptions);
-                });
-            }
-        });
     };
 
     Mapbox.prototype.addGeoJSONFeature = function (item) {
