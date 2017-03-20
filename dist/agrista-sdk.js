@@ -13897,6 +13897,9 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 code: 'INC-FRS',
                 name: 'Fruit Sales'
             }, {
+                code: 'EST',
+                name: 'Establishment'
+            }, {
                 code: 'HVT',
                 name: 'Harvest'
             }, {
@@ -14026,8 +14029,30 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 't'
             },
             //*********** Expenses *********
+            // Establishment
+            {
+                code: 'EXP-HVP-DRAN',
+                name: 'Drainage',
+                unit: 'Total'
+            }, {
+                code: 'EXP-EST-IRRG',
+                name: 'Irrigation',
+                unit: 'Total'
+            }, {
+                code: 'EXP-EST-LPRP',
+                name: 'Land preparation',
+                unit: 'Total'
+            }, {
+                code: 'EXP-EST-TRLL',
+                name: 'Trellising',
+                unit: 'Total'
+            },
             // Preharvest
             {
+                code: 'EXP-HVP-CONS',
+                name: 'Consultants',
+                unit: 'Total'
+            }, {
                 code: 'EXP-HVP-SEED',
                 name: 'Seed',
                 unit: 'kg'
@@ -14036,9 +14061,25 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Plant Material',
                 unit: 'each'
             }, {
+                code: 'EXP-HVP-ELEC',
+                name: 'Electricity',
+                unit: 'Total'
+            }, {
                 code: 'EXP-HVP-FERT',
                 name: 'Fertiliser',
                 unit: 't'
+            }, {
+                code: 'EXP-HVP-FUEL',
+                name: 'Fuel',
+                unit: 'l'
+            }, {
+                code: 'EXP-HVP-FUNG',
+                name: 'Fungicides',
+                unit: 'Total'
+            }, {
+                code: 'EXP-HVP-GENL',
+                name: 'General',
+                unit: 'Total'
             }, {
                 code: 'EXP-HVP-LIME',
                 name: 'Lime',
@@ -14052,27 +14093,55 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Pesticides',
                 unit: 'l'
             }, {
+                code: 'EXP-HVP-PGRG',
+                name: 'Plant growth regulators',
+                unit: 'Total'
+            }, {
+                code: 'EXP-HVP-POLL',
+                name: 'Pollination',
+                unit: 'ha'
+            }, {
                 code: 'EXP-HVP-SPYA',
                 name: 'Aerial spraying',
                 unit: 'ha'
             }, {
                 code: 'EXP-HVP-INSH',
-                name: 'Crop Insurance (Hail)',
+                name: 'Hail insurance',
                 unit: 't'
             }, {
                 code: 'EXP-HVP-INSM',
-                name: 'Crop Insurance (Multiperil)',
+                name: 'Multiperil insurance',
                 unit: 't'
             }, {
                 code: 'EXP-HVP-HEDG',
                 name: 'Hedging cost',
                 unit: 't'
+            }, {
+                code: 'EXP-HVP-REPP',
+                name: 'Repairs & maintenance',
+                unit: 'Total'
+            }, {
+                code: 'EXP-HVP-SLAB',
+                name: 'Seasonal labour',
+                unit: 'ha'
             },
             //Harvest
             {
+                code: 'EXP-HVT-FUEL',
+                name: 'Fuel',
+                unit: 'l'
+            }, {
                 code: 'EXP-HVT-LABC',
-                name: 'Contract work (Harvest)',
+                name: 'Harvest labour',
                 unit: 'ha'
+            }, {
+                code: 'EXP-HVT-HVTT',
+                name: 'Harvest transport',
+                unit: 'Total'
+            }, {
+                code: 'EXP-HVT-REPP',
+                name: 'Repairs & maintenance',
+                unit: 'Total'
             }, {
                 code: 'EXP-HVT-STOR',
                 name: 'Storage',
@@ -14092,16 +14161,24 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             //Indirect
             {
+                code: 'EXP-IDR-ODEP',
+                name: 'Depreciation on orchards',
+                unit: 'Total'
+            }, {
                 code: 'EXP-IDR-FUEL',
                 name: 'Fuel',
                 unit: 'l'
             }, {
                 code: 'EXP-IDR-REPP',
-                name: 'Repairs & parts',
+                name: 'Repairs & maintenance',
                 unit: 'Total'
             }, {
                 code: 'EXP-IDR-ELEC',
                 name: 'Electricity',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-INTR',
+                name: 'Interest on loans',
                 unit: 'Total'
             }, {
                 code: 'EXP-IDR-WATR',
@@ -14125,7 +14202,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'Total'
             }, {
                 code: 'EXP-IDR-OTHER',
-                name: 'Other costs',
+                name: 'Other overheads',
                 unit: 'Total'
             },
             //Replacements
@@ -14265,7 +14342,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     'Crop Sales': getCategoryArray(['INC-HVT-CROP'])
                 },
                 EXP: {
-                    'Preharvest': getCategoryArray(['EXP-HVP-SEED', 'EXP-HVP-FERT', 'EXP-HVP-LIME', 'EXP-HVP-HERB', 'EXP-HVP-PEST', 'EXP-HVP-SPYA', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-HEDG']),
+                    'Preharvest': getCategoryArray(['EXP-HVP-FERT', 'EXP-HVP-FUNG', 'EXP-HVP-HEDG', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-LIME', 'EXP-HVP-PEST', 'EXP-HVP-SEED', 'EXP-HVP-SPYA']),
                     'Harvest': getCategoryArray(['EXP-HVT-LABC']),
                     'Marketing': getCategoryArray(['EXP-MRK-CRPF', 'EXP-MRK-CRPT']),
                     'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-OTHER'])
@@ -14276,10 +14353,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     'Fruit Sales': getCategoryArray(['INC-HVT-FRUT'])
                 },
                 EXP: {
-                    'Preharvest': getCategoryArray(['EXP-HVP-PLTM', 'EXP-HVP-FERT', 'EXP-HVP-LIME', 'EXP-HVP-HERB', 'EXP-HVP-PEST', 'EXP-HVP-SPYA', 'EXP-HVP-INSH', 'EXP-HVP-INSM']),
-                    'Harvest': getCategoryArray(['EXP-HVT-LABC', 'EXP-HVT-STOR', 'EXP-HVT-PAKM', 'EXP-HVT-DYCL', 'EXP-HVT-PAKC']),
+                    'Establishment': getCategoryArray(['EXP-HVP-DRAN', 'EXP-HVP-IRRG', 'EXP-HVP-LPRP', 'EXP-HVP-TRLL']),
+                    'Preharvest': getCategoryArray(['EXP-HVP-CONS', 'EXP-HVP-ELEC', 'EXP-HVP-FERT', 'EXP-HVP-FUEL', 'EXP-HVP-FUNG', 'EXP-HVP-GENL', 'EXP-HVP-LIME', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-PEST', 'EXP-HVP-PGRG', 'EXP-HVP-PLTM', 'EXP-HVP-POLL', 'EXP-HVP-REPP', 'EXP-HVP-SLAB', 'EXP-HVP-SPYA']),
+                    'Harvest': getCategoryArray(['EXP-HVT-FUEL', 'EXP-HVT-DYCL', 'EXP-HVT-LABC', 'EXP-HVT-HVTT', 'EXP-HVT-PAKC', 'EXP-HVT-PAKM', 'EXP-HVT-REPP', 'EXP-HVT-STOR']),
                     'Marketing': getCategoryArray(['EXP-MRK-HOTF', 'EXP-MRK-HOTT']),
-                    'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
+                    'Indirect Costs': getCategoryArray(['EXP-IDR-ODEP', 'EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
                 }
             },
             livestock: {
@@ -14331,6 +14409,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     return EnterpriseBudgetBase.categories[code];
                 })
                 .compact()
+                .sortBy('name')
                 .value();
         }
 
