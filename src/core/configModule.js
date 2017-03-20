@@ -26,6 +26,16 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         }
     };
 
+    var _getServer = function (stripTrailingSlash) {
+        var server = _servers[_host];
+
+        if (stripTrailingSlash && server.lastIndexOf('/') === server.length - 1) {
+            server = server.substr(0, server.length - 1);
+        }
+
+        return server;
+    };
+
     return {
         addModule: _addModule,
         hasModule: _hasModule,
@@ -41,13 +51,19 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
 
             this.useHost(_host, _version);
         },
+        setVersion: function (version) {
+            if (version) {
+                _version = version;
+            }
+        },
+        getServer: _getServer,
         useHost: function(host, version, cCallback) {
             if (typeof version === 'function') {
                 cCallback = version;
-                version = '';
+                version = _version;
             }
 
-            _version = version || '';
+            _version = version || _version;
 
             if (_servers[host] !== undefined) {
                 _host = host;
@@ -72,9 +88,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
                 getHost: function() {
                     return _host;
                 },
-                getServer: function() {
-                    return _servers[_host];
-                }
+                getServer: _getServer
             }
         }
     }

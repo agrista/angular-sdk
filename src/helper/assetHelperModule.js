@@ -418,6 +418,29 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             { category: "Cattle", subCategory: "Weaners", purpose: "Slaughter" },
             { category: "Cattle", subCategory: "Calves", purpose: "Slaughter" },
             { category: "Cattle", subCategory: "Culls", purpose: "Slaughter" },
+            { category: "Chickens", subCategory: "Day Old Chicks", purpose: "Broilers" },
+            { category: "Chickens", subCategory: "Broilers", purpose: "Broilers" },
+            { category: "Chickens", subCategory: "Hens", purpose: "Layers" },
+            { category: "Chickens", subCategory: "Point of Laying Hens", purpose: "Layers" },
+            { category: "Chickens", subCategory: "Culls", purpose: "Layers" },
+            { category: "Game", subCategory: "Game", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Rams", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Breeding Ewes", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Young Ewes", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Kids", purpose: "Slaughter" },
+            { category: "Horses", subCategory: "Horses", purpose: "Breeding" },
+            { category: "Pigs", subCategory: "Boars", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Breeding Sows", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Weaned pigs", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Piglets", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Porkers", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Baconers", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Culls", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Breeding Stock", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Slaughter Birds > 3 months", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Slaughter Birds < 3 months", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Chicks", purpose: "Slaughter" },
+            { category: "Rabbits", subCategory: "Rabbits", purpose: "Slaughter" },
             { category: "Sheep", subCategory: "Rams", purpose: "Breeding" },
             { category: "Sheep", subCategory: "Young Rams", purpose: "Breeding" },
             { category: "Sheep", subCategory: "Ewes", purpose: "Breeding" },
@@ -429,27 +452,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             { category: "Sheep", subCategory: "Ewes", purpose: "Slaughter" },
             { category: "Sheep", subCategory: "Lambs", purpose: "Slaughter" },
             { category: "Sheep", subCategory: "Wethers", purpose: "Slaughter" },
-            { category: "Sheep", subCategory: "Culls", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Boars", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Breeding Sows", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Weaned pigs", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Piglets", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Porkers", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Baconers", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Culls", purpose: "Slaughter" },
-            { category: "Chickens", subCategory: "Day Old Chicks", purpose: "Broilers" },
-            { category: "Chickens", subCategory: "Broilers", purpose: "Broilers" },
-            { category: "Chickens", subCategory: "Hens", purpose: "Layers" },
-            { category: "Chickens", subCategory: "Point of Laying Hens", purpose: "Layers" },
-            { category: "Chickens", subCategory: "Culls", purpose: "Layers" },
-            { category: "Ostriches", subCategory: "Breeding Stock", purpose: "Slaughter" },
-            { category: "Ostriches", subCategory: "Slaughter Birds > 3 months", purpose: "Slaughter" },
-            { category: "Ostriches", subCategory: "Slaughter Birds < 3 months", purpose: "Slaughter" },
-            { category: "Ostriches", subCategory: "Chicks", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Rams", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Breeding Ewes", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Young Ewes", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Kids", purpose: "Slaughter" }
+            { category: "Sheep", subCategory: "Culls", purpose: "Slaughter" }
         ],
         vme: [
             { category: "Vehicles", subCategory: "Bakkie" },
@@ -536,7 +539,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'Medic (Gama)',
         'Medic (Snail)',
         'Medic (Strand)',
-        'Multi-species',
+        'Multispecies Pasture',
         'Phalaris',
         'Rescue',
         'Rhodes',
@@ -565,21 +568,28 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Bean (Sugar)',
             'Bean (Green)',
             'Bean (Kidney)',
+            'Beet',
+            'Broccoli',
+            'Butternut',
+            'Cabbage',
             'Canola',
+            'Carrot',
             'Cassava',
+            'Cauliflower',
             'Cotton',
             'Cowpea',
             'Grain Sorghum',
             'Groundnut',
+            'Leek',
             'Lucerne',
             'Maize',
             'Maize (White)',
             'Maize (Yellow)',
-            'Oat',
+            'Oats',
             'Peanut',
             'Pearl Millet',
             'Potato',
-            'Rape',
+            'Rapeseed',
             'Rice',
             'Rye',
             'Soya Bean',
@@ -589,12 +599,10 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Tobacco',
             'Triticale',
             'Wheat',
-            'Wheat (Durum)'
-        ],
+            'Wheat (Durum)'],
         'Grazing': _grazingCropTypes,
         'Horticulture (Perennial)': [
             'Almond',
-            'Aloe',
             'Apple',
             'Apricot',
             'Avocado',
@@ -617,7 +625,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Grape (White)',
             'Grapefruit',
             'Guava',
-            'Hops',
             'Kiwi Fruit',
             'Lemon',
             'Litchi',
@@ -640,13 +647,10 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Protea',
             'Raspberry',
             'Rooibos',
-            'Sisal',
             'Strawberry',
             'Sugarcane',
-            'Tea',
             'Walnut',
-            'Wineberry'
-        ],
+            'Wineberry'],
         'Horticulture (Seasonal)': [
             'Asparagus',
             'Beet',
@@ -656,6 +660,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Brinjal',
             'Broccoli',
             'Brussel Sprout',
+            'Butternut',
             'Cabbage',
             'Cabbage (Chinese)',
             'Cabbage (Savoy)',
@@ -688,23 +693,27 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Pepper',
             'Pumpkin',
             'Quince',
+            'Rapeseed',
             'Radish',
             'Squash',
             'Strawberry',
             'Swede',
             'Sweet Melon',
             'Swiss Chard',
-            'Tea',
             'Tomato',
             'Turnip',
             'Vetch (Common)',
             'Vetch (Hairy)',
             'Watermelon',
-            'Youngberry'
-        ],
+            'Youngberry'],
         'Plantation': [
+            'Aloe',
             'Bluegum',
+            'Hops',
             'Pine',
+            'Pineapple',
+            'Tea',
+            'Sisal',
             'Wattle'],
         'Planted Pastures': _grazingCropTypes
     };
@@ -852,16 +861,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
             return valuation;
         },
-        generateFarmlandAssetLabels: function(asset) {
-            if (asset.data && asset.type == 'farmland') {
-                asset.data.portionLabel = (asset.data.portionNumber ?
-                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Ptn. ' + asset.data.portionNumber) :
+        generateFarmlandAssetLabels: function(asset, force) {
+            var portion = (asset.data ? asset.data : asset);
+            
+            if (portion && (asset.type == 'farmland' || force)) {
+                portion.portionLabel = (portion.portionNumber ?
+                    (portion.remainder ? 'Rem. portion ' + portion.portionNumber : 'Ptn. ' + portion.portionNumber) :
                     'Rem. extent');
-                asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
-                    _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
-                asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
-                    " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
-                    "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
+                portion.farmLabel = (portion.officialFarmName && !_(portion.officialFarmName.toLowerCase()).startsWith('farm') ?
+                    _(portion.officialFarmName).titleize() + ' ' : '') + (portion.farmNumber ? portion.farmNumber : '');
+                portion.label = portion.portionLabel + (portion.farmLabel && _.words(portion.farmLabel).length > 0 ?
+                    " of " + (_.words(portion.farmLabel.toLowerCase())[0] == 'farm' ? _(portion.farmLabel).titleize() :
+                    "farm " + _(portion.farmLabel).titleize() ) : 'farm Unknown');
             }
         },
         generateAssetName: function(asset, categoryLabel, currentAssetList) {

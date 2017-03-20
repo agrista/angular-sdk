@@ -74,7 +74,7 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
 /**
  * Aggregation API
  */
-sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($log, $http, configuration, promiseService, pagingService, underscore) {
+sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($http, configuration, promiseService, pagingService, underscore) {
     // TODO: Refactor so that the aggregationApi can be extended for downstream platforms
     var _host = configuration.getServer();
 
@@ -93,9 +93,9 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
                 }, promise.reject);
             });
         },
-        getSubRegionBoundaries: function (northEastLat, northEastLng, southWestLat, southWestLng) {
+        getSublayerBoundaries: function (northEastLat, northEastLng, southWestLat, southWestLng) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/aggregation/guideline-subregions?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/aggregation/guideline-sublayers?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -120,18 +120,13 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
         },
-        getProductionRegionByPoint: function (x, y) {
+        getSublayerByPoint: function (query) {
+            query = underscore.map(query, function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            }).join('&');
+
             return promiseService.wrap(function(promise) {
-                var param = '';
-
-                if (typeof x == 'number' && typeof y == 'number') {
-                    param = '?x=' + x + '&y=' + y;
-                } else {
-                    promise.reject();
-                }
-
-                $http.get(_host + 'api/aggregation/production-region' + param, {withCredentials: true}).then(function (res) {
-                    $log.debug(res.data);
+                $http.get(_host + 'api/aggregation/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -153,18 +148,8 @@ sdkApiApp.factory('aggregationApi', ['$log', '$http', 'configuration', 'promiseS
             return pagingService.page(_host + 'api/aggregation/report-cross-selling', params);
         },
         searchProductionSchedules: function(query) {
-            query = angular.copy(query);
-
-            if (query.horticultureStage) {
-                query.horticulturestage = query.horticultureStage;
-                delete query['horticultureStage'];
-            }
-            if (query.regionName) {
-                query.regionname = query.regionName;
-                delete query['regionName'];
-            }
             query = underscore.map(query, function (value, key) {
-                return key + '=' + encodeURIComponent(value);
+                return (underscore.isString(key) ? key.toLowerCase() : key) + '=' + encodeURIComponent(value);
             }).join('&');
 
             return promiseService.wrap(function(promise) {
@@ -403,6 +388,17 @@ sdkApiApp.factory('benefitApi', ['$http', 'pagingService', 'promiseService', 'co
 sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
+    function uriEncodeQuery (query) {
+        return underscore.chain(query)
+            .defaults({
+                resulttype: 'simple'
+            })
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+
     return {
         createComparable: function (comparable) {
             return promiseService.wrap(function (promise) {
@@ -411,15 +407,17 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
+        aggregateComparables: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         searchComparables: function (query) {
-            query = underscore.chain(query)
-                .defaults({
-                    resulttype: 'simple'
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
+            query = uriEncodeQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -427,30 +425,37 @@ sdkApiApp.factory('comparableApi', ['$http', 'pagingService', 'promiseService', 
                 }, promise.reject);
             });
         },
-        getComparable: function (id) {
+        getComparable: function (uuid) {
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/comparable/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/comparable/' + uuid, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateComparable: function (id, data) {
+        updateComparable: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ data.uuid, data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        useComparable: function (id) {
+        uploadComparableAttachments: function (uuid, data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id + '/use', {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/' + uuid + '/attach', data, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
+        },
+        useComparable: function (uuid) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/comparable/'+ uuid + '/use', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        deleteComparable: function (id) {
+        deleteComparable: function (uuid) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ id + '/delete', {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ uuid + '/delete', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -465,6 +470,13 @@ sdkApiApp.factory('dataApi', ['$http', 'promiseService', 'configuration', functi
     var _host = configuration.getServer();
 
     return {
+        aggregateAll: function () {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/data/aggregate-all', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         exportFile: function (data) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/data/export-file', data, {withCredentials: true}).then(function (res) {
@@ -590,7 +602,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
                 id = undefined;
             }
 
-            return pagingService.page(_host + 'api/budgets' + (id ? '?subregion=' + id : ''), page);
+            return pagingService.page(_host + 'api/budgets' + (id ? '?sublayer=' + id : ''), page);
         },
         getAveragedBudgets: function(query) {
             query = underscore.chain(query)
@@ -695,7 +707,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
 /**
  * Expense API
  */
-sdkApiApp.factory('expenseApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
+sdkApiApp.factory('expenseApi', ['$http', 'pagingService', 'promiseService', 'configuration', function($http, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -932,6 +944,64 @@ sdkApiApp.factory('financialApi', ['$http', 'promiseService', 'configuration', f
 }]);
 
 /**
+ * Layers API
+ */
+sdkApiApp.factory('layerApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getLayers: function (params) {
+            return pagingService.page(_host + 'api/layers', params);
+        },
+        getLayer: function (layerId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/layer/' + layerId, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getLayerTypes: function () {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/layer/types', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getSublayers: function (params) {
+            return pagingService.page(_host + 'api/sublayers', params);
+        },
+        getSublayer: function (sublayerId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/sublayer/' + sublayerId, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getSublayersByLayer: function (layerId) {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/sublayers/' + layerId, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        createSublayer: function (sublayer) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/sublayer', sublayer, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateSublayer: function(sublayer) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/sublayer/' + sublayer.id, sublayer, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Legal Entity API
  */
 sdkApiApp.factory('legalEntityApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
@@ -1098,6 +1168,13 @@ sdkApiApp.factory('merchantApi', ['$http', 'pagingService', 'promiseService', 'c
         inviteMerchantUser: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/merchant/' + id + '/invite-user', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        registerMerchant: function (data) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/register/merchant', data, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1346,56 +1423,6 @@ sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService
 }]);
 
 /**
- * Production Region API
- */
-sdkApiApp.factory('productionRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
-    var _host = configuration.getServer();
-
-    return {
-        getProductionRegions: function (withGeometries, paging) {
-            if (withGeometries && typeof withGeometries != 'boolean') {
-                $log.debug(withGeometries);
-                paging = withGeometries;
-                withGeometries = undefined;
-            }
-
-            return pagingService.page(_host + 'api/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
-        },
-        getProductionRegion: function(subregionId) {
-            return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/subregion/' + subregionId, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getProductionRegionsByRegion: function (regionId) {
-            return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/subregions/' + regionId, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        createProductionRegion: function (data) {
-            return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/subregion', data, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        updateProductionRegion: function(region) {
-            return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/subregion/' + region.id, region, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getParentRegions: function (params) {
-            return pagingService.page(_host + 'api/regions', params);
-        }
-    };
-}]);
-
-/**
  * Production Schedule API
  */
 sdkApiApp.factory('productionScheduleApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
@@ -1499,33 +1526,6 @@ sdkApiApp.factory('shareApi', ['$http', 'promiseService', 'configuration', funct
         getDocument: function (code) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/share/document/' + code, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        }
-    };
-}]);
-
-
-/**
- * SubRegion API
- */
-sdkApiApp.factory('subRegionApi', ['$http', '$log', 'pagingService', 'promiseService', 'configuration', function($http, $log, pagingService, promiseService, configuration) {
-    var _host = configuration.getServer();
-
-    return {
-        getSubRegions: function (withGeometries, paging) {
-            if (withGeometries && typeof withGeometries != 'boolean') {
-                $log.debug(withGeometries);
-                paging = withGeometries;
-                withGeometries = undefined;
-            }
-
-            return pagingService.page(_host + 'api/guidelines/subregions' + (withGeometries ? '?geometries=' + withGeometries : ''), paging);
-        },
-        getSubRegion: function(subregionId, versionId) {
-            return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/guidelines/' + subregionId + (versionId ? '?versionId=' + versionId : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

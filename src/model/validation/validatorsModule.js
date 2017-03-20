@@ -217,11 +217,10 @@ sdkModelValidators.factory('Validator.length', ['Validatable.Validator', 'Valida
         }
 
         length.message = 'does not meet the length requirement';
+        length.options = {};
 
-        length.options = {
-            min: min,
-            max: max
-        };
+        if (min) length.options.min = min;
+        if (max) length.options.max = max;
 
         return new Validator(length);
     }]);
@@ -237,7 +236,7 @@ sdkModelValidators.factory('Validator.length.min', ['underscore', 'Validatable.V
         }
 
         min.message = function () {
-            return 'Must be at least ' + this.min + ' characters';
+            return 'Length must be at least ' + this.min;
         };
 
         return new Validator(min);
@@ -254,7 +253,7 @@ sdkModelValidators.factory('Validator.length.max', ['underscore', 'Validatable.V
         }
 
         max.message = function () {
-            return 'Must be no more than ' + this.max + ' characters';
+            return 'Length must be at most ' + this.max;
         };
 
         return new Validator(max);

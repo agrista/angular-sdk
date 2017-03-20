@@ -1,12 +1,9 @@
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudgetBase(attrs) {
             Model.Base.apply(this, arguments);
-
-            this.data = (attrs && attrs.data ? attrs.data : {});
-            this.data.sections = this.data.sections || [];
 
             computedProperty(this, 'defaultCostStage', function () {
                 return underscore.last(EnterpriseBudgetBase.costStages);
@@ -21,8 +18,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 }));
             });
 
+            privateProperty(this, 'sortSections', function () {
+                this.data.sections = underscore.chain(this.data.sections)
+                    .sortBy('name')
+                    .reverse()
+                    .value();
+            });
+
             privateProperty(this, 'getSection', function (sectionCode, costStage) {
                 return underscore.first(this.getSections(sectionCode, costStage));
+            });
+
+            privateProperty(this, 'getSectionTitle', function (sectionCode) {
+                return (EnterpriseBudgetBase.sections[sectionCode] ? EnterpriseBudgetBase.sections[sectionCode].name : '');
             });
 
             privateProperty(this, 'addSection', function (sectionCode, costStage) {
@@ -45,6 +53,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                     }
 
                     this.data.sections.push(section);
+                    this.sortSections();
                 }
 
                 return section;
@@ -210,6 +219,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             privateProperty(this, 'getUnitAbbreviation', function (unit) {
                 return unitAbbreviations[unit] || unit;
             });
+
+            // Properties
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'sections', []);
+
+            this.sortSections();
         }
 
         inheritModel(EnterpriseBudgetBase, Model.Base);
@@ -769,7 +784,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             EnterpriseBudgetBase.apply(this, arguments);
 
             Base.initializeObject(this.data, 'details', {});
-            Base.initializeObject(this.data, 'schedules', []);
+            Base.initializeObject(this.data, 'schedules', {});
             Base.initializeObject(this.data.details, 'cycleStart', 0);
             Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
 
@@ -888,8 +903,16 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
             } else if (this.assetType === 'horticulture') {
+                if (this.data.details.maturityFactor instanceof Array) {
+                    this.data.details.maturityFactor = {
+                        'INC': this.data.details.maturityFactor
+                    };
+                }
+
                 Base.initializeObject(this.data.details, 'yearsToMaturity', getYearsToMaturity(this));
-                Base.initializeObject(this.data.details, 'maturityFactor', []);
+                Base.initializeObject(this.data.details, 'maturityFactor', {});
+                Base.initializeObject(this.data.details.maturityFactor, 'INC', []);
+                Base.initializeObject(this.data.details.maturityFactor, 'EXP', []);
             }
 
             this.recalculate();
@@ -909,11 +932,18 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Barley',
                 'Bean (Dry)',
                 'Bean (Green)',
+                'Beet',
+                'Broccoli',
+                'Butternut',
+                'Cabbage',
                 'Canola',
+                'Carrot',
+                'Cauliflower',
                 'Cotton',
                 'Cowpea',
                 'Grain Sorghum',
                 'Groundnut',
+                'Leek',
                 'Lucerne',
                 'Lupin',
                 'Maize (Fodder)',
@@ -921,12 +951,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Maize (Seed)',
                 'Maize (White)',
                 'Maize (Yellow)',
-                'Oat',
+                'Multispecies Pasture',
+                'Oats',
                 'Potato',
+                'Rapeseed',
                 'Rye',
                 'Soya Bean',
                 'Sunflower',
                 'Sweet Corn',
+                'Teff',
                 'Tobacco',
                 'Triticale',
                 'Wheat'
@@ -952,6 +985,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Fig',
                 'Garlic',
                 'Gooseberry',
+                'Grape (Bush Vine)',
                 'Grape (Table)',
                 'Grape (Wine)',
                 'Guava',
@@ -1005,6 +1039,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Horses',
                 'Ostrich',
                 'Pigs',
+                'Rabbits',
                 'Sheep (Extensive)',
                 'Sheep (Feedlot)',
                 'Sheep (Stud)'
@@ -1113,6 +1148,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                         budgetSection.productCategoryGroups = [];
 
                         instance.data.sections.push(budgetSection);
+                        instance.sortSections();
                     }
 
                     budgetSection.costStage = EnterpriseBudget.costStages[i];
@@ -1121,11 +1157,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             // Validate maturity
             if (instance.assetType == 'horticulture' && instance.data.details.yearsToMaturity) {
-                while (instance.data.details.maturityFactor.length < instance.data.details.yearsToMaturity) {
-                    instance.data.details.maturityFactor.push(Math.floor((100 / instance.data.details.yearsToMaturity) * (instance.data.details.maturityFactor.length + 1)));
-                }
+                var yearsToMaturity = instance.data.details.yearsToMaturity;
 
-                instance.data.details.maturityFactor = instance.data.details.maturityFactor.slice(0, instance.data.details.yearsToMaturity);
+                instance.data.details.maturityFactor = underscore.mapObject(instance.data.details.maturityFactor, function (maturityFactor) {
+                    return underscore.first(maturityFactor.concat(underscore.range(maturityFactor.length < yearsToMaturity ? (yearsToMaturity - maturityFactor.length) : 0)
+                        .map(function () {
+                            return 100;
+                        })), yearsToMaturity);
+                });
             }
         }
 

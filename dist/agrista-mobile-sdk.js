@@ -1,60 +1,53 @@
-var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities']);
+var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'satellizer']);
 
-sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', function($http, promiseService, configuration) {
+sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', 'underscore', function($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
     
     return {
-        login: function (email, password) {
+        requestReset: function(email) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'login', {email: email, password: password}).then(function (res) {
+                $http.post(_host + 'auth/request-reset', {email: email}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        resetPassword: function (hash, password) {
+        confirmReset: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/password-reset', {hash: hash, password: password}).then(function (res) {
+                $http.post(_host + 'auth/confirm-reset', data).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        requestResetPasswordEmail: function(email) {
+        refresh: function (refreshToken) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/password-reset-email', {email: email}).then(function (res) {
+                $http.post(_host + 'auth/refresh-token', {refresh_token: refreshToken}, {skipAuthorization: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        changePassword: function (id, oldPassword, newPassword) {
+        changePassword: function (oldPassword, newPassword) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/user/password', {password: oldPassword, newPassword: newPassword}).then(function (res) {
+                $http.post(_host + 'auth/change-password', {password: oldPassword, newPassword: newPassword}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         getUser: function () {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'current-user', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        registerUser: function (data) {
-            return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/register', data).then(function (res) {
+                $http.get(_host + 'api/me').then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'current-user', _.omit(data, 'profilePhotoSrc'), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/me', underscore.omit(data, 'profilePhotoSrc')).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         logout: function() {
-            return $http.post(_host + 'logout');
+            return $http.post(_host + 'logout', {});
         }
     };
 }]);
@@ -77,13 +70,74 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         role: _userRoles.open
     };
 
-    var _lastError = undefined,
-        _sslFingerprint = '',
-        _sslFingerprintAlt = '';
+    var _lastError,
+        _tokens,
+        _expiry = {
+            expiresIn: 60
+        };
 
     // Intercept any HTTP responses that are not authorized
-    $httpProvider.interceptors.push(['$log', '$q', '$injector', '$rootScope', function ($log, $q, $injector, $rootScope) {
+    $httpProvider.interceptors.push(['$injector', '$log', '$rootScope', 'localStore', 'moment', 'promiseService', function ($injector, $log, $rootScope, localStore, moment, promiseService) {
+        var _requestQueue = [];
+
+        function queueRequest (config) {
+            var queueItem = {
+                config: config,
+                defer: promiseService.defer()
+            };
+
+            _requestQueue.push(queueItem);
+
+            return queueItem.defer.promise;
+        }
+
+        function resolveQueue (token) {
+            while (_requestQueue.length > 0) {
+                var queueItem = _requestQueue.shift();
+
+                if (token) {
+                    queueItem.config.headers['Authorization'] = 'Bearer ' + token;
+                }
+
+                queueItem.defer.resolve(queueItem.config);
+            }
+        }
+
         return {
+            request: function (config) {
+                if (config.skipAuthorization || config.headers['Authorization']) {
+                    _expiry.lastRequest = moment();
+
+                    return config;
+                }
+
+                if (_tokens && _tokens.refresh_token && _preReauthenticate(_expiry)) {
+                    if (_requestQueue.length == 0) {
+                        var $auth = $injector.get('$auth'),
+                            authorizationApi = $injector.get('authorizationApi');
+
+                        authorizationApi.refresh(_tokens.refresh_token).then(function (res) {
+                            if (res) {
+                                if (res.expires_at) {
+                                    _expiry.expiresIn = moment(res.expires_at).diff(moment(), 'm');
+                                }
+
+                                $auth.setToken(res.token);
+                                localStore.setItem('tokens', res);
+                                _tokens = res;
+                            }
+
+                            resolveQueue(res && res.token);
+                        }, function () {
+                            resolveQueue();
+                        });
+                    }
+
+                    return queueRequest(config);
+                }
+
+                return config;
+            },
             responseError: function (err) {
                 $log.debug(err);
 
@@ -93,181 +147,209 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     $rootScope.$broadcast('authorization::forbidden', err);
                 }
 
-                return $q.reject(err);
+                return promiseService.reject(err);
             }
         }
     }]);
+
+    var _preAuthenticate = ['promiseService', function (promiseService) {
+        return function () {
+            return promiseService.wrap(function (promise) {
+                promise.resolve();
+            });
+        }
+    }], _preReauthenticate = function () {
+        return true;
+    };
 
     return {
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
-        setFingerprints: function (fingerprint, fingerprintAlt) {
-            _sslFingerprint = fingerprint;
-            _sslFingerprintAlt = fingerprintAlt;
+        setPreAuthenticate: function (fn) {
+            _preAuthenticate = fn;
         },
 
-        $get: ['$log', '$rootScope', 'authorizationApi', 'configuration', 'localStore', 'promiseService', function ($log, $rootScope, authorizationApi, configuration, localStore, promiseService) {
-            var _user = _getUser();
+        setPreReauthenticate: function (fn) {
+            _preReauthenticate = fn;
+        },
 
-            authorizationApi.getUser().then(function (res) {
-                if (res.user !== null) {
-                    _user = _setUser(res.user);
+        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
+            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
+                var _user = _getUser();
+
+                _tokens = localStore.getItem('tokens');
+
+                if (_preAuthenticate instanceof Array) {
+                    _preAuthenticate = $injector.invoke(_preAuthenticate);
+                }
+
+                authorizationApi.getUser().then(function (res) {
+                    _user = _setUser(res);
 
                     $rootScope.$broadcast('authorization::login', _user);
-                } else if (_user.isActive !== true) {
+                }, function () {
                     $rootScope.$broadcast('authorization::unauthorized');
-                }
-            });
+                });
 
-            $rootScope.$on('authorization::unauthorized', function () {
-                localStore.removeItem('user');
-            });
+                $rootScope.$on('authorization::unauthorized', function () {
+                    localStore.removeItem('user');
+                    localStore.removeItem('tokens');
+                    $auth.removeToken();
+                    _tokens = undefined;
+                });
 
-            function _getUser() {
-                return localStore.getItem('user') || _defaultUser;
-            }
-
-            function _setUser(user) {
-                user = user || _defaultUser;
-
-                if (user.role === undefined) {
-                    user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
+                function _getUser() {
+                    return localStore.getItem('user') || _defaultUser;
                 }
 
-                localStore.setItem('user', user);
+                function _setUser(user) {
+                    user = user || _defaultUser;
 
-                return user;
-            }
+                    if (user.role === undefined) {
+                        user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
+                    }
 
-            return {
-                userRole: _userRoles,
-                accessLevel: _accessLevels,
-                lastError: function () {
-                    return _lastError;
-                },
-                currentUser: function () {
-                    return _user;
-                },
+                    localStore.setItem('user', user);
 
-                isAdmin: function () {
-                    return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
-                },
-                isAllowed: function (level) {
-                    return (level & _user.role) != 0;
-                },
-                isLoggedIn: function () {
-                    return (_accessLevels.user & _user.role) != 0;
-                },
-                login: function (email, password) {
-                    return promiseService.wrap(function (promise) {
-                        $log.debug('SSL CERT TESTER: ' + (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0));
+                    return user;
+                }
 
-                        if (window.plugins && window.plugins.sslCertificateChecker && _sslFingerprint && _sslFingerprint.length > 0) {
-                            window.plugins.sslCertificateChecker.check(promise.resolve, function (err) {
-                                    $log.error(err);
-
-                                    _lastError = {
-                                        type: 'error',
-                                        message: 'SSL Certificate Error: Please contact your administrator'
-                                    };
-
-                                    localStore.removeItem('user');
-                                    promise.reject({
-                                        data: _lastError
-                                    });
-                                },
-                                configuration.getServer(),
-                                _sslFingerprint, _sslFingerprintAlt);
-                        } else {
-                            promise.resolve();
+                function _postAuthenticateSuccess (res) {
+                    if (res && res.data) {
+                        if (res.data.expires_at) {
+                            _expiry.expiresIn = moment(res.data.expires_at).diff(moment(), 'm');
                         }
-                    }).then(function () {
-                        return promiseService.wrap(function(promise) {
-                            authorizationApi.login(email, password).then(function (res) {
-                                if (res.user !== null) {
-                                    _lastError = undefined;
-                                    _user = _setUser(res.user);
-                                    promise.resolve(_user);
 
-                                    $rootScope.$broadcast('authorization::login', _user);
-                                } else {
-                                    $log.error(res);
+                        $auth.setToken(res.data.token);
+                        localStore.setItem('tokens', res.data);
+                        _tokens = res.data;
+                    }
 
-                                    _lastError = {
-                                        type: 'error',
-                                        message: 'The entered e-mail and/or password is incorrect. Please try again.'
-                                    };
+                    return authorizationApi.getUser();
+                }
 
-                                    localStore.removeItem('user');
-                                    promise.reject({
-                                        data: _lastError
-                                    });
+                function _postGetUserSuccess (promise) {
+                    return function (res) {
+                        _lastError = undefined;
+                        _user = _setUser(res);
+                        promise.resolve(_user);
+
+                        $rootScope.$broadcast('authorization::login', _user);
+                    }
+                }
+
+                function _postError (promise) {
+                    return function (err) {
+                        $log.error(err);
+
+                        _lastError = {
+                            code: err.status,
+                            type: 'error',
+                            message: err.data && err.data.message || 'Unable to Authenticate. Please try again.'
+                        };
+
+                        localStore.removeItem('user');
+                        promise.reject({
+                            data: _lastError
+                        });
+                    }
+                }
+
+                return {
+                    userRole: _userRoles,
+                    accessLevel: _accessLevels,
+                    lastError: function () {
+                        return _lastError;
+                    },
+                    currentUser: function () {
+                        return _user;
+                    },
+                    getAuthenticationResponse: function () {
+                        return _tokens;
+                    },
+
+                    isAdmin: function () {
+                        return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
+                    },
+                    isAllowed: function (level) {
+                        return (level & _user.role) != 0;
+                    },
+                    isLoggedIn: function () {
+                        return (_accessLevels.user & _user.role) != 0;
+                    },
+                    login: function (email, password) {
+                        var credentials = {
+                            email: email,
+                            password: password
+                        };
+
+                        return promiseService.wrap(function (promise) {
+                            return _preAuthenticate(credentials)
+                                .then(function () {
+                                    return $auth.login(credentials);
+                                }, promiseService.throwError)
+                                .then(_postAuthenticateSuccess, promiseService.throwError)
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+                    },
+                    authenticate: function (name, data) {
+                        return promiseService.wrap(function (promise) {
+                            return _preAuthenticate(data)
+                                .then(function () {
+                                    return $auth.authenticate(name, data);
+                                }, promiseService.throwError)
+                                .then(_postAuthenticateSuccess, promiseService.throwError)
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+                    },
+                    requestReset: authorizationApi.requestReset,
+                    confirmReset: function (data) {
+                        return promiseService.wrap(function (promise) {
+                            authorizationApi.confirmReset(data).then(function (res) {
+                                if (_tokens) {
+                                    _tokens.confirmed = true;
+                                    localStore.setItem('tokens', _tokens);
                                 }
 
-                            }, function (err) {
-                                $log.error(err);
-
-                                _lastError = {
-                                    type: 'error',
-                                    message: err.data && err.data.message || 'Could not connect to the server. Please try again or contact your administrator'
-                                };
-
-                                localStore.removeItem('user');
-                                promise.reject({
-                                    data: _lastError
-                                });
-                            });
+                                promise.resolve(res);
+                            }, promise.reject);
                         });
-                    }, promiseService.throwError);
-                },
-                requestResetPasswordEmail: authorizationApi.requestResetPasswordEmail,
-                resetPassword: authorizationApi.resetPassword,
-                changePassword: function (oldPassword, newPassword) {
-                    return authorizationApi.changePassword(_user.id, oldPassword, newPassword);
-                },
-                changeUserDetails: function (userDetails) {
-                    return authorizationApi.updateUser(userDetails).then(function (result) {
-                        _user = _setUser(result);
+                    },
+                    changePassword: function (oldPassword, newPassword) {
+                        return authorizationApi.changePassword(oldPassword, newPassword);
+                    },
+                    changeUserDetails: function (userDetails) {
+                        return authorizationApi.updateUser(userDetails).then(function (result) {
+                            _user = _setUser(result);
 
-                        $rootScope.$broadcast('authorization::user-details__changed', _user);
+                            $rootScope.$broadcast('authorization::user-details__changed', _user);
 
-                        return result;
-                    });
-                },
-                register: function(data) {
-                    return promiseService.wrap(function(promise) {
-                        authorizationApi.registerUser(data).then(function (res) {
-                            if (res !== null) {
-                                _lastError = undefined;
-                                _user = _setUser(res);
-                                promise.resolve(_user);
-
-                                $rootScope.$broadcast('authorization::login', _user);
-                            } else {
-                                localStore.removeItem('user');
-                                promise.reject();
-                            }
-                        }, function (err) {
-                            _lastError = {
-                                type: 'error',
-                                message: 'There is already an Agrista account associated with this email address. Please login.'
-                            };
-
+                            return result;
+                        });
+                    },
+                    register: function (data) {
+                        return promiseService.wrap(function (promise) {
+                            return _preAuthenticate(data)
+                                .then(function () {
+                                    return $auth.signup(data);
+                                }, promiseService.throwError)
+                                .then(_postAuthenticateSuccess, promiseService.throwError)
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+                    },
+                    logout: function () {
+                        return authorizationApi.logout().then(function () {
+                            $auth.logout();
                             localStore.removeItem('user');
-                            promise.reject(err);
-                        });
-                    });
-                },
-                logout: function () {
-                    $rootScope.$broadcast('authorization::logout');
+                            localStore.removeItem('tokens');
+                            _tokens = undefined;
 
-                    return authorizationApi.logout().then(function () {
-                        localStore.removeItem('user');
-                    });
+                            $rootScope.$broadcast('authorization::logout');
+                        });
+                    }
                 }
-            }
-        }]
+            }]
     }
 }]);
 
@@ -299,6 +381,16 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
         }
     };
 
+    var _getServer = function (stripTrailingSlash) {
+        var server = _servers[_host];
+
+        if (stripTrailingSlash && server.lastIndexOf('/') === server.length - 1) {
+            server = server.substr(0, server.length - 1);
+        }
+
+        return server;
+    };
+
     return {
         addModule: _addModule,
         hasModule: _hasModule,
@@ -314,13 +406,19 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
 
             this.useHost(_host, _version);
         },
+        setVersion: function (version) {
+            if (version) {
+                _version = version;
+            }
+        },
+        getServer: _getServer,
         useHost: function(host, version, cCallback) {
             if (typeof version === 'function') {
                 cCallback = version;
-                version = '';
+                version = _version;
             }
 
-            _version = version || '';
+            _version = version || _version;
 
             if (_servers[host] !== undefined) {
                 _host = host;
@@ -345,12 +443,250 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
                 getHost: function() {
                     return _host;
                 },
-                getServer: function() {
-                    return _servers[_host];
-                }
+                getServer: _getServer
             }
         }
     }
+}]);
+var sdkGeospatialApp = angular.module('ag.sdk.geospatial', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
+
+sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
+    function GeojsonHelper(json, properties) {
+        if (!(this instanceof GeojsonHelper)) {
+            return new GeojsonHelper(json, properties);
+        }
+
+        this.addGeometry(json, properties);
+    }
+
+    function _recursiveCoordinateFinder (bounds, coordinates) {
+        if (coordinates) {
+            if (angular.isArray(coordinates[0])) {
+                angular.forEach(coordinates, function(coordinate) {
+                    _recursiveCoordinateFinder(bounds, coordinate);
+                });
+            } else if (angular.isArray(coordinates)) {
+                bounds.push([coordinates[1], coordinates[0]]);
+            }
+        }
+    }
+
+    GeojsonHelper.prototype = {
+        getJson: function () {
+            return this._json;
+        },
+        getType: function () {
+            return this._json.type;
+        },
+        getGeometryType: function () {
+            return (this._json.geometry ? this._json.geometry.type : this._json.type);
+        },
+        getBounds: function () {
+            var bounds = [];
+
+            if (this._json) {
+                var features = this._json.features || [this._json];
+
+                angular.forEach(features, function(feature) {
+                    var geometry = feature.geometry || feature;
+
+                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                });
+            }
+
+            return bounds;
+        },
+        getBoundingBox: function (bounds) {
+            bounds = bounds || this.getBounds();
+
+            var lat1 = 0, lat2 = 0,
+                lng1 = 0, lng2 = 0;
+
+            angular.forEach(bounds, function(coordinate, index) {
+                if (index == 0) {
+                    lat1 = lat2 = coordinate[0];
+                    lng1 = lng2 = coordinate[1];
+                } else {
+                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
+                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
+                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
+                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
+                }
+            });
+
+            return [[lat1, lng1], [lat2, lng2]];
+        },
+        getCenter: function (bounds) {
+            var boundingBox = this.getBoundingBox(bounds);
+
+            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
+        },
+        getCenterAsGeojson: function (bounds) {
+            return {
+                coordinates: this.getCenter(bounds).reverse(),
+                type: 'Point'
+            }
+        },
+        getProperty: function (name) {
+            return (this._json && this._json.properties ? this._json.properties[name] : undefined);
+        },
+        setCoordinates: function (coordinates) {
+            if (this._json && this._json.type != 'FeatureCollection') {
+                if (this._json.geometry) {
+                    this._json.geometry.coordinates = coordinates;
+                } else {
+                    this._json.coordinates = coordinates;
+                }
+            }
+        },
+        addProperties: function (properties) {
+            var _this = this;
+
+            if (this._json && properties) {
+                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
+                    _this._json = {
+                        type: 'Feature',
+                        geometry: _this._json,
+                        properties: properties
+                    };
+                } else {
+                    _this._json.properties = _this._json.properties || {};
+
+                    angular.forEach(properties, function(property, key) {
+                        _this._json.properties[key] = property;
+                    });
+                }
+            }
+
+            return _this;
+        },
+        addGeometry: function (geometry, properties) {
+            if (geometry) {
+                if (this._json === undefined) {
+                    this._json = geometry;
+
+                    this.addProperties(properties);
+                } else {
+                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                        this._json = {
+                            type: 'Feature',
+                            geometry: this._json
+                        };
+                    }
+
+                    if (this._json.type == 'Feature') {
+                        this._json.properties = underscore.defaults(this._json.properties || {}, {
+                            featureId: objectId().toString()
+                        });
+
+                        this._json = {
+                            type: 'FeatureCollection',
+                            features: [this._json]
+                        };
+                    }
+
+                    if (this._json.type == 'FeatureCollection') {
+                        this._json.features.push({
+                            type: 'Feature',
+                            geometry: geometry,
+                            properties: underscore.defaults(properties || {}, {
+                                featureId: objectId().toString()
+                            })
+                        });
+                    }
+                }
+            }
+
+            return this;
+        },
+        formatGeoJson: function (geoJson, toType) {
+            // TODO: REFACTOR
+            //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
+            if(toType.toLowerCase() == 'point') {
+                switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
+                    // type of Feature
+                    case 'feature':
+                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                            return geoJson.geometry;
+                        }
+                        break;
+                    // type of FeatureCollection
+                    case 'featurecollection':
+                        break;
+                    // type of GeometryCollection
+                    case 'geometrycollection':
+                        break;
+                    // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                    default:
+                        break;
+                }
+            }
+
+            return geoJson;
+        },
+        validGeoJson: function (geoJson, typeRestriction) {
+            // TODO: REFACTOR
+            var validate = true;
+            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+                return false;
+            }
+
+            // valid type, and type matches the restriction, then validate the geometry / features / geometries / coordinates fields
+            switch (geoJson.type.toLowerCase()) {
+                // type of Feature
+                case 'feature':
+                    break;
+                // type of FeatureCollection
+                case 'featurecollection':
+                    break;
+                // type of GeometryCollection
+                case 'geometrycollection':
+                    break;
+                // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
+                default:
+                    if(!geoJson.coordinates || !geoJson.coordinates instanceof Array) {
+                        return false;
+                    }
+                    var flattenedCoordinates = _.flatten(geoJson.coordinates);
+                    flattenedCoordinates.forEach(function(element, i) {
+                        if(typeof element != 'number') {
+                            validate = false;
+                        }
+                    });
+                    break;
+            }
+
+            return validate;
+        }
+    };
+
+    return function (json, properties) {
+        return new GeojsonHelper(json, properties);
+    }
+}]);
+
+sdkGeospatialApp.factory('topologyHelper', ['topologySuite', function (topologySuite) {
+    var geometryFactory = new topologySuite.geom.GeometryFactory(),
+        geoJSONReader = new topologySuite.io.GeoJSONReader(geometryFactory),
+        geoJSONWriter = new topologySuite.io.GeoJSONWriter(geometryFactory);
+
+    return {
+        getGeometryFactory: function () {
+            return geometryFactory;
+        },
+        getGeoJSONReader: function () {
+            return geoJSONReader;
+        },
+        getGeoJSONWriter: function () {
+            return geoJSONWriter;
+        },
+        readGeoJSON: function (geojson) {
+            return (geojson ? geoJSONReader.read(geojson) : undefined);
+        },
+        writeGeoJSON: function (geometry) {
+            return (geometry ? geoJSONWriter.write(geometry) : undefined);
+        }
+    };
 }]);
 var sdkIdApp = angular.module('ag.sdk.id', ['ag.sdk.utilities']);
 
@@ -483,7 +819,7 @@ sdkLibraryApp.constant('underscore', window._);
 
 sdkLibraryApp.constant('moment', window.moment);
 
-sdkLibraryApp.constant('geojsonUtils', window.gju);
+sdkLibraryApp.constant('topologySuite', window.jsts);
 
 sdkLibraryApp.constant('naturalSort', window.naturalSort);
 
@@ -890,6 +1226,9 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         },
         objectWrap: function (action) {
             return _wrapAll(action, {});
+        },
+        reject: function (obj) {
+            return $q.reject(obj);
         },
         throwError: function (err) {
             throw err;
@@ -1351,6 +1690,29 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             { category: "Cattle", subCategory: "Weaners", purpose: "Slaughter" },
             { category: "Cattle", subCategory: "Calves", purpose: "Slaughter" },
             { category: "Cattle", subCategory: "Culls", purpose: "Slaughter" },
+            { category: "Chickens", subCategory: "Day Old Chicks", purpose: "Broilers" },
+            { category: "Chickens", subCategory: "Broilers", purpose: "Broilers" },
+            { category: "Chickens", subCategory: "Hens", purpose: "Layers" },
+            { category: "Chickens", subCategory: "Point of Laying Hens", purpose: "Layers" },
+            { category: "Chickens", subCategory: "Culls", purpose: "Layers" },
+            { category: "Game", subCategory: "Game", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Rams", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Breeding Ewes", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Young Ewes", purpose: "Slaughter" },
+            { category: "Goats", subCategory: "Kids", purpose: "Slaughter" },
+            { category: "Horses", subCategory: "Horses", purpose: "Breeding" },
+            { category: "Pigs", subCategory: "Boars", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Breeding Sows", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Weaned pigs", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Piglets", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Porkers", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Baconers", purpose: "Slaughter" },
+            { category: "Pigs", subCategory: "Culls", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Breeding Stock", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Slaughter Birds > 3 months", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Slaughter Birds < 3 months", purpose: "Slaughter" },
+            { category: "Ostriches", subCategory: "Chicks", purpose: "Slaughter" },
+            { category: "Rabbits", subCategory: "Rabbits", purpose: "Slaughter" },
             { category: "Sheep", subCategory: "Rams", purpose: "Breeding" },
             { category: "Sheep", subCategory: "Young Rams", purpose: "Breeding" },
             { category: "Sheep", subCategory: "Ewes", purpose: "Breeding" },
@@ -1362,27 +1724,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             { category: "Sheep", subCategory: "Ewes", purpose: "Slaughter" },
             { category: "Sheep", subCategory: "Lambs", purpose: "Slaughter" },
             { category: "Sheep", subCategory: "Wethers", purpose: "Slaughter" },
-            { category: "Sheep", subCategory: "Culls", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Boars", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Breeding Sows", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Weaned pigs", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Piglets", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Porkers", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Baconers", purpose: "Slaughter" },
-            { category: "Pigs", subCategory: "Culls", purpose: "Slaughter" },
-            { category: "Chickens", subCategory: "Day Old Chicks", purpose: "Broilers" },
-            { category: "Chickens", subCategory: "Broilers", purpose: "Broilers" },
-            { category: "Chickens", subCategory: "Hens", purpose: "Layers" },
-            { category: "Chickens", subCategory: "Point of Laying Hens", purpose: "Layers" },
-            { category: "Chickens", subCategory: "Culls", purpose: "Layers" },
-            { category: "Ostriches", subCategory: "Breeding Stock", purpose: "Slaughter" },
-            { category: "Ostriches", subCategory: "Slaughter Birds > 3 months", purpose: "Slaughter" },
-            { category: "Ostriches", subCategory: "Slaughter Birds < 3 months", purpose: "Slaughter" },
-            { category: "Ostriches", subCategory: "Chicks", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Rams", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Breeding Ewes", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Young Ewes", purpose: "Slaughter" },
-            { category: "Goats", subCategory: "Kids", purpose: "Slaughter" }
+            { category: "Sheep", subCategory: "Culls", purpose: "Slaughter" }
         ],
         vme: [
             { category: "Vehicles", subCategory: "Bakkie" },
@@ -1469,7 +1811,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
         'Medic (Gama)',
         'Medic (Snail)',
         'Medic (Strand)',
-        'Multi-species',
+        'Multispecies Pasture',
         'Phalaris',
         'Rescue',
         'Rhodes',
@@ -1498,21 +1840,28 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Bean (Sugar)',
             'Bean (Green)',
             'Bean (Kidney)',
+            'Beet',
+            'Broccoli',
+            'Butternut',
+            'Cabbage',
             'Canola',
+            'Carrot',
             'Cassava',
+            'Cauliflower',
             'Cotton',
             'Cowpea',
             'Grain Sorghum',
             'Groundnut',
+            'Leek',
             'Lucerne',
             'Maize',
             'Maize (White)',
             'Maize (Yellow)',
-            'Oat',
+            'Oats',
             'Peanut',
             'Pearl Millet',
             'Potato',
-            'Rape',
+            'Rapeseed',
             'Rice',
             'Rye',
             'Soya Bean',
@@ -1522,12 +1871,10 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Tobacco',
             'Triticale',
             'Wheat',
-            'Wheat (Durum)'
-        ],
+            'Wheat (Durum)'],
         'Grazing': _grazingCropTypes,
         'Horticulture (Perennial)': [
             'Almond',
-            'Aloe',
             'Apple',
             'Apricot',
             'Avocado',
@@ -1550,7 +1897,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Grape (White)',
             'Grapefruit',
             'Guava',
-            'Hops',
             'Kiwi Fruit',
             'Lemon',
             'Litchi',
@@ -1573,13 +1919,10 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Protea',
             'Raspberry',
             'Rooibos',
-            'Sisal',
             'Strawberry',
             'Sugarcane',
-            'Tea',
             'Walnut',
-            'Wineberry'
-        ],
+            'Wineberry'],
         'Horticulture (Seasonal)': [
             'Asparagus',
             'Beet',
@@ -1589,6 +1932,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Brinjal',
             'Broccoli',
             'Brussel Sprout',
+            'Butternut',
             'Cabbage',
             'Cabbage (Chinese)',
             'Cabbage (Savoy)',
@@ -1621,23 +1965,27 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Pepper',
             'Pumpkin',
             'Quince',
+            'Rapeseed',
             'Radish',
             'Squash',
             'Strawberry',
             'Swede',
             'Sweet Melon',
             'Swiss Chard',
-            'Tea',
             'Tomato',
             'Turnip',
             'Vetch (Common)',
             'Vetch (Hairy)',
             'Watermelon',
-            'Youngberry'
-        ],
+            'Youngberry'],
         'Plantation': [
+            'Aloe',
             'Bluegum',
+            'Hops',
             'Pine',
+            'Pineapple',
+            'Tea',
+            'Sisal',
             'Wattle'],
         'Planted Pastures': _grazingCropTypes
     };
@@ -1785,16 +2133,18 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
 
             return valuation;
         },
-        generateFarmlandAssetLabels: function(asset) {
-            if (asset.data && asset.type == 'farmland') {
-                asset.data.portionLabel = (asset.data.portionNumber ?
-                    (asset.data.remainder ? 'Rem. portion ' + asset.data.portionNumber : 'Ptn. ' + asset.data.portionNumber) :
+        generateFarmlandAssetLabels: function(asset, force) {
+            var portion = (asset.data ? asset.data : asset);
+            
+            if (portion && (asset.type == 'farmland' || force)) {
+                portion.portionLabel = (portion.portionNumber ?
+                    (portion.remainder ? 'Rem. portion ' + portion.portionNumber : 'Ptn. ' + portion.portionNumber) :
                     'Rem. extent');
-                asset.data.farmLabel = (asset.data.officialFarmName && !_(asset.data.officialFarmName.toLowerCase()).startsWith('farm') ?
-                    _(asset.data.officialFarmName).titleize() + ' ' : '') + (asset.data.farmNumber ? asset.data.farmNumber : '');
-                asset.data.label = asset.data.portionLabel + (asset.data.farmLabel && _.words(asset.data.farmLabel).length > 0 ?
-                    " of " + (_.words(asset.data.farmLabel.toLowerCase())[0] == 'farm' ? _(asset.data.farmLabel).titleize() :
-                    "farm " + _(asset.data.farmLabel).titleize() ) : 'farm Unknown');
+                portion.farmLabel = (portion.officialFarmName && !_(portion.officialFarmName.toLowerCase()).startsWith('farm') ?
+                    _(portion.officialFarmName).titleize() + ' ' : '') + (portion.farmNumber ? portion.farmNumber : '');
+                portion.label = portion.portionLabel + (portion.farmLabel && _.words(portion.farmLabel).length > 0 ?
+                    " of " + (_.words(portion.farmLabel.toLowerCase())[0] == 'farm' ? _(portion.farmLabel).titleize() :
+                    "farm " + _(portion.farmLabel).titleize() ) : 'farm Unknown');
             }
         },
         generateAssetName: function(asset, categoryLabel, currentAssetList) {
@@ -4280,9 +4630,9 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['naturalSort', '
 
     // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
-        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Canola', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Lucerne', 'Lupin', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Oat', 'Potato', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Tobacco', 'Triticale', 'Wheat'],
-        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prickly Pear', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
-        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Potato', 'Rapeseed', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Teff', 'Tobacco', 'Triticale', 'Wheat'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Bush Vine)', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prickly Pear', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Rabbits', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
 
     var _horticultureStages = {
@@ -4749,7 +5099,7 @@ sdkHelperExpenseApp.factory('expenseHelper', ['underscore', function (underscore
         }
     };
 }]);
-var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.interface.map', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
+var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.geospatial', 'ag.sdk.library', 'ag.sdk.interface.map', 'ag.sdk.helper.attachment']);
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
@@ -4871,21 +5221,28 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Bean (Sugar)',
             'Bean (Green)',
             'Bean (Kidney)',
+            'Beet',
+            'Broccoli',
+            'Butternut',
+            'Cabbage',
             'Canola',
+            'Carrot',
             'Cassava',
+            'Cauliflower',
             'Cotton',
             'Cowpea',
             'Grain Sorghum',
             'Groundnut',
+            'Leek',
             'Lucerne',
             'Maize',
             'Maize (White)',
             'Maize (Yellow)',
-            'Oat',
+            'Oats',
             'Peanut',
             'Pearl Millet',
             'Potato',
-            'Rape',
+            'Rapeseed',
             'Rice',
             'Rye',
             'Soya Bean',
@@ -4895,8 +5252,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Tobacco',
             'Triticale',
             'Wheat',
-            'Wheat (Durum)'
-        ],
+            'Wheat (Durum)'],
         'Grazing': [
             'Bahia-Notatum',
             'Birdsfoot Trefoil',
@@ -4930,7 +5286,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Medic (Gama)',
             'Medic (Snail)',
             'Medic (Strand)',
-            'Multi-species',
+            'Multispecies Pasture',
             'Phalaris',
             'Rescue',
             'Rhodes',
@@ -4950,22 +5306,43 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Weeping Lovegrass'],
         'Horticulture': [
             'Almond',
-            'Aloe',
             'Apple',
             'Apricot',
+            'Asparagus',
             'Avocado',
             'Banana',
             'Barberry',
+            'Beet',
+            'Beetroot',
             'Berry',
             'Bilberry',
             'Blackberry',
             'Blueberry',
+            'Borecole',
+            'Brinjal',
+            'Broccoli',
+            'Brussel Sprout',
+            'Butternut',
+            'Cabbage',
+            'Cabbage (Chinese)',
+            'Cabbage (Savoy)',
+            'Cactus Pear',
+            'Carrot',
+            'Cauliflower',
+            'Celery',
             'Cherry',
+            'Chicory',
+            'Chili',
             'Cloudberry',
             'Coconut',
             'Coffee',
+            'Cucumber',
+            'Cucurbit',
             'Fig',
+            'Garlic',
+            'Ginger',
             'Gooseberry',
+            'Granadilla',
             'Grape',
             'Grape (Bush Vine)',
             'Grape (Red)',
@@ -4973,37 +5350,61 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Grape (White)',
             'Grapefruit',
             'Guava',
-            'Hops',
+            'Kale',
             'Kiwi Fruit',
+            'Kohlrabi',
+            'Leek',
             'Lemon',
+            'Lentil',
+            'Lespedeza',
+            'Lettuce',
             'Litchi',
             'Macadamia Nut',
+            'Makataan',
             'Mandarin',
             'Mango',
-            'Mulberry',
+            'Mustard',
+            'Mustard (White)',
             'Nectarine',
             'Olive',
+            'Onion',
             'Orange',
             'Papaya',
+            'Paprika',
+            'Parsley',
+            'Parsnip',
+            'Pea',
+            'Pea (Dry)',
             'Peach',
             'Pear',
-            'Pomegranate',
-            'Prickly Pear',
             'Pecan Nut',
+            'Pepper',
             'Persimmon',
-            'Pineapple',
             'Pistachio Nut',
             'Plum',
+            'Pomegranate',
+            'Prickly Pear',
             'Protea',
+            'Pumpkin',
+            'Quince',
+            'Radish',
+            'Rapeseed',
             'Raspberry',
             'Rooibos',
-            'Sisal',
+            'Squash',
             'Strawberry',
             'Sugarcane',
-            'Tea',
+            'Swede',
+            'Sweet Melon',
+            'Swiss Chard',
+            'Tomato',
+            'Turnip',
+            'Vetch (Common)',
+            'Vetch (Hairy)',
             'Walnut',
-            'Wineberry'
-        ],
+            'Watermelon',
+            'Wineberry',
+            'Youngberry'],
         'Livestock': [
             'Cattle (Extensive)',
             'Cattle (Feedlot)',
@@ -5016,15 +5417,19 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Horses',
             'Ostrich',
             'Pigs',
+            'Rabbits',
             'Sheep (Extensive)',
             'Sheep (Feedlot)',
-            'Sheep (Stud)'
-        ],
+            'Sheep (Stud)'],
         'Plantation': [
+            'Aloe',
             'Bluegum',
+            'Hops',
             'Pine',
-            'Wattle'
-        ]
+            'Pineapple',
+            'Tea',
+            'Sisal',
+            'Wattle']
     };
 
     /**
@@ -5120,6 +5525,9 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
         isCroppingPotentialRequired: function (landUse) {
             return (landUse == 'Cropland');
         },
+        isEstablishedDateRequired: function (landUse) {
+            return (landUse == 'Horticulture (Perennial)');
+        },
         isTerrainRequired: function (landUse) {
             return (landUse == 'Grazing');
         },
@@ -5129,7 +5537,7 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     }
 });
 
-sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'underscore', function(geoJSONHelper, geojsonUtils, underscore) {
+sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'topologyHelper', 'underscore', function(geoJSONHelper, topologyHelper, underscore) {
     var _listServiceMap = function(item) {
         return {
             id: item.id || item.$id,
@@ -5143,17 +5551,11 @@ sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'geojsonUtils', 'unde
         },
 
         containsPoint: function (geometry, assets, farm) {
-            var found = false;
+            var point = topologyHelper.readGeojson(geometry);
 
-            angular.forEach(assets, function (asset) {
-                if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                    if (geojsonUtils.pointInPolygon(geometry, asset.data.loc)) {
-                        found = true;
-                    }
-                }
+            return underscore.some(assets, function (asset) {
+                return (asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id && asset.data.loc && point.within(topologyHelper.readGeojson(asset.data.loc)));
             });
-
-            return found;
         },
         getCenter: function (farmer, farm) {
             var geojson = geoJSONHelper();
@@ -5474,31 +5876,6 @@ sdkHelperProductionPlanApp.factory('productionPlanHelper', [function () {
             });
 
             return assetType;
-        }
-    }
-}]);
-var sdkHelperRegionApp = angular.module('ag.sdk.helper.region', []);
-
-sdkHelperRegionApp.factory('regionHelper', [function() {
-    var _listServiceMap = function(item) {
-        var map = {
-            title: item.name,
-            subtitle: item.region.province,
-            region: item.region.name
-        };
-        if(item.subRegionNumber) {
-            map.subtitle += ' - ' +item.subRegionNumber;
-        }
-        if(item.plotCode) {
-            map.subtitle += ' - ' +item.plotCode;
-        }
-
-        return map;
-    };
-
-    return {
-        listServiceMap: function() {
-            return _listServiceMap;
         }
     }
 }]);
@@ -6172,225 +6549,7 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
     }
 }]);
 
-var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config', 'ag.sdk.library']);
-
-/*
- * GeoJson
- */
-sdkInterfaceMapApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
-    function GeojsonHelper(json, properties) {
-        if (!(this instanceof GeojsonHelper)) {
-            return new GeojsonHelper(json, properties);
-        }
-
-        this.addGeometry(json, properties);
-    }
-
-    function _recursiveCoordinateFinder (bounds, coordinates) {
-        if (coordinates) {
-            if (angular.isArray(coordinates[0])) {
-                angular.forEach(coordinates, function(coordinate) {
-                    _recursiveCoordinateFinder(bounds, coordinate);
-                });
-            } else if (angular.isArray(coordinates)) {
-                bounds.push([coordinates[1], coordinates[0]]);
-            }
-        }
-    }
-
-    GeojsonHelper.prototype = {
-        getJson: function () {
-            return this._json;
-        },
-        getType: function () {
-            return this._json.type;
-        },
-        getGeometryType: function () {
-            return (this._json.geometry ? this._json.geometry.type : this._json.type);
-        },
-        getBounds: function () {
-            var bounds = [];
-
-            if (this._json) {
-                var features = this._json.features || [this._json];
-
-                angular.forEach(features, function(feature) {
-                    var geometry = feature.geometry || feature;
-
-                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
-                });
-            }
-
-            return bounds;
-        },
-        getBoundingBox: function (bounds) {
-            bounds = bounds || this.getBounds();
-
-            var lat1 = 0, lat2 = 0,
-                lng1 = 0, lng2 = 0;
-
-            angular.forEach(bounds, function(coordinate, index) {
-                if (index == 0) {
-                    lat1 = lat2 = coordinate[0];
-                    lng1 = lng2 = coordinate[1];
-                } else {
-                    lat1 = (lat1 < coordinate[0] ? lat1 : coordinate[0]);
-                    lat2 = (lat2 < coordinate[0] ? coordinate[0] : lat2);
-                    lng1 = (lng1 < coordinate[1] ? lng1 : coordinate[1]);
-                    lng2 = (lng2 < coordinate[1] ? coordinate[1] : lng2);
-                }
-            });
-
-            return [[lat1, lng1], [lat2, lng2]];
-        },
-        getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds);
-
-            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
-        },
-        getCenterAsGeojson: function (bounds) {
-            return {
-                coordinates: this.getCenter(bounds).reverse(),
-                type: 'Point'
-            }
-        },
-        getProperty: function (name) {
-            return (this._json && this._json.properties ? this._json.properties[name] : undefined);
-        },
-        setCoordinates: function (coordinates) {
-            if (this._json && this._json.type != 'FeatureCollection') {
-                if (this._json.geometry) {
-                    this._json.geometry.coordinates = coordinates;
-                } else {
-                    this._json.coordinates = coordinates;
-                }
-            }
-        },
-        addProperties: function (properties) {
-            var _this = this;
-
-            if (this._json && properties) {
-                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
-                    _this._json = {
-                        type: 'Feature',
-                        geometry: _this._json,
-                        properties: properties
-                    };
-                } else {
-                    _this._json.properties = _this._json.properties || {};
-
-                    angular.forEach(properties, function(property, key) {
-                        _this._json.properties[key] = property;
-                    });
-                }
-            }
-
-            return _this;
-        },
-        addGeometry: function (geometry, properties) {
-            if (geometry) {
-                if (this._json === undefined) {
-                    this._json = geometry;
-
-                    this.addProperties(properties);
-                } else {
-                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
-                        this._json = {
-                            type: 'Feature',
-                            geometry: this._json
-                        };
-                    }
-
-                    if (this._json.type == 'Feature') {
-                        this._json.properties = underscore.defaults(this._json.properties || {}, {
-                            featureId: objectId().toString()
-                        });
-
-                        this._json = {
-                            type: 'FeatureCollection',
-                            features: [this._json]
-                        };
-                    }
-
-                    if (this._json.type == 'FeatureCollection') {
-                        this._json.features.push({
-                            type: 'Feature',
-                            geometry: geometry,
-                            properties: underscore.defaults(properties || {}, {
-                                featureId: objectId().toString()
-                            })
-                        });
-                    }
-                }
-            }
-
-            return this;
-        },
-        formatGeoJson: function (geoJson, toType) {
-            // TODO: REFACTOR
-            //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
-            if(toType.toLowerCase() == 'point') {
-                switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
-                    // type of Feature
-                    case 'feature':
-                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
-                            return geoJson.geometry;
-                        }
-                        break;
-                    // type of FeatureCollection
-                    case 'featurecollection':
-                        break;
-                    // type of GeometryCollection
-                    case 'geometrycollection':
-                        break;
-                    // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
-                    default:
-                        break;
-                }
-            }
-
-            return geoJson;
-        },
-        validGeoJson: function (geoJson, typeRestriction) {
-            // TODO: REFACTOR
-            var validate = true;
-            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
-                return false;
-            }
-
-            // valid type, and type matches the restriction, then validate the geometry / features / geometries / coordinates fields
-            switch (geoJson.type.toLowerCase()) {
-                // type of Feature
-                case 'feature':
-                    break;
-                // type of FeatureCollection
-                case 'featurecollection':
-                    break;
-                // type of GeometryCollection
-                case 'geometrycollection':
-                    break;
-                // type of Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon
-                default:
-                    if(!geoJson.coordinates || !geoJson.coordinates instanceof Array) {
-                        return false;
-                    }
-                    var flattenedCoordinates = _.flatten(geoJson.coordinates);
-                    flattenedCoordinates.forEach(function(element, i) {
-                        if(typeof element != 'number') {
-                            validate = false;
-                        }
-                    });
-                    break;
-            }
-
-            return validate;
-        }
-    };
-
-    return function (json, properties) {
-        return new GeojsonHelper(json, properties);
-    }
-}]);
+var sdkInterfaceMapApp = angular.module('ag.sdk.interface.map', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.config', 'ag.sdk.geospatial', 'ag.sdk.library']);
 
 sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (underscore) {
     var _createMarker = function (name, state, options) {
@@ -6704,6 +6863,9 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
  */
 sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore) {
     var _defaultConfig = {
+        init: {
+            delay: 200
+        },
         options: {
             attributionControl: true,
             layersControl: true,
@@ -6754,7 +6916,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
     };
 
-    this.$get = ['$rootScope', 'objectId', function ($rootScope, objectId) {
+    this.$get = ['$rootScope', '$timeout', 'objectId', 'safeApply', function ($rootScope, $timeout, objectId, safeApply) {
         /**
         * @name MapboxServiceInstance
         * @param id
@@ -6772,8 +6934,10 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             _this._requestQueue = [];
 
             $rootScope.$on('mapbox-' + _this._id + '::init', function () {
-                _this.dequeueRequests();
-                _this._ready = true;
+                $timeout(function () {
+                    _this.dequeueRequests();
+                    _this._ready = true;
+                }, _this._config.init.delay || 0);
             });
 
             $rootScope.$on('mapbox-' + _this._id + '::destroy', function () {
@@ -6788,6 +6952,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         MapboxServiceInstance.prototype = {
             getId: function () {
                 return this._id;
+            },
+            isReady: function () {
+                return this._ready;
             },
             
             /*
@@ -6807,13 +6974,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             /*
              * Queuing requests
              */
-            enqueueRequest: function (event, args) {
+            enqueueRequest: function (event, data, handler) {
+                handler = handler || angular.noop;
+
                 if (this._ready) {
-                    $rootScope.$broadcast(event, args);
+                    $rootScope.$broadcast(event, data);
+
+                    handler();
                 } else {
                     this._requestQueue.push({
                         event: event,
-                        args: args
+                        data: data,
+                        handler: handler
                     });
                 }
             },
@@ -6822,7 +6994,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     do {
                         var request = this._requestQueue.shift();
 
-                        $rootScope.$broadcast(request.event, request.args);
+                        $rootScope.$broadcast(request.event, request.data);
+
+                        request.handler();
                     } while(this._requestQueue.length);
                 }
             },
@@ -6834,12 +7008,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 return this._show;
             },
             hide: function() {
-                this._show = false;
-                this.enqueueRequest('mapbox-' + this._id + '::hide', {});
+                var _this = this;
+
+                this.enqueueRequest('mapbox-' + this._id + '::hide', {}, function () {
+                    _this._show = false;
+                });
             },
             show: function() {
-                this._show = true;
-                this.enqueueRequest('mapbox-' + this._id + '::show', {});
+                var _this = this;
+
+                this.enqueueRequest('mapbox-' + this._id + '::show', {}, function () {
+                    _this._show = true;
+                });
             },
             invalidateSize: function() {
                 this.enqueueRequest('mapbox-' + this._id + '::invalidate-size', {});
@@ -6882,23 +7062,29 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 return this._config.layerControl.baseTile;
             },
             setBaseTile: function (tile) {
-                this._config.layerControl.baseTile = tile;
-                this.enqueueRequest('mapbox-' + this._id + '::set-basetile', tile);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::set-basetile', tile, function () {
+                    _this._config.layerControl.baseTile = tile;
+                });
             },
 
             getBaseLayers: function () {
                 return this._config.layerControl.baseLayers;
             },
             setBaseLayers: function (layers) {
-                this._config.layerControl.baseLayers = layers;
-                this.enqueueRequest('mapbox-' + this._id + '::set-baselayers', layers);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::set-baselayers', layers, function () {
+                    _this._config.layerControl.baseLayers = layers;
+                });
             },
             addBaseLayer: function (name, layer, show) {
-                this._config.layerControl.baseLayers[name] = layer;
-                this.enqueueRequest('mapbox-' + this._id + '::add-baselayer', {
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-baselayer', {
                     name: name,
                     layer: layer,
                     show: show
+                }, function () {
+                    _this._config.layerControl.baseLayers[name] = layer;
                 });
             },
 
@@ -6907,28 +7093,30 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             addOverlay: function (layerName, name) {
                 if (layerName && this._config.layerControl.overlays[layerName] == undefined) {
-                    this._config.layerControl.overlays[layerName] = name;
-
-                    this.enqueueRequest('mapbox-' + this._id + '::add-overlay', {
+                    var _this = this;
+                    _this.enqueueRequest('mapbox-' + _this._id + '::add-overlay', {
                         layerName: layerName,
                         name: name || layerName
+                    }, function () {
+                        _this._config.layerControl.overlays[layerName] = name;
                     });
                 }
             },
             removeOverlay: function (layerName) {
                 if (layerName && this._config.layerControl.overlays[layerName]) {
-                    $rootScope.$broadcast('mapbox-' + this._id + '::remove-overlay', layerName);
-
-                    delete this._config.layerControl.overlays[layerName];
+                    var _this = this;
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-overlay', layerName, function () {
+                        delete _this._config.layerControl.overlays[layerName];
+                    });
                 }
             },
             removeOverlays: function () {
                 var _this = this;
                 
-                angular.forEach(this._config.layerControl.overlays, function(overlay, name) {
-                    $rootScope.$broadcast('mapbox-' + _this._id + '::remove-overlay', name);
-
-                    delete _this._config.layerControl.overlays[name];
+                angular.forEach(_this._config.layerControl.overlays, function(overlay, name) {
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-overlay', name, function () {
+                        delete _this._config.layerControl.overlays[name];
+                    });
                 });
             },
 
@@ -6938,18 +7126,28 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             getControls: function () {
                 return this._config.controls;
             },
-            addControl: function (control, options) {
-                this._config.controls[control] = {
-                    name: control,
+            addControl: function (controlName, options) {
+                var _this = this;
+                var control = {
+                    name: controlName,
                     options: options
                 };
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-control',  this._config.controls[control]);
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-control', control, function () {
+                    _this._config.controls[controlName] = control;
+                });
+            },
+            showControls: function () {
+                this.enqueueRequest('mapbox-' + this._id + '::show-controls');
+            },
+            hideControls: function () {
+                this.enqueueRequest('mapbox-' + this._id + '::hide-controls');
             },
             removeControl: function (control) {
-                delete this._config.controls[control];
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::remove-control', control);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::remove-control', control, function () {
+                    delete _this._config.controls[control];
+                });
             },
 
             /*
@@ -6963,13 +7161,26 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 var _this = this;
 
-                angular.forEach(events, function(event) {
+                angular.forEach(events, function (event) {
                     _this.removeEventHandler(event);
-                    _this._config.events[event] = handler;
+
+                    var eventHandler = (event !== 'click' ? handler : function (e) {
+                        var clickLocation = e.originalEvent.x + ',' + e.originalEvent.y;
+
+                        if (!_this.lastClick || _this.lastClick !== clickLocation) {
+                            safeApply(function () {
+                                handler(e);
+                            });
+                        }
+
+                        _this.lastClick = clickLocation;
+                    });
 
                     _this.enqueueRequest('mapbox-' + _this._id + '::add-event-handler', {
                         event: event,
-                        handler: handler
+                        handler: eventHandler
+                    }, function () {
+                        _this._config.events[event] = eventHandler;
                     });
                 });
             },
@@ -6978,16 +7189,31 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 var _this = this;
 
-                angular.forEach(events, function(event) {
+                angular.forEach(events, function (event) {
                     if (_this._config.events[event] !== undefined) {
                         _this.enqueueRequest('mapbox-' + _this._id + '::remove-event-handler', {
                             event: event,
                             handler: _this._config.events[event]
+                        }, function () {
+                            delete _this._config.events[event];
                         });
-
-                        delete _this._config.events[event];
                     }
                 });
+            },
+            addLayerEventHandler: function (event, layer, handler) {
+                var _this = this;
+
+                layer.on(event, (event !== 'click' ? handler : function (e) {
+                    var clickLocation = e.originalEvent.x + ',' + e.originalEvent.y;
+
+                    if (!_this.lastClick || _this.lastClick !== clickLocation) {
+                        safeApply(function () {
+                            handler(e);
+                        });
+                    }
+
+                    _this.lastClick = clickLocation;
+                }));
             },
 
             /*
@@ -7001,27 +7227,35 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             },
             setView: function (coordinates, zoom) {
                 if (coordinates instanceof Array) {
-                    this._config.view.coordinates = coordinates;
-                    this._config.view.zoom = zoom || this._config.view.zoom;
+                    var _this = this;
+                    var view = {
+                        coordinates: coordinates,
+                        zoom: zoom || _this._config.view.zoom
+                    };
 
-                    $rootScope.$broadcast('mapbox-' + this._id + '::set-view', this._config.view);
+                    _this.enqueueRequest('mapbox-' + _this._id + '::set-view', view, function () {
+                        _this._config.view = view;
+                    });
                 }
             },
             getBounds: function () {
                 return this._config.bounds;
             },
             setBounds: function (coordinates, options) {
-                this._config.bounds = {
+                var _this = this;
+                var bounds = {
                     coordinates: coordinates,
                     options: options || {
                         reset: false
                     }
                 };
 
-                $rootScope.$broadcast('mapbox-' + this._id + '::set-bounds', this._config.bounds);
+                _this.enqueueRequest('mapbox-' + _this._id + '::set-bounds', bounds, function () {
+                    _this._config.bounds = bounds;
+                });
             },
             zoomTo: function (coordinates, zoom, options) {
-                $rootScope.$broadcast('mapbox-' + this._id + '::zoom-to', {
+                this.enqueueRequest('mapbox-' + this._id + '::zoom-to', {
                     coordinates: coordinates,
                     zoom: zoom,
                     options: options
@@ -7038,8 +7272,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 }
 
                 var _this = this;
-
-                this._config.layers[name] = {
+                var layer = {
                     name: name,
                     type: type,
                     options: options,
@@ -7050,7 +7283,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     }
                 };
 
-                this.enqueueRequest('mapbox-' + this._id + '::create-layer', this._config.layers[name]);
+                _this.enqueueRequest('mapbox-' + _this._id + '::create-layer', layer, function () {
+                    _this._config.layers[name] = layer;
+                });
             },
             getLayer: function (name) {
                 return this._config.leafletLayers[name];
@@ -7059,30 +7294,31 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 return this._config.layers;
             },
             addLayer: function (name, layer) {
-                this._config.leafletLayers[name] = layer;
-
-                $rootScope.$broadcast('mapbox-' + this._id + '::add-layer', name);
+                var _this = this;
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-layer', name, function () {
+                    _this._config.leafletLayers[name] = layer;
+                });
             },
             removeLayer: function (names) {
                 if ((names instanceof Array) === false) names = [names];
 
                 var _this = this;
 
-                angular.forEach(names, function(name) {
-                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
-
-                    delete _this._config.layers[name];
-                    delete _this._config.leafletLayers[name];
+                angular.forEach(names, function (name) {
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name, function () {
+                        delete _this._config.layers[name];
+                        delete _this._config.leafletLayers[name];
+                    });
                 });
             },
             removeLayers: function () {
                 var _this = this;
                 
                 angular.forEach(this._config.layers, function(layer, name) {
-                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name);
-
-                    delete _this._config.layers[name];
-                    delete _this._config.leafletLayers[name];
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', name, function () {
+                        delete _this._config.layers[name];
+                        delete _this._config.leafletLayers[name];
+                    });
                 });
             },
             showLayer: function (name) {
@@ -7147,53 +7383,19 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     }
                 };
 
-                this._config.geojson[layerName] = this._config.geojson[layerName] || {};
-                this._config.geojson[layerName][properties.featureId] = data;
-
-                this.enqueueRequest('mapbox-' + this._id + '::add-geojson', data);
-
-                return properties.featureId;
-            },
-            addPhotoMarker: function(layerName, geojson, options, properties, onAddCallback) {
-                if (typeof properties == 'function') {
-                    onAddCallback = properties;
-                    properties = {};
-                }
-
-                var _this = this;
-
-                properties = underscore.defaults(properties || {},  {
-                    featureId: objectId().toString()
+                _this.enqueueRequest('mapbox-' + _this._id + '::add-geojson', data, function () {
+                    _this._config.geojson[layerName] = _this._config.geojson[layerName] || {};
+                    _this._config.geojson[layerName][properties.featureId] = data;
                 });
-
-                var data = {
-                    layerName: layerName,
-                    geojson: geojson,
-                    options: options,
-                    properties: properties,
-                    handler: function (layer, feature, featureLayer) {
-                        _this._config.leafletLayers[layerName] = layer;
-
-                        if (typeof onAddCallback == 'function') {
-                            onAddCallback(feature, featureLayer);
-                        }
-                    }
-                };
-
-                data.properties.isMedia = true;
-
-                this._config.geojson[layerName] = this._config.geojson[layerName] || {};
-                this._config.geojson[layerName][properties.featureId] = data;
-
-                this.enqueueRequest('mapbox-' + this._id + '::add-photo-marker', data);
 
                 return properties.featureId;
             },
             removeGeoJSONFeature: function(layerName, featureId) {
                 if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
-                    $rootScope.$broadcast('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId]);
-
-                    delete this._config.geojson[layerName][featureId];
+                    var _this = this;
+                    _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId], function () {
+                        delete _this._config.geojson[layerName][featureId];
+                    });
                 }
             },
             removeGeoJSONLayer: function(layerNames) {
@@ -7204,16 +7406,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 angular.forEach(layerNames, function(layerName) {
                     if (_this._config.geojson[layerName]) {
                         angular.forEach(_this._config.geojson[layerName], function(childLayer, childName) {
-                            _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName);
-
-                            delete _this._config.leafletLayers[childName];
-                            delete _this._config.geojson[layerName][childName];
+                            _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName, function () {
+                                delete _this._config.leafletLayers[childName];
+                                delete _this._config.geojson[layerName][childName];
+                            });
                         });
 
-                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', layerName);
-
-                        delete _this._config.leafletLayers[layerName];
-                        delete _this._config.geojson[layerName];
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', layerName, function () {
+                            delete _this._config.leafletLayers[layerName];
+                            delete _this._config.geojson[layerName];
+                        });
                     }
                 });
             },
@@ -7222,16 +7424,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
 
                 angular.forEach(_this._config.geojson, function(layer, name) {
                     angular.forEach(layer, function(childLayer, childName) {
-                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName);
-
-                        delete _this._config.leafletLayers[childName];
-                        delete _this._config.geojson[name][childName];
+                        _this.enqueueRequest('mapbox-' + _this._id + '::remove-layer', childName, function () {
+                            delete _this._config.leafletLayers[childName];
+                            delete _this._config.geojson[name][childName];
+                        });
                     });
 
-                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', name);
-
-                    delete _this._config.leafletLayers[name];
-                    delete _this._config.geojson[name];
+                    _this.enqueueRequest('mapbox-' + _this._id + '::remove-geojson-layer', name, function () {
+                        delete _this._config.leafletLayers[name];
+                        delete _this._config.geojson[name];
+                    });
                 });
             },
 
@@ -7393,6 +7595,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         var view = _this._mapboxServiceInstance.getView();
         var options = _this._mapboxServiceInstance.getOptions();
 
+        L.mapbox.accessToken = options.accessToken;
+
         _this._map = L.map(_this._id, options).setView(view.coordinates, view.zoom);
 
         _this._map.whenReady(function () {
@@ -7407,17 +7611,17 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         _this._editableFeature.addTo(_this._map);
 
         _this.setEventHandlers(_this._mapboxServiceInstance.getEventHandlers());
-        _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
         _this.addControls(_this._mapboxServiceInstance.getControls());
         _this.setBounds(_this._mapboxServiceInstance.getBounds());
         _this.resetLayers(_this._mapboxServiceInstance.getLayers());
         _this.resetGeoJSON(_this._mapboxServiceInstance.getGeoJSON());
+        _this.resetLayerControls(_this._mapboxServiceInstance.getBaseTile(), _this._mapboxServiceInstance.getBaseLayers(), _this._mapboxServiceInstance.getOverlays());
 
         _this._map.on('draw:drawstart', _this.onDrawStart, _this);
-        _this._map.on('draw:editstart', _this.onDrawStart, _this);
+        _this._map.on('draw:editstart', _this.onEditStart, _this);
         _this._map.on('draw:deletestart', _this.onDrawStart, _this);
         _this._map.on('draw:drawstop', _this.onDrawStop, _this);
-        _this._map.on('draw:editstop', _this.onDrawStop, _this);
+        _this._map.on('draw:editstop', _this.onEditStop, _this);
         _this._map.on('draw:deletestop', _this.onDrawStop, _this);
     };
 
@@ -7484,6 +7688,14 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             _this.removeControl(args);
         });
 
+        scope.$on('mapbox-' + id + '::show-controls', function (event, args) {
+            _this.showControls(args);
+        });
+
+        scope.$on('mapbox-' + id + '::hide-controls', function (event, args) {
+            _this.hideControls(args);
+        });
+
         // Event Handlers
         scope.$on('mapbox-' + id + '::add-event-handler', function (event, args) {
             _this.addEventHandler(args.event, args.handler);
@@ -7536,11 +7748,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         // GeoJSON
         scope.$on('mapbox-' + id + '::add-geojson', function (event, args) {
             _this.addGeoJSONFeature(args);
-        });
-
-        // photoMarker
-        scope.$on('mapbox-' + id + '::add-photo-marker', function (event, args) {
-            _this.addPhotoMarker(args);
         });
 
         scope.$on('mapbox-' + id + '::remove-geojson-feature', function (event, args) {
@@ -7890,6 +8097,34 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         });
     };
 
+    Mapbox.prototype.showControls = function () {
+        var _this = this;
+
+        if (_this._layerControls.control) {
+            _this._map.addControl(_this._layerControls.control);
+        }
+
+        angular.forEach(_this._controls, function (control, key) {
+            control.addTo(_this._map);
+            delete _this._controls[key];
+        });
+    };
+
+    Mapbox.prototype.hideControls = function () {
+        var _this = this;
+
+        if (_this._layerControls.control) {
+            _this._layerControls.control.remove();
+        }
+
+        angular.forEach(_this._map.options, function (option, key) {
+            if (option === true && _this._map[key] && typeof _this._map[key].disable == 'function') {
+                _this._controls[key] = _this._map[key];
+                _this._map[key].remove();
+            }
+        });
+    };
+
     Mapbox.prototype.removeControl = function (control) {
         if (this._controls[control]) {
             this._map.removeControl(this._controls[control]);
@@ -8040,8 +8275,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             if (layer.eachLayer) {
                 layer.eachLayer(function (item) {
-                    if (item.bindLabel && item.feature && item.feature.properties && item.feature.properties.label) {
-                        item.bindLabel(item.feature.properties.label.message, item.feature.properties.label.options);
+                    if (item.bindTooltip && item.feature && item.feature.properties && item.feature.properties.label) {
+                        item.bindTooltip(item.feature.properties.label.message, item.feature.properties.label.options);
                     }
                 });
             }
@@ -8098,94 +8333,28 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (typeof labelData === 'object' && feature.geometry.type !== 'Point') {
             labelData.options = labelData.options || {};
 
-            if ((labelData.options.centered || labelData.options.noHide) && typeof _this._map.showLabel === 'function') {
-                var label = new L.Label(underscore.extend(labelData.options), {
-                    offset: [6, -15]
+            var label = new L.Tooltip(labelData.options);
+            label.setContent(labelData.message);
+            label.setLatLng(geojson.getCenter());
+
+            if (labelData.options.permanent == true) {
+                label.addTo(_this._map);
+
+                layer.on('add', function () {
+                    label.addTo(_this._map);
                 });
-
-                label.setContent(labelData.message);
-                label.setLatLng(geojson.getCenter());
-
-                if (labelData.options.noHide == true) {
-                    _this._map.showLabel(label);
-
-                    layer.on('add', function () {
-                        _this._map.showLabel(label);
-                    });
-                    layer.on('remove', function () {
-                        _this._map.removeLayer(label);
-                    });
-                } else {
-                    layer.on('mouseover', function () {
-                        _this._map.showLabel(label);
-                    });
-                    layer.on('mouseout', function () {
-                        _this._map.removeLayer(label);
-                    });
-                }
-            } else if (typeof layer.bindLabel === 'function') {
-                layer.bindLabel(labelData.message, labelData.options);
+                layer.on('remove', function () {
+                    _this._map.removeLayer(label);
+                });
+            } else {
+                layer.on('mouseover', function () {
+                    label.addTo(_this._map);
+                });
+                layer.on('mouseout', function () {
+                    _this._map.removeLayer(label);
+                });
             }
         }
-    };
-
-    Mapbox.prototype.addPhotoMarker = function (item) {
-        var _this = this;
-        var geojson = geoJSONHelper(item.geojson, item.properties);
-
-        _this.createLayer(item.layerName, item.type, item.options);
-
-        _this._geoJSON[item.layerName] = _this._geoJSON[item.layerName] || {};
-        _this._geoJSON[item.layerName][item.properties.featureId] = item;
-
-        var image = item;
-        var icon = {
-            iconSize: [40, 40],
-            className: 'leaflet-marker-agrista-photo'
-        };
-        var fancyboxOptions = {
-            helpers: {
-                overlay : {
-                    css : {
-                        'background' : 'rgba(0,0,0,0.7)'
-                    }
-                }
-            },
-            aspectRatio: true,
-            autoSize: false,
-            width: 640,
-            height: 640
-        };
-
-        L.geoJson(geojson.getJson(), {
-            pointToLayer: function(feature, latlng) {
-                return L.marker(latlng, {
-                    icon: L.icon(L.extend({
-                        iconUrl: image.geojson.properties.data.src
-                    }, icon)),
-                    title: image.caption || ''
-                });
-            },
-            onEachFeature: function(feature, layer) {
-                var added = _this.addLayerToLayer(feature.properties.featureId, layer, item.layerName);
-
-                if (added && typeof item.handler === 'function') {
-                    item.handler(_this._layers[item.layerName], feature, layer);
-                }
-
-                layer.on('click', function(e) {
-                    //todo: video
-                    //image
-                    $.fancybox({
-                        href: feature.properties.data.src,
-                        title: (feature.properties.data.photoDate || feature.properties.data.uploadDate)
-                            + ' @ ' + feature.geometry.coordinates[1].toFixed(4) + (feature.geometry.coordinates[1] > 0 ? ' N' : ' S')
-                            + ' ' + feature.geometry.coordinates[0].toFixed(4)+ (feature.geometry.coordinates[0] > 0 ? ' E' : '  W'),
-                        type: 'image'
-                    }, fancyboxOptions);
-                });
-            }
-        });
     };
 
     Mapbox.prototype.addGeoJSONFeature = function (item) {
@@ -8217,7 +8386,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
 
                 if (geojsonOptions.label) {
-                    marker.bindLabel(geojsonOptions.label.message, geojsonOptions.label.options);
+                    marker.bindPopup(geojsonOptions.label.message, geojsonOptions.label.options);
                 }
 
                 return marker;
@@ -8294,8 +8463,25 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         });
     };
 
+    Mapbox.prototype.resetEditable = function () {
+        var _this = this;
+
+        if (_this._editableFeature) {
+            _this._editableFeature.eachLayer(function(layer) {
+                _this._editableFeature.removeLayer(layer);
+
+                if (_this._layers[_this._editableLayer]) {
+                    _this._layers[_this._editableLayer].addLayer(layer);
+                }
+            });
+
+            _this._editableFeature = L.featureGroup();
+            _this._editableFeature.addTo(_this._map);
+        }
+    };
+
     Mapbox.prototype.setDrawControls = function (controls, controlOptions) {
-        this._draw.controlOptions = controlOptions || {};
+        this._draw.controlOptions = controlOptions || this._draw.controlOptions || {};
         this._draw.controls = {};
 
         if(controls instanceof Array && typeof L.Control.Draw == 'function') {
@@ -8335,7 +8521,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 }
             });
 
-            this._draw.controls.edit = new L.Control.Draw({
+            this._draw.controls.editor = new L.Control.Draw({
                 draw: false,
                 edit: {
                     featureGroup: this._editableFeature,
@@ -8360,7 +8546,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             this._map.removeControl(this._draw.controls.marker);
         } catch(exception) {}
         try {
-            this._map.removeControl(this._draw.controls.edit);
+            this._map.removeControl(this._draw.controls.editor);
         } catch(exception) {}
 
         try {
@@ -8374,8 +8560,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             this._map.on('draw:edited', this.onEdited, this);
             this._map.on('draw:deleted', this.onDeleted, this);
 
-            if(this._draw.controls.edit) {
-                this._map.addControl(this._draw.controls.edit);
+            if(this._draw.controls.editor) {
+                this._draw.controls.editor = new L.Control.Draw({
+                    draw: false,
+                    edit: {
+                        featureGroup: this._editableFeature,
+                        remove: (this._draw.controlOptions.nodelete != true)
+                    }
+                });
+
+                this._map.addControl(this._draw.controls.editor);
             }
         }
 
@@ -8587,6 +8781,33 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             }
         };
 
+        var _getCoordinates = function (latlngs, geojson) {
+            var polygonCoordinates = [];
+
+            angular.forEach(latlngs, function(latlng) {
+                polygonCoordinates.push([latlng.lng, latlng.lat]);
+            });
+
+            // Add a closing coordinate if there is not a matching starting one
+            if (polygonCoordinates.length > 0 && polygonCoordinates[0] != polygonCoordinates[polygonCoordinates.length - 1]) {
+                polygonCoordinates.push(polygonCoordinates[0]);
+            }
+
+            // Add area
+            if (geojson.properties.area !== undefined) {
+                var geodesicArea = L.GeometryUtil.geodesicArea(latlngs);
+                var yards = (geodesicArea * 1.19599);
+
+                geojson.properties.area.m_sq += geodesicArea;
+                geojson.properties.area.ha += (geodesicArea * 0.0001);
+                geojson.properties.area.mi_sq += (yards / 3097600);
+                geojson.properties.area.acres += (yards / 4840);
+                geojson.properties.area.yd_sq += yards;
+            }
+
+            return polygonCoordinates;
+        };
+
         switch (e.layerType) {
             case 'polyline':
                 geojson.geometry = {
@@ -8603,30 +8824,20 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             case 'polygon':
                 geojson.geometry = {
                     type: 'Polygon',
-                    coordinates: [[]]
+                    coordinates: []
                 };
 
-                angular.forEach(e.layer._latlngs, function(latlng) {
-                    geojson.geometry.coordinates[0].push([latlng.lng, latlng.lat]);
+                geojson.properties.area = {
+                    m_sq: 0,
+                    ha: 0,
+                    mi_sq: 0,
+                    acres: 0,
+                    yd_sq: 0
+                };
+
+                angular.forEach(e.layer._latlngs, function (latlngs) {
+                    geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
                 });
-
-                // Add a closing coordinate if there is not a matching starting one
-                if (geojson.geometry.coordinates[0].length > 0 && geojson.geometry.coordinates[0][0] != geojson.geometry.coordinates[0][geojson.geometry.coordinates[0].length - 1]) {
-                    geojson.geometry.coordinates[0].push(geojson.geometry.coordinates[0][0]);
-                }
-
-                if (this._draw.controls.polygon.options.draw.polygon.showArea) {
-                    var geodesicArea = L.GeometryUtil.geodesicArea(e.layer._latlngs);
-                    var yards = (geodesicArea * 1.19599);
-
-                    geojson.properties.area = {
-                        m_sq: geodesicArea,
-                        ha: (geodesicArea * 0.0001),
-                        mi_sq: (yards / 3097600),
-                        acres: (yards / 4840),
-                        yd_sq: yards
-                    };
-                }
 
                 this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
                 break;
@@ -8640,11 +8851,28 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 break;
         }
 
+        this._editing = false;
+
         if (this._draw.addLayer) {
             this._mapboxServiceInstance.addGeoJSON(this._editableLayer, geojson, this._optionSchema, geojson.properties);
             this.makeEditable(this._editableLayer);
             this.updateDrawControls();
         }
+    };
+
+    Mapbox.prototype.onEditStart = function (e) {
+        this._editing = true;
+
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
+    };
+
+    Mapbox.prototype.onEditStop = function (e) {
+        this._editing = false;
+        this.resetEditable();
+        this.makeEditable(this._editableLayer);
+        this.updateDrawControls();
+
+        this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
 
     Mapbox.prototype.onEdited = function (e) {
@@ -8671,10 +8899,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 };
             }
 
-            var _getCoordinates = function (layer, geojson) {
+            var _getCoordinates = function (latlngs, geojson) {
                 var polygonCoordinates = [];
 
-                angular.forEach(layer._latlngs, function(latlng) {
+                angular.forEach(latlngs, function(latlng) {
                     polygonCoordinates.push([latlng.lng, latlng.lat]);
                 });
 
@@ -8685,7 +8913,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
                 // Add area
                 if (geojson.properties.area !== undefined) {
-                    var geodesicArea = L.GeometryUtil.geodesicArea(layer._latlngs);
+                    var geodesicArea = L.GeometryUtil.geodesicArea(latlngs);
                     var yards = (geodesicArea * 1.19599);
 
                     geojson.properties.area.m_sq += geodesicArea;
@@ -8705,15 +8933,27 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'Polygon':
-                    geojson.geometry.coordinates = [_getCoordinates(layer, geojson)];
+                    geojson.geometry.coordinates = [];
+
+                    angular.forEach(layer._latlngs, function (latlngs) {
+                        geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
+                    });
+
+                    if (geojson.geometry.coordinates.length > 1) {
+                        geojson.geometry.type = 'MultiPolygon';
+                        geojson.geometry.coordinates = [geojson.geometry.coordinates];
+                    }
 
                     $rootScope.$broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
                     break;
                 case 'MultiPolygon':
-                    geojson.geometry.coordinates = [[]];
+                    geojson.geometry.coordinates = [];
 
-                    layer.eachLayer(function (childLayer) {
-                        geojson.geometry.coordinates[0].push(_getCoordinates(childLayer, geojson));
+                    angular.forEach(layer._latlngs, function (latlngs, index) {
+                        geojson.geometry.coordinates.push([]);
+                        angular.forEach(latlngs, function (latlngs) {
+                            geojson.geometry.coordinates[index].push(_getCoordinates(latlngs, geojson));
+                        });
                     });
 
                     _this.broadcast('mapbox-' + _this._mapboxServiceInstance.getId() + '::geometry-edited', geojson);
@@ -8794,6 +9034,14 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
+            element.on('mouseover', function () {
+                map.dragging.disable();
+            });
+
+            element.on('mouseout', function () {
+                map.dragging.enable();
+            });
+
             parent.find('.leaflet-control-container ' + _positions[scope.position]).prepend(element);
 
             scope.hidden = false;
@@ -9710,21 +9958,28 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Bean (Sugar)',
             'Bean (Green)',
             'Bean (Kidney)',
+            'Beet',
+            'Broccoli',
+            'Butternut',
+            'Cabbage',
             'Canola',
+            'Carrot',
             'Cassava',
+            'Cauliflower',
             'Cotton',
             'Cowpea',
             'Grain Sorghum',
             'Groundnut',
+            'Leek',
             'Lucerne',
             'Maize',
             'Maize (White)',
             'Maize (Yellow)',
-            'Oat',
+            'Oats',
             'Peanut',
             'Pearl Millet',
             'Potato',
-            'Rape',
+            'Rapeseed',
             'Rice',
             'Rye',
             'Soya Bean',
@@ -9769,7 +10024,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Medic (Gama)',
             'Medic (Snail)',
             'Medic (Strand)',
-            'Multi-species',
+            'Multispecies Pasture',
             'Phalaris',
             'Rescue',
             'Rhodes',
@@ -9790,7 +10045,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
         ];
         var _perennialCrops = [
             'Almond',
-            'Aloe',
             'Apple',
             'Apricot',
             'Avocado',
@@ -9813,7 +10067,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Grape (White)',
             'Grapefruit',
             'Guava',
-            'Hops',
             'Kiwi Fruit',
             'Lemon',
             'Litchi',
@@ -9830,23 +10083,25 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Prickly Pear',
             'Pecan Nut',
             'Persimmon',
-            'Pineapple',
             'Pistachio Nut',
             'Plum',
             'Pomegranate',
             'Protea',
             'Raspberry',
             'Rooibos',
-            'Sisal',
             'Strawberry',
             'Sugarcane',
-            'Tea',
             'Walnut',
             'Wineberry'
         ];
         var _plantationCrops = [
+            'Aloe',
             'Bluegum',
+            'Hops',
             'Pine',
+            'Pineapple',
+            'Tea',
+            'Sisal',
             'Wattle'
         ];
 
@@ -10069,8 +10324,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             });
         });
 
-        privateProperty(Base, 'initializeObject', function (object, property, defaultObject) {
-            return object[property] = object[property] || defaultObject;
+        privateProperty(Base, 'initializeObject', function (object, property, defaultValue) {
+            object[property] = (object[property] && Object.prototype.toString.call(object[property]) == Object.prototype.toString.call(defaultValue))
+                ? object[property]
+                : defaultValue;
         });
 
         return Base;
@@ -10146,8 +10403,8 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
     }]);
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function (Asset, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function (Asset, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
 
         var _assetYearEndValueAdjustments = {
             'Land and fixed improvements': [
@@ -10213,28 +10470,28 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             this.data.startDate = moment(this.data.startDate).format('YYYY-MM-DD');
             this.data.endDate = moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD');
 
-            initializeObject(this.data, 'account', {});
-            initializeObject(this.data, 'models', {});
-            initializeObject(this.data, 'adjustmentFactors', {});
-            initializeObject(this.data, 'assetStatement', {});
-            initializeObject(this.data, 'liabilityStatement', {});
+            Base.initializeObject(this.data, 'account', {});
+            Base.initializeObject(this.data, 'models', {});
+            Base.initializeObject(this.data, 'adjustmentFactors', {});
+            Base.initializeObject(this.data, 'assetStatement', {});
+            Base.initializeObject(this.data, 'liabilityStatement', {});
 
-            initializeObject(this.data.assetStatement, 'total', {});
-            initializeObject(this.data.liabilityStatement, 'total', {});
+            Base.initializeObject(this.data.assetStatement, 'total', {});
+            Base.initializeObject(this.data.liabilityStatement, 'total', {});
 
-            initializeObject(this.data.account, 'monthly', []);
-            initializeObject(this.data.account, 'yearly', []);
-            initializeObject(this.data.account, 'openingBalance', 0);
-            initializeObject(this.data.account, 'interestRateCredit', 0);
-            initializeObject(this.data.account, 'interestRateDebit', 0);
-            initializeObject(this.data.account, 'depreciationRate', 0);
+            Base.initializeObject(this.data.account, 'monthly', []);
+            Base.initializeObject(this.data.account, 'yearly', []);
+            Base.initializeObject(this.data.account, 'openingBalance', 0);
+            Base.initializeObject(this.data.account, 'interestRateCredit', 0);
+            Base.initializeObject(this.data.account, 'interestRateDebit', 0);
+            Base.initializeObject(this.data.account, 'depreciationRate', 0);
 
-            initializeObject(this.data.models, 'assets', []);
-            initializeObject(this.data.models, 'expenses', []);
-            initializeObject(this.data.models, 'financials', []);
-            initializeObject(this.data.models, 'income', []);
-            initializeObject(this.data.models, 'liabilities', []);
-            initializeObject(this.data.models, 'productionSchedules', []);
+            Base.initializeObject(this.data.models, 'assets', []);
+            Base.initializeObject(this.data.models, 'expenses', []);
+            Base.initializeObject(this.data.models, 'financials', []);
+            Base.initializeObject(this.data.models, 'income', []);
+            Base.initializeObject(this.data.models, 'liabilities', []);
+            Base.initializeObject(this.data.models, 'productionSchedules', []);
 
             function reEvaluateBusinessPlan (instance) {
                 // Re-evaluate all included models
@@ -10255,16 +10512,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
             /**
              * Helper functions
              */
-            function initializeArray(length) {
-                return underscore.range(length).map(function () {
-                    return 0;
-                });
-            }
-
-            function initializeObject(object, property, defaultObject) {
-                return object[property] = object[property] || defaultObject;
-            }
-
             function infinityToZero(value) {
                 return (isFinite(value) ? value : 0);
             }
@@ -10469,7 +10716,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
-                    initializeObject(instance.data.enterpriseProductionExpenditure, schedule.data.details.commodity, {});
+                    Base.initializeObject(instance.data.enterpriseProductionExpenditure, schedule.data.details.commodity, {});
                     extractGroupCategories(instance.data.enterpriseProductionExpenditure[schedule.data.details.commodity], schedule, 'EXP', startMonth, numberOfMonths);
 
                     extractGroupCategories(instance.data.productionIncome, schedule, 'INC', startMonth, numberOfMonths);
@@ -10734,7 +10981,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         name: itemName,
                         estimatedValue: 0,
                         currentRMV: 0,
-                        yearlyRMV: initializeArray(numberOfYears),
+                        yearlyRMV: Base.initializeArray(numberOfYears),
                         assets: []
                     });
 
@@ -10753,7 +11000,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1)[0] : {
                         name: itemName,
                         currentValue: 0,
-                        yearlyValues: initializeArray(numberOfYears),
+                        yearlyValues: Base.initializeArray(numberOfYears),
                         liabilities: []
                     });
 
@@ -10812,7 +11059,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     }, {
                         estimatedValue: 0,
                         currentRMV: 0,
-                        yearlyRMV: initializeArray(numberOfYears)
+                        yearlyRMV: Base.initializeArray(numberOfYears)
                     })
                     .value();
 
@@ -10826,7 +11073,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         return result;
                     }, {
                         currentValue: 0,
-                        yearlyValues: initializeArray(numberOfYears)
+                        yearlyValues: Base.initializeArray(numberOfYears)
                     })
                     .value();
 
@@ -11009,8 +11256,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 var defaultObj = (type == 'asset' ? {
                     estimatedValue: 0,
                     currentRMV: 0,
-                    yearlyRMV: initializeArray(numberOfYears)
-                } : { currentValue: 0, yearlyValues: initializeArray(numberOfYears) } );
+                    yearlyRMV: Base.initializeArray(numberOfYears)
+                } : { currentValue: 0, yearlyValues: Base.initializeArray(numberOfYears) } );
                 var statementProperty = (type == 'asset' ? 'assetStatement' : 'liabilityStatement');
 
                 if (!instance.data[statementProperty][subType] || instance.data[statementProperty][subType].length == 0) {
@@ -11037,7 +11284,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         return liabilityTypes.indexOf(liability.type) != -1;
                     });
 
-                if (liabilities.length == 0) return initializeArray(instance.numberOfMonths);
+                if (liabilities.length == 0) return Base.initializeArray(instance.numberOfMonths);
 
                 return underscore.chain(liabilities)
                     .map(function(liability) {
@@ -11083,7 +11330,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     .pluck('yearlyRMV')
                     .reduce(function(result, rmvArray) {
                         if (result.length == 0) {
-                            result = initializeArray(rmvArray.length);
+                            result = Base.initializeArray(rmvArray.length);
                         }
                         return addArrayValues(result, rmvArray);
                     }, [])
@@ -11100,26 +11347,26 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                 instance.data.summary = {};
                 instance.data.summary.monthly = {
                     // Income
-                    unallocatedProductionIncome: calculateMonthlySectionsTotal([instance.data.unallocatedProductionIncome], initializeArray(numberOfMonths)),
-                    productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], initializeArray(numberOfMonths)),
-                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], initializeArray(numberOfMonths)),
-                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], initializeArray(numberOfMonths)),
-                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.unallocatedProductionIncome, instance.data.otherIncome], initializeArray(numberOfMonths)),
+                    unallocatedProductionIncome: calculateMonthlySectionsTotal([instance.data.unallocatedProductionIncome], Base.initializeArray(numberOfMonths)),
+                    productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], Base.initializeArray(numberOfMonths)),
+                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], Base.initializeArray(numberOfMonths)),
+                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.unallocatedProductionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
 
                     // Expenses
-                    unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], initializeArray(numberOfMonths)),
-                    productionExpenditure: calculateMonthlySectionsTotal([instance.data.productionExpenditure], initializeArray(numberOfMonths)),
-                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], initializeArray(numberOfMonths)),
-                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], initializeArray(numberOfMonths)),
-                    debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], initializeArray(numberOfMonths)),
-                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.debtRedemption, instance.data.otherExpenditure], initializeArray(numberOfMonths)),
+                    unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], Base.initializeArray(numberOfMonths)),
+                    productionExpenditure: calculateMonthlySectionsTotal([instance.data.productionExpenditure], Base.initializeArray(numberOfMonths)),
+                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], Base.initializeArray(numberOfMonths)),
+                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
+                    debtRedemption: calculateMonthlySectionsTotal([instance.data.debtRedemption], Base.initializeArray(numberOfMonths)),
+                    totalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.debtRedemption, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
 
                     // Interest
-                    primaryAccountInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
+                    primaryAccountInterest: Base.initializeArray(numberOfMonths), //Calculated when primary account is recalculated
                     productionCreditInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'interest', startMonth, endMonth),
                     mediumTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'interest', startMonth, endMonth),
                     longTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'interest', startMonth, endMonth),
-                    totalInterest: initializeArray(numberOfMonths), //Calculated when primary account is recalculated
+                    totalInterest: Base.initializeArray(numberOfMonths), //Calculated when primary account is recalculated
 
                     // Liabilities
                     currentLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'closing', startMonth, endMonth),
@@ -11146,11 +11393,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
 
                     // Interest
-                    primaryAccountInterest: initializeArray(2),
+                    primaryAccountInterest: Base.initializeArray(2),
                     productionCreditInterest: [calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 2)],
                     mediumTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 2)],
                     longTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 2)],
-                    totalInterest: initializeArray(2),
+                    totalInterest: Base.initializeArray(2),
 
                     // Liabilities
                     currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
@@ -11163,7 +11410,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                     currentAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'short-term'),
                     movableAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'medium-term'),
                     fixedAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'long-term'),
-                    totalAssets: instance.data.assetStatement.total.yearlyRMV || initializeArray(2),
+                    totalAssets: instance.data.assetStatement.total.yearlyRMV || Base.initializeArray(2),
 
                     depreciation: getDepreciation(instance)
                 };
@@ -11189,7 +11436,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
                         closing: 0
                     };
 
-                instance.data.summary.monthly.primaryAccountInterest = initializeArray(instance.numberOfMonths);
+                instance.data.summary.monthly.primaryAccountInterest = Base.initializeArray(instance.numberOfMonths);
                 instance.data.summary.monthly.totalInterest = calculateMonthlyLiabilityPropertyTotal(instance, [], 'interest', startMonth, endMonth);
 
                 instance.account.monthly = underscore.chain(underscore.range(instance.numberOfMonths))
@@ -11420,94 +11667,444 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'computedProperty
         return BusinessPlan;
     }]);
 
+var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritModel', 'landUseHelper', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, landUseHelper, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
+        function ComparableSale (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'area', function () {
+                return underscore.reduce(this.portions, function(total, portion) {
+                    return total + (portion.area || 0);
+                }, 0);
+            }, {enumerable: true});
+
+            computedProperty(this, 'distanceInKm', function () {
+                return (this.distance ? this.distance / 1000.0 : '-');
+            });
+
+            computedProperty(this, 'improvedRatePerHa', function () {
+                return this.purchasePrice / this.area;
+            }, {enumerable: true});
+
+            computedProperty(this, 'vacantLandValue', function () {
+                return this.valueMinusImprovements / this.area;
+            }, {enumerable: true});
+
+            computedProperty(this, 'valueMinusImprovements', function () {
+                return this.purchasePrice - this.depImpValue;
+            }, {enumerable: true});
+
+            computedProperty(this, 'farmName', function () {
+                return underscore.chain(this.portions)
+                    .groupBy('farmLabel')
+                    .map(function (portions, farmName) {
+                        farmName = (farmName || '').toLowerCase();
+
+                        var portionSentence = underscore.chain(portions)
+                                .sortBy('portionLabel')
+                                .pluck('portionLabel')
+                                .toSentence()
+                                .value();
+
+                        return (portionSentence + (farmName.length ? ' of ' + (underscore.startsWith(farmName, 'farm') ? '' : 'farm ') + underscore.titleize(farmName) : ''));
+                    })
+                    .toSentence()
+                    .value();
+            }, {enumerable: true});
+
+
+            computedProperty(this, 'totalLandComponentArea', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return total + (landComponent.area || 0);
+                }, 0);
+            });
+
+            computedProperty(this, 'totalLandComponentValue', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return total + (landComponent.assetValue || 0);
+                }, 0);
+            });
+
+            /**
+             * Attachment Handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.attachments = underscore.reject(this.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            privateProperty(this, 'removeNewAttachments', function () {
+                var attachments = this.attachments;
+
+                this.attachments = underscore.reject(attachments, function (attachment) {
+                    return underscore.isObject(attachment.archive);
+                });
+
+                return underscore.difference(attachments, this.attachments);
+            });
+
+            /**
+             * Land Component Handling
+             */
+            privateProperty(this, 'addLandComponent', function (type) {
+                this.landComponents.push({
+                    type: type,
+                    assetValue: 0
+                });
+            });
+
+            privateProperty(this, 'removeLandComponent', function (landComponent) {
+                this.landComponents = underscore.without(this.landComponents, landComponent);
+            });
+
+            /**
+             * Portion Handling
+             */
+            privateProperty(this, 'addPortion', function (portion) {
+                this.removePortionBySgKey(portion.sgKey);
+
+                this.portions.push(portion);
+            });
+
+            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
+                this.portions = underscore.reject(this.portions, function (portion) {
+                    return (portion.sgKey === sgKey);
+                });
+            });
+
+            /**
+             * Edit Authorisation
+             */
+            privateProperty(this, 'isEditable', function (user) {
+                return (user && user.username === this.createdBy && this.authorData && user.company === this.authorData.company);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid;
+            this.area = attrs.area;
+            this.attachments = attrs.attachments || [];
+            this.authorData = attrs.authorData;
+            this.centroid = attrs.centroid;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.depImpValue = attrs.depImpValue;
+            this.distance = attrs.distance || 0;
+            this.geometry = attrs.geometry;
+            this.landComponents = attrs.landComponents || [];
+            this.portions = attrs.portions || [];
+            this.regions = attrs.regions || [];
+            this.propertyKnowledge = attrs.propertyKnowledge;
+            this.purchasedAt = attrs.purchasedAt;
+            this.purchasePrice = attrs.purchasePrice || 0;
+            this.useCount = attrs.useCount || 0;
+        }
+
+        inheritModel(ComparableSale, Model.Base);
+
+        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(landUseHelper.landUseTypes())
+            .without('Cropland')
+            .union(['Cropland (Dry)', 'Cropland (Equipped, Irrigable)', 'Cropland (Irrigable)'])
+            .value()
+            .sort(naturalSort));
+
+        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
+            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
+            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
+
+        ComparableSale.validates({
+            area: {
+                required: true,
+                numeric: true
+            },
+            landComponents: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            portions: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            purchasePrice: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return ComparableSale;
+    }]);
+
+var sdkModelDesktopValuationDocument = angular.module('ag.sdk.model.desktop-valuation', ['ag.sdk.model.comparable-sale', 'ag.sdk.model.document']);
+
+sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'ComparableSale', 'computedProperty', 'Document', 'inheritModel', 'privateProperty', 'underscore',
+    function (Base, ComparableSale, computedProperty, Document, inheritModel, privateProperty, underscore) {
+        function DesktopValuation (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'desktop valuation';
+
+            var defaultReportBody = '<div class="tinymce-container pdf-container">' +
+                '<h2 id="property-description">Property Description</h2><br/><table id="property-description-table" width="100%"></table><br/>' +
+                '<h2 id="farmland-value">Estimated Farmland Value</h2><br/><div id="farmland-value-table"></div><br/>' +
+                '<h2 id="regional-value">Regional Value Development</h2><br/><div id="regional-value-graph"></div><br/>' +
+                '<h2 id="comparable-sales">Comparable Sales</h2><table id="comparable-sales-table" width="100%"></table><br/>' +
+                '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
+                '</div>';
+
+            Base.initializeObject(this.data, 'attachments', []);
+            Base.initializeObject(this.data, 'request', {});
+            Base.initializeObject(this.data, 'report', {});
+
+            Base.initializeObject(this.data.request, 'farmland', []);
+
+            Base.initializeObject(this.data.report, 'body', defaultReportBody);
+            Base.initializeObject(this.data.report, 'comparableSales', []);
+            Base.initializeObject(this.data.report, 'improvements', []);
+            Base.initializeObject(this.data.report, 'improvementsValue', {});
+            Base.initializeObject(this.data.report, 'landUseComponents', {});
+            Base.initializeObject(this.data.report, 'landUseValue', {});
+            Base.initializeObject(this.data.report, 'summary', {});
+
+            /**
+             * Legal Entity handling
+             */
+            privateProperty(this, 'setLegalEntity', function (entity) {
+                this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
+            });
+
+            /**
+             * Attachment handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.data.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.data.attachments = underscore.reject(this.data.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            /**
+             * Farmland handling
+             */
+            privateProperty(this, 'getFarmland', function () {
+                return this.data.request.farmland;
+            });
+
+            privateProperty(this, 'hasFarmland', function (farmland) {
+                return underscore.some(this.data.request.farmland, function (asset) {
+                    return asset.assetKey === farmland.assetKey;
+                });
+            });
+
+            privateProperty(this, 'addFarmland', function (farmland) {
+                this.removeFarmland(farmland);
+
+                this.data.request.farmland.push(farmland);
+            });
+
+            privateProperty(this, 'removeFarmland', function (farmland) {
+                this.data.request.farmland = underscore.reject(this.data.request.farmland, function (asset) {
+                    return asset.assetKey === farmland.assetKey;
+                });
+            });
+
+            privateProperty(this, 'getFarmlandSummary', function () {
+                return underscore.chain(this.data.request.farmland)
+                    .groupBy(function (farmland) {
+                        return (farmland.data.farmLabel ? farmland.data.farmLabel :
+                            (farmland.data.officialFarmName ? underscore.titleize(farmland.data.officialFarmName) : 'Unknown'));
+                    })
+                    .mapObject(function (farmGroup) {
+                        return {
+                            portionList: (underscore.size(farmGroup) > 1 ? underscore.chain(farmGroup)
+                                .map(function (farmland) {
+                                    return (farmland.data.portionNumber ? farmland.data.portionNumber : farmland.data.portionLabel);
+                                })
+                                .sort()
+                                .toSentence()
+                                .value() : underscore.first(farmGroup).data.portionLabel),
+                            town: underscore.chain(farmGroup)
+                                .map(function (farmland) {
+                                    return (farmland.data.town ? underscore.titleize(farmland.data.town) : '');
+                                })
+                                .first()
+                                .value(),
+                            province: underscore.chain(farmGroup)
+                                .map(function (farmland) {
+                                    return (farmland.data.province ? underscore.titleize(farmland.data.province) : '');
+                                })
+                                .first()
+                                .value(),
+                            area: underscore.reduce(farmGroup, function (total, farmland) {
+                                return total + (farmland.data.area || 0);
+                            }, 0)
+                        }
+                    })
+                    .value();
+            });
+
+            /**
+             * Comparable Handling
+             */
+            privateProperty(this, 'addComparableSale', function (comparableSale) {
+                var _this = this;
+
+                comparableSale = ComparableSale.new(comparableSale);
+
+                _this.removeComparableSale(comparableSale);
+
+                _this.data.report.comparableSales.push(comparableSale.asJSON());
+
+                underscore.each(comparableSale.attachments, function (attachment) {
+                    _this.addAttachment(attachment);
+                });
+            });
+
+            privateProperty(this, 'removeComparableSale', function (comparableSale) {
+                var _this = this;
+
+                _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, function (comparable) {
+                    return comparable.uuid === comparableSale.uuid;
+                });
+
+                underscore.each(comparableSale.attachments, function (attachment) {
+                    _this.removeAttachment(attachment);
+                });
+            });
+        }
+
+        inheritModel(DesktopValuation, Document);
+
+        DesktopValuation.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'desktop valuation'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return DesktopValuation;
+    }]);
+
 var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
-            function Document (attrs, organization) {
-                Model.Base.apply(this, arguments);
+    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Document (attrs, organization) {
+            Model.Base.apply(this, arguments);
 
-                this.data = (attrs && attrs.data) || {};
+            this.data = (attrs && attrs.data) || {};
 
-                privateProperty(this, 'updateRegister', function (organization) {
-                    this.data = underscore.extend(this.data, {
-                        farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farms : organization.farms,
-                        legalEntities: underscore
-                            .map(organization.legalEntities, function (entity) {
-                                return underscore.omit(entity, ['assets', 'farms']);
-                            }),
-                        assets: underscore
-                            .chain(organization.legalEntities)
-                            .pluck('assets')
-                            .flatten()
-                            .compact()
-                            .groupBy('type')
-                            .value(),
-                        liabilities: underscore
-                            .chain(organization.legalEntities)
-                            .pluck('liabilities')
-                            .flatten()
-                            .compact()
-                            .value()
-                    });
+            privateProperty(this, 'updateRegister', function (organization) {
+                this.organization = organization;
+                this.organizationId = organization.id;
+                this.data = underscore.extend(this.data, {
+                    farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
+                    farms : organization.farms,
+                    legalEntities: underscore
+                        .map(organization.legalEntities, function (entity) {
+                            return underscore.omit(entity, ['assets', 'farms']);
+                        }),
+                    assets: underscore
+                        .chain(organization.legalEntities)
+                        .pluck('assets')
+                        .flatten()
+                        .compact()
+                        .groupBy('type')
+                        .value(),
+                    liabilities: underscore
+                        .chain(organization.legalEntities)
+                        .pluck('liabilities')
+                        .flatten()
+                        .compact()
+                        .value()
                 });
-
-                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-                this.author = attrs.author;
-                this.docType = attrs.docType;
-                this.documentId = attrs.documentId;
-                this.id = attrs.id || attrs.$id;
-                this.organization = attrs.organization;
-                this.organizationId = attrs.organizationId;
-                this.title = attrs.title;
-            }
-
-            inheritModel(Document, Model.Base);
-
-            readOnlyProperty(Document, 'docTypes', {
-                'asset register': 'Asset Register',
-                'emergence report': 'Emergence Report',
-                'farm valuation': 'Farm Valuation',
-                'financial resource plan': 'Financial Resource Plan',
-                'insurance policy': 'Insurance Policy',
-                'production plan': 'Production Plan',
-                'progress report': 'Progress Report'
             });
 
-            Document.validates({
-                author: {
-                    required: true,
-                    length: {
-                        min: 1,
-                        max: 255
-                    }
-                },
-                docType: {
-                    required: true,
-                    inclusion: {
-                        in: underscore.keys(Document.docTypes)
-                    }
-                },
-                organizationId: {
-                    required: true,
-                    numeric: true
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.author = attrs.author;
+            this.docType = attrs.docType;
+            this.documentId = attrs.documentId;
+            this.id = attrs.id || attrs.$id;
+            this.organization = attrs.organization;
+            this.organizationId = attrs.organizationId;
+            this.title = attrs.title;
+        }
+
+        inheritModel(Document, Model.Base);
+
+        readOnlyProperty(Document, 'docTypes', {
+            'asset register': 'Asset Register',
+            'desktop valuation': 'Desktop Valuation',
+            'emergence report': 'Emergence Report',
+            'farm valuation': 'Farm Valuation',
+            'financial resource plan': 'Financial Resource Plan',
+            'insurance policy': 'Insurance Policy',
+            'production plan': 'Production Plan',
+            'progress report': 'Progress Report'
+        });
+
+        Document.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
                 }
-            });
+            },
+            docType: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Document.docTypes)
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
 
-            return Document;
-        }]);
+        return Document;
+    }]);
 
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudgetBase(attrs) {
             Model.Base.apply(this, arguments);
-
-            this.data = (attrs && attrs.data ? attrs.data : {});
-            this.data.sections = this.data.sections || [];
 
             computedProperty(this, 'defaultCostStage', function () {
                 return underscore.last(EnterpriseBudgetBase.costStages);
@@ -11522,8 +12119,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                 }));
             });
 
+            privateProperty(this, 'sortSections', function () {
+                this.data.sections = underscore.chain(this.data.sections)
+                    .sortBy('name')
+                    .reverse()
+                    .value();
+            });
+
             privateProperty(this, 'getSection', function (sectionCode, costStage) {
                 return underscore.first(this.getSections(sectionCode, costStage));
+            });
+
+            privateProperty(this, 'getSectionTitle', function (sectionCode) {
+                return (EnterpriseBudgetBase.sections[sectionCode] ? EnterpriseBudgetBase.sections[sectionCode].name : '');
             });
 
             privateProperty(this, 'addSection', function (sectionCode, costStage) {
@@ -11546,6 +12154,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
                     }
 
                     this.data.sections.push(section);
+                    this.sortSections();
                 }
 
                 return section;
@@ -11711,6 +12320,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             privateProperty(this, 'getUnitAbbreviation', function (unit) {
                 return unitAbbreviations[unit] || unit;
             });
+
+            // Properties
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'sections', []);
+
+            this.sortSections();
         }
 
         inheritModel(EnterpriseBudgetBase, Model.Base);
@@ -12270,7 +12885,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             EnterpriseBudgetBase.apply(this, arguments);
 
             Base.initializeObject(this.data, 'details', {});
-            Base.initializeObject(this.data, 'schedules', []);
+            Base.initializeObject(this.data, 'schedules', {});
             Base.initializeObject(this.data.details, 'cycleStart', 0);
             Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
 
@@ -12389,8 +13004,16 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
             } else if (this.assetType === 'horticulture') {
+                if (this.data.details.maturityFactor instanceof Array) {
+                    this.data.details.maturityFactor = {
+                        'INC': this.data.details.maturityFactor
+                    };
+                }
+
                 Base.initializeObject(this.data.details, 'yearsToMaturity', getYearsToMaturity(this));
-                Base.initializeObject(this.data.details, 'maturityFactor', []);
+                Base.initializeObject(this.data.details, 'maturityFactor', {});
+                Base.initializeObject(this.data.details.maturityFactor, 'INC', []);
+                Base.initializeObject(this.data.details.maturityFactor, 'EXP', []);
             }
 
             this.recalculate();
@@ -12410,11 +13033,18 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Barley',
                 'Bean (Dry)',
                 'Bean (Green)',
+                'Beet',
+                'Broccoli',
+                'Butternut',
+                'Cabbage',
                 'Canola',
+                'Carrot',
+                'Cauliflower',
                 'Cotton',
                 'Cowpea',
                 'Grain Sorghum',
                 'Groundnut',
+                'Leek',
                 'Lucerne',
                 'Lupin',
                 'Maize (Fodder)',
@@ -12422,12 +13052,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Maize (Seed)',
                 'Maize (White)',
                 'Maize (Yellow)',
-                'Oat',
+                'Multispecies Pasture',
+                'Oats',
                 'Potato',
+                'Rapeseed',
                 'Rye',
                 'Soya Bean',
                 'Sunflower',
                 'Sweet Corn',
+                'Teff',
                 'Tobacco',
                 'Triticale',
                 'Wheat'
@@ -12453,6 +13086,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Fig',
                 'Garlic',
                 'Gooseberry',
+                'Grape (Bush Vine)',
                 'Grape (Table)',
                 'Grape (Wine)',
                 'Guava',
@@ -12506,6 +13140,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Horses',
                 'Ostrich',
                 'Pigs',
+                'Rabbits',
                 'Sheep (Extensive)',
                 'Sheep (Feedlot)',
                 'Sheep (Stud)'
@@ -12614,6 +13249,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                         budgetSection.productCategoryGroups = [];
 
                         instance.data.sections.push(budgetSection);
+                        instance.sortSections();
                     }
 
                     budgetSection.costStage = EnterpriseBudget.costStages[i];
@@ -12622,11 +13258,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             // Validate maturity
             if (instance.assetType == 'horticulture' && instance.data.details.yearsToMaturity) {
-                while (instance.data.details.maturityFactor.length < instance.data.details.yearsToMaturity) {
-                    instance.data.details.maturityFactor.push(Math.floor((100 / instance.data.details.yearsToMaturity) * (instance.data.details.maturityFactor.length + 1)));
-                }
+                var yearsToMaturity = instance.data.details.yearsToMaturity;
 
-                instance.data.details.maturityFactor = instance.data.details.maturityFactor.slice(0, instance.data.details.yearsToMaturity);
+                instance.data.details.maturityFactor = underscore.mapObject(instance.data.details.maturityFactor, function (maturityFactor) {
+                    return underscore.first(maturityFactor.concat(underscore.range(maturityFactor.length < yearsToMaturity ? (yearsToMaturity - maturityFactor.length) : 0)
+                        .map(function () {
+                            return 100;
+                        })), yearsToMaturity);
+                });
             }
         }
 
@@ -12940,6 +13579,151 @@ sdkModelFinancial.factory('Financial', ['$filter', 'inheritModel', 'Model', 'pri
         });
 
         return Financial;
+    }]);
+
+var sdkModelLayer= angular.module('ag.sdk.model.layer', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.geospatial']);
+
+sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Layer (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.geometry = attrs.geometry;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+            this.province = attrs.province;
+            this.type = attrs.type;
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
+
+            this.organization = attrs.organization;
+            this.sublayers = attrs.sublayers;
+        }
+
+        inheritModel(Layer, Model.Base);
+
+        privateProperty(Layer, 'listMap', function (item) {
+            return {
+                title: item.name,
+                subtitle: item.province
+            }
+        });
+
+        Layer.validates({
+            comments: {
+                required: false,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: false,
+                numeric: true
+            },
+            province: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            type: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return Layer;
+    }]);
+
+
+sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologySuite', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, topologySuite, underscore) {
+        function Sublayer (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.code = attrs.code;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.geometry = attrs.geometry;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+            this.regionId = attrs.regionId;
+            this.type = attrs.type;
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
+
+            this.organization = attrs.organization;
+            this.layer = attrs.layer;
+        }
+
+        inheritModel(Sublayer, Model.Base);
+
+        privateProperty(Sublayer, 'listMap', function (item) {
+            return {
+                title: item.name,
+                subtitle: item.layer.province + (item.code ? ' - ' + item.code : ''),
+                layer: item.layer.name
+            }
+        });
+
+        Sublayer.validates({
+            code: {
+                required: false,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            comments: {
+                required: false,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: false,
+                numeric: true
+            },
+            type: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return Sublayer;
     }]);
 
 var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
@@ -13841,6 +14625,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
                 });
             });
 
+            instance.sortSections();
+
             instance.data.details.grossProfit = underscore.reduce(instance.data.sections, function (total, section) {
                 return (section.code == 'INC' ? total + section.total.value : total - section.total.value);
             }, 0);
@@ -13927,7 +14713,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     });
                 } else if (this.type === 'horticulture') {
                     this.data.details = underscore.extend(this.data.details, {
-                        maturityFactor: this.budget.data.details.maturityFactor || []
+                        maturityFactor: this.budget.data.details.maturityFactor
                     });
                 }
 
@@ -13973,16 +14759,16 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 return adjustCategory(this, sectionCode, categoryCode, costStage, property);
             });
 
-            privateProperty(this, 'applyMaturityFactor', function (value) {
-                var factor = (this.type == 'horticulture' && this.costStage === 'Yearly' && this.data.details.maturityFactor ?
-                    (this.data.details.maturityFactor[this.data.details.assetAge - 1] || 0) : 100);
+            privateProperty(this, 'applyMaturityFactor', function (sectionCode, value) {
+                var factor = (this.type == 'horticulture' && this.costStage === 'Yearly' && this.data.details.maturityFactor && this.data.details.maturityFactor[sectionCode] ?
+                    (this.data.details.maturityFactor[sectionCode][this.data.details.assetAge - 1] || 0) : 100);
 
                 return (factor ? (value * (factor / 100)) : factor);
             });
 
-            privateProperty(this, 'reverseMaturityFactor', function (value) {
-                var factor = (this.type == 'horticulture' && this.costStage === 'Yearly' && this.data.details.maturityFactor ?
-                    (this.data.details.maturityFactor[this.data.details.assetAge - 1] || 0) : 100);
+            privateProperty(this, 'reverseMaturityFactor', function (sectionCode, value) {
+                var factor = (this.type == 'horticulture' && this.costStage === 'Yearly' && this.data.details.maturityFactor && this.data.details.maturityFactor[sectionCode] ?
+                    (this.data.details.maturityFactor[sectionCode][this.data.details.assetAge - 1] || 0) : 100);
 
                 return (factor ? (value * (100 / factor)) : factor);
             });
@@ -14077,7 +14863,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
             if (productionCategory && budgetCategory) {
                 if (property === 'value') {
-                    budgetCategory.value = instance.reverseMaturityFactor(productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
+                    budgetCategory.value = instance.reverseMaturityFactor(sectionCode, productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
 
                     if (budgetCategory.unit === 'Total') {
                         budgetCategory.pricePerUnit = budgetCategory.value;
@@ -14087,9 +14873,9 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         productionCategory.quantity = productionCategory.value / productionCategory.pricePerUnit;
                     }
 
-                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                 } else if (property === 'valuePerHa') {
-                    budgetCategory.value = instance.reverseMaturityFactor(productionCategory.valuePerHa);
+                    budgetCategory.value = instance.reverseMaturityFactor(sectionCode, productionCategory.valuePerHa);
 
                     if (budgetCategory.unit === 'Total') {
                         budgetCategory.pricePerUnit = budgetCategory.value;
@@ -14097,8 +14883,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     }
 
                     budgetCategory.quantity = budgetCategory.value / budgetCategory.pricePerUnit;
-                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * instance.allocatedSize), 2);
-                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(budgetCategory.value));
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value * instance.allocatedSize), 2);
+                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value));
                     productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
                 } else if (property === 'valuePerLSU') {
                     budgetCategory.valuePerLSU = roundValue(productionCategory.valuePerLSU, 2);
@@ -14108,10 +14894,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     productionCategory.valuePerLSU = roundValue(budgetCategory.valuePerLSU * instance.data.details.multiplicationFactor, 2);
                     productionCategory.quantity = roundValue(productionCategory.value / productionCategory.pricePerUnit, 2);
                 } else if (property === 'quantityPerHa') {
-                    budgetCategory.quantity = instance.reverseMaturityFactor(productionCategory.quantityPerHa);
+                    budgetCategory.quantity = instance.reverseMaturityFactor(sectionCode, productionCategory.quantityPerHa);
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(budgetCategory.quantity * instance.allocatedSize), 2);
-                    productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(budgetCategory.quantity), 2);
+                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.quantity * instance.allocatedSize), 2);
+                    productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.quantity), 2);
                     productionCategory.value = roundValue(productionCategory.quantity * productionCategory.pricePerUnit, 2);
                 } else if (property === 'quantityPerLSU') {
                     budgetCategory.quantity = productionCategory.quantityPerLSU;
@@ -14120,20 +14906,20 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     productionCategory.quantityPerLSU = budgetCategory.quantity;
                     productionCategory.value = roundValue(productionCategory.quantity * productionCategory.pricePerUnit, 2);
                 } else if (property === 'quantity') {
-                    budgetCategory.quantity = instance.reverseMaturityFactor(productionCategory.quantity / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
+                    budgetCategory.quantity = instance.reverseMaturityFactor(sectionCode, productionCategory.quantity / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(budgetCategory.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                     productionCategory.value = roundValue(productionCategory.pricePerUnit * productionCategory.quantity, 2);
                 } else if (property === 'pricePerUnit') {
                     budgetCategory.pricePerUnit = productionCategory.pricePerUnit;
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                     productionCategory.pricePerUnit = budgetCategory.pricePerUnit;
                 } else if (property === 'stock') {
                     budgetCategory.stock = productionCategory.stock;
                 } else if (property === 'schedule') {
                     budgetCategory.schedule = instance.budget.unshiftMonthlyArray(productionCategory.schedule);
-                    budgetCategory.value = instance.reverseMaturityFactor(productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
+                    budgetCategory.value = instance.reverseMaturityFactor(sectionCode, productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
 
                     if (budgetCategory.unit === 'Total') {
                         budgetCategory.pricePerUnit = budgetCategory.value;
@@ -14151,11 +14937,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                     });
 
                     productionCategory.valuePerMonth = underscore.map(instance.budget.shiftMonthlyArray(budgetCategory.valuePerMonth), function (value) {
-                        return instance.applyMaturityFactor(value) * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                        return instance.applyMaturityFactor(sectionCode, value) * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
                     });
 
-                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(budgetCategory.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
-                    productionCategory.value = roundValue(instance.applyMaturityFactor(budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                    productionCategory.quantity = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                    productionCategory.value = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                 }
 
                 if(instance.type == 'livestock') {
@@ -14163,7 +14949,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                 }
 
                 if (sectionCode === 'EXP') {
-                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(budgetCategory.value), 2);
+                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value), 2);
                 }
 
                 instance.$dirty = true;
@@ -14195,24 +14981,24 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                         productionCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
                                     }
                                 } else {
-                                    productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(category.quantity), 2);
+                                    productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(section.code, category.quantity), 2);
                                 }
 
                                 if (section.code === 'EXP') {
-                                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(category.value), 2);
+                                    productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(section.code, category.value), 2);
                                 }
 
                                 productionCategory.schedule = instance.budget.getShiftedSchedule(category.schedule);
 
                                 productionCategory.valuePerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.valuePerMonth), function (value) {
-                                    return roundValue(instance.applyMaturityFactor(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                                    return roundValue(instance.applyMaturityFactor(section.code, value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                                 });
 
                                 productionCategory.quantityPerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.quantityPerMonth), function (value) {
-                                    return roundValue(instance.applyMaturityFactor(value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                                    return roundValue(instance.applyMaturityFactor(section.code, value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                                 });
 
-                                productionCategory.quantity = roundValue(instance.applyMaturityFactor(category.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
+                                productionCategory.quantity = roundValue(instance.applyMaturityFactor(section.code, category.quantity * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                                 productionCategory.value = roundValue(productionCategory.pricePerUnit * productionCategory.quantity, 2);
                             });
 
@@ -14294,6 +15080,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                         }
                     }
                 });
+
+                instance.sortSections();
 
                 if (instance.type == 'livestock') {
                     instance.data.details.grossProfitPerLSU = (instance.data.details.calculatedLSU ? instance.data.details.grossProfit / instance.data.details.calculatedLSU : 0);
@@ -15380,13 +16168,9 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
 
                     return promiseService.wrap(function (promise) {
                         authorizationApi.getUser().then(function (res) {
-                            if (res.user) {
-                                _this.upload(models).then(function () {
-                                    _this.download(models).then(promise.resolve, promise.reject);
-                                }, promise.reject);
-                            } else {
-                                promise.reject();
-                            }
+                            _this.upload(models).then(function () {
+                                _this.download(models).then(promise.resolve, promise.reject);
+                            }, promise.reject);
                         }, promise.reject);
                     });
                 },
@@ -18123,11 +18907,10 @@ sdkModelValidators.factory('Validator.length', ['Validatable.Validator', 'Valida
         }
 
         length.message = 'does not meet the length requirement';
+        length.options = {};
 
-        length.options = {
-            min: min,
-            max: max
-        };
+        if (min) length.options.min = min;
+        if (max) length.options.max = max;
 
         return new Validator(length);
     }]);
@@ -18143,7 +18926,7 @@ sdkModelValidators.factory('Validator.length.min', ['underscore', 'Validatable.V
         }
 
         min.message = function () {
-            return 'Must be at least ' + this.min + ' characters';
+            return 'Length must be at least ' + this.min;
         };
 
         return new Validator(min);
@@ -18160,7 +18943,7 @@ sdkModelValidators.factory('Validator.length.max', ['underscore', 'Validatable.V
         }
 
         max.message = function () {
-            return 'Must be no more than ' + this.max + ' characters';
+            return 'Length must be at most ' + this.max;
         };
 
         return new Validator(max);
@@ -18314,7 +19097,6 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.favourites',
     'ag.sdk.helper.merchant',
     'ag.sdk.helper.production-plan',
-    'ag.sdk.helper.region',
     'ag.sdk.helper.task',
     'ag.sdk.helper.team',
     'ag.sdk.helper.user'
@@ -18332,11 +19114,14 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.asset',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
+    'ag.sdk.model.comparable-sale',
+    'ag.sdk.model.desktop-valuation',
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.financial',
+    'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.production-schedule',
@@ -18353,6 +19138,7 @@ angular.module('ag.sdk.test', [
 angular.module('ag.mobile-sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
+    'ag.sdk.geospatial',
     'ag.sdk.utilities',
     'ag.sdk.model',
     'ag.sdk.monitor',
