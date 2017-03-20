@@ -265,333 +265,333 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['computedProperty', 'i
             //*********** Income *********
             // livestock sales
             // Sheep
-                {
-                    code: 'INC-LSS-SLAMB',
-                    name: 'Lamb',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-SWEAN',
-                    name: 'Weaner lambs',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-SEWE',
-                    name: 'Ewe',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-SWTH',
-                    name: 'Wether (2-tooth plus)',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-SRAM',
-                    name: 'Ram',
-                    unit: 'head'
-                },
+            {
+                code: 'INC-LSS-SLAMB',
+                name: 'Lamb',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-SWEAN',
+                name: 'Weaner lambs',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-SEWE',
+                name: 'Ewe',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-SWTH',
+                name: 'Wether (2-tooth plus)',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-SRAM',
+                name: 'Ram',
+                unit: 'head'
+            },
 
-                // Cattle
-                {
-                    code: 'INC-LSS-CCALV',
-                    name: 'Calf',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-CWEN',
-                    name: 'Weaner calves',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-CCOW',
-                    name: 'Cow or heifer',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-CST18',
-                    name: 'Steer (18 months plus)',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-CST36',
-                    name: 'Steer (3 years plus)',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-CBULL',
-                    name: 'Bull (3 years plus)',
-                    unit: 'head'
-                },
+            // Cattle
+            {
+                code: 'INC-LSS-CCALV',
+                name: 'Calf',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-CWEN',
+                name: 'Weaner calves',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-CCOW',
+                name: 'Cow or heifer',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-CST18',
+                name: 'Steer (18 months plus)',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-CST36',
+                name: 'Steer (3 years plus)',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-CBULL',
+                name: 'Bull (3 years plus)',
+                unit: 'head'
+            },
 
-                //Goats
-                {
-                    code: 'INC-LSS-GKID',
-                    name: 'Kid',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-GWEAN',
-                    name: 'Weaner kids',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-GEWE',
-                    name: 'Ewe (2-tooth plus)',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-GCAST',
-                    name: 'Castrate (2-tooth plus)',
-                    unit: 'head'
-                }, {
-                    code: 'INC-LSS-GRAM',
-                    name: 'Ram (2-tooth plus)',
-                    unit: 'head'
-                },
+            //Goats
+            {
+                code: 'INC-LSS-GKID',
+                name: 'Kid',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-GWEAN',
+                name: 'Weaner kids',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-GEWE',
+                name: 'Ewe (2-tooth plus)',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-GCAST',
+                name: 'Castrate (2-tooth plus)',
+                unit: 'head'
+            }, {
+                code: 'INC-LSS-GRAM',
+                name: 'Ram (2-tooth plus)',
+                unit: 'head'
+            },
 
-                // livestock product sales
-                {
-                    code: 'INC-LSP-MILK',
-                    name: 'Milk',
-                    unit: 'l'
-                }, {
-                    code: 'INC-LSP-WOOL',
-                    name: 'Wool',
-                    unit: 'kg'
-                },
+            // livestock product sales
+            {
+                code: 'INC-LSP-MILK',
+                name: 'Milk',
+                unit: 'l'
+            }, {
+                code: 'INC-LSP-WOOL',
+                name: 'Wool',
+                unit: 'kg'
+            },
 
-                //Crops
-                {
-                    code: 'INC-HVT-CROP',
-                    name: 'Crop',
-                    unit: 't'
-                },
-                //Horticulture (non-perennial)
-                {
-                    code: 'INC-HVT-FRUT',
-                    name: 'Fruit',
-                    unit: 't'
-                },
-                //*********** Expenses *********
-                // Preharvest
-                {
-                    code: 'EXP-HVP-SEED',
-                    name: 'Seed',
-                    unit: 'kg'
-                }, {
-                    code: 'EXP-HVP-PLTM',
-                    name: 'Plant Material',
-                    unit: 'each'
-                }, {
-                    code: 'EXP-HVP-FERT',
-                    name: 'Fertiliser',
-                    unit: 't'
-                }, {
-                    code: 'EXP-HVP-LIME',
-                    name: 'Lime',
-                    unit: 't'
-                }, {
-                    code: 'EXP-HVP-HERB',
-                    name: 'Herbicides',
-                    unit: 'l'
-                }, {
-                    code: 'EXP-HVP-PEST',
-                    name: 'Pesticides',
-                    unit: 'l'
-                }, {
-                    code: 'EXP-HVP-SPYA',
-                    name: 'Aerial spraying',
-                    unit: 'ha'
-                }, {
-                    code: 'EXP-HVP-INSH',
-                    name: 'Crop Insurance (Hail)',
-                    unit: 't'
-                }, {
-                    code: 'EXP-HVP-INSM',
-                    name: 'Crop Insurance (Multiperil)',
-                    unit: 't'
-                }, {
-                    code: 'EXP-HVP-HEDG',
-                    name: 'Hedging cost',
-                    unit: 't'
-                },
-                //Harvest
-                {
-                    code: 'EXP-HVT-LABC',
-                    name: 'Contract work (Harvest)',
-                    unit: 'ha'
-                }, {
-                    code: 'EXP-HVT-STOR',
-                    name: 'Storage',
-                    unit: 'days'
-                }, {
-                    code: 'EXP-HVT-PAKM',
-                    name: 'Packaging material',
-                    unit: 'each'
-                }, {
-                    code: 'EXP-HVT-DYCL',
-                    name: 'Drying and cleaning',
-                    unit: 't'
-                }, {
-                    code: 'EXP-HVT-PAKC',
-                    name: 'Packing cost',
-                    unit: 'each'
-                },
-                //Indirect
-                {
-                    code: 'EXP-IDR-FUEL',
-                    name: 'Fuel',
-                    unit: 'l'
-                }, {
-                    code: 'EXP-IDR-REPP',
-                    name: 'Repairs & parts',
-                    unit: 'Total'
-                }, {
-                    code: 'EXP-IDR-ELEC',
-                    name: 'Electricity',
-                    unit: 'Total'
-                }, {
-                    code: 'EXP-IDR-WATR',
-                    name: 'Water',
-                    unit: 'Total'
-                }, {
-                    code: 'EXP-IDR-LABP',
-                    name: 'Permanent labour',
-                    unit: 'Total'
-                }, {
-                    code: 'EXP-IDR-SCHED',
-                    name: 'Scheduling',
-                    unit: 'Total'
-                }, {
-                    code: 'EXP-IDR-LICS',
-                    name: 'License',
-                    unit: 'Total'
-                }, {
-                    code: 'EXP-IDR-INSA',
-                    name: 'Insurance assets',
-                    unit: 'Total'
-                }, {
-                    code: 'EXP-IDR-OTHER',
-                    name: 'Other costs',
-                    unit: 'Total'
-                },
-                //Replacements
-                // Sheep
-                {
-                    code: 'EXP-RPM-SLAMB',
-                    name: 'Lamb',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-SWEAN',
-                    name: 'Weaner lambs',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-SEWE',
-                    name: 'Ewe',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-SWTH',
-                    name: 'Wether (2-tooth plus)',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-SRAM',
-                    name: 'Ram',
-                    unit: 'head'
-                },
+            //Crops
+            {
+                code: 'INC-HVT-CROP',
+                name: 'Crop',
+                unit: 't'
+            },
+            //Horticulture (non-perennial)
+            {
+                code: 'INC-HVT-FRUT',
+                name: 'Fruit',
+                unit: 't'
+            },
+            //*********** Expenses *********
+            // Preharvest
+            {
+                code: 'EXP-HVP-SEED',
+                name: 'Seed',
+                unit: 'kg'
+            }, {
+                code: 'EXP-HVP-PLTM',
+                name: 'Plant Material',
+                unit: 'each'
+            }, {
+                code: 'EXP-HVP-FERT',
+                name: 'Fertiliser',
+                unit: 't'
+            }, {
+                code: 'EXP-HVP-LIME',
+                name: 'Lime',
+                unit: 't'
+            }, {
+                code: 'EXP-HVP-HERB',
+                name: 'Herbicides',
+                unit: 'l'
+            }, {
+                code: 'EXP-HVP-PEST',
+                name: 'Pesticides',
+                unit: 'l'
+            }, {
+                code: 'EXP-HVP-SPYA',
+                name: 'Aerial spraying',
+                unit: 'ha'
+            }, {
+                code: 'EXP-HVP-INSH',
+                name: 'Crop Insurance (Hail)',
+                unit: 't'
+            }, {
+                code: 'EXP-HVP-INSM',
+                name: 'Crop Insurance (Multiperil)',
+                unit: 't'
+            }, {
+                code: 'EXP-HVP-HEDG',
+                name: 'Hedging cost',
+                unit: 't'
+            },
+            //Harvest
+            {
+                code: 'EXP-HVT-LABC',
+                name: 'Contract work (Harvest)',
+                unit: 'ha'
+            }, {
+                code: 'EXP-HVT-STOR',
+                name: 'Storage',
+                unit: 'days'
+            }, {
+                code: 'EXP-HVT-PAKM',
+                name: 'Packaging material',
+                unit: 'each'
+            }, {
+                code: 'EXP-HVT-DYCL',
+                name: 'Drying and cleaning',
+                unit: 't'
+            }, {
+                code: 'EXP-HVT-PAKC',
+                name: 'Packing cost',
+                unit: 'each'
+            },
+            //Indirect
+            {
+                code: 'EXP-IDR-FUEL',
+                name: 'Fuel',
+                unit: 'l'
+            }, {
+                code: 'EXP-IDR-REPP',
+                name: 'Repairs & parts',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-ELEC',
+                name: 'Electricity',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-WATR',
+                name: 'Water',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-LABP',
+                name: 'Permanent labour',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-SCHED',
+                name: 'Scheduling',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-LICS',
+                name: 'License',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-INSA',
+                name: 'Insurance assets',
+                unit: 'Total'
+            }, {
+                code: 'EXP-IDR-OTHER',
+                name: 'Other costs',
+                unit: 'Total'
+            },
+            //Replacements
+            // Sheep
+            {
+                code: 'EXP-RPM-SLAMB',
+                name: 'Lamb',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-SWEAN',
+                name: 'Weaner lambs',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-SEWE',
+                name: 'Ewe',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-SWTH',
+                name: 'Wether (2-tooth plus)',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-SRAM',
+                name: 'Ram',
+                unit: 'head'
+            },
 
-                // Cattle
-                {
-                    code: 'EXP-RPM-CCALV',
-                    name: 'Calf',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-CWEN',
-                    name: 'Weaner calves',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-CCOW',
-                    name: 'Cow or heifer',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-CST18',
-                    name: 'Steer (18 moths plus)',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-CST36',
-                    name: 'Steer (3 years plus)',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-CBULL',
-                    name: 'Bull (3 years plus)',
-                    unit: 'head'
-                },
+            // Cattle
+            {
+                code: 'EXP-RPM-CCALV',
+                name: 'Calf',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-CWEN',
+                name: 'Weaner calves',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-CCOW',
+                name: 'Cow or heifer',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-CST18',
+                name: 'Steer (18 moths plus)',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-CST36',
+                name: 'Steer (3 years plus)',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-CBULL',
+                name: 'Bull (3 years plus)',
+                unit: 'head'
+            },
 
-                //Goats
-                {
-                    code: 'EXP-RPM-GKID',
-                    name: 'Kid',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-GWEAN',
-                    name: 'Weaner kids',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-GEWE',
-                    name: 'Ewe (2-tooth plus)',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-GCAST',
-                    name: 'Castrate (2-tooth plus)',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-RPM-GRAM',
-                    name: 'Ram (2-tooth plus)',
-                    unit: 'head'
-                },
-                //Animal feed
-                {
-                    code: 'EXP-AMF-LICK',
-                    name: 'Lick',
-                    unit: 'kg'
-                },
-                //Husbandry
-                {
-                    code: 'EXP-HBD-VACC',
-                    name: 'Drenching & vaccination',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-HBD-DIPP',
-                    name: 'Dipping & jetting',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-HBD-VETY',
-                    name: 'Veterinary',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-HBD-SHER',
-                    name: 'Shearing',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-HBD-CRCH',
-                    name: 'Crutching',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-MRK-LSSF',
-                    name: 'Livestock sales marketing fees',
-                    unit: 't'
-                }, {
-                    code: 'EXP-MRK-LSPF',
-                    name: 'Livestock products marketing fees',
-                    unit: 't'
-                }, {
-                    code: 'EXP-MRK-HOTF',
-                    name: 'Horticulture marketing fees',
-                    unit: 't'
-                }, {
-                    code: 'EXP-MRK-CRPF',
-                    name: 'Crop marketing fees',
-                    unit: 't'
-                }, {
-                    code: 'EXP-MRK-LSTP',
-                    name: 'Livestock transport',
-                    unit: 'head'
-                }, {
-                    code: 'EXP-MRK-HOTT',
-                    name: 'Horticulture transport',
-                    unit: 't'
-                }, {
-                    code: 'EXP-MRK-CRPT',
-                    name: 'Crop transport',
-                    unit: 't'
-                }
+            //Goats
+            {
+                code: 'EXP-RPM-GKID',
+                name: 'Kid',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-GWEAN',
+                name: 'Weaner kids',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-GEWE',
+                name: 'Ewe (2-tooth plus)',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-GCAST',
+                name: 'Castrate (2-tooth plus)',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-GRAM',
+                name: 'Ram (2-tooth plus)',
+                unit: 'head'
+            },
+            //Animal feed
+            {
+                code: 'EXP-AMF-LICK',
+                name: 'Lick',
+                unit: 'kg'
+            },
+            //Husbandry
+            {
+                code: 'EXP-HBD-VACC',
+                name: 'Drenching & vaccination',
+                unit: 'head'
+            }, {
+                code: 'EXP-HBD-DIPP',
+                name: 'Dipping & jetting',
+                unit: 'head'
+            }, {
+                code: 'EXP-HBD-VETY',
+                name: 'Veterinary',
+                unit: 'head'
+            }, {
+                code: 'EXP-HBD-SHER',
+                name: 'Shearing',
+                unit: 'head'
+            }, {
+                code: 'EXP-HBD-CRCH',
+                name: 'Crutching',
+                unit: 'head'
+            }, {
+                code: 'EXP-MRK-LSSF',
+                name: 'Livestock sales marketing fees',
+                unit: 't'
+            }, {
+                code: 'EXP-MRK-LSPF',
+                name: 'Livestock products marketing fees',
+                unit: 't'
+            }, {
+                code: 'EXP-MRK-HOTF',
+                name: 'Horticulture marketing fees',
+                unit: 't'
+            }, {
+                code: 'EXP-MRK-CRPF',
+                name: 'Crop marketing fees',
+                unit: 't'
+            }, {
+                code: 'EXP-MRK-LSTP',
+                name: 'Livestock transport',
+                unit: 'head'
+            }, {
+                code: 'EXP-MRK-HOTT',
+                name: 'Horticulture transport',
+                unit: 't'
+            }, {
+                code: 'EXP-MRK-CRPT',
+                name: 'Crop transport',
+                unit: 't'
+            }
         ], 'code'));
 
         readOnlyProperty(EnterpriseBudgetBase, 'categoryOptions', {
