@@ -94,11 +94,11 @@
 'Sheep','Sheep (Feedlot)','Sheep (Feedlot)','livestock',,
 'Sheep','Sheep (Stud)','Sheep (Stud)','livestock',,
 'Rabbits',,'Rabbits','livestock',,
-'Carrots',,'Carrots','crop','Vegetables','Cropland'
+Carrot,,Carrot,'crop','Vegetables','Cropland'
 'Beet',,'Beet','crop','Vegetables','Cropland'
 'Cauliflower',,'Cauliflower','crop','Vegetables','Cropland'
 'Broccoli',,'Broccoli','crop','Vegetables','Cropland'
-'Leeks',,'Leeks','crop','Vegetables','Cropland'
+'Leeks',,Leek,'crop','Vegetables','Cropland'
 'Butternut',,'Butternut','crop','Vegetables','Cropland'
 'Cabbage',,'Cabbage','crop','Vegetables','Cropland'
-'Rapeseed',,'Rapeseed','crop','Vegetables','Cropland'
+'Rapeseed',Rape,'Rapeseed','crop','Vegetables','Cropland'
