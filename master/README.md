@@ -40,4 +40,6 @@ This list containes all published budgets. Ideally this should match ```entperpr
 
 [List of Alternative Crops and Enterprises for Small Farm Diversification](https://www.nal.usda.gov/afsic/list-alternative-crops-and-enterprises-small-farm-diversification)
 
+[Alternative Crop Suitability Maps](http://www.isws.illinois.edu/data/altcrops/cropreq.asp?pid=&Suit=&suitVal=&ordrBy=&fp=croplist&letter=C&nmeType=cmn&c=&QStr=pid%3D%26Suit%3D%26suitVal%3D%26ordrBy%3D%26fp%3Dcroplist%26letter%3DC%26nmeType%3Dcmn%26c%3D%26QStr%3Dcrop%253D964%2526fp%253Dcroplist%2526letter%253DC%2526nmeType%253Dcmn%26mapselect%gd3Do%26submit%3DSubmit%26crop%3D964&mapselect=gd&submit=Submit&crop=964&m=met)
+
 [Understanding citrus](http://www.farmersweekly.co.za/farm-basics/how-to-crop-production/understanding-citrus-2/)
