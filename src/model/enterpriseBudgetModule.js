@@ -594,7 +594,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST18',
-                name: 'Steer (18 moths plus)',
+                name: 'Steer (18 months plus)',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST36',
@@ -677,7 +677,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-MRK-HOTT',
-                name: 'Horticulture transport',
+                name: 'Fruit transport',
                 unit: 't'
             }, {
                 code: 'EXP-MRK-CRPT',
@@ -1025,6 +1025,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Leek',
                 'Lucerne',
                 'Lupin',
+                'Maize',
                 'Maize (Fodder)',
                 'Maize (Green)',
                 'Maize (Seed)',
