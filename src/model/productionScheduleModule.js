@@ -74,11 +74,11 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
             if (productionCategory && !underscore.isUndefined(productionCategory[property])) {
                 if (underscore.contains(['valuePerLSU', 'pricePerUnit', 'quantityPerLSU', 'quantityPerHa'], property)) {
                     value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                        return total + category[property];
+                        return total + (category[property] || 0);
                     }, 0) / productionCategory.categories.length, 2);
                 } else if (underscore.contains(['value', 'quantity'], property)) {
                     value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                        return total + category[property];
+                        return total + (category[property] || 0);
                     }, 0), 2);
                 } else if (property === 'valuePerHa') {
                     value = roundValue(productionCategory.value / instance.allocatedSize, 2);
@@ -207,11 +207,11 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
 
                                 if (productionSchedule.type == 'livestock') {
                                     productionCategory.quantityPerLSU = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                                        return total + category.quantityPerLSU;
+                                        return total + (category.quantityPerLSU || 0);
                                     }, 0) / productionCategory.categories.length, 2);
 
                                     productionCategory.valuePerLSU = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                                        return total + category.valuePerLSU;
+                                        return total + (category.valuePerLSU || 0);
                                     }, 0) / productionCategory.categories.length, 2);
                                 } else {
                                     productionCategory.quantityPerHa = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
@@ -244,7 +244,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
 
                                 if (productionSchedule.type == 'livestock') {
                                     productionGroup.total.valuePerLSU = underscore.reduce(productionGroup.productCategories, function (total, category) {
-                                        return total + category.valuePerLSU;
+                                        return total + (category.valuePerLSU || 0);
                                     }, 0);
                                 }
                             }
@@ -271,7 +271,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
 
                             if (productionSchedule.type == 'livestock') {
                                 productionSection.total.valuePerLSU = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
-                                    return total + group.total.valuePerLSU;
+                                    return total + (group.total.valuePerLSU || 0);
                                 }, 0);
                             }
 
@@ -632,8 +632,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
                                 productionCategory.pricePerUnit = category.pricePerUnit;
 
                                 if (instance.type == 'livestock') {
-                                    productionCategory.valuePerLSU += roundValue(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
-                                    productionCategory.quantityPerLSU = category.quantity;
+                                    if (category.valuePerLSU) {
+                                        productionCategory.valuePerLSU += roundValue(category.valuePerLSU * instance.data.details.multiplicationFactor, 2);
+                                        productionCategory.quantityPerLSU = category.quantity;
+                                    }
 
                                     if (group.code === 'INC-LSS') {
                                         productionCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
@@ -690,7 +692,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
                                 if (instance.type == 'livestock') {
                                     productionGroup.total.valuePerLSU = underscore.reduce(productionGroup.productCategories, function (total, category) {
-                                        return total + category.valuePerLSU;
+                                        return total + (category.valuePerLSU || 0);
                                     }, 0);
                                 }
                             }
@@ -728,7 +730,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
 
                             if (instance.type == 'livestock') {
                                 productionSection.total.valuePerLSU = underscore.reduce(productionSection.productCategoryGroups, function (total, group) {
-                                    return total + group.total.valuePerLSU;
+                                    return total + (group.total.valuePerLSU || 0);
                                 }, 0);
                             }
 
