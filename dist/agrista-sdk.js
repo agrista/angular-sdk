@@ -6367,7 +6367,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['naturalSort', '
 
     // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
-        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Potato', 'Rapeseed', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Teff', 'Tobacco', 'Triticale', 'Wheat'],
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Potato', 'Rapeseed', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Teff', 'Tobacco', 'Triticale', 'Wheat'],
         horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Bush Vine)', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prickly Pear', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Rabbits', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
@@ -13860,11 +13860,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             // livestock sales
             // Sheep
             {
-                code: 'INC-LSS-SLAMB',
+                code: 'INC-LSS-SLMB',
                 name: 'Lamb',
                 unit: 'head'
             }, {
-                code: 'INC-LSS-SWEAN',
+                code: 'INC-LSS-SWEN',
                 name: 'Weaner lambs',
                 unit: 'head'
             }, {
@@ -13883,7 +13883,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
             // Cattle
             {
-                code: 'INC-LSS-CCALV',
+                code: 'INC-LSS-CCLV',
                 name: 'Calf',
                 unit: 'head'
             }, {
@@ -13895,15 +13895,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Cow or heifer',
                 unit: 'head'
             }, {
-                code: 'INC-LSS-CST18',
+                code: 'INC-LSS-CST1',
                 name: 'Steer (18 months plus)',
                 unit: 'head'
             }, {
-                code: 'INC-LSS-CST36',
+                code: 'INC-LSS-CST3',
                 name: 'Steer (3 years plus)',
                 unit: 'head'
             }, {
-                code: 'INC-LSS-CBULL',
+                code: 'INC-LSS-CBUL',
                 name: 'Bull (3 years plus)',
                 unit: 'head'
             },
@@ -13914,7 +13914,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Kid',
                 unit: 'head'
             }, {
-                code: 'INC-LSS-GWEAN',
+                code: 'INC-LSS-GWEN',
                 name: 'Weaner kids',
                 unit: 'head'
             }, {
@@ -13922,7 +13922,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Ewe (2-tooth plus)',
                 unit: 'head'
             }, {
-                code: 'INC-LSS-GCAST',
+                code: 'INC-LSS-GCST',
                 name: 'Castrate (2-tooth plus)',
                 unit: 'head'
             }, {
@@ -14115,7 +14115,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Permanent labour',
                 unit: 'Total'
             }, {
-                code: 'EXP-IDR-SCHED',
+                code: 'EXP-IDR-SCHD',
                 name: 'Scheduling',
                 unit: 'Total'
             }, {
@@ -14127,18 +14127,18 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Insurance assets',
                 unit: 'Total'
             }, {
-                code: 'EXP-IDR-OTHER',
+                code: 'EXP-IDR-OTHR',
                 name: 'Other overheads',
                 unit: 'Total'
             },
             //Replacements
             // Sheep
             {
-                code: 'EXP-RPM-SLAMB',
+                code: 'EXP-RPM-SLMB',
                 name: 'Lamb',
                 unit: 'head'
             }, {
-                code: 'EXP-RPM-SWEAN',
+                code: 'EXP-RPM-SWEN',
                 name: 'Weaner lambs',
                 unit: 'head'
             }, {
@@ -14157,7 +14157,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
             // Cattle
             {
-                code: 'EXP-RPM-CCALV',
+                code: 'EXP-RPM-CCLV',
                 name: 'Calf',
                 unit: 'head'
             }, {
@@ -14169,15 +14169,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Cow or heifer',
                 unit: 'head'
             }, {
-                code: 'EXP-RPM-CST18',
-                name: 'Steer (18 moths plus)',
+                code: 'EXP-RPM-CST1',
+                name: 'Steer (18 months plus)',
                 unit: 'head'
             }, {
-                code: 'EXP-RPM-CST36',
+                code: 'EXP-RPM-CST3',
                 name: 'Steer (3 years plus)',
                 unit: 'head'
             }, {
-                code: 'EXP-RPM-CBULL',
+                code: 'EXP-RPM-CBUL',
                 name: 'Bull (3 years plus)',
                 unit: 'head'
             },
@@ -14188,7 +14188,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Kid',
                 unit: 'head'
             }, {
-                code: 'EXP-RPM-GWEAN',
+                code: 'EXP-RPM-GWEN',
                 name: 'Weaner kids',
                 unit: 'head'
             }, {
@@ -14196,7 +14196,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 name: 'Ewe (2-tooth plus)',
                 unit: 'head'
             }, {
-                code: 'EXP-RPM-GCAST',
+                code: 'EXP-RPM-GCST',
                 name: 'Castrate (2-tooth plus)',
                 unit: 'head'
             }, {
@@ -14253,7 +14253,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-MRK-HOTT',
-                name: 'Horticulture transport',
+                name: 'Fruit transport',
                 unit: 't'
             }, {
                 code: 'EXP-MRK-CRPT',
@@ -14271,7 +14271,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     'Preharvest': getCategoryArray(['EXP-HVP-FERT', 'EXP-HVP-FUNG', 'EXP-HVP-HEDG', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-LIME', 'EXP-HVP-PEST', 'EXP-HVP-SEED', 'EXP-HVP-SPYA']),
                     'Harvest': getCategoryArray(['EXP-HVT-LABC']),
                     'Marketing': getCategoryArray(['EXP-MRK-CRPF', 'EXP-MRK-CRPT']),
-                    'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-OTHER'])
+                    'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHD', 'EXP-IDR-OTHR'])
                 }
             },
             horticulture: {
@@ -14283,47 +14283,47 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     'Preharvest': getCategoryArray(['EXP-HVP-CONS', 'EXP-HVP-ELEC', 'EXP-HVP-FERT', 'EXP-HVP-FUEL', 'EXP-HVP-FUNG', 'EXP-HVP-GENL', 'EXP-HVP-LIME', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-PEST', 'EXP-HVP-PGRG', 'EXP-HVP-PLTM', 'EXP-HVP-POLL', 'EXP-HVP-REPP', 'EXP-HVP-SLAB', 'EXP-HVP-SPYA']),
                     'Harvest': getCategoryArray(['EXP-HVT-FUEL', 'EXP-HVT-DYCL', 'EXP-HVT-LABC', 'EXP-HVT-HVTT', 'EXP-HVT-PAKC', 'EXP-HVT-PAKM', 'EXP-HVT-REPP', 'EXP-HVT-STOR']),
                     'Marketing': getCategoryArray(['EXP-MRK-HOTF', 'EXP-MRK-HOTT']),
-                    'Indirect Costs': getCategoryArray(['EXP-IDR-ODEP', 'EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
+                    'Indirect Costs': getCategoryArray(['EXP-IDR-ODEP', 'EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHD', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHR'])
                 }
             },
             livestock: {
                 Cattle: {
                     INC: {
-                        'Livestock Sales': getCategoryArray(['INC-LSS-CCALV', 'INC-LSS-CWEN', 'INC-LSS-CCOW', 'INC-LSS-CST18', 'INC-LSS-CST36', 'INC-LSS-CBULL']),
+                        'Livestock Sales': getCategoryArray(['INC-LSS-CCLV', 'INC-LSS-CWEN', 'INC-LSS-CCOW', 'INC-LSS-CST1', 'INC-LSS-CST3', 'INC-LSS-CBUL']),
                         'Product Sales': getCategoryArray(['INC-LSP-MILK'])
                     },
                     EXP: {
-                        'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
+                        'Replacements': getCategoryArray(['EXP-RPM-CCLV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CST1', 'EXP-RPM-CST3', 'EXP-RPM-CBUL']),
                         'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
-                        'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
+                        'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHR'])
                     }
                 },
                 Goats: {
                     INC: {
-                        'Livestock Sales': getCategoryArray(['INC-LSS-GKID', 'INC-LSS-GWEAN', 'INC-LSS-GEWE', 'INC-LSS-GCAST', 'INC-LSS-GRAM']),
+                        'Livestock Sales': getCategoryArray(['INC-LSS-GKID', 'INC-LSS-GWEN', 'INC-LSS-GEWE', 'INC-LSS-GCST', 'INC-LSS-GRAM']),
                         'Product Sales': getCategoryArray(['INC-LSP-WOOL', 'INC-LSP-MILK'])
                     },
                     EXP: {
-                        'Replacements': getCategoryArray(['EXP-RPM-GKID', 'EXP-RPM-GWEAN', 'EXP-RPM-GEWE', 'EXP-RPM-GCAST', 'EXP-RPM-GRAM']),
+                        'Replacements': getCategoryArray(['EXP-RPM-GKID', 'EXP-RPM-GWEN', 'EXP-RPM-GEWE', 'EXP-RPM-GCST', 'EXP-RPM-GRAM']),
                         'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
-                        'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
+                        'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHR'])
                     }
                 },
                 Sheep: {
                     INC: {
-                        'Livestock Sales': getCategoryArray(['INC-LSS-SLAMB', 'INC-LSS-SWEAN', 'INC-LSS-SEWE', 'INC-LSS-SWTH', 'INC-LSS-SRAM']),
+                        'Livestock Sales': getCategoryArray(['INC-LSS-SLMB', 'INC-LSS-SWEN', 'INC-LSS-SEWE', 'INC-LSS-SWTH', 'INC-LSS-SRAM']),
                         'Product Sales': getCategoryArray(['INC-LSP-WOOL', 'INC-LSP-MILK'])
                     },
                     EXP: {
-                        'Replacements': getCategoryArray(['EXP-RPM-SLAMB', 'EXP-RPM-SWEAN', 'EXP-RPM-SEWE', 'EXP-RPM-SWTH', 'EXP-RPM-SRAM']),
+                        'Replacements': getCategoryArray(['EXP-RPM-SLMB', 'EXP-RPM-SWEN', 'EXP-RPM-SEWE', 'EXP-RPM-SWTH', 'EXP-RPM-SRAM']),
                         'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
-                        'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
+                        'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHR'])
                     }
                 }
             }
@@ -14601,6 +14601,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Leek',
                 'Lucerne',
                 'Lupin',
+                'Maize',
                 'Maize (Fodder)',
                 'Maize (Green)',
                 'Maize (Seed)',
