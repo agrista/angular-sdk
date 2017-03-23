@@ -1,15 +1,9 @@
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritModel', 'landUseHelper', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (computedProperty, inheritModel, landUseHelper, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'inheritModel', 'landUseHelper', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, inheritModel, landUseHelper, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function ComparableSale (attrs) {
             Model.Base.apply(this, arguments);
-
-            computedProperty(this, 'area', function () {
-                return underscore.reduce(this.portions, function(total, portion) {
-                    return total + (portion.area || 0);
-                }, 0);
-            }, {enumerable: true});
 
             computedProperty(this, 'distanceInKm', function () {
                 return (this.distance ? this.distance / 1000.0 : '-');
@@ -104,12 +98,14 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
                 this.removePortionBySgKey(portion.sgKey);
 
                 this.portions.push(portion);
+                recalculateArea(this);
             });
 
             privateProperty(this, 'removePortionBySgKey', function (sgKey) {
                 this.portions = underscore.reject(this.portions, function (portion) {
                     return (portion.sgKey === sgKey);
                 });
+                recalculateArea(this);
             });
 
             /**
@@ -140,6 +136,14 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'inheritMo
             this.purchasedAt = attrs.purchasedAt;
             this.purchasePrice = attrs.purchasePrice || 0;
             this.useCount = attrs.useCount || 0;
+        }
+
+        var roundValue = $filter('round');
+
+        function recalculateArea (instance) {
+            instance.area = roundValue(underscore.reduce(instance.portions, function(total, portion) {
+                return total + (portion.area || 0);
+            }, 0), 4);
         }
 
         inheritModel(ComparableSale, Model.Base);
