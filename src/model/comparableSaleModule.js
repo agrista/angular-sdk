@@ -112,7 +112,7 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
              * Edit Authorisation
              */
             privateProperty(this, 'isEditable', function (user) {
-                return (user && user.username === this.createdBy && this.authorData && user.company === this.authorData.company);
+                return (user && this.authorData && user.username === this.authorData.username && user.company === this.authorData.company);
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
