@@ -581,7 +581,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
 /**
  * Enterprise Budget API
  */
-sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, httpRequestor, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -610,20 +610,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             });
         },
         searchEnterpriseBudgets: function (query) {
-            query = underscore.chain(query)
-                .defaults({
-                    resulttype: 'simple'
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
-
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(_host + 'api/budgets/search', underscore.extend({resulttype: 'simple'}, query));
         },
         createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
