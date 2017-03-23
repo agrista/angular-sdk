@@ -115,11 +115,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
-                return (this.assetType ?
-                    (this.assetType == 'livestock' ?
-                        EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] :
-                        EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode]) :
-                    []);
+                return (this.assetType && EnterpriseBudgetBase.categoryOptions[this.assetType] ?
+                    (this.assetType == 'livestock'
+                        ? (this.baseAnimal ? EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] : [])
+                        : EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode])
+                    : []);
             });
 
             privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {

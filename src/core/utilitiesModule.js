@@ -1,6 +1,6 @@
-var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies', 'ag.sdk.id']);
+var sdkUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies', 'ag.sdk.id']);
 
-skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
+sdkUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
         if ($rootScope.$$phase) {
             fn();
@@ -10,7 +10,7 @@ skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     };
 }]);
 
-skdUtilitiesApp.directive('stopEvent', function () {
+sdkUtilitiesApp.directive('stopEvent', function () {
     return {
         restrict: 'A',
         link: function (scope, element, attr) {
@@ -21,7 +21,7 @@ skdUtilitiesApp.directive('stopEvent', function () {
     };
 });
 
-skdUtilitiesApp.factory('dataMapService', [function() {
+sdkUtilitiesApp.factory('dataMapService', [function() {
     return function(items, mapping, excludeId) {
         var mappedItems = [];
 
@@ -62,7 +62,7 @@ skdUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
+sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
     var _listId = generateUUID();
 
     return {
@@ -186,7 +186,25 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
     };
 }]);
 
-skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safeApply) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
+    return function (url, params) {
+        return $http(underscore.extend(underscore.isObject(params.resulttype) ? {
+            method: 'POST',
+            data: params.resulttype,
+            params: underscore.omit(params, 'resulttype')
+        } : {
+            method: 'GET',
+            params: params
+        }, {
+            url: url,
+            withCredentials: true
+        })).then(function (result) {
+            return result.data;
+        });
+    }
+}]);
+
+sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safeApply) {
     var _defer = function() {
         var deferred = $q.defer();
 
@@ -276,7 +294,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     }
 }]);
 
-skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($cookieStore, $window) {
+sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($cookieStore, $window) {
     return {
         setItem: function (key, value) {
             if ($window.localStorage) {
@@ -302,7 +320,7 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-skdUtilitiesApp.filter('round', ['$filter', function ($filter) {
+sdkUtilitiesApp.filter('round', ['$filter', function ($filter) {
     return function (value, precision) {
         precision = precision || 2;
 

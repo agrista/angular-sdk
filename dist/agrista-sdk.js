@@ -592,7 +592,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
 /**
  * Enterprise Budget API
  */
-sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, httpRequestor, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
@@ -621,20 +621,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'pagingService', 'promiseServ
             });
         },
         searchEnterpriseBudgets: function (query) {
-            query = underscore.chain(query)
-                .defaults({
-                    resulttype: 'simple'
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
-
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budgets/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(_host + 'api/budgets/search', underscore.extend({resulttype: 'simple'}, query));
         },
         createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
@@ -2696,9 +2683,9 @@ sdkMonitorApp.factory('promiseMonitor', ['$log', 'safeApply', function ($log, sa
     }
 }]);
 
-var skdUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies', 'ag.sdk.id']);
+var sdkUtilitiesApp = angular.module('ag.sdk.utilities', ['ngCookies', 'ag.sdk.id']);
 
-skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
+sdkUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     return function (fn) {
         if ($rootScope.$$phase) {
             fn();
@@ -2708,7 +2695,7 @@ skdUtilitiesApp.factory('safeApply', ['$rootScope', function ($rootScope) {
     };
 }]);
 
-skdUtilitiesApp.directive('stopEvent', function () {
+sdkUtilitiesApp.directive('stopEvent', function () {
     return {
         restrict: 'A',
         link: function (scope, element, attr) {
@@ -2719,7 +2706,7 @@ skdUtilitiesApp.directive('stopEvent', function () {
     };
 });
 
-skdUtilitiesApp.factory('dataMapService', [function() {
+sdkUtilitiesApp.factory('dataMapService', [function() {
     return function(items, mapping, excludeId) {
         var mappedItems = [];
 
@@ -2760,7 +2747,7 @@ skdUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
+sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
     var _listId = generateUUID();
 
     return {
@@ -2884,7 +2871,25 @@ skdUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
     };
 }]);
 
-skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safeApply) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
+    return function (url, params) {
+        return $http(underscore.extend(underscore.isObject(params.resulttype) ? {
+            method: 'POST',
+            data: params.resulttype,
+            params: underscore.omit(params, 'resulttype')
+        } : {
+            method: 'GET',
+            params: params
+        }, {
+            url: url,
+            withCredentials: true
+        })).then(function (result) {
+            return result.data;
+        });
+    }
+}]);
+
+sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safeApply) {
     var _defer = function() {
         var deferred = $q.defer();
 
@@ -2974,7 +2979,7 @@ skdUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     }
 }]);
 
-skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($cookieStore, $window) {
+sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($cookieStore, $window) {
     return {
         setItem: function (key, value) {
             if ($window.localStorage) {
@@ -3000,7 +3005,7 @@ skdUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-skdUtilitiesApp.filter('round', ['$filter', function ($filter) {
+sdkUtilitiesApp.filter('round', ['$filter', function ($filter) {
     return function (value, precision) {
         precision = precision || 2;
 
@@ -13691,11 +13696,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
-                return (this.assetType ?
-                    (this.assetType == 'livestock' ?
-                        EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] :
-                        EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode]) :
-                    []);
+                return (this.assetType && EnterpriseBudgetBase.categoryOptions[this.assetType] ?
+                    (this.assetType == 'livestock'
+                        ? (this.baseAnimal ? EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] : [])
+                        : EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode])
+                    : []);
             });
 
             privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {
@@ -16344,7 +16349,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedPr
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = EnterpriseBudget.new(budget);
+                this.budget = EnterpriseBudget.new(underscore.omit(budget, ['followers', 'organization', 'region', 'user', 'userData']));
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 
