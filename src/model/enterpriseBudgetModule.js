@@ -25,6 +25,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     .value();
             });
 
+            privateProperty(this, 'hasSection', function (sectionCode, costStage) {
+                return !underscore.isEmpty(this.getSections(sectionCode, costStage));
+            });
+
             privateProperty(this, 'getSection', function (sectionCode, costStage) {
                 return underscore.first(this.getSections(sectionCode, costStage));
             });
@@ -1057,6 +1061,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             this.commodityType = attrs.commodityType;
             this.favoriteCount = attrs.favoriteCount || 0;
             this.favorited = attrs.favorited || false;
+            this.followers = attrs.followers || [];
             this.id = attrs.id || attrs.$id;
             this.internallyPublished = attrs.internallyPublished || false;
             this.name = attrs.name;

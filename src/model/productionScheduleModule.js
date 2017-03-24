@@ -1,11 +1,13 @@
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, underscore) {
+sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, underscore) {
         function ProductionGroup (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data.details = this.data.details || {};
+            Base.initializeObject(this.data, 'details', {});
+            Base.initializeObject(this.data.details, 'grossProfit', 0);
+            Base.initializeObject(this.data.details, 'size', 0);
 
             this.productionSchedules = [];
 
@@ -58,7 +60,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
 
             this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
-
 
             underscore.each(attrs.productionSchedules, this.addProductionSchedule, this);
         }
@@ -293,12 +294,12 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'computedPrope
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
-            this.data.details = this.data.details || {};
+            Base.initializeObject(this.data, 'details', {});
 
             computedProperty(this, 'costStage', function () {
                 return (this.type != 'horticulture' || this.data.details.assetAge != 0 ? this.defaultCostStage : underscore.first(ProductionSchedule.costStages));
