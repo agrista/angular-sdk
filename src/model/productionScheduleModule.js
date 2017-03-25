@@ -574,8 +574,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
                     productionCategory.value = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                     productionCategory.pricePerUnit = budgetCategory.pricePerUnit;
-                } else if (property === 'stock') {
-                    budgetCategory.stock = productionCategory.stock;
+                } else if (underscore.contains(['stock', 'stockPrice'], property)) {
+                    budgetCategory[property] = productionCategory[property];
                 } else if (property === 'schedule') {
                     budgetCategory.schedule = instance.budget.unshiftMonthlyArray(productionCategory.schedule);
                     budgetCategory.value = instance.reverseMaturityFactor(sectionCode, productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
@@ -640,6 +640,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
 
                                     if (group.code === 'INC-LSS') {
                                         productionCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
+                                        productionCategory.stockPrice = category.stockPrice || category.pricePerUnit;
                                     }
                                 } else {
                                     productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(section.code, category.quantity), 2);
