@@ -287,12 +287,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
 
                     if (livestockSalesGroup) {
                         underscore.each(livestockSalesGroup.productCategories, function (category) {
-                            if (category.breedingStock) {
+                            if (category.breedingStock && category.stock) {
                                 updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
                                     data: {
-                                        name: 'Breeding Stock',
+                                        name: category.name,
                                         liquidityType: 'medium-term',
-                                        assetValue: (category.stock || 0) * category.pricePerUnit
+                                        assetValue: (category.stock || 0) * (category.stockPrice || category.pricePerUnit || 0),
+                                        scheduleKey: schedule.scheduleKey
                                     }
                                 });
                             }
