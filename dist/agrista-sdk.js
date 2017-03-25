@@ -12170,12 +12170,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
 
                     if (livestockSalesGroup) {
                         underscore.each(livestockSalesGroup.productCategories, function (category) {
-                            if (category.breedingStock) {
+                            if (category.breedingStock && category.stock) {
                                 updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
                                     data: {
-                                        name: 'Breeding Stock',
+                                        name: category.name,
                                         liquidityType: 'medium-term',
-                                        assetValue: (category.stock || 0) * category.pricePerUnit
+                                        assetValue: (category.stock || 0) * (category.stockPrice || category.pricePerUnit || 0),
+                                        scheduleKey: schedule.scheduleKey
                                     }
                                 });
                             }
@@ -13729,7 +13730,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             privateProperty(this, 'addCategory', function (sectionCode, groupName, categoryCode, costStage) {
-                var category = this.getCategory(sectionCode, categoryCode, costStage);
+                var category = this.getCategory(sectionCode, categoryCode, costStage),
+                    conversionRates = this.getConversionRates();
 
                 if (underscore.isUndefined(category)) {
                     var group = this.addGroup(sectionCode, findGroupNameByCategory(this, sectionCode, groupName, categoryCode), costStage);
@@ -13744,22 +13746,20 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                         category.unit = 'Total'
                     }
 
+                    category.per = (this.assetType == 'livestock' ? 'LSU' : 'ha');
+
                     if (this.assetType == 'livestock') {
                         var conversionRate = this.getConversionRate(category.name);
 
                         if (conversionRate) {
-                            category = underscore.extend(category, {
-                                conversionRate: conversionRate,
-                                valuePerLSU: 0,
-                                per: 'LSU'
-                            });
+                            category.conversionRate = conversionRate;
                         }
 
-                        if (breedingStock[this.commodityType] && underscore.contains(breedingStock[this.commodityType], category.name)) {
+                        if (conversionRates && conversionRates[category.name]) {
                             category.breedingStock = true;
                         }
-                    } else {
-                        category.per = 'ha';
+
+                        category.valuePerLSU = 0;
                     }
 
                     group.productCategories.push(category);
@@ -14525,11 +14525,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 'Wether (2-tooth plus)': 0.16,
                 'Ram (2-tooth plus)': 0.23
             }
-        };
-
-        var breedingStock = {
-            'Cattle (Extensive)': ['Cow or heifer', 'Bull (3 years plus)'],
-            'Sheep (Extensive)': ['Ewe', 'Ram (2-tooth plus)']
         };
 
         EnterpriseBudgetBase.validates({
@@ -16581,8 +16576,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
                     budgetCategory.value = (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
                     productionCategory.value = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value * (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                     productionCategory.pricePerUnit = budgetCategory.pricePerUnit;
-                } else if (property === 'stock') {
-                    budgetCategory.stock = productionCategory.stock;
+                } else if (underscore.contains(['stock', 'stockPrice'], property)) {
+                    budgetCategory[property] = productionCategory[property];
                 } else if (property === 'schedule') {
                     budgetCategory.schedule = instance.budget.unshiftMonthlyArray(productionCategory.schedule);
                     budgetCategory.value = instance.reverseMaturityFactor(sectionCode, productionCategory.value / (instance.type == 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
@@ -16647,6 +16642,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
 
                                     if (group.code === 'INC-LSS') {
                                         productionCategory.stock = category.stock || (category.name == instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
+                                        productionCategory.stockPrice = category.stockPrice || category.pricePerUnit;
                                     }
                                 } else {
                                     productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(section.code, category.quantity), 2);

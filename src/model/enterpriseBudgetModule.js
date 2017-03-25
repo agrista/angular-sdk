@@ -144,7 +144,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             privateProperty(this, 'addCategory', function (sectionCode, groupName, categoryCode, costStage) {
-                var category = this.getCategory(sectionCode, categoryCode, costStage);
+                var category = this.getCategory(sectionCode, categoryCode, costStage),
+                    conversionRates = this.getConversionRates();
 
                 if (underscore.isUndefined(category)) {
                     var group = this.addGroup(sectionCode, findGroupNameByCategory(this, sectionCode, groupName, categoryCode), costStage);
@@ -159,22 +160,20 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                         category.unit = 'Total'
                     }
 
+                    category.per = (this.assetType == 'livestock' ? 'LSU' : 'ha');
+
                     if (this.assetType == 'livestock') {
                         var conversionRate = this.getConversionRate(category.name);
 
                         if (conversionRate) {
-                            category = underscore.extend(category, {
-                                conversionRate: conversionRate,
-                                valuePerLSU: 0,
-                                per: 'LSU'
-                            });
+                            category.conversionRate = conversionRate;
                         }
 
-                        if (breedingStock[this.commodityType] && underscore.contains(breedingStock[this.commodityType], category.name)) {
+                        if (conversionRates && conversionRates[category.name]) {
                             category.breedingStock = true;
                         }
-                    } else {
-                        category.per = 'ha';
+
+                        category.valuePerLSU = 0;
                     }
 
                     group.productCategories.push(category);
@@ -940,11 +939,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 'Wether (2-tooth plus)': 0.16,
                 'Ram (2-tooth plus)': 0.23
             }
-        };
-
-        var breedingStock = {
-            'Cattle (Extensive)': ['Cow or heifer', 'Bull (3 years plus)'],
-            'Sheep (Extensive)': ['Ewe', 'Ram (2-tooth plus)']
         };
 
         EnterpriseBudgetBase.validates({
