@@ -570,13 +570,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                 return reEvaluateProductionCredit(this, liabilities);
             });
 
-            function updateAssetStatementCategory(instance, category, itemName, asset) {
+            function updateAssetStatementCategory(instance, category, name, asset) {
                 instance.data.assetStatement[category] = instance.data.assetStatement[category] || [];
+                asset.data.assetValue = asset.data.assetValue || 0;
 
-                var index = underscore.findIndex(instance.data.assetStatement[category], function(statementObj) { return statementObj.name == itemName; }),
+                var index = underscore.findIndex(instance.data.assetStatement[category], function (statement) {
+                        return statement.name == name;
+                    }),
                     numberOfYears = Math.ceil(moment(instance.endDate, 'YYYY-MM-DD').diff(moment(instance.startDate, 'YYYY-MM-DD'), 'years', true)),
                     assetCategory = (index !== -1 ? instance.data.assetStatement[category].splice(index, 1)[0] : {
-                        name: itemName,
+                        name: name,
                         estimatedValue: 0,
                         currentRMV: 0,
                         yearlyRMV: Base.initializeArray(numberOfYears),
@@ -586,6 +589,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                 if (!underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey })) {
                     assetCategory.assets.push(typeof asset.asJSON == 'function' ? asset.asJSON() : asset);
                 }
+
                 assetCategory.estimatedValue += asset.data.assetValue || 0;
                 instance.data.assetStatement[category].push(assetCategory);
             }
@@ -751,7 +755,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                             }
                         }
 
-                        if (asset.data.assetValue && !(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
+                        if (!(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
                             switch(asset.type) {
                                 case 'cropland':
                                 case 'farmland':
