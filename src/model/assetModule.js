@@ -113,6 +113,11 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             });
 
             this.type = attrs.type;
+
+            if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
+                this.data.assetValuePerHa = (this.data.assetValue / this.size);
+                this.$dirty = true;
+            }
         }
 
         inheritModel(Asset, Model.Base);
