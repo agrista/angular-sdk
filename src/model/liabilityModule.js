@@ -71,6 +71,17 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
         }
 
+        function liabilityInMonth (instance, month) {
+            var startMonth = moment(instance.offsetDate, 'YYYY-MM-DD'),
+                currentMonth = moment(month, 'YYYY-MM-DD'),
+                appliedMonth = currentMonth.diff(startMonth, 'months');
+
+            var monthlyData = angular.copy(instance.data.monthly || []);
+            initializeMonthlyTotals(instance, monthlyData, appliedMonth);
+
+            return monthlyData[appliedMonth] || defaultMonth();
+        }
+
         function Liability (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -104,14 +115,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
              * Get liability/balance in month
              */
             privateProperty(this, 'liabilityInMonth', function (month) {
-                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
-                    currentMonth = moment(month, 'YYYY-MM-DD'),
-                    appliedMonth = currentMonth.diff(startMonth, 'months');
-
-                var monthlyData = angular.copy(this.data.monthly || []);
-                initializeMonthlyTotals(this, monthlyData, appliedMonth);
-
-                return monthlyData[appliedMonth] || defaultMonth();
+                return liabilityInMonth(this, month);
             });
 
             privateProperty(this, 'balanceInMonth', function (month) {
@@ -356,6 +360,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
         privateProperty(Liability, 'getTypeTitle', function (type) {
             return Liability.liabilityTypesWithOther[type] || '';
+        });
+
+        privateProperty(Liability, 'getLiabilityInMonth', function (liability, month) {
+            return liabilityInMonth(Liability.newCopy(liability), month);
         });
 
         readOnlyProperty(Liability, 'liabilityCategories', {

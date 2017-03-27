@@ -11007,7 +11007,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                         assets: []
                     });
 
-                if (!underscore.findWhere(assetCategory.assets, { assetKey: asset.assetKey })) {
+                if (!underscore.findWhere(assetCategory.assets, {assetKey: asset.assetKey})) {
                     assetCategory.assets.push(typeof asset.asJSON == 'function' ? asset.asJSON() : asset);
                 }
 
@@ -11017,19 +11017,20 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
 
             function updateLiabilityStatementCategory(instance, liability) {
                 var category = (liability.type == 'production-credit' ? 'medium-term' : (liability.type == 'rent' ? 'short-term' : liability.type)),
-                    itemName = (liability.type == 'rent' ? 'Rent overdue' : liability.name),
-                    index = underscore.findIndex(instance.data.liabilityStatement[category], function(statementObj) { return statementObj.name == itemName; }),
+                    name = (liability.type == 'production-credit' ? 'Production Credit' : (liability.type == 'rent' ? 'Rent overdue' : liability.name)),
+                    index = underscore.findIndex(instance.data.liabilityStatement[category], function(statement) {
+                        return statement.name == name;
+                    }),
                     numberOfYears = Math.ceil(moment(instance.endDate, 'YYYY-MM-DD').diff(moment(instance.startDate, 'YYYY-MM-DD'), 'years', true)),
                     liabilityCategory = (index !== -1 ? instance.data.liabilityStatement[category].splice(index, 1)[0] : {
-                        name: itemName,
+                        name: name,
                         currentValue: 0,
                         yearlyValues: Base.initializeArray(numberOfYears),
                         liabilities: []
                     });
 
                 instance.data.liabilityStatement[category] = instance.data.liabilityStatement[category] || [];
-
-                liabilityCategory.currentValue +=  liability.liabilityInMonth(instance.startDate).opening;
+                liabilityCategory.currentValue += liability.liabilityInMonth(instance.startDate).opening;
 
                 // Calculate total year-end values for liability category
                 for (var year = 0; year < numberOfYears; year++) {
@@ -11037,9 +11038,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                     liabilityCategory.yearlyValues[year] += liability.liabilityInMonth(yearEnd).closing;
                 }
 
-                if (!underscore.findWhere(liabilityCategory.liabilities, { uuid: liability.uuid })) {
+                if (!underscore.findWhere(liabilityCategory.liabilities, {uuid: liability.uuid})) {
                     liabilityCategory.liabilities.push(typeof liability.asJSON == 'function' ? liability.asJSON() : liability);
                 }
+
                 instance.data.liabilityStatement[category].push(liabilityCategory);
             }
 
@@ -14131,6 +14133,17 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
         }
 
+        function liabilityInMonth (instance, month) {
+            var startMonth = moment(instance.offsetDate, 'YYYY-MM-DD'),
+                currentMonth = moment(month, 'YYYY-MM-DD'),
+                appliedMonth = currentMonth.diff(startMonth, 'months');
+
+            var monthlyData = angular.copy(instance.data.monthly || []);
+            initializeMonthlyTotals(instance, monthlyData, appliedMonth);
+
+            return monthlyData[appliedMonth] || defaultMonth();
+        }
+
         function Liability (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -14164,14 +14177,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
              * Get liability/balance in month
              */
             privateProperty(this, 'liabilityInMonth', function (month) {
-                var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
-                    currentMonth = moment(month, 'YYYY-MM-DD'),
-                    appliedMonth = currentMonth.diff(startMonth, 'months');
-
-                var monthlyData = angular.copy(this.data.monthly || []);
-                initializeMonthlyTotals(this, monthlyData, appliedMonth);
-
-                return monthlyData[appliedMonth] || defaultMonth();
+                return liabilityInMonth(this, month);
             });
 
             privateProperty(this, 'balanceInMonth', function (month) {
@@ -14416,6 +14422,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
         privateProperty(Liability, 'getTypeTitle', function (type) {
             return Liability.liabilityTypesWithOther[type] || '';
+        });
+
+        privateProperty(Liability, 'getLiabilityInMonth', function (liability, month) {
+            return liabilityInMonth(Liability.newCopy(liability), month);
         });
 
         readOnlyProperty(Liability, 'liabilityCategories', {
