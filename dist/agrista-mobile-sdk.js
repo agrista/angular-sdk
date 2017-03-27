@@ -14142,7 +14142,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             computedProperty(this, 'paymentMonths', function () {
                 var paymentsPerYear = _frequency[this.frequency],
-                    firstPaymentMonth = moment(this.offsetDate, 'YYYY-MM-DD').month();
+                    firstPaymentMonth = (underscore.isUndefined(this.data.month) ? moment(this.offsetDate, 'YYYY-MM-DD').month() : this.data.month);
 
                 return underscore
                     .range(firstPaymentMonth, firstPaymentMonth + 12, (paymentsPerYear < 12 ? 12 / paymentsPerYear : 1))
@@ -14396,8 +14396,8 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             'bi-monthly': 'Bi-Monthly',
             'monthly': 'Monthly',
             'quarterly': 'Quarterly',
-            'bi-yearly': 'Bi-Yearly',
-            'yearly': 'Yearly'
+            'bi-yearly': 'Bi-Annually',
+            'yearly': 'Annually'
         });
 
         readOnlyProperty(Liability, 'frequencyTypesWithCustom', underscore.extend({
