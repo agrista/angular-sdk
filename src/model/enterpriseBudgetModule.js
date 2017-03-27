@@ -308,7 +308,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'INC-LSS-SRAM',
-                name: 'Ram',
+                name: 'Ram (2-tooth plus)',
                 unit: 'head'
             },
 
@@ -609,7 +609,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SRAM',
-                name: 'Ram',
+                name: 'Ram (2-tooth plus)',
                 unit: 'head'
             },
 
@@ -934,7 +934,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             Sheep: {
                 'Lamb': 0.08,
-                'Weaner Lambs': 0.11,
+                'Weaner lambs': 0.11,
                 'Ewe': 0.16,
                 'Wether (2-tooth plus)': 0.16,
                 'Ram (2-tooth plus)': 0.23
