@@ -159,6 +159,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Leek',
             'Lucerne',
             'Maize',
+            'Maize (Irrigated)',
             'Maize (White)',
             'Maize (Yellow)',
             'Oats',
@@ -169,13 +170,17 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Rice',
             'Rye',
             'Soya Bean',
+            'Soya Bean (Irrigated)',
             'Sunflower',
             'Sweet Corn',
             'Sweet Potato',
+            'Teff',
+            'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
             'Wheat',
-            'Wheat (Durum)'
+            'Wheat (Durum)',
+            'Wheat (Irrigated)'
         ];
         var _grazingCrops = [
             'Bahia-Notatum',

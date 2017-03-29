@@ -1123,6 +1123,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Maize',
                 'Maize (Fodder)',
                 'Maize (Green)',
+                'Maize (Irrigated)',
                 'Maize (Seed)',
                 'Maize (White)',
                 'Maize (Yellow)',
@@ -1132,12 +1133,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Rapeseed',
                 'Rye',
                 'Soya Bean',
+                'Soya Bean (Irrigated)',
                 'Sunflower',
                 'Sweet Corn',
                 'Teff',
+                'Teff (Irrigated)',
                 'Tobacco',
                 'Triticale',
-                'Wheat'
+                'Wheat',
+                'Wheat (Irrigated)'
             ],
             horticulture: [
                 'Almond',

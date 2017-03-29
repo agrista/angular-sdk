@@ -1893,6 +1893,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Leek',
             'Lucerne',
             'Maize',
+            'Maize (Irrigated)',
             'Maize (White)',
             'Maize (Yellow)',
             'Oats',
@@ -1903,13 +1904,17 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Rice',
             'Rye',
             'Soya Bean',
+            'Soya Bean (Irrigated)',
             'Sunflower',
             'Sweet Corn',
             'Sweet Potato',
+            'Teff',
+            'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
             'Wheat',
-            'Wheat (Durum)'],
+            'Wheat (Durum)',
+            'Wheat (Irrigated)'],
         'Grazing': _grazingCropTypes,
         'Horticulture (Perennial)': [
             'Almond',
@@ -4668,7 +4673,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['naturalSort', '
 
     // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
-        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Potato', 'Rapeseed', 'Rye', 'Soya Bean', 'Sunflower', 'Sweet Corn', 'Teff', 'Tobacco', 'Triticale', 'Wheat'],
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Irrigated)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Potato', 'Rapeseed', 'Rye', 'Soya Bean', 'Soya Bean (Irrigated)', 'Sunflower', 'Sweet Corn', 'Teff', 'Teff (Irrigated)', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Irrigated)'],
         horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Bush Vine)', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Onion', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prickly Pear', 'Prune', 'Pumpkin', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Rabbits', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
@@ -10042,6 +10047,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Leek',
             'Lucerne',
             'Maize',
+            'Maize (Irrigated)',
             'Maize (White)',
             'Maize (Yellow)',
             'Oats',
@@ -10052,13 +10058,17 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Rice',
             'Rye',
             'Soya Bean',
+            'Soya Bean (Irrigated)',
             'Sunflower',
             'Sweet Corn',
             'Sweet Potato',
+            'Teff',
+            'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
             'Wheat',
-            'Wheat (Durum)'
+            'Wheat (Durum)',
+            'Wheat (Irrigated)'
         ];
         var _grazingCrops = [
             'Bahia-Notatum',
@@ -13304,6 +13314,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Maize',
                 'Maize (Fodder)',
                 'Maize (Green)',
+                'Maize (Irrigated)',
                 'Maize (Seed)',
                 'Maize (White)',
                 'Maize (Yellow)',
@@ -13313,12 +13324,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Rapeseed',
                 'Rye',
                 'Soya Bean',
+                'Soya Bean (Irrigated)',
                 'Sunflower',
                 'Sweet Corn',
                 'Teff',
+                'Teff (Irrigated)',
                 'Tobacco',
                 'Triticale',
-                'Wheat'
+                'Wheat',
+                'Wheat (Irrigated)'
             ],
             horticulture: [
                 'Almond',
