@@ -11582,6 +11582,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Plum',
             'Pomegranate',
             'Protea',
+            'Pumpkin',
             'Raspberry',
             'Rooibos',
             'Strawberry',
