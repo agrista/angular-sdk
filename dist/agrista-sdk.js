@@ -3666,6 +3666,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
+            'Turnip',
             'Wheat',
             'Wheat (Durum)',
             'Wheat (Irrigated)'],
@@ -3769,7 +3770,6 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Sweet Melon',
             'Swiss Chard',
             'Tomato',
-            'Turnip',
             'Vetch (Common)',
             'Vetch (Hairy)',
             'Watermelon',
@@ -6426,7 +6426,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['naturalSort', '
 
     // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
-        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Irrigated)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Onion', 'Potato', 'Pumpkin', 'Rapeseed', 'Rye', 'Soya Bean', 'Soya Bean (Irrigated)', 'Sunflower', 'Sweet Corn', 'Teff', 'Teff (Irrigated)', 'Tobacco', 'Triticale', 'Wheat', 'Wheat (Irrigated)'],
+        crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Irrigated)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Onion', 'Potato', 'Pumpkin', 'Rapeseed', 'Rye', 'Soya Bean', 'Soya Bean (Irrigated)', 'Sunflower', 'Sweet Corn', 'Teff', 'Teff (Irrigated)', 'Tobacco', 'Triticale', 'Turnip', 'Wheat', 'Wheat (Irrigated)'],
         horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Bush Vine)', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prickly Pear', 'Prune', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Rabbits', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
@@ -7047,6 +7047,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Sweet Potato',
             'Tobacco',
             'Triticale',
+            'Turnip',
             'Wheat',
             'Wheat (Durum)'],
         'Grazing': [
@@ -7195,7 +7196,6 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Sweet Melon',
             'Swiss Chard',
             'Tomato',
-            'Turnip',
             'Vetch (Common)',
             'Vetch (Hairy)',
             'Walnut',
@@ -11560,6 +11560,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
+            'Turnip',
             'Wheat',
             'Wheat (Durum)',
             'Wheat (Irrigated)'
@@ -14828,6 +14829,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Teff (Irrigated)',
                 'Tobacco',
                 'Triticale',
+                'Turnip',
                 'Wheat',
                 'Wheat (Irrigated)'
             ],

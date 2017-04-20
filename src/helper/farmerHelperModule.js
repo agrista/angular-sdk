@@ -150,6 +150,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Sweet Potato',
             'Tobacco',
             'Triticale',
+            'Turnip',
             'Wheat',
             'Wheat (Durum)'],
         'Grazing': [
@@ -298,7 +299,6 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Sweet Melon',
             'Swiss Chard',
             'Tomato',
-            'Turnip',
             'Vetch (Common)',
             'Vetch (Hairy)',
             'Walnut',

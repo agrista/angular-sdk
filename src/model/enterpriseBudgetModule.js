@@ -1142,6 +1142,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Teff (Irrigated)',
                 'Tobacco',
                 'Triticale',
+                'Turnip',
                 'Wheat',
                 'Wheat (Irrigated)'
             ],
