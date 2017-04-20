@@ -180,6 +180,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
+            'Turnip',
             'Wheat',
             'Wheat (Durum)',
             'Wheat (Irrigated)'
