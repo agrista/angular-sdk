@@ -290,6 +290,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Rapeseed',
             'Raspberry',
             'Rooibos',
+            'Roses',
             'Squash',
             'Strawberry',
             'Sugarcane',
