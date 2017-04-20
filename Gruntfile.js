@@ -80,7 +80,8 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-sloc');
     grunt.loadNpmTasks('js-obfuscator');
 
-    grunt.registerTask('build', ['concat', 'uglify', 'jsObfuscate']);
+    grunt.registerTask('build', ['build-min', 'jsObfuscate']);
+    grunt.registerTask('build-min', ['concat', 'uglify']);
     grunt.registerTask('default', ['karma:single','build']);
     grunt.registerTask('unit-test', ['karma:single']);
 };
