@@ -11492,8 +11492,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                         month.inflow = instance.data.summary.monthly.totalIncome[index];
                         month.outflow = instance.data.summary.monthly.totalExpenditure[index];
                         month.balance = month.opening + month.inflow - month.outflow;
-                        month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
-                        month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
+                        month.interestPayable = (month.balance < 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0);
+                        month.interestReceivable = (month.balance > 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0);
                         month.closing = month.balance + month.interestPayable + month.interestReceivable;
 
                         instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
