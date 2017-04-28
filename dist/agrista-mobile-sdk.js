@@ -10634,8 +10634,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
 
             function extractGroupCategories(dataStore, schedule, code, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: code}),
-                // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'days');
+                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD');
 
                 if (section) {
                     var offset = scheduleStart.diff(startMonth, 'months');
@@ -10660,8 +10659,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
 
             function calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
-                // TODO: Fix time zone errors. Temporarily added one day to startDate to ensure it falls in the appropriate month.
-                    scheduleStart = moment(schedule.startDate).add(1, 'days');
+                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD');
 
                 if (section) {
                     var numberOfYears = Math.ceil(numberOfMonths / 12);
@@ -11494,8 +11492,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                         month.inflow = instance.data.summary.monthly.totalIncome[index];
                         month.outflow = instance.data.summary.monthly.totalExpenditure[index];
                         month.balance = month.opening + month.inflow - month.outflow;
-                        month.interestPayable = (month.balance < 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0 );
-                        month.interestReceivable = (month.balance > 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0 );
+                        month.interestPayable = (month.balance < 0 && instance.account.interestRateDebit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateDebit / 100 / 12) : 0);
+                        month.interestReceivable = (month.balance > 0 && instance.account.interestRateCredit ? ((month.opening + month.balance) / 2) * (instance.account.interestRateCredit / 100 / 12) : 0);
                         month.closing = month.balance + month.interestPayable + month.interestReceivable;
 
                         instance.data.summary.monthly.totalInterest[index] += -month.interestPayable;
