@@ -16153,7 +16153,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                     value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                         return total + (category[property] || 0);
                     }, 0) / productionCategory.categories.length, 2);
-                } else if (underscore.contains(['value', 'quantity'], property)) {
+                } else if (underscore.contains(['value', 'quantity', 'supply'], property)) {
                     value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                         return total + (category[property] || 0);
                     }, 0), 2);
@@ -16274,7 +16274,13 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                                     return total + category.quantity;
                                 }, 0), 2);
 
-                                productionCategory.pricePerUnit = roundValue(productionCategory.value / productionCategory.quantity, 2);
+                                if (productionCategory.supplyUnit) {
+                                    productionCategory.supply = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
+                                        return total + (category.supply || 0);
+                                    }, 0), 2);
+                                }
+
+                                productionCategory.pricePerUnit = roundValue(productionCategory.value / productionCategory.quantity / (productionCategory.supply || 1), 2);
 
                                 productionCategory.schedule = underscore.reduce(productionCategory.valuePerMonth, function (schedule, value, index) {
                                     schedule[index] = roundValue((100 / productionCategory.value) * value, 2);
