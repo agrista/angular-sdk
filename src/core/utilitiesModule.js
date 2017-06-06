@@ -320,7 +320,7 @@ sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-sdkUtilitiesApp.filter('round', ['$filter', function ($filter) {
+sdkUtilitiesApp.filter('round', [function () {
     return function (value, precision) {
         precision = precision || 2;
 
