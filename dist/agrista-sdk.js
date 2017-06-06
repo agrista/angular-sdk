@@ -17086,9 +17086,9 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
                     productionCategory.quantity = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.quantity * (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                     productionCategory.value = roundValue((productionCategory.supply || 1) * productionCategory.pricePerUnit * productionCategory.quantity, 2);
                 } else if (property === 'supply') {
-                    budgetCategory.supply = productionCategory.supply / (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
-                    budgetCategory.value = (budgetCategory.supply || 1) * (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
-                    productionCategory.supply = budgetCategory.supply * (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                    budgetCategory.supply = (productionCategory.supply || 0) / (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
+                    budgetCategory.value = (budgetCategory.supply || 0) * (budgetCategory.pricePerUnit || 0) * (budgetCategory.quantity || 0);
+                    productionCategory.supply = (budgetCategory.supply || 0) * (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
                     productionCategory.value = roundValue(instance.applyMaturityFactor(sectionCode, budgetCategory.value * (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
                 } else if (property === 'pricePerUnit') {
                     budgetCategory.pricePerUnit = productionCategory.pricePerUnit;
@@ -17158,8 +17158,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
                                     productionCategory.quantityPerLSU = category.quantity;
 
                                     if (group.code === 'INC-LSS') {
-                                        productionCategory.stock = category.stock || (category.name === instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0);
-                                        productionCategory.stockPrice = category.stockPrice || category.pricePerUnit;
+                                        productionCategory.stock = (!underscore.isUndefined(category.stock) ? category.stock : (category.name === instance.getRepresentativeAnimal() ? instance.data.details.herdSize : 0));
+                                        productionCategory.stockPrice = (!underscore.isUndefined(category.stockPrice) ? category.stockPrice : category.pricePerUnit);
                                     }
                                 } else {
                                     productionCategory.quantityPerHa = roundValue(instance.applyMaturityFactor(section.code, category.quantity), 2);
@@ -17176,7 +17176,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
                                     productionCategory.valuePerHa = roundValue(instance.applyMaturityFactor(section.code, category.value), 2);
                                 }
 
-                                if (productionCategory.supplyUnit && category.supply) {
+                                if (productionCategory.supplyUnit && !underscore.isUndefined(category.supply)) {
                                     productionCategory.supply = category.supply * (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize);
                                 }
 
@@ -17191,9 +17191,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
                                 });
 
                                 productionCategory.quantity = roundValue(instance.applyMaturityFactor(section.code, category.quantity * (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)), 2);
-                                productionCategory.value = roundValue((productionCategory.supply || 1) * (productionCategory.pricePerUnit || 0) * (productionCategory.quantity || 0), 2);
-
-                                instance.setCategory(section.code, group.name, underscore.pick(productionCategory, underscore.identity), section.costStage);
+                                productionCategory.value = roundValue((underscore.isUndefined(productionCategory.supply) ? 1 : productionCategory.supply) * (productionCategory.pricePerUnit || 0) * (productionCategory.quantity || 0), 2);
                             });
 
                             // Group totals
