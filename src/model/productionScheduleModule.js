@@ -90,24 +90,28 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                 });
 
                 if (property !== 'schedule') {
-                    var offset = productionCategory[property] / value,
+                    var ratio = (value !== 0 ? (productionCategory[property] / value) : (productionCategory[property] / affectedProductionSchedules.length)),
                         remainder = productionCategory[property];
 
                     underscore.each(affectedProductionSchedules, function (productionSchedule, index, list) {
                         var category = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
 
-                        if (underscore.isFinite(offset) && category[property] !== 0) {
-                            category[property] = category[property] * offset;
+                        if (value === 0) {
+                            category[property] = ratio;
+                        } else if (index === list.length - 1) {
+                            category[property] = remainder;
+                        } else if (!underscore.isUndefined(category[property])) {
+                            category[property] = category[property] * ratio;
                         } else {
-                            category[property] = (index < list.length - 1 ? category[property] / list.length : remainder);
+                            category[property] = (index < list.length - 1 ? (category[property] || 0) / list.length : remainder);
                         }
 
-                        remainder -= productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property);
+                        remainder = roundValue(remainder - productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property), 2);
                     });
                 } else if (property === 'schedule') {
                     var valuePerMonth = underscore.reduce(productionCategory.schedule, function (valuePerMonth, allocation, index) {
                         //valuePerMonth[index] = roundValue((productionCategory.value / 100) * allocation, 2);
-                        valuePerMonth[index] = productionCategory.value * (allocation / 100);
+                        valuePerMonth[index] = (productionCategory.value || 0) * (allocation / 100);
 
                         return valuePerMonth;
                     }, initializeArray(instance.numberOfMonths));
@@ -185,7 +189,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                                 }, productionCategory.valuePerMonth || initializeArray(instance.numberOfMonths));
 
                                 productionCategory.value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                                    return total + category.value;
+                                    return total + (category.value || 0);
                                 }, 0), 2);
 
                                 productionCategory.quantityPerMonth = underscore.reduce(category.quantityPerMonth, function (quantityPerMonth, value, index) {
@@ -195,7 +199,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                                 }, productionCategory.quantityPerMonth || initializeArray(instance.numberOfMonths));
 
                                 productionCategory.quantity = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                                    return total + category.quantity;
+                                    return total + (category.quantity || 0);
                                 }, 0), 2);
 
                                 if (productionCategory.supplyUnit) {
@@ -222,7 +226,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                                     }, 0) / productionCategory.categories.length, 2);
                                 } else {
                                     productionCategory.quantityPerHa = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                                        return total + category.quantityPerHa;
+                                        return total + (category.quantityPerHa || 0);
                                     }, 0) / productionCategory.categories.length, 2);
                                 }
 
