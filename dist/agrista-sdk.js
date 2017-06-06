@@ -12168,6 +12168,43 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 return result;
             }
 
+            function calculateEnterpriseCashFlowComposition (instance, schedules) {
+                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                    numberOfMonths = instance.numberOfMonths,
+                    cashFlowStartMonth = moment(startMonth).subtract(1, 'y'),
+                    cashFlowNumberOfMonths = numberOfMonths + 24;
+
+                var productionIncome = {},
+                    productionExpenditure = {};
+
+                var result = {
+                    income: {},
+                    expenditure: {}
+                };
+
+                angular.forEach(schedules, function (productionSchedule) {
+                    var schedule = ProductionSchedule.new(productionSchedule),
+                        commodity = schedule.data.details.commodity;
+
+                    Base.initializeObject(productionExpenditure, commodity, {});
+                    extractGroupCategories(productionExpenditure[commodity], schedule, 'EXP', cashFlowStartMonth, cashFlowNumberOfMonths, true);
+                });
+
+                result.expenditure = underscore.mapObject(productionExpenditure, function (expenditure) {
+                    return underscore.mapObject(expenditure, function (values, category) {
+                        var enterpriseCategoryTotal = sumCollectionValues(values),
+                            cashFlowCategoryTotal = sumCollectionValues(instance.data.cashFlowExpenditure[category]),
+                            diff = enterpriseCategoryTotal / cashFlowCategoryTotal;
+
+                        return underscore.map(instance.data.cashFlowExpenditure[category], function (value) {
+                            return roundValue(value * diff, 2);
+                        });
+                    });
+                });
+
+                return result;
+            }
+
             function addProductionScheduleToCashFlow (instance, schedule) {
                 var scheduleCashFlow = calculateCashFlow(instance, [schedule]);
 
@@ -12412,15 +12449,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     numberOfMonths = instance.numberOfMonths;
 
                 instance.data.enterpriseProductionExpenditure = {};
-                instance.data.productionIncome = {};
-                instance.data.productionExpenditure = {};
                 instance.data.productionIncomeComposition = [];
 
                 angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
-
-                    Base.initializeObject(instance.data.enterpriseProductionExpenditure, schedule.data.details.commodity, {});
-                    extractGroupCategories(instance.data.enterpriseProductionExpenditure[schedule.data.details.commodity], schedule, 'EXP', startMonth, numberOfMonths);
 
                     calculateIncomeComposition(instance, schedule, startMonth, numberOfMonths);
                 });
@@ -12429,6 +12461,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     underscore.extend(instance.data, calculateCashFlow(instance, instance.models.productionSchedules));
                 }
 
+                // Production Income/Expenditure
                 instance.data.productionIncome = underscore.mapObject(instance.data.cashFlowIncome, function (values) {
                     return values.slice(12, 12 + numberOfMonths);
                 });
@@ -12439,6 +12472,15 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                 instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
                 instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
+
+                // Enterprise Production Expenditure
+                var enterpriseCashFlowComposition = calculateEnterpriseCashFlowComposition(instance, instance.models.productionSchedules);
+
+                instance.data.enterpriseProductionExpenditure = underscore.mapObject(enterpriseCashFlowComposition.expenditure, function (expenditure) {
+                    return underscore.mapObject(expenditure, function (values) {
+                        return values.slice(12, 12 + numberOfMonths);
+                    });
+                });
             }
 
             /**
