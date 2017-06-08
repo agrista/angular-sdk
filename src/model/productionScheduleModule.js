@@ -73,7 +73,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                 value = 0;
 
             if (productionCategory && !underscore.isUndefined(productionCategory[property])) {
-                if (underscore.contains(['valuePerLSU', 'pricePerUnit', 'quantityPerLSU', 'quantityPerHa'], property)) {
+                if (underscore.contains(['valuePerLSU', 'quantityPerLSU', 'quantityPerHa'], property)) {
                     value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                         return total + (category[property] || 0);
                     }, 0) / productionCategory.categories.length, 2);
@@ -81,6 +81,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                     value = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                         return total + (category[property] || 0);
                     }, 0), 2);
+                } else if (property === 'pricePerUnit') {
+                    value = roundValue(productionCategory.value / productionCategory.quantity / (productionCategory.supply || 1), 2);
                 } else if (property === 'valuePerHa') {
                     value = roundValue(productionCategory.value / instance.allocatedSize, 2);
                 }
@@ -90,27 +92,24 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                 });
 
                 if (property !== 'schedule') {
-                    var ratio = (value !== 0 ? (productionCategory[property] / value) : (productionCategory[property] / affectedProductionSchedules.length)),
+                    var ratio = productionCategory[property] / value,
                         remainder = productionCategory[property];
 
-                    underscore.each(affectedProductionSchedules, function (productionSchedule, index, list) {
+                    underscore.each(affectedProductionSchedules, function (productionSchedule, index) {
                         var category = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
 
                         if (value === 0) {
-                            category[property] = ratio;
-                        } else if (index === list.length - 1) {
-                            category[property] = remainder;
-                        } else if (!underscore.isUndefined(category[property])) {
+                            category[property] = (productionCategory[property] / affectedProductionSchedules.length);
+                        } else if (underscore.isFinite(ratio) && !underscore.isUndefined(category[property])) {
                             category[property] = category[property] * ratio;
                         } else {
-                            category[property] = (index < list.length - 1 ? (category[property] || 0) / list.length : remainder);
+                            category[property] = (index < affectedProductionSchedules.length - 1 ? category[property] / affectedProductionSchedules.length : remainder);
                         }
 
                         remainder = roundValue(remainder - productionSchedule.adjustCategory(sectionCode, categoryCode, costStage, property), 2);
                     });
                 } else if (property === 'schedule') {
                     var valuePerMonth = underscore.reduce(productionCategory.schedule, function (valuePerMonth, allocation, index) {
-                        //valuePerMonth[index] = roundValue((productionCategory.value / 100) * allocation, 2);
                         valuePerMonth[index] = (productionCategory.value || 0) * (allocation / 100);
 
                         return valuePerMonth;
@@ -128,9 +127,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                                 category = productionSchedule.getCategory(sectionCode, categoryCode, costStage);
 
                             if (index >= startOffset && index < startOffset + category.valuePerMonth.length) {
-                                //category.valuePerMonth[index - startOffset] = (value === 0 ?
-                                //    roundValue(valuePerMonth[index] / categoryCount, 2) :
-                                //    roundValue(valuePerMonth[index] * (category.valuePerMonth[index - startOffset] / value), 2));
                                 category.valuePerMonth[index - startOffset] = (value === 0 ?
                                     valuePerMonth[index] / categoryCount :
                                     valuePerMonth[index] * (category.valuePerMonth[index - startOffset] / value));
