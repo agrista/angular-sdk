@@ -549,7 +549,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     return values.slice(12, 12 + numberOfMonths);
                 });
 
-                instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
                 instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
 
                 // Enterprise Production Expenditure
@@ -682,7 +681,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     }
                 });
 
-                instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
                 instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
             }
 
@@ -784,7 +782,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 var filteredLiabilities = underscore.where(liabilities, {type: 'production-credit'});
 
                 instance.data.unallocatedEnterpriseProductionExpenditure = angular.copy(instance.data.enterpriseProductionExpenditure);
-                instance.data.unallocatedProductionIncome = angular.copy(instance.data.productionIncome);
                 instance.data.unallocatedProductionExpenditure = angular.copy(instance.data.productionExpenditure);
 
                 underscore.each(filteredLiabilities, function (liability) {
@@ -1172,22 +1169,32 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
             function calculateMonthlyLiabilityPropertyTotal (instance, liabilityTypes, property, startMonth, endMonth) {
                 var liabilities = underscore.filter(instance.models.liabilities, function(liability) {
-                        if (!liabilityTypes || liabilityTypes.length === 0) return true;
+                    if (!liabilityTypes || liabilityTypes.length === 0) return true;
 
-                        return liabilityTypes.indexOf(liability.type) !== -1;
-                    });
+                    return liabilityTypes.indexOf(liability.type) !== -1;
+                });
 
                 if (liabilities.length === 0) return Base.initializeArray(instance.numberOfMonths);
 
                 return underscore.chain(liabilities)
                     .map(function(liability) {
-                        var l = new Liability(liability).liabilityInRange(startMonth, endMonth);
-                        return underscore.pluck(l, property);
+                        var range = new Liability(liability).liabilityInRange(startMonth, endMonth);
+
+                        return underscore.chain(range)
+                            .pluck(property)
+                            .map(function (propertyValue) {
+                                return (underscore.isNumber(propertyValue) ? propertyValue : underscore.reduce(propertyValue, function (total, value) {
+                                    return total + (value || 0);
+                                }, 0))
+                            })
+                            .value();
                     })
                     .unzip()
                     .map(function(monthArray) {
-                            return underscore.reduce(monthArray, function(total, value) { return total + (value || 0); }, 0);
-                        })
+                        return underscore.reduce(monthArray, function(total, value) {
+                            return total + (value || 0);
+                        }, 0);
+                    })
                     .value();
             }
 
@@ -1217,11 +1224,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 instance.data.summary = {};
                 instance.data.summary.monthly = {
                     // Income
-                    unallocatedProductionIncome: calculateMonthlySectionsTotal([instance.data.unallocatedProductionIncome], Base.initializeArray(numberOfMonths)),
                     productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], Base.initializeArray(numberOfMonths)),
                     capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], Base.initializeArray(numberOfMonths)),
                     otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
-                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.unallocatedProductionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                    totalIncomeAfterRepayments: subtractArrayValues(calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)), calculateMonthlyLiabilityPropertyTotal(instance, ['production-credit'], 'repayment', startMonth, endMonth)),
 
                     // Expenses
                     unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], Base.initializeArray(numberOfMonths)),
@@ -1248,11 +1255,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                 instance.data.summary.yearly = {
                     // Income
-                    unallocatedProductionIncome: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionIncome, 2)],
                     productionIncome: [calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 2)],
                     capitalIncome: [calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 2)],
                     otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
                     totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
+                    totalIncomeAfterRepayments: [calculateYearlyTotal(instance.data.summary.monthly.totalIncomeAfterRepayments, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncomeAfterRepayments, 2)],
 
                     // Expenses
                     unallocatedProductionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 2)],
@@ -1285,8 +1292,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     depreciation: instance.data.assetStatement.total.yearlyDep || Base.initializeArray(2)
                 };
 
-                instance.data.summary.yearly.productionExpenditurePlusDepreciation = addArrayValues(instance.data.summary.yearly.productionExpenditure, instance.data.summary.yearly.depreciation);
-                instance.data.summary.yearly.netFarmIncome = subtractArrayValues(instance.data.summary.yearly.productionIncome, instance.data.summary.yearly.productionExpenditurePlusDepreciation);
+                instance.data.summary.yearly.productionGrossMargin = subtractArrayValues(instance.data.summary.yearly.productionIncome, instance.data.summary.yearly.productionExpenditure);
+                instance.data.summary.yearly.productionCost = addArrayValues(instance.data.summary.yearly.productionExpenditure, instance.data.summary.yearly.depreciation);
+                instance.data.summary.yearly.netFarmIncome = subtractArrayValues(instance.data.summary.yearly.productionIncome, instance.data.summary.yearly.productionCost);
                 instance.data.summary.yearly.farmingProfitOrLoss = subtractArrayValues(instance.data.summary.yearly.netFarmIncome, addArrayValues(instance.data.summary.yearly.totalRent, instance.data.summary.yearly.totalInterest));
             }
 
@@ -1377,9 +1385,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     interestCover: calculateRatio(instance, 'netFarmIncome', 'totalInterest'),
                     inputOutput: calculateRatio(instance, 'productionIncome', ['productionExpenditure', 'productionCreditInterest', 'primaryAccountInterest']),
                     productionCost: calculateRatio(instance, 'productionExpenditure', 'productionIncome'),
-                    cashFlowBank: calculateRatio(instance, ['unallocatedProductionIncome', 'capitalIncome', 'otherIncome'], ['unallocatedProductionExpenditure', 'primaryAccountInterest']),
+                    cashFlowBank: calculateRatio(instance, 'totalIncome', ['capitalExpenditure', 'unallocatedProductionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
                     //TODO: add payments to co-ops with crop deliveries to cashFlowFarming denominator
-                    cashFlowFarming: calculateRatio(instance, ['productionIncome', 'capitalIncome', 'otherIncome'], ['totalExpenditure', 'primaryAccountInterest']),
+                    cashFlowFarming: calculateRatio(instance, 'totalIncome', ['capitalExpenditure', 'productionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
                     debtToTurnover: calculateRatio(instance, 'totalLiabilities', ['productionIncome', 'otherIncome']),
                     interestToTurnover: calculateRatio(instance, 'totalInterest', ['productionIncome', 'otherIncome']),
                     //TODO: change denominator to total asset value used for farming
