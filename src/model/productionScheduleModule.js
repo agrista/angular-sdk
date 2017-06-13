@@ -198,13 +198,17 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
                                     return quantityPerMonth;
                                 }, productionCategory.quantityPerMonth || initializeArray(instance.numberOfMonths));
 
-                                productionCategory.quantity = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
-                                    return total + (category.quantity || 0);
-                                }, 0), 2);
-
                                 if (productionCategory.supplyUnit) {
                                     productionCategory.supply = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
                                         return total + (category.supply || 0);
+                                    }, 0), 2);
+
+                                    productionCategory.quantity = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
+                                        return total + (category.quantity || 0);
+                                    }, 0) / productionCategory.categories.length, 2);
+                                } else {
+                                    productionCategory.quantity = roundValue(underscore.reduce(productionCategory.categories, function (total, category) {
+                                        return total + (category.quantity || 0);
                                     }, 0), 2);
                                 }
 
