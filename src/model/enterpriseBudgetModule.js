@@ -1431,7 +1431,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                                 return total + (value || 0);
                             }, 0);
 
-                        category.value = roundValue(((category.supply || 1) * (category.quantity || 0) * (category.pricePerUnit || 0)) * (scheduleTotalAllocation / 100));
+                        category.value = roundValue(((underscore.isUndefined(category.supply) ? 1 : category.supply) * (category.quantity || 0) * (category.pricePerUnit || 0)) * (scheduleTotalAllocation / 100));
 
                         category.valuePerMonth = underscore.map(schedule, function (allocation) {
                             return roundValue(category.value * (allocation / 100));
