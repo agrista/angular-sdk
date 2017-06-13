@@ -1505,6 +1505,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 return moment(this.endDate, 'YYYY-MM-DD').diff(moment(this.startDate, 'YYYY-MM-DD'), 'months');
             });
 
+            computedProperty(this, 'numberOfYears', function () {
+                return Math.ceil(moment(this.endDate, 'YYYY-MM-DD').diff(moment(this.startDate, 'YYYY-MM-DD'), 'years', true));
+            });
+
             computedProperty(this, 'models', function () {
                 return this.data.models;
             });
@@ -1528,6 +1532,37 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             'capital': 'Capital',
             'production': 'Production',
             'other': 'Other'
+        });
+
+        readOnlyProperty(BusinessPlan, 'otherExpenseSubtypes', {
+            'overhead': 'Overhead',
+            'private': 'Private',
+            'other': 'Other'
+        });
+
+        readOnlyProperty(BusinessPlan, 'subtypeExpenses', {
+            'overhead': ['Accident Insurance',
+                'Administration',
+                'Accounting Fees',
+                'Bank Charges',
+                'Crop Insurance',
+                'Fuel',
+                'Government Levy',
+                'Licenses & Membership Fees',
+                'Long term insurance & Policies',
+                'Office Costs',
+                'Property Rates',
+                'Protective Clothing',
+                'Rations',
+                'Repairs & Maintenance',
+                'Staff Salaries & Wages',
+                'Security',
+                'Short-term Insurance',
+                'Unemployment Insurance'],
+            'private': ['Drawings',
+                'Medical',
+                'Life insurance',
+                'University / School fees']
         });
 
         BusinessPlan.validates({
