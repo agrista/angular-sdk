@@ -879,7 +879,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                                     rmv *= adjustmentFactor;
 
-                                    item.yearlyDep[year] = rmv * (underscore.contains(['Vehicles', 'Machinery & Equipment'], item.name) ? (instance.data.account.depreciationRate || 0) / 100 : 0);
+                                    item.yearlyDep[year] = rmv * (item.name === 'Vehicles, Machinery & Equipment' ? (instance.data.account.depreciationRate || 0) / 100 : 0);
                                     item.yearlyRMV[year] = rmv - item.yearlyDep[year];
                                 }
                             }
@@ -953,31 +953,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                         // VME
                         if (asset.type === 'vme') {
-                            if (asset.data.type === 'Vehicles') {
-                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles', numberOfMonths);
+                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Vehicles'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
-                                }
+                                instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                            }
 
-                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicles', numberOfMonths);
+                            if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'capitalIncome', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                                    instance.data.capitalIncome['Vehicles'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
-                                }
-
-                            } else if (asset.data.type === 'Machinery') {
-                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment', numberOfMonths);
-
-                                    instance.data.capitalExpenditure['Machinery & Equipment'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
-                                }
-
-                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment', numberOfMonths);
-
-                                    instance.data.capitalIncome['Machinery & Equipment'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
-                                }
+                                instance.data.capitalIncome['Vehicles, Machinery & Equipment'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         } else if (asset.type === 'improvement') {
                             if (asset.data.assetValue && constructionDate && constructionDate.isBetween(startMonth, endMonth)) {
@@ -1028,11 +1013,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                     updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', asset);
                                     break;
                                 case 'vme':
-                                    if (asset.data.type === 'Vehicles') {
-                                        updateAssetStatementCategory(instance, 'medium-term', 'Vehicles', asset);
-                                    } else if (asset.data.type === 'Machinery') {
-                                        updateAssetStatementCategory(instance, 'medium-term', 'Machinery & Equipment', asset);
-                                    }
+                                    updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
                                     break;
                                 case 'other':
                                     updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.category, asset);
