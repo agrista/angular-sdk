@@ -12777,7 +12777,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                                 return total + (value || 0);
                                             }, 0);
 
-                                            rmv = (['+', '-'].indexOf(adjustment.operation) !== -1 ? eval(rmv + adjustment.operation + value) : rmv);
+                                            rmv = Math.max(0, (['+', '-'].indexOf(adjustment.operation) !== -1 ? eval(rmv + adjustment.operation + value) : rmv));
                                         }
                                     });
 
