@@ -77,9 +77,9 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             _constructor.include(Storable);
         }
 
-        privateProperty(Base, 'initializeArray', function (length) {
+        privateProperty(Base, 'initializeArray', function (length, defaultValue) {
             return underscore.range(length).map(function () {
-                return 0;
+                return defaultValue || 0;
             });
         });
 
