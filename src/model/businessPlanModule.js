@@ -850,7 +850,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 var ignoredItems = ['Bank Capital', 'Bank Overdraft'],
                     adjustments = [{
                         operation: '-',
-                        category: 'capitalIncome'
+                        category: 'assetRMV'
                     }, {
                         operation: '+',
                         category: 'capitalExpenditure'
@@ -879,7 +879,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                                     rmv *= adjustmentFactor;
 
-                                    item.yearlyDep[year] = rmv * (underscore.contains(['Vehicles', 'Machinery & Equipment'], item.name) ? (instance.data.account.depreciationRate || 0) / 100 : 0);
+                                    item.yearlyDep[year] = rmv * (item.name === 'Vehicles, Machinery & Equipment' ? (instance.data.account.depreciationRate || 0) / 100 : 0);
                                     item.yearlyRMV[year] = rmv - item.yearlyDep[year];
                                 }
                             }
@@ -933,6 +933,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 instance.data.capitalIncome = {};
                 instance.data.capitalExpenditure = {};
                 instance.data.debtRedemption = {};
+                instance.data.assetRMV = {};
                 instance.data.assetStatement = {};
                 instance.data.liabilityStatement = {};
 
@@ -953,31 +954,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                         // VME
                         if (asset.type === 'vme') {
-                            if (asset.data.type === 'Vehicles') {
-                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles', numberOfMonths);
+                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Vehicles'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
-                                }
+                                instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                            }
 
-                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicles', numberOfMonths);
+                            if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'assetRMV', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                                initializeCategoryValues(instance, 'capitalIncome', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                                    instance.data.capitalIncome['Vehicles'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
-                                }
-
-                            } else if (asset.data.type === 'Machinery') {
-                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Machinery & Equipment', numberOfMonths);
-
-                                    instance.data.capitalExpenditure['Machinery & Equipment'][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
-                                }
-
-                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Machinery & Equipment', numberOfMonths);
-
-                                    instance.data.capitalIncome['Machinery & Equipment'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
-                                }
+                                instance.data.assetRMV['Vehicles, Machinery & Equipment'][soldDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                                instance.data.capitalIncome['Vehicles, Machinery & Equipment'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         } else if (asset.type === 'improvement') {
                             if (asset.data.assetValue && constructionDate && constructionDate.isBetween(startMonth, endMonth)) {
@@ -993,8 +981,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                             }
 
                             if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'assetRMV', 'Land', numberOfMonths);
                                 initializeCategoryValues(instance, 'capitalIncome', 'Land', numberOfMonths);
 
+                                instance.data.assetRMV['Land'][soldDate.diff(startMonth, 'months')] += asset.data.assetValue;
                                 instance.data.capitalIncome['Land'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         } else if (asset.type === 'other') {
@@ -1005,8 +995,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                             }
 
                             if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'assetRMV', asset.data.category, numberOfMonths);
                                 initializeCategoryValues(instance, 'capitalIncome', asset.data.category, numberOfMonths);
 
+                                instance.data.assetRMV[asset.data.category][soldDate.diff(startMonth, 'months')] += asset.data.assetValue;
                                 instance.data.capitalIncome[asset.data.category][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         }
@@ -1028,11 +1020,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                     updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', asset);
                                     break;
                                 case 'vme':
-                                    if (asset.data.type === 'Vehicles') {
-                                        updateAssetStatementCategory(instance, 'medium-term', 'Vehicles', asset);
-                                    } else if (asset.data.type === 'Machinery') {
-                                        updateAssetStatementCategory(instance, 'medium-term', 'Machinery & Equipment', asset);
-                                    }
+                                    updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
                                     break;
                                 case 'other':
                                     updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.category, asset);
@@ -1050,9 +1038,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                     liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
                                 if (asset.type === 'farmland' && liability.type !== 'rent' && moment(liability.startDate, 'YYYY-MM-DD').isBetween(startMonth, endMonth)) {
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Land Purchases', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Land', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Land Purchases'][moment(liability.startDate, 'YYYY-MM-DD').diff(startMonth, 'months')] += liability.openingBalance;
+                                    instance.data.capitalExpenditure['Land'][moment(liability.startDate, 'YYYY-MM-DD').diff(startMonth, 'months')] += liability.openingBalance;
                                 }
 
                                 initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
@@ -1109,7 +1097,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 }, 0);
             }
 
-            function calculateYearlyEndLiabilityBalance(monthlyTotals, year) {
+            function calculateEndOfYearValue(monthlyTotals, year) {
                 var yearSlice = monthlyTotals.slice((year - 1) * 12, year * 12);
                 return yearSlice[yearSlice.length - 1];
             }
@@ -1141,6 +1129,36 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                             total.yearlyValues = addArrayValues(total.yearlyValues, item.yearlyValues);
                         }
                         return total;
+                    }, result);
+                });
+
+                return result;
+            }
+
+            function calculateMonthlyAssetTotal (instance, types) {
+                types = (underscore.isArray(types) ? types : [types]);
+
+                var ignoredItems = ['Bank Capital', 'Bank Overdraft'],
+                    result = Base.initializeArray(instance.numberOfMonths),
+                    depreciationRate = instance.data.account.depreciationRate || 0,
+                    numberOfMonths = instance.numberOfMonths,
+                    numberOfYears = instance.numberOfYears;
+
+                underscore.each(types, function (type) {
+                    result = underscore.reduce(instance.data.assetStatement[type], function (monthlyTotal, item) {
+                        if (!underscore.contains(ignoredItems, item.name)) {
+                            var assetRMV = instance.data.assetRMV[item.name] || Base.initializeArray(instance.numberOfMonths),
+                                capitalExpenditure = instance.data.capitalExpenditure[item.name] || Base.initializeArray(instance.numberOfMonths);
+
+                            monthlyTotal = underscore.map(monthlyTotal, function (value, index) {
+                                return (value + item.currentRMV
+                                    - sumCollectionValues(assetRMV.slice(0, index))
+                                    + sumCollectionValues(capitalExpenditure.slice(0, index)))
+                                    * (item.name === 'Vehicles, Machinery & Equipment' ? 1 - (((depreciationRate * numberOfYears) / 100 / numberOfMonths) * (index + 1)) : 1);
+                            });
+                        }
+
+                        return monthlyTotal;
                     }, result);
                 });
 
@@ -1208,7 +1226,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 recalculateIncomeExpensesSummary(instance, startMonth, endMonth, numberOfMonths);
                 recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths);
                 reEvaluateAssetsAndLiabilities(instance);
-                recalculateAssetsLiabilitiesInterestSummary(instance, startMonth, endMonth, numberOfMonths);
+                recalculateAssetsLiabilitiesInterestSummary(instance, startMonth, endMonth);
 
                 instance.data.summary.yearly.productionGrossMargin = subtractArrayValues(instance.data.summary.yearly.productionIncome, instance.data.summary.yearly.productionExpenditure);
                 instance.data.summary.yearly.productionCost = addArrayValues(instance.data.summary.yearly.productionExpenditure, instance.data.summary.yearly.depreciation);
@@ -1252,7 +1270,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 });
             }
 
-            function recalculateAssetsLiabilitiesInterestSummary (instance, startMonth, endMonth, numberOfMonths) {
+            function recalculateAssetsLiabilitiesInterestSummary (instance, startMonth, endMonth) {
                 underscore.extend(instance.data.summary.monthly, {
                     // Interest
                     productionCreditInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'interest', startMonth, endMonth),
@@ -1265,7 +1283,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     mediumLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'closing', startMonth, endMonth),
                     longLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'closing', startMonth, endMonth),
                     totalLiabilities: addArrayValues(calculateMonthlyLiabilityPropertyTotal(instance, [], 'closing', startMonth, endMonth), instance.data.summary.monthly.primaryAccountLiability),
-                    totalRent: calculateMonthlyLiabilityPropertyTotal(instance, ['rent'], 'rent', startMonth, endMonth)
+                    totalRent: calculateMonthlyLiabilityPropertyTotal(instance, ['rent'], 'rent', startMonth, endMonth),
+
+                    // Assets
+                    currentAssets: addArrayValues(calculateMonthlyAssetTotal(instance, ['short-term']), instance.data.summary.monthly.primaryAccountCapital),
+                    movableAssets: calculateMonthlyAssetTotal(instance, ['medium-term']),
+                    fixedAssets: calculateMonthlyAssetTotal(instance, ['long-term']),
+                    totalAssets: addArrayValues(calculateMonthlyAssetTotal(instance, ['short-term', 'medium-term', 'long-term']), instance.data.summary.monthly.primaryAccountCapital)
                 });
 
                 underscore.extend(instance.data.summary.yearly, {
@@ -1279,7 +1303,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
                     mediumLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'medium-term'),
                     longLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'long-term'),
-                    totalLiabilities: [calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 1), calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.totalLiabilities, 2)],
+                    totalLiabilities: [calculateEndOfYearValue(instance.data.summary.monthly.totalLiabilities, 1), calculateEndOfYearValue(instance.data.summary.monthly.totalLiabilities, 2)],
                     totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
 
                     // Assets
@@ -1308,6 +1332,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     };
 
                 instance.data.summary.monthly.primaryAccountInterest = Base.initializeArray(numberOfMonths);
+                instance.data.summary.monthly.primaryAccountCapital = Base.initializeArray(numberOfMonths);
                 instance.data.summary.monthly.primaryAccountLiability = Base.initializeArray(numberOfMonths);
 
                 instance.account.monthly = underscore.chain(underscore.range(numberOfMonths))
@@ -1324,6 +1349,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         month.closing = month.balance + month.interestPayable + month.interestReceivable;
 
                         instance.data.summary.monthly.primaryAccountInterest[index] += -month.interestPayable;
+                        instance.data.summary.monthly.primaryAccountCapital[index] += Math.abs(Math.max(0, month.closing));
                         instance.data.summary.monthly.primaryAccountLiability[index] += Math.abs(Math.min(0, month.closing));
 
                         monthly.push(month);
@@ -1369,7 +1395,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     .value();
 
                 instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
-                instance.data.summary.yearly.primaryAccountLiability = [calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.primaryAccountLiability, 1), calculateYearlyEndLiabilityBalance(instance.data.summary.monthly.primaryAccountLiability, 2)];
+                instance.data.summary.yearly.primaryAccountCapital = [calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountCapital, 1), calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountCapital, 2)];
+                instance.data.summary.yearly.primaryAccountLiability = [calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountLiability, 1), calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountLiability, 2)];
             }
 
             function addPrimaryAccountAssetsLiabilities (instance) {
@@ -1410,6 +1437,43 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 };
 
                 calculateAssetRatios(instance);
+                calculateAccountRatios(instance);
+            }
+
+            function calculateAccountRatios (instance) {
+                var debtRatioYear1 = calculateDebtStageRatio(instance, 0),
+                    debtRatioYear2 = calculateDebtStageRatio(instance, 1);
+
+                instance.data.ratios = underscore.extend(instance.data.ratios, {
+                    debtMinStage: [debtRatioYear1.min, debtRatioYear2.min],
+                    debtMaxStage: [debtRatioYear1.max, debtRatioYear2.max]
+                });
+            }
+
+            function calculateDebtStageRatio (instance, year) {
+                var yearStart = 12 * year,
+                    yearEnd = 12 * (year + 1);
+
+                function slice (array) {
+                    return array.slice(yearStart, yearEnd);
+                }
+
+                var totalAssetsMinusAccountCapital = subtractArrayValues(slice(instance.data.summary.monthly.totalAssets), slice(instance.data.summary.monthly.primaryAccountCapital)),
+                    minusCapitalIncome = subtractArrayValues(totalAssetsMinusAccountCapital, slice(instance.data.summary.monthly.capitalIncome)),
+                    plusAccountCapital = addArrayValues(minusCapitalIncome, slice(instance.data.summary.monthly.primaryAccountCapital)),
+                    plusCapitalExpenditure = addArrayValues(plusAccountCapital, slice(instance.data.summary.monthly.capitalExpenditure)),
+                    plusTotalIncome = addArrayValues(plusCapitalExpenditure, slice(instance.data.summary.monthly.totalIncome)),
+                    minusTotalIncomeAfterRepayments = subtractArrayValues(plusTotalIncome, slice(instance.data.summary.monthly.totalIncomeAfterRepayments)),
+                    totalDebt = slice(instance.data.summary.monthly.totalLiabilities);
+
+                var debtRatio = underscore.map(minusTotalIncomeAfterRepayments, function (month, index) {
+                    return (month ? totalDebt[index] / month : 0);
+                });
+
+                return {
+                    min: underscore.min(debtRatio),
+                    max: underscore.max(debtRatio)
+                };
             }
 
             function calculateAssetRatios (instance) {
