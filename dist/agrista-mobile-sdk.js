@@ -11205,16 +11205,29 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         }, {})
                         .value();
 
+                    var coverage = angular.copy(liability.data.coverage || {});
+
                     for (var i = 0; i < instance.numberOfMonths; i++) {
                         var month = moment(liability.startDate, 'YYYY-MM-DD').add(i, 'M'),
-                            monthFormatted = month.format('YYYY-MM-DD');
+                            monthFormatted = month.format('YYYY-MM-DD'),
+                            year = Math.floor(i / 12);
 
                         underscore.each(filteredUnallocatedEnterpriseProductionExpenditure, function (productionExpenditure, enterprise) {
                             underscore.each(productionExpenditure, function (expenditure, input) {
-                                var opening = expenditure[i];
+                                var opening = (coverage[input] && coverage[input][year] ?
+                                    Math.min(coverage[input][year].coverage, expenditure[i]) :
+                                    expenditure[i]);
 
-                                expenditure[i] = liability.addWithdrawalInMonth(opening, month);
-                                instance.data.unallocatedProductionExpenditure[input][i] += (expenditure[i] - opening)
+                                if (opening > 0) {
+                                    var allocated = Math.max(0, (opening - liability.addWithdrawalInMonth(opening, month)));
+
+                                    instance.data.unallocatedProductionExpenditure[input][i] -= allocated;
+                                    expenditure[i] -= allocated;
+
+                                    if (coverage[input] && coverage[input][year]) {
+                                        coverage[input][year].coverage = Math.max(0, coverage[input][year].coverage - allocated);
+                                    }
+                                }
                             });
                         });
 
