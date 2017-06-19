@@ -1601,14 +1601,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             'other': 'Other'
         });
 
-        readOnlyProperty(BusinessPlan, 'otherExpenseSubtypes', {
-            'overhead': 'Overhead',
-            'private': 'Private',
-            'other': 'Other'
-        });
-
-        readOnlyProperty(BusinessPlan, 'subtypeExpenses', {
-            'overhead': ['Accident Insurance',
+        readOnlyProperty(BusinessPlan, 'expenseSubtypes', {
+            'production': [
+                'Accident Insurance',
                 'Administration',
                 'Accounting Fees',
                 'Bank Charges',
@@ -1625,11 +1620,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 'Staff Salaries & Wages',
                 'Security',
                 'Short-term Insurance',
-                'Unemployment Insurance'],
-            'private': ['Drawings',
+                'Unemployment Insurance',
+                'Other'],
+            'other': [
+                'Drawings',
                 'Medical',
                 'Life insurance',
-                'University / School fees']
+                'University / School fees',
+                'Other']
         });
 
         BusinessPlan.validates({
