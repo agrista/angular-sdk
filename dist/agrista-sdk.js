@@ -11938,16 +11938,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             Base.initializeObject(this.data.models, 'productionSchedules', []);
 
             function reEvaluateBusinessPlan (instance) {
-                // Re-evaluate all included models
-                reEvaluateProductionSchedules(instance);
-                reEvaluateIncomeAndExpenses(instance);
-
                 recalculate(instance);
-            }
-
-            function recalculate (instance) {
-                // Re-calculate summary, account & ratio data
-                recalculateSummary(instance);
                 recalculateRatios(instance);
             }
 
@@ -12464,7 +12455,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 this.models.income.push(income);
 
                 reEvaluateBusinessPlan(this);
-                recalculate(this);
             });
 
             privateProperty(this, 'removeIncome', function (income) {
@@ -12473,7 +12463,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 });
 
                 reEvaluateBusinessPlan(this);
-                recalculate(this);
             });
 
             privateProperty(this, 'addExpense', function (expense) {
@@ -12484,7 +12473,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 this.models.expenses.push(expense);
 
                 reEvaluateBusinessPlan(this);
-                recalculate(this);
             });
 
             privateProperty(this, 'removeExpense', function (expense) {
@@ -12493,7 +12481,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 });
 
                 reEvaluateBusinessPlan(this);
-                recalculate(this);
             });
 
             function reEvaluateIncomeAndExpenses (instance) {
@@ -12589,7 +12576,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                     instance.models.assets.push(asJson(asset));
 
-                    recalculate(instance);
+                    reEvaluateBusinessPlan(instance);
                 }
             });
 
@@ -12606,7 +12593,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     });
                 });
 
-                recalculate(instance);
+                reEvaluateBusinessPlan(instance);
 
             });
 
@@ -12620,7 +12607,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                     this.models.liabilities.push(asJson(liability));
 
-                    recalculate(this);
+                    reEvaluateBusinessPlan(this);
                 }
             });
 
@@ -12629,7 +12616,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     return item.uuid === liability.uuid;
                 });
 
-                recalculate(this);
+                reEvaluateBusinessPlan(this);
             });
 
             function reEvaluateProductionCredit(instance, liabilities) {
@@ -12999,10 +12986,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
                     extractLivestockBreedingStockComposition(instance, schedule);
                 });
-
-                addPrimaryAccountAssetsLiabilities(instance);
-                calculateAssetStatementRMV(instance);
-                totalAssetsAndLiabilities(instance);
             }
 
             /**
@@ -13130,7 +13113,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 }, results);
             }
 
-            function recalculateSummary (instance) {
+            function recalculate (instance) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
                     numberOfMonths = endMonth.diff(startMonth, 'months');
@@ -13140,9 +13123,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     yearly: {}
                 };
 
+                reEvaluateProductionSchedules(instance);
+                reEvaluateAssetsAndLiabilities(instance);
+                reEvaluateIncomeAndExpenses(instance);
+
                 recalculateIncomeExpensesSummary(instance, startMonth, endMonth, numberOfMonths);
                 recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths);
-                reEvaluateAssetsAndLiabilities(instance);
+                addPrimaryAccountAssetsLiabilities(instance);
+
+                calculateAssetStatementRMV(instance);
+                totalAssetsAndLiabilities(instance);
                 recalculateAssetsLiabilitiesInterestSummary(instance, startMonth, endMonth);
 
                 instance.data.summary.yearly.productionGrossMargin = subtractArrayValues(instance.data.summary.yearly.productionIncome, instance.data.summary.yearly.productionExpenditure);
