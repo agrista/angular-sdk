@@ -12728,7 +12728,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                             if (underscore.isEmpty(liability.data.enterprises) || underscore.contains(liability.data.enterprises, enterprise)) {
                                 enterpriseProductionExpenditure[enterprise] = underscore.chain(productionExpenditure)
                                     .reduce(function (productionExpenditure, expenditure, input) {
-                                        if (underscore.isEmpty(liability.data.inputs) || underscore.contains(liability.data.inputs, input)) {
+                                        if (underscore.contains(liability.data.inputs, input)) {
                                             productionExpenditure[input] = expenditure;
                                         }
 
@@ -12748,7 +12748,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                             monthFormatted = month.format('YYYY-MM-DD'),
                             year = Math.floor(i / 12);
 
-                        underscore.each(filteredUnallocatedEnterpriseProductionExpenditure, function (productionExpenditure, enterprise) {
+                        underscore.each(filteredUnallocatedEnterpriseProductionExpenditure, function (productionExpenditure) {
                             underscore.each(productionExpenditure, function (expenditure, input) {
                                 var opening = (coverage[input] && coverage[input][year] ?
                                     Math.min(coverage[input][year].coverage, expenditure[i]) :
