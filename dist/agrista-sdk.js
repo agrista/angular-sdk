@@ -12180,22 +12180,26 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     cashFlowStartMonth = moment(startMonth).subtract(1, 'y'),
                     cashFlowNumberOfMonths = numberOfMonths + 24;
 
-                var productionIncome = {},
+                var productionIncomeComposition = {},
+                    productionIncome = {},
                     productionExpenditure = {},
-                    incomeResult = {};
+                    incomeComposition = {};
 
                 angular.forEach(schedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule),
                         commodity = schedule.data.details.commodity;
 
+                    Base.initializeObject(productionIncomeComposition, commodity, {});
+                    extractScheduleCategory(productionIncomeComposition[commodity], schedule, 'INC', cashFlowStartMonth, cashFlowNumberOfMonths);
+
                     Base.initializeObject(productionIncome, commodity, {});
-                    extractScheduleCategory(productionIncome[commodity], schedule, 'INC', cashFlowStartMonth, cashFlowNumberOfMonths);
+                    extractScheduleCategoryValuePerMonth(productionIncome[commodity], schedule, 'INC', cashFlowStartMonth, cashFlowNumberOfMonths, true);
 
                     Base.initializeObject(productionExpenditure, commodity, {});
                     extractScheduleCategoryValuePerMonth(productionExpenditure[commodity], schedule, 'EXP', cashFlowStartMonth, cashFlowNumberOfMonths, true);
                 });
 
-                angular.forEach(productionIncome, function (income, commodity) {
+                angular.forEach(productionIncomeComposition, function (income, commodity) {
                     angular.forEach(income, function (values, category) {
                         var enterprise = (category === 'Crop' || category === 'Fruit' ? commodity : category),
                             cashFlowCategoryTotal = sumCollectionValues(instance.data.cashFlowIncome[category]);
@@ -12224,16 +12228,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                             };
                         });
 
-                        incomeResult[enterprise] = (incomeResult[enterprise] ? underscore.reduce(adjustedValues, function (totalObj, obj) {
+                        incomeComposition[enterprise] = (incomeComposition[enterprise] ? underscore.reduce(adjustedValues, function (totalObj, obj) {
                             totalObj.quantity = roundValue(totalObj.quantity + obj.quantity, 2);
                             totalObj.value = roundValue(totalObj.value + obj.value, 2);
                             totalObj.pricePerUnit = roundValue(totalObj.quantity ? (totalObj.value / totalObj.quantity) : 0, 2);
-                        }, incomeResult[enterprise]) : adjustedValues);
+                        }, incomeComposition[enterprise]) : adjustedValues);
                     });
                 });
 
                 return {
-                    income: incomeResult,
+                    incomeComposition: incomeComposition,
+                    income: underscore.mapObject(productionIncome, function (income) {
+                        return underscore.mapObject(income, function (values, category) {
+                            var enterpriseCategoryTotal = sumCollectionValues(values),
+                                cashFlowCategoryTotal = sumCollectionValues(instance.data.cashFlowIncome[category]),
+                                diff = enterpriseCategoryTotal / cashFlowCategoryTotal;
+
+                            return underscore.map(instance.data.cashFlowIncome[category], function (value) {
+                                return roundValue(value * diff, 2);
+                            });
+                        });
+                    }),
                     expenditure: underscore.mapObject(productionExpenditure, function (expenditure) {
                         return underscore.mapObject(expenditure, function (values, category) {
                             var enterpriseCategoryTotal = sumCollectionValues(values),
@@ -12478,7 +12493,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 var enterpriseCashFlowComposition = calculateEnterpriseCashFlowComposition(instance, instance.models.productionSchedules);
 
                 instance.data.productionIncomeComposition = underscore.range(numberOfMonths / 12).map(function (year) {
-                    var productionIncome = underscore.chain(enterpriseCashFlowComposition.income)
+                    var productionIncome = underscore.chain(enterpriseCashFlowComposition.incomeComposition)
                         .mapObject(function (values) {
                             return underscore.reduce(values.slice(12 * (year + 1), 12 * (year + 2)), function (total, obj) {
                                 total.unit = total.unit || obj.unit;
@@ -12509,6 +12524,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                             contributionPercent: (total ? (obj.value / total) * 100 : 0)
                         }, obj);
                     }));
+                });
+
+                instance.data.enterpriseProductionIncome = underscore.mapObject(enterpriseCashFlowComposition.income, function (income) {
+                    return underscore.mapObject(income, function (values) {
+                        return values.slice(12, 12 + numberOfMonths);
+                    });
                 });
 
                 instance.data.enterpriseProductionExpenditure = underscore.mapObject(enterpriseCashFlowComposition.expenditure, function (expenditure) {
