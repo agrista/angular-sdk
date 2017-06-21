@@ -14837,7 +14837,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 this.data.monthly = this.data.monthly || [];
 
                 appliedStartMonth = (appliedStartMonth < 0 ? 0 : appliedStartMonth);
-                appliedEndMonth = (appliedEndMonth > this.data.monthly.length ? this.data.monthly.length - 1 : appliedEndMonth);
+                appliedEndMonth = (appliedEndMonth > this.data.monthly.length ? this.data.monthly.length : appliedEndMonth);
 
                 for (var i = appliedStartMonth; i < appliedEndMonth; i++) {
                     this.data.monthly[i].withdrawal = 0;
