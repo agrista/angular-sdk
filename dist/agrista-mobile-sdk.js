@@ -12064,6 +12064,17 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             'other': 'Other'
         });
 
+        readOnlyProperty(BusinessPlan, 'incomeSubtypes', {
+            'other': [
+                'Interest, Dividends & Subsidies',
+                'Pension Fund',
+                'Short-term Insurance Claims',
+                'VAT Refund',
+                'Inheritance',
+                'Shares',
+                'Other']
+        });
+
         readOnlyProperty(BusinessPlan, 'expenseSubtypes', {
             'production': [
                 'Accident Insurance',
