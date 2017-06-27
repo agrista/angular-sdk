@@ -807,8 +807,11 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
         privateProperty(Asset, 'getTitle', function (asset) {
             return getTitle(asset);
         });
-
-
+        
+        privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
+            return listServiceMap(asset, metadata);
+        });
+        
         function getTitle (instance, withField, farm) {
             switch (instance.type) {
                 case 'crop':
@@ -847,6 +850,59 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 default:
                     return instance.data.name || instance.data.category || Asset.assetTypes[instance.type];
             }
+        }
+        
+        function listServiceMap (instance, metadata) {
+            var map = {
+                id: instance.id || instance.$id,
+                type: instance.type,
+                updatedAt: instance.updatedAt
+            };
+
+            if (instance.data) {
+                map.title = getTitle(instance);
+                map.groupby = instance.farmId;
+                map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
+
+                switch (instance.type) {
+                    case 'crop':
+                        map.subtitle = (instance.data.season ? instance.data.season : '');
+                        break;
+                    case 'cropland':
+                    case 'pasture':
+                    case 'wasteland':
+                    case 'water right':
+                        map.subtitle = (instance.data.size !== undefined ? 'Area: ' + $filter('number')(instance.data.size, 2) + 'ha' : 'Unknown area');
+                        break;
+                    case 'farmland':
+                        map.subtitle = (instance.data.area !== undefined ? 'Area: ' + $filter('number')(instance.data.area, 2) + 'ha' : 'Unknown area');
+                        break;
+                    case 'permanent crop':
+                    case 'plantation':
+                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + $filter('date')(instance.data.establishedDate, 'dd/MM/yy') : '');
+                        break;
+                    case 'improvement':
+                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
+                        map.summary = (instance.data.description || '');
+                        break;
+                    case 'livestock':
+                        map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
+                        map.summary = (instance.data.description || '');
+                        map.groupby = instance.data.type;
+                        break;
+                    case 'vme':
+                        map.subtitle = 'Quantity: ' + instance.data.quantity;
+                        map.summary = (instance.data.description || '');
+                        map.groupby = instance.data.type;
+                        break;
+                }
+            }
+
+            if (metadata) {
+                map = underscore.extend(map, metadata);
+            }
+
+            return map;
         }
 
         function generateKey (instance, legalEntity, farm) {
