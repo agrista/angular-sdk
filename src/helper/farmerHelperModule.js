@@ -384,7 +384,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
     }
 }]);
 
-sdkHelperFarmerApp.factory('landUseHelper', function() {
+sdkHelperFarmerApp.factory('landUseHelper', ['underscore', function (underscore) {
     var _croppingPotentialTypes = ['High', 'Medium', 'Low'];
     var _effectiveDepthTypes = ['0 - 30cm', '30 - 60cm', '60 - 90cm', '90 - 120cm', '120cm +'];
     var _irrigationTypes = ['Centre-Pivot', 'Flood', 'Micro', 'Sub-drainage', 'Sprinkler', 'Drip'];
@@ -392,13 +392,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     var _soilTextureTypes = ['Sand', 'Loamy Sand', 'Clay Sand', 'Sandy Loam', 'Fine Sandy Loam', 'Loam', 'Silty Loam', 'Sandy Clay Loam', 'Clay Loam', 'Clay', 'Gravel', 'Other', 'Fine Sandy Clay', 'Medium Sandy Clay Loam', 'Fine Sandy Clay Loam', 'Loamy Medium Sand', 'Medium Sandy Loam', 'Coarse Sandy Clay Loam', 'Coarse Sand', 'Loamy Fine Sand', 'Loamy Coarse Sand', 'Fine Sand', 'Silty Clay', 'Coarse Sandy Loam', 'Medium Sand', 'Medium Sandy Clay', 'Coarse Sandy Clay', 'Sandy Clay'];
     var _terrainTypes = ['Plains', 'Mountains'];
     var _waterSourceTypes = ['Irrigation Scheme', 'River', 'Dam', 'Borehole'];
-
-    var _pipLandUseConvertion = {
-        'Crops': 'Cropland',
-        'Orchards': 'Horticulture (Perennial)',
-        'Plantations': 'Plantation',
-        'Vineyards': 'Horticulture (Perennial)'
-    };
 
     return {
         croppingPotentialTypes: function () {
@@ -423,64 +416,13 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
             return _waterSourceTypes;
         },
         isCroppingPotentialRequired: function (landUse) {
-            return (landUse == 'Cropland');
+            return s.include(landUse, 'Cropland');
         },
         isEstablishedDateRequired: function (landUse) {
             return (landUse == 'Horticulture (Perennial)');
         },
         isTerrainRequired: function (landUse) {
-            return (landUse == 'Grazing');
-        },
-        getPipLandUseType: function (pipLandUse) {
-            return _pipLandUseConvertion[pipLandUse];
-        }
-    }
-});
-
-sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'topologyHelper', 'underscore', function(geoJSONHelper, topologyHelper, underscore) {
-    var _listServiceMap = function(item) {
-        return {
-            id: item.id || item.$id,
-            title: item.name
-        };
-    };
-
-    return {
-        listServiceMap: function () {
-            return _listServiceMap;
-        },
-
-        containsPoint: function (geometry, assets, farm) {
-            var point = topologyHelper.readGeojson(geometry);
-
-            return underscore.some(assets, function (asset) {
-                return (asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id && asset.data.loc && point.within(topologyHelper.readGeojson(asset.data.loc)));
-            });
-        },
-        getCenter: function (farmer, farm) {
-            var geojson = geoJSONHelper();
-
-            underscore
-                .chain(farmer.legalEntities)
-                .pluck('assets')
-                .flatten()
-                .compact()
-                .each(function (asset) {
-                    if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                        geojson.addGeometry(asset.data.loc);
-                    }
-                });
-
-            return geojson.getCenterAsGeojson();
-        },
-
-        validateFieldName: function (farm, newField, oldField) {
-            newField.fieldName = (newField.fieldName ? newField.fieldName.trim().replace(/[^0-9A-Za-z\s]/g, '') : '');
-            var foundField = underscore.find(farm.data.fields, function (field) {
-                return (field.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, '') === newField.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, ''))
-            });
-
-            return (angular.isObject(foundField) ? (angular.isObject(oldField) && foundField.fieldName === oldField.fieldName) : true);
+            return s.include(landUse, 'Grazing');
         }
     }
 }]);

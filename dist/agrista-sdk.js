@@ -2263,7 +2263,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
                 lng1 = 0, lng2 = 0;
 
             angular.forEach(bounds, function(coordinate, index) {
-                if (index == 0) {
+                if (index === 0) {
                     lat1 = lat2 = coordinate[0];
                     lng1 = lng2 = coordinate[1];
                 } else {
@@ -2289,13 +2289,13 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
          * Get Center
          */
         getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds);
+            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
 
             return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
-                coordinates: this.getCenter(bounds).reverse(),
+                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
                 type: 'Point'
             }
         },
@@ -2303,7 +2303,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);
         },
         setCoordinates: function (coordinates) {
-            if (this._json && this._json.type != 'FeatureCollection') {
+            if (this._json && this._json.type !== 'FeatureCollection') {
                 if (this._json.geometry) {
                     this._json.geometry.coordinates = coordinates;
                 } else {
@@ -2315,7 +2315,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
             var _this = this;
 
             if (this._json && properties) {
-                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
+                if (_this._json.type !== 'FeatureCollection' && _this._json.type !== 'Feature') {
                     _this._json = {
                         type: 'Feature',
                         geometry: _this._json,
@@ -2339,14 +2339,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
 
                     this.addProperties(properties);
                 } else {
-                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                    if (this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
                         this._json = {
                             type: 'Feature',
                             geometry: this._json
                         };
                     }
 
-                    if (this._json.type == 'Feature') {
+                    if (this._json.type === 'Feature') {
                         this._json.properties = underscore.defaults(this._json.properties || {}, {
                             featureId: objectId().toString()
                         });
@@ -2357,7 +2357,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
                         };
                     }
 
-                    if (this._json.type == 'FeatureCollection') {
+                    if (this._json.type === 'FeatureCollection') {
                         this._json.features.push({
                             type: 'Feature',
                             geometry: geometry,
@@ -2374,11 +2374,11 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         formatGeoJson: function (geoJson, toType) {
             // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
-            if(toType.toLowerCase() == 'point') {
+            if (toType.toLowerCase() === 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
                     // type of Feature
                     case 'feature':
-                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                        if (geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type === 'Point') {
                             return geoJson.geometry;
                         }
                         break;
@@ -2399,7 +2399,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         validGeoJson: function (geoJson, typeRestriction) {
             // TODO: REFACTOR
             var validate = true;
-            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+            if(!geoJson || geoJson.type === undefined || typeof geoJson.type !== 'string' || (typeRestriction && geoJson.type.toLowerCase() !== typeRestriction)) {
                 return false;
             }
 
@@ -2420,8 +2420,8 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
                         return false;
                     }
                     var flattenedCoordinates = _.flatten(geoJson.coordinates);
-                    flattenedCoordinates.forEach(function(element, i) {
-                        if(typeof element != 'number') {
+                    flattenedCoordinates.forEach(function(element) {
+                        if (typeof element !== 'number') {
                             validate = false;
                         }
                     });
@@ -7281,7 +7281,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
     }
 }]);
 
-sdkHelperFarmerApp.factory('landUseHelper', function() {
+sdkHelperFarmerApp.factory('landUseHelper', ['underscore', function (underscore) {
     var _croppingPotentialTypes = ['High', 'Medium', 'Low'];
     var _effectiveDepthTypes = ['0 - 30cm', '30 - 60cm', '60 - 90cm', '90 - 120cm', '120cm +'];
     var _irrigationTypes = ['Centre-Pivot', 'Flood', 'Micro', 'Sub-drainage', 'Sprinkler', 'Drip'];
@@ -7289,13 +7289,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     var _soilTextureTypes = ['Sand', 'Loamy Sand', 'Clay Sand', 'Sandy Loam', 'Fine Sandy Loam', 'Loam', 'Silty Loam', 'Sandy Clay Loam', 'Clay Loam', 'Clay', 'Gravel', 'Other', 'Fine Sandy Clay', 'Medium Sandy Clay Loam', 'Fine Sandy Clay Loam', 'Loamy Medium Sand', 'Medium Sandy Loam', 'Coarse Sandy Clay Loam', 'Coarse Sand', 'Loamy Fine Sand', 'Loamy Coarse Sand', 'Fine Sand', 'Silty Clay', 'Coarse Sandy Loam', 'Medium Sand', 'Medium Sandy Clay', 'Coarse Sandy Clay', 'Sandy Clay'];
     var _terrainTypes = ['Plains', 'Mountains'];
     var _waterSourceTypes = ['Irrigation Scheme', 'River', 'Dam', 'Borehole'];
-
-    var _pipLandUseConvertion = {
-        'Crops': 'Cropland',
-        'Orchards': 'Horticulture (Perennial)',
-        'Plantations': 'Plantation',
-        'Vineyards': 'Horticulture (Perennial)'
-    };
 
     return {
         croppingPotentialTypes: function () {
@@ -7320,64 +7313,13 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
             return _waterSourceTypes;
         },
         isCroppingPotentialRequired: function (landUse) {
-            return (landUse == 'Cropland');
+            return s.include(landUse, 'Cropland');
         },
         isEstablishedDateRequired: function (landUse) {
             return (landUse == 'Horticulture (Perennial)');
         },
         isTerrainRequired: function (landUse) {
-            return (landUse == 'Grazing');
-        },
-        getPipLandUseType: function (pipLandUse) {
-            return _pipLandUseConvertion[pipLandUse];
-        }
-    }
-});
-
-sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'topologyHelper', 'underscore', function(geoJSONHelper, topologyHelper, underscore) {
-    var _listServiceMap = function(item) {
-        return {
-            id: item.id || item.$id,
-            title: item.name
-        };
-    };
-
-    return {
-        listServiceMap: function () {
-            return _listServiceMap;
-        },
-
-        containsPoint: function (geometry, assets, farm) {
-            var point = topologyHelper.readGeojson(geometry);
-
-            return underscore.some(assets, function (asset) {
-                return (asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id && asset.data.loc && point.within(topologyHelper.readGeojson(asset.data.loc)));
-            });
-        },
-        getCenter: function (farmer, farm) {
-            var geojson = geoJSONHelper();
-
-            underscore
-                .chain(farmer.legalEntities)
-                .pluck('assets')
-                .flatten()
-                .compact()
-                .each(function (asset) {
-                    if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                        geojson.addGeometry(asset.data.loc);
-                    }
-                });
-
-            return geojson.getCenterAsGeojson();
-        },
-
-        validateFieldName: function (farm, newField, oldField) {
-            newField.fieldName = (newField.fieldName ? newField.fieldName.trim().replace(/[^0-9A-Za-z\s]/g, '') : '');
-            var foundField = underscore.find(farm.data.fields, function (field) {
-                return (field.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, '') === newField.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, ''))
-            });
-
-            return (angular.isObject(foundField) ? (angular.isObject(oldField) && foundField.fieldName === oldField.fieldName) : true);
+            return s.include(landUse, 'Grazing');
         }
     }
 }]);
@@ -11378,34 +11320,29 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
     }
 }]);
 
-var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, attachmentHelper, computedProperty, inheritModel, Liability, Model, moment, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'Model', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, Model, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'attachments', []);
+            Base.initializeObject(this.data, 'zones', []);
 
             privateProperty(this, 'generateKey', function (legalEntity, farm) {
-                this.assetKey = (legalEntity ? 'entity.' + legalEntity.uuid : '') +
-                (this.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
-                (this.type === 'crop' && this.data.season ? '-s.' + this.data.season : '') +
-                (this.data.fieldName ? '-fi.' + this.data.fieldName : '') +
-                (this.data.crop ? '-c.' + this.data.crop : '') +
-                (this.type === 'cropland' && this.data.irrigated ? '-i.' + this.data.irrigation : '') +
-                (this.type === 'farmland' && this.data.sgKey ? '-' + this.data.sgKey : '') +
-                (this.type === 'improvement' || this.type === 'livestock' || this.type === 'vme' ?
-                (this.data.type ? '-t.' + this.data.type : '') +
-                (this.data.category ? '-c.' + this.data.category : '') +
-                (this.data.name ? '-n.' + this.data.name : '') +
-                (this.data.purpose ? '-p.' + this.data.purpose : '') +
-                (this.data.model ? '-m.' + this.data.model : '') +
-                (this.data.identificationNo ? '-in.' + this.data.identificationNo : '') : '') +
-                (this.data.waterSource ? '-ws.' + this.data.waterSource : '') +
-                (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
+                this.assetKey = generateKey(this, legalEntity, farm);
 
                 return this.assetKey;
+            });
+
+            privateProperty(this, 'generateUniqueName', function (categoryLabel, assets) {
+                this.data.name = generateUniqueName(this, categoryLabel, assets);
+            });
+
+            privateProperty(this, 'getCategories', function () {
+                return Asset.categories[this.type] || [];
             });
 
             privateProperty(this, 'getPhoto', function () {
@@ -11414,6 +11351,19 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
 
             privateProperty(this, 'getTitle', function (withField, farm) {
                 return getTitle(this, withField, farm);
+            });
+
+            privateProperty(this, 'isFieldApplicable', function (field) {
+                return isFieldApplicable(this, field);
+            });
+
+            privateProperty(this, 'clean', function () {
+                if (this.type === 'vme') {
+                    this.data.quantity = (this.data.identificationNo && this.data.identificationNo.length > 0 ? 1 : this.data.quantity);
+                    this.data.identificationNo = (this.data.quantity !== 1 ? '' : this.data.identificationNo);
+                } else if (this.type === 'cropland') {
+                    this.data.equipped = (this.data.irrigated ? this.data.equipped : false);
+                }
             });
 
             computedProperty(this, 'age', function (asOfDate) {
@@ -11450,7 +11400,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             });
 
             // Value / Liability
-
             computedProperty(this, 'liquidityTypeTitle', function () {
                 return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
             });
@@ -11516,6 +11465,405 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'water right': 'Water Rights'
         });
 
+        readOnlyProperty(Asset, 'categories', {
+            improvement: [
+                {category: 'Airport', subCategory: 'Hangar'},
+                {category: 'Airport', subCategory: 'Helipad'},
+                {category: 'Airport', subCategory: 'Runway'},
+                {category: 'Poultry', subCategory: 'Hatchery'},
+                {category: 'Aquaculture', subCategory: 'Pond'},
+                {category: 'Aquaculture', subCategory: 'Net House'},
+                {category: 'Aviary'},
+                {category: 'Beekeeping'},
+                {category: 'Borehole'},
+                {category: 'Borehole', subCategory: 'Equipped'},
+                {category: 'Borehole', subCategory: 'Pump'},
+                {category: 'Borehole', subCategory: 'Windmill'},
+                {category: 'Poultry', subCategory: 'Broiler House'},
+                {category: 'Poultry', subCategory: 'Broiler House - Atmosphere'},
+                {category: 'Poultry', subCategory: 'Broiler House - Semi'},
+                {category: 'Poultry', subCategory: 'Broiler House - Zinc'},
+                {category: 'Building', subCategory: 'Administrative'},
+                {category: 'Building'},
+                {category: 'Building', subCategory: 'Commercial'},
+                {category: 'Building', subCategory: 'Entrance'},
+                {category: 'Building', subCategory: 'Lean-to'},
+                {category: 'Building', subCategory: 'Outbuilding'},
+                {category: 'Building', subCategory: 'Gate'},
+                {category: 'Cold Storage'},
+                {category: 'Commercial', subCategory: 'Coffee Shop'},
+                {category: 'Commercial', subCategory: 'Sales Facility'},
+                {category: 'Commercial', subCategory: 'Shop'},
+                {category: 'Commercial', subCategory: 'Bar'},
+                {category: 'Commercial', subCategory: 'Café'},
+                {category: 'Commercial', subCategory: 'Restaurant'},
+                {category: 'Commercial', subCategory: 'Factory'},
+                {category: 'Commercial', subCategory: 'Tasting Facility'},
+                {category: 'Commercial', subCategory: 'Cloth House'},
+                {category: 'Compost', subCategory: 'Preparing Unit'},
+                {category: 'Crocodile Dam'},
+                {category: 'Crop Processing', subCategory: 'Degreening Room'},
+                {category: 'Crop Processing', subCategory: 'Dehusking Facility'},
+                {category: 'Crop Processing', subCategory: 'Drying Facility'},
+                {category: 'Crop Processing', subCategory: 'Drying Tunnels'},
+                {category: 'Crop Processing', subCategory: 'Sorting Facility'},
+                {category: 'Crop Processing', subCategory: 'Drying Oven'},
+                {category: 'Crop Processing', subCategory: 'Drying Racks'},
+                {category: 'Crop Processing', subCategory: 'Crushing Plant'},
+                {category: 'Crop Processing', subCategory: 'Nut Cracking Facility'},
+                {category: 'Crop Processing', subCategory: 'Nut Factory'},
+                {category: 'Dairy'},
+                {category: 'Dairy', subCategory: 'Pasteurising Facility'},
+                {category: 'Dairy', subCategory: 'Milking Parlour'},
+                {category: 'Dam'},
+                {category: 'Dam', subCategory: 'Filter'},
+                {category: 'Dam', subCategory: 'Trout'},
+                {category: 'Domestic', subCategory: 'Chicken Coop'},
+                {category: 'Domestic', subCategory: 'Chicken Run'},
+                {category: 'Domestic', subCategory: 'Kennels'},
+                {category: 'Domestic', subCategory: 'Gardening Facility'},
+                {category: 'Education', subCategory: 'Conference Room'},
+                {category: 'Education', subCategory: 'Classroom'},
+                {category: 'Education', subCategory: 'Crèche'},
+                {category: 'Education', subCategory: 'School'},
+                {category: 'Education', subCategory: 'Training Facility'},
+                {category: 'Equipment', subCategory: 'Air Conditioner'},
+                {category: 'Equipment', subCategory: 'Gantry'},
+                {category: 'Equipment', subCategory: 'Oven'},
+                {category: 'Equipment', subCategory: 'Pump'},
+                {category: 'Equipment', subCategory: 'Pumphouse'},
+                {category: 'Equipment', subCategory: 'Scale'},
+                {category: 'Feed Mill'},
+                {category: 'Feedlot'},
+                {category: 'Fencing'},
+                {category: 'Fencing', subCategory: 'Electric'},
+                {category: 'Fencing', subCategory: 'Game'},
+                {category: 'Fencing', subCategory: 'Perimeter'},
+                {category: 'Fencing', subCategory: 'Security'},
+                {category: 'Fencing', subCategory: 'Wire'},
+                {category: 'Fuel', subCategory: 'Tanks'},
+                {category: 'Fuel', subCategory: 'Tank Stand'},
+                {category: 'Fuel', subCategory: 'Fuelling Facility'},
+                {category: 'Grain Mill'},
+                {category: 'Greenhouse'},
+                {category: 'Infrastructure'},
+                {category: 'Irrigation', subCategory: 'Sprinklers'},
+                {category: 'Irrigation'},
+                {category: 'Laboratory'},
+                {category: 'Livestock Handling', subCategory: 'Auction Facility'},
+                {category: 'Livestock Handling', subCategory: 'Cages'},
+                {category: 'Livestock Handling', subCategory: 'Growing House'},
+                {category: 'Livestock Handling', subCategory: 'Pens'},
+                {category: 'Livestock Handling', subCategory: 'Shelter'},
+                {category: 'Livestock Handling', subCategory: 'Breeding Facility'},
+                {category: 'Livestock Handling', subCategory: 'Culling Shed'},
+                {category: 'Livestock Handling', subCategory: 'Dipping Facility'},
+                {category: 'Livestock Handling', subCategory: 'Elephant Enclosures'},
+                {category: 'Livestock Handling', subCategory: 'Feed Troughs/Dispensers'},
+                {category: 'Livestock Handling', subCategory: 'Horse Walker'},
+                {category: 'Livestock Handling', subCategory: 'Maternity Shelter/Pen'},
+                {category: 'Livestock Handling', subCategory: 'Quarantine Area'},
+                {category: 'Livestock Handling', subCategory: 'Rehab Facility'},
+                {category: 'Livestock Handling', subCategory: 'Shearing Facility'},
+                {category: 'Livestock Handling', subCategory: 'Stable'},
+                {category: 'Livestock Handling', subCategory: 'Surgery'},
+                {category: 'Livestock Handling', subCategory: 'Treatment Area'},
+                {category: 'Livestock Handling', subCategory: 'Weaner House'},
+                {category: 'Livestock Handling', subCategory: 'Grading Facility'},
+                {category: 'Livestock Handling', subCategory: 'Inspection Facility'},
+                {category: 'Logistics', subCategory: 'Handling Equipment'},
+                {category: 'Logistics', subCategory: 'Handling Facility'},
+                {category: 'Logistics', subCategory: 'Depot'},
+                {category: 'Logistics', subCategory: 'Loading Area'},
+                {category: 'Logistics', subCategory: 'Loading Shed'},
+                {category: 'Logistics', subCategory: 'Hopper'},
+                {category: 'Logistics', subCategory: 'Weigh Bridge'},
+                {category: 'Meat Processing', subCategory: 'Abattoir'},
+                {category: 'Meat Processing', subCategory: 'Deboning Room'},
+                {category: 'Meat Processing', subCategory: 'Skinning Facility'},
+                {category: 'Mill'},
+                {category: 'Mushrooms', subCategory: 'Cultivation'},
+                {category: 'Mushrooms', subCategory: 'Sweat Room'},
+                {category: 'Nursery ', subCategory: 'Plant'},
+                {category: 'Nursery ', subCategory: 'Plant Growing Facility'},
+                {category: 'Office'},
+                {category: 'Packaging Facility'},
+                {category: 'Paddocks', subCategory: 'Camp'},
+                {category: 'Paddocks', subCategory: 'Kraal'},
+                {category: 'Paddocks'},
+                {category: 'Piggery', subCategory: 'Farrowing House'},
+                {category: 'Piggery', subCategory: 'Pig Sty'},
+                {category: 'Processing', subCategory: 'Bottling Facility'},
+                {category: 'Processing', subCategory: 'Flavour Shed'},
+                {category: 'Processing', subCategory: 'Processing Facility'},
+                {category: 'Recreation', subCategory: 'Viewing Area'},
+                {category: 'Recreation', subCategory: 'BBQ'},
+                {category: 'Recreation', subCategory: 'Clubhouse'},
+                {category: 'Recreation', subCategory: 'Event Venue'},
+                {category: 'Recreation', subCategory: 'Gallery'},
+                {category: 'Recreation', subCategory: 'Game Room'},
+                {category: 'Recreation', subCategory: 'Gazebo'},
+                {category: 'Recreation', subCategory: 'Gymnasium'},
+                {category: 'Recreation', subCategory: 'Jacuzzi'},
+                {category: 'Recreation', subCategory: 'Judging Booth'},
+                {category: 'Recreation', subCategory: 'Museum'},
+                {category: 'Recreation', subCategory: 'Play Area'},
+                {category: 'Recreation', subCategory: 'Pool House'},
+                {category: 'Recreation', subCategory: 'Pottery Room'},
+                {category: 'Recreation', subCategory: 'Racing Track'},
+                {category: 'Recreation', subCategory: 'Salon'},
+                {category: 'Recreation', subCategory: 'Sauna'},
+                {category: 'Recreation', subCategory: 'Shooting Range'},
+                {category: 'Recreation', subCategory: 'Spa Facility'},
+                {category: 'Recreation', subCategory: 'Squash Court'},
+                {category: 'Recreation', subCategory: 'Swimming Pool'},
+                {category: 'Recreation'},
+                {category: 'Religeous', subCategory: 'Church'},
+                {category: 'Residential', subCategory: 'Carport'},
+                {category: 'Residential', subCategory: 'Driveway'},
+                {category: 'Residential', subCategory: 'Flooring'},
+                {category: 'Residential', subCategory: 'Paving'},
+                {category: 'Residential', subCategory: 'Roofing'},
+                {category: 'Residential', subCategory: 'Water Feature'},
+                {category: 'Residential', subCategory: 'Hall'},
+                {category: 'Residential', subCategory: 'Balcony'},
+                {category: 'Residential', subCategory: 'Canopy'},
+                {category: 'Residential', subCategory: 'Concrete Surface'},
+                {category: 'Residential', subCategory: 'Courtyard'},
+                {category: 'Residential', subCategory: 'Covered'},
+                {category: 'Residential', subCategory: 'Deck'},
+                {category: 'Residential', subCategory: 'Mezzanine'},
+                {category: 'Residential', subCategory: 'Parking Area'},
+                {category: 'Residential', subCategory: 'Patio'},
+                {category: 'Residential', subCategory: 'Porch'},
+                {category: 'Residential', subCategory: 'Porte Cochere'},
+                {category: 'Residential', subCategory: 'Terrace'},
+                {category: 'Residential', subCategory: 'Veranda'},
+                {category: 'Residential', subCategory: 'Walkways'},
+                {category: 'Residential', subCategory: 'Rondavel'},
+                {category: 'Residential', subCategory: 'Accommodation Units'},
+                {category: 'Residential', subCategory: 'Boma'},
+                {category: 'Residential', subCategory: 'Bungalow'},
+                {category: 'Residential', subCategory: 'Bunker'},
+                {category: 'Residential', subCategory: 'Cabin'},
+                {category: 'Residential', subCategory: 'Chalet'},
+                {category: 'Residential', subCategory: 'Community Centre'},
+                {category: 'Residential', subCategory: 'Dormitory'},
+                {category: 'Residential', subCategory: 'Dwelling'},
+                {category: 'Residential', subCategory: 'Flat'},
+                {category: 'Residential', subCategory: 'Kitchen'},
+                {category: 'Residential', subCategory: 'Lapa'},
+                {category: 'Residential', subCategory: 'Laundry Facility'},
+                {category: 'Residential', subCategory: 'Locker Room'},
+                {category: 'Residential', subCategory: 'Lodge'},
+                {category: 'Residential', subCategory: 'Shower'},
+                {category: 'Residential', subCategory: 'Toilets'},
+                {category: 'Residential', subCategory: 'Room'},
+                {category: 'Residential', subCategory: 'Cottage'},
+                {category: 'Residential', subCategory: 'Garage'},
+                {category: 'Roads', subCategory: 'Access Roads'},
+                {category: 'Roads', subCategory: 'Gravel'},
+                {category: 'Roads', subCategory: 'Tarred'},
+                {category: 'Security', subCategory: 'Control Room'},
+                {category: 'Security', subCategory: 'Guardhouse'},
+                {category: 'Security', subCategory: 'Office'},
+                {category: 'Shade Nets'},
+                {category: 'Silo'},
+                {category: 'Sports', subCategory: 'Arena'},
+                {category: 'Sports', subCategory: 'Tennis Court'},
+                {category: 'Staff', subCategory: 'Hostel'},
+                {category: 'Staff', subCategory: 'Hut'},
+                {category: 'Staff', subCategory: 'Retirement Centre'},
+                {category: 'Staff', subCategory: 'Staff Building'},
+                {category: 'Staff', subCategory: 'Canteen'},
+                {category: 'Staff', subCategory: 'Dining Facility'},
+                {category: 'Storage', subCategory: 'Truck Shelter'},
+                {category: 'Storage', subCategory: 'Barn'},
+                {category: 'Storage', subCategory: 'Dark Room'},
+                {category: 'Storage', subCategory: 'Bin Compartments'},
+                {category: 'Storage', subCategory: 'Machinery'},
+                {category: 'Storage', subCategory: 'Saddle Room'},
+                {category: 'Storage', subCategory: 'Shed'},
+                {category: 'Storage', subCategory: 'Chemicals'},
+                {category: 'Storage', subCategory: 'Tools'},
+                {category: 'Storage', subCategory: 'Dry'},
+                {category: 'Storage', subCategory: 'Equipment'},
+                {category: 'Storage', subCategory: 'Feed'},
+                {category: 'Storage', subCategory: 'Fertilizer'},
+                {category: 'Storage', subCategory: 'Fuel'},
+                {category: 'Storage', subCategory: 'Grain'},
+                {category: 'Storage', subCategory: 'Hides'},
+                {category: 'Storage', subCategory: 'Oil'},
+                {category: 'Storage', subCategory: 'Pesticide'},
+                {category: 'Storage', subCategory: 'Poison'},
+                {category: 'Storage', subCategory: 'Seed'},
+                {category: 'Storage', subCategory: 'Zinc'},
+                {category: 'Storage', subCategory: 'Sulphur'},
+                {category: 'Storage'},
+                {category: 'Storage', subCategory: 'Vitamin Room'},
+                {category: 'Sugar Mill'},
+                {category: 'Tanks', subCategory: 'Water'},
+                {category: 'Timber Mill'},
+                {category: 'Trench'},
+                {category: 'Utilities', subCategory: 'Battery Room'},
+                {category: 'Utilities', subCategory: 'Boiler Room'},
+                {category: 'Utilities', subCategory: 'Compressor Room'},
+                {category: 'Utilities', subCategory: 'Engine Room'},
+                {category: 'Utilities', subCategory: 'Generator'},
+                {category: 'Utilities', subCategory: 'Power Room'},
+                {category: 'Utilities', subCategory: 'Pumphouse'},
+                {category: 'Utilities', subCategory: 'Transformer Room'},
+                {category: 'Utilities'},
+                {category: 'Vacant Area'},
+                {category: 'Vehicles', subCategory: 'Transport Depot'},
+                {category: 'Vehicles', subCategory: 'Truck Wash'},
+                {category: 'Vehicles', subCategory: 'Workshop'},
+                {category: 'Walls'},
+                {category: 'Walls', subCategory: 'Boundary'},
+                {category: 'Walls', subCategory: 'Retaining'},
+                {category: 'Walls', subCategory: 'Security'},
+                {category: 'Warehouse'},
+                {category: 'Water', subCategory: 'Reservoir'},
+                {category: 'Water', subCategory: 'Tower'},
+                {category: 'Water', subCategory: 'Purification Plant'},
+                {category: 'Water', subCategory: 'Reticulation Works'},
+                {category: 'Water', subCategory: 'Filter Station'},
+                {category: 'Wine Cellar', subCategory: 'Tanks'},
+                {category: 'Wine Cellar'},
+                {category: 'Wine Cellar', subCategory: 'Winery'},
+                {category: 'Wine Cellar', subCategory: 'Barrel Maturation Room'}
+            ],
+            livestock: [
+                {category: 'Cattle', subCategory: 'Phase A Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Phase B Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Phase C Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Phase D Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Bull Calves', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Heifer Calves', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Tollies 1-2', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Heifers 1-2', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Culls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Bulls', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Dry Cows', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Lactating Cows', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Calves', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Culls', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Bulls', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Cows', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Weaners', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Calves', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Culls', purpose: 'Slaughter'},
+                {category: 'Chickens', subCategory: 'Day Old Chicks', purpose: 'Broilers'},
+                {category: 'Chickens', subCategory: 'Broilers', purpose: 'Broilers'},
+                {category: 'Chickens', subCategory: 'Hens', purpose: 'Layers'},
+                {category: 'Chickens', subCategory: 'Point of Laying Hens', purpose: 'Layers'},
+                {category: 'Chickens', subCategory: 'Culls', purpose: 'Layers'},
+                {category: 'Game', subCategory: 'Game', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Rams', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Breeding Ewes', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Young Ewes', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Kids', purpose: 'Slaughter'},
+                {category: 'Horses', subCategory: 'Horses', purpose: 'Breeding'},
+                {category: 'Pigs', subCategory: 'Boars', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Breeding Sows', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Weaned pigs', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Piglets', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Porkers', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Baconers', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Culls', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Breeding Stock', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Slaughter Birds > 3 months', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Slaughter Birds < 3 months', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Chicks', purpose: 'Slaughter'},
+                {category: 'Rabbits', subCategory: 'Rabbits', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Rams', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Young Rams', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Ewes', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Young Ewes', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Lambs', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Wethers', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Culls', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Rams', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Ewes', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Lambs', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Wethers', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Culls', purpose: 'Slaughter'}
+            ],
+            vme: [
+                {category: 'Vehicles', subCategory: 'Bakkie'},
+                {category: 'Vehicles', subCategory: 'Car'},
+                {category: 'Vehicles', subCategory: 'Truck'},
+                {category: 'Vehicles', subCategory: 'Tractor'},
+                {category: 'Machinery', subCategory: 'Mower'},
+                {category: 'Machinery', subCategory: 'Mower Conditioner'},
+                {category: 'Machinery', subCategory: 'Hay Rake'},
+                {category: 'Machinery', subCategory: 'Hay Baler'},
+                {category: 'Machinery', subCategory: 'Harvester'},
+                {category: 'Equipment', subCategory: 'Plough'},
+                {category: 'Equipment', subCategory: 'Harrow'},
+                {category: 'Equipment', subCategory: 'Ridgers'},
+                {category: 'Equipment', subCategory: 'Rotovator'},
+                {category: 'Equipment', subCategory: 'Cultivator'},
+                {category: 'Equipment', subCategory: 'Planter'},
+                {category: 'Equipment', subCategory: 'Combine'},
+                {category: 'Equipment', subCategory: 'Spreader'},
+                {category: 'Equipment', subCategory: 'Sprayer'},
+                {category: 'Equipment', subCategory: 'Mixer'},
+            ]
+        });
+
+        readOnlyProperty(Asset, 'landClassesByType', {
+            'crop': [
+                'Cropland',
+                'Cropland (Emerging)',
+                'Cropland (Irrigated)',
+                'Cropland (Smallholding)',
+                'Vegetables'],
+            'cropland': [
+                'Cropland',
+                'Cropland (Emerging)',
+                'Cropland (Irrigated)',
+                'Cropland (Smallholding)',
+                'Vegetables'],
+            'farmland': [],
+            'improvement': [],
+            'livestock': [
+                'Grazing',
+                'Grazing (Bush)',
+                'Grazing (Fynbos)',
+                'Grazing (Shrubland)',
+                'Planted Pastures'],
+            'pasture': [
+                'Grazing',
+                'Grazing (Bush)',
+                'Grazing (Fynbos)',
+                'Grazing (Shrubland)',
+                'Planted Pastures'],
+            'permanent crop': [
+                'Greenhouses',
+                'Orchard',
+                'Orchard (Shadenet)',
+                'Vineyard'],
+            'plantation': [
+                'Pineapple',
+                'Plantation',
+                'Plantation (Smallholding)',
+                'Sugarcane',
+                'Sugarcane (Emerging)',
+                'Sugarcane (Irrigated)',
+                'Tea'],
+            'vme': [],
+            'wasteland': [
+                'Non-vegetated'],
+            'water right': [
+                'Water',
+                'Water (Seasonal)',
+                'Wetland']
+        });
+
         var _croplandCrops = [
             'Barley',
             'Bean',
@@ -11539,7 +11887,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Leek',
             'Lucerne',
             'Maize',
-            'Maize (Irrigated)',
             'Maize (White)',
             'Maize (Yellow)',
             'Oats',
@@ -11552,19 +11899,23 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Rice',
             'Rye',
             'Soya Bean',
-            'Soya Bean (Irrigated)',
             'Sunflower',
             'Sweet Corn',
             'Sweet Potato',
             'Teff',
-            'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
             'Turnip',
             'Wheat',
-            'Wheat (Durum)',
+            'Wheat (Durum)'
+        ];
+        var _croplandIrrigatedCrops = [
+            'Maize (Irrigated)',
+            'Soya Bean (Irrigated)',
+            'Teff (Irrigated)',
             'Wheat (Irrigated)'
         ];
+        var _croplandAllCrops = underscore.union(_croplandCrops, _croplandIrrigatedCrops).sort(naturalSort);
         var _grazingCrops = [
             'Bahia-Notatum',
             'Birdsfoot Trefoil',
@@ -11634,11 +11985,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Coffee',
             'Fig',
             'Gooseberry',
-            'Grape',
-            'Grape (Bush Vine)',
-            'Grape (Red)',
-            'Grape (Table)',
-            'Grape (White)',
             'Grapefruit',
             'Guava',
             'Kiwi Fruit',
@@ -11661,11 +12007,11 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Plum',
             'Pomegranate',
             'Protea',
+            'Prune',
             'Raspberry',
             'Rooibos',
             'Roses',
             'Strawberry',
-            'Sugarcane',
             'Walnut',
             'Wineberry'
         ];
@@ -11679,10 +12025,65 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Sisal',
             'Wattle'
         ];
+        var _vegetableCrops = [
+            'Chicory',
+            'Chili',
+            'Garlic',
+            'Lentil',
+            'Melon',
+            'Olive',
+            'Onion',
+            'Pea',
+            'Pumpkin',
+            'Quince',
+            'Strawberry',
+            'Tomato',
+            'Watermelon',
+            'Carrot',
+            'Beet',
+            'Cauliflower',
+            'Broccoli',
+            'Leek',
+            'Butternut',
+            'Cabbage',
+            'Rapeseed'
+        ];
+        var _vineyardCrops = [
+            'Grape',
+            'Grape (Bush Vine)',
+            'Grape (Red)',
+            'Grape (Table)',
+            'Grape (White)'
+        ];
+
+        readOnlyProperty(Asset, 'cropsByLandClass', {
+            'Cropland': _croplandCrops,
+            'Cropland (Emerging)': _croplandCrops,
+            'Cropland (Irrigated)': _croplandIrrigatedCrops,
+            'Cropland (Smallholding)': _croplandCrops,
+            'Forest': ['Pine'],
+            'Grazing': _grazingCrops,
+            'Grazing (Bush)': _grazingCrops,
+            'Grazing (Fynbos)': _grazingCrops,
+            'Grazing (Shrubland)': _grazingCrops,
+            'Greenhouses': [],
+            'Orchard': _perennialCrops,
+            'Orchard (Shadenet)': _perennialCrops,
+            'Pineapple': ['Pineapple'],
+            'Plantation': _plantationCrops,
+            'Plantation (Smallholding)': _plantationCrops,
+            'Planted Pastures': _grazingCrops,
+            'Sugarcane': ['Sugarcane'],
+            'Sugarcane (Emerging)': ['Sugarcane'],
+            'Sugarcane (Irrigated)': ['Sugarcane (Irrigated)'],
+            'Tea': ['Tea'],
+            'Vegetables': _vegetableCrops,
+            'Vineyard': _vineyardCrops
+        });
 
         readOnlyProperty(Asset, 'cropsByType', {
-            'crop': _croplandCrops,
-            'cropland': _croplandCrops,
+            'crop': _croplandAllCrops,
+            'cropland': _croplandAllCrops,
             'livestock': _grazingCrops,
             'pasture': _grazingCrops,
             'permanent crop': _perennialCrops,
@@ -11705,6 +12106,16 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'other': 'Other'
         }, Asset.assetTypes));
 
+        readOnlyProperty(Asset, 'seasonTypes', ['Cape', 'Summer', 'Fruit', 'Winter']);
+
+        privateProperty(Asset, 'getAssetKey', function (asset, legalEntity, farm) {
+            return generateKey(asset, legalEntity, farm);
+        });
+
+        privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
+            return Asset.cropsByLandClass[landClass] || [];
+        });
+
         privateProperty(Asset, 'getTypeTitle', function (type) {
             return Asset.assetTypes[type] || '';
         });
@@ -11718,6 +12129,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
         privateProperty(Asset, 'getTitle', function (asset) {
             return getTitle(asset);
         });
+
 
         function getTitle (instance, withField, farm) {
             switch (instance.type) {
@@ -11759,19 +12171,68 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             }
         }
 
+        function generateKey (instance, legalEntity, farm) {
+            return  (legalEntity ? 'entity.' + legalEntity.uuid : '') +
+                (instance.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (instance.type === 'crop' && instance.data.season ? '-s.' + instance.data.season : '') +
+                (instance.data.fieldName ? '-fi.' + instance.data.fieldName : '') +
+                (instance.data.crop ? '-c.' + instance.data.crop : '') +
+                (instance.type === 'cropland' && instance.data.irrigated ? '-i.' + instance.data.irrigation : '') +
+                (instance.type === 'farmland' && instance.data.sgKey ? '-' + instance.data.sgKey : '') +
+                (instance.type === 'improvement' || instance.type === 'livestock' || instance.type === 'vme' ?
+                    (instance.data.type ? '-t.' + instance.data.type : '') +
+                    (instance.data.category ? '-c.' + instance.data.category : '') +
+                    (instance.data.name ? '-n.' + instance.data.name : '') +
+                    (instance.data.purpose ? '-p.' + instance.data.purpose : '') +
+                    (instance.data.model ? '-m.' + instance.data.model : '') +
+                    (instance.data.identificationNo ? '-in.' + instance.data.identificationNo : '') : '') +
+                (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
+                (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
+        }
+
+        function generateUniqueName (instance, categoryLabel, assets) {
+            var assetCount = underscore.chain(assets)
+                .where({type: instance.type})
+                .reduce(function(assetCount, asset) {
+                    if (asset.data.name) {
+                        var index = asset.data.name.search(/\s+[0-9]+$/),
+                            name = asset.data.name,
+                            number;
+
+                        if (index !== -1) {
+                            name = name.substr(0, index);
+                            number = parseInt(asset.data.name.substring(index).trim());
+                        }
+
+                        if (categoryLabel && name === categoryLabel && (!number || number > assetCount)) {
+                            assetCount = number || 1;
+                        }
+                    }
+
+                    return assetCount;
+                }, -1)
+                .value();
+
+            return categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
+        }
+
+        function isFieldApplicable (instance, field) {
+            return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
+        }
+
         Asset.validates({
             crop: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type);
                 },
                 inclusion: {
-                    in: function (value, instance, field) {
+                    in: function (value, instance) {
                         return Asset.cropsByType[instance.type];
                     }
                 }
             },
             establishedDate: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['permanent crop', 'plantation'], instance.type);
                 },
                 format: {
@@ -11782,7 +12243,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 numeric: true
             },
             fieldName: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation'], instance.type);
                 },
                 length: {
@@ -11798,7 +12259,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 required: true
             },
             size: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
                 },
                 numeric: true
@@ -13677,8 +14138,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'inheritModel', 'landUseHelper', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, landUseHelper, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function ComparableSale (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -13806,7 +14267,7 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
             this.depImpValue = attrs.depImpValue;
             this.distance = attrs.distance || 0;
             this.geometry = attrs.geometry;
-            this.landComponents = attrs.landComponents || [];
+            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
             this.portions = attrs.portions || [];
             this.regions = attrs.regions || [];
             this.propertyKnowledge = attrs.propertyKnowledge;
@@ -13817,6 +14278,31 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         var roundValue = $filter('round');
 
+        function convertLandComponent (landComponent) {
+            switch (landComponent.type) {
+                case 'Conservation':
+                    landComponent.type = 'Grazing (Bush)';
+                    break;
+                case 'Horticulture (Intensive)':
+                    landComponent.type = 'Greenhouses';
+                    break;
+                case 'Horticulture (Perennial)':
+                    landComponent.type = 'Orchard';
+                    break;
+                case 'Horticulture (Seasonal)':
+                    landComponent.type = 'Vegetables';
+                    break;
+                case 'Housing':
+                    landComponent.type = 'Homestead';
+                    break;
+                case 'Wasteland':
+                    landComponent.type = 'Non-vegetated';
+                    break;
+            }
+
+            return landComponent;
+        }
+
         function recalculateArea (instance) {
             instance.area = roundValue(underscore.reduce(instance.portions, function(total, portion) {
                 return total + (portion.area || 0);
@@ -13825,8 +14311,8 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         inheritModel(ComparableSale, Model.Base);
 
-        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(landUseHelper.landUseTypes())
-            .without('Cropland')
+        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(Field.landClasses)
+            .without('Cropland', 'Cropland (Emerging)', 'Cropland (Irrigated)', 'Cropland (Smallholding)')
             .union(['Cropland (Dry)', 'Cropland (Equipped, Irrigable)', 'Cropland (Irrigable)'])
             .value()
             .sort(naturalSort));
@@ -15090,6 +15576,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         };
 
+        interfaceProperty(this, 'getAssetTypeForLandUse', function (landUse) {
+            return (s.include(landUse, 'Cropland') ? 'crop' :
+                (s.include(landUse, 'Cropland') ? 'horticulture' : 'livestock'));
+        });
+
         EnterpriseBudgetBase.validates({
             data: {
                 required: true,
@@ -15699,6 +16190,255 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         });
 
         return FarmValuation;
+    }]);
+
+var sdkModelField = angular.module('ag.sdk.model.field', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Field (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'croppingPotentialRequired', function () {
+                return s.include(this.landUse, 'Cropland');
+            });
+
+            computedProperty(this, 'terrainRequired', function () {
+                return s.include(this.landUse, 'Grazing');
+            });
+
+            privateProperty(this, 'setIrrigatedFromLandUse', function () {
+                this.irrigated = s.include(this.landUse, 'Irrigated');
+            });
+
+            privateProperty(this, 'fieldNameUnique', function (fieldName, farm) {
+                return fieldNameUnique(this, fieldName, farm);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.croppingPotential = attrs.croppingPotential;
+            this.effectiveDepth = attrs.effectiveDepth;
+            this.farmName = attrs.farmName;
+            this.fieldName = attrs.fieldName;
+            this.irrigated = attrs.irrigated;
+            this.irrigationType = attrs.irrigationType;
+            this.landUse = attrs.landUse;
+            this.loc = attrs.loc;
+            this.sgKey = attrs.sgKey;
+            this.size = attrs.size;
+            this.soilTexture = attrs.soilTexture;
+            this.source = attrs.source;
+            this.terrain = attrs.terrain;
+            this.waterSource = attrs.waterSource;
+
+            convertLandUse(this);
+        }
+
+        function convertLandUse (instance) {
+            switch (instance.landUse) {
+                case 'Cropland':
+                    if (instance.irrigated) {
+                        instance.landUse = 'Cropland (Irrigated)';
+                    }
+                    break;
+                case 'Conservation':
+                    instance.landUse = 'Grazing (Bush)';
+                    break;
+                case 'Horticulture (Intensive)':
+                    instance.landUse = 'Greenhouses';
+                    break;
+                case 'Horticulture (Perennial)':
+                    instance.landUse = 'Orchard';
+                    break;
+                case 'Horticulture (Seasonal)':
+                    instance.landUse = 'Vegetables';
+                    break;
+                case 'Housing':
+                    instance.landUse = 'Homestead';
+                    break;
+                case 'Wasteland':
+                    instance.landUse = 'Non-vegetated';
+                    break;
+            }
+        }
+
+        function fieldNameUnique (instance, fieldName, farm) {
+            return (farm && farm.data && !underscore.some(farm.data.fields || [], function (field) {
+                return (field.fieldName === fieldName && !underscore.isEqual(field.loc, instance.loc));
+            }));
+        }
+
+        inheritModel(Field, Model.Base);
+
+        readOnlyProperty(Field, 'croppingPotentials', [
+            'High',
+            'Medium',
+            'Low']);
+
+        readOnlyProperty(Field, 'effectiveDepths', [
+            '0 - 30cm',
+            '30 - 60cm',
+            '60 - 90cm',
+            '90 - 120cm',
+            '120cm +']);
+
+        readOnlyProperty(Field, 'irrigationTypes', [
+            'Centre-Pivot',
+            'Drip',
+            'Flood',
+            'Micro',
+            'Sprinkler',
+            'Sub-drainage']);
+
+        readOnlyProperty(Field, 'landClasses', [
+            'Building',
+            'Built-up',
+            'Cropland',
+            'Cropland (Emerging)',
+            'Cropland (Irrigated)',
+            'Cropland (Smallholding)',
+            'Erosion',
+            'Forest',
+            'Grazing',
+            'Grazing (Bush)',
+            'Grazing (Fynbos)',
+            'Grazing (Shrubland)',
+            'Greenhouses',
+            'Homestead',
+            'Mining',
+            'Non-vegetated',
+            'Orchard',
+            'Orchard (Shadenet)',
+            'Pineapple',
+            'Plantation',
+            'Plantation (Smallholding)',
+            'Planted Pastures',
+            'Sugarcane',
+            'Sugarcane (Emerging)',
+            'Sugarcane (Irrigated)',
+            'Tea',
+            'Vegetables',
+            'Vineyard',
+            'Water',
+            'Water (Seasonal)',
+            'Wetland']);
+
+        readOnlyProperty(Field, 'soilTextures', [
+            'Clay',
+            'Clay Loam',
+            'Clay Sand',
+            'Coarse Sand',
+            'Coarse Sandy Clay',
+            'Coarse Sandy Clay Loam',
+            'Coarse Sandy Loam',
+            'Fine Sand',
+            'Fine Sandy Clay',
+            'Fine Sandy Clay Loam',
+            'Fine Sandy Loam',
+            'Gravel',
+            'Loam',
+            'Loamy Coarse Sand',
+            'Loamy Fine Sand',
+            'Loamy Medium Sand',
+            'Loamy Sand',
+            'Medium Sand',
+            'Medium Sandy Clay',
+            'Medium Sandy Clay Loam',
+            'Medium Sandy Loam',
+            'Other',
+            'Sand',
+            'Sandy Clay',
+            'Sandy Clay Loam',
+            'Sandy Loam',
+            'Silty Clay',
+            'Silty Loam']);
+
+        readOnlyProperty(Field, 'waterSources', [
+            'Borehole',
+            'Dam',
+            'Irrigation Scheme',
+            'River']);
+
+        readOnlyProperty(Field, 'terrains', [
+            'Mountains',
+            'Plains']);
+
+        Field.validates({
+            croppingPotential: {
+                required: false,
+                inclusion: {
+                    in: Field.croppingPotentials
+                }
+            },
+            effectiveDepth: {
+                required: false,
+                inclusion: {
+                    in: Field.effectiveDepths
+                }
+            },
+            farmName: {
+                required: true,
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            fieldName: {
+                required: true,
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            landUse: {
+                required: true,
+                inclusion: {
+                    in: Field.landClasses
+                }
+            },
+            loc: {
+                required: false,
+                object: true
+            },
+            size: {
+                required: true,
+                numeric: true
+            },
+            sgKey: {
+                required: false,
+                numeric: true
+            },
+            soilTexture: {
+                required: false,
+                inclusion: {
+                    in: Field.soilTextures
+                }
+            },
+            source: {
+                required: false,
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            terrain: {
+                requiredIf: function (value, instance, field) {
+                    return instance.terrainRequired;
+                },
+                inclusion: {
+                    in: Field.terrains
+                }
+            },
+            waterSource: {
+                required: false,
+                inclusion: {
+                    in: Field.waterSources
+                }
+            }
+        });
+
+        return Field;
     }]);
 
 var sdkModelFinancial = angular.module('ag.sdk.model.financial', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.utilities']);
@@ -16983,8 +17723,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -17467,7 +18207,17 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
             livestock: 'Livestock'
         });
 
-        readOnlyProperty(ProductionSchedule, 'allowedLandUse', ['Conservation', 'Cropland', 'Grazing', 'Horticulture (Perennial)', 'Irrigated Cropland', 'Planted Pastures']);
+        readOnlyProperty(ProductionSchedule, 'allowedLandUse', underscore.difference(Field.landClasses, [
+            'Building',
+            'Built-up',
+            'Erosion',
+            'Forest',
+            'Homestead',
+            'Mining',
+            'Non-vegetated',
+            'Water',
+            'Water (Seasonal)',
+            'Wetland']));
 
         readOnlyProperty(ProductionSchedule, 'allowedAssets', ['cropland', 'pasture', 'permanent crop']);
 
@@ -18372,6 +19122,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
+    'ag.sdk.model.field',
     'ag.sdk.model.financial',
     'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',

@@ -977,6 +977,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         };
 
+        interfaceProperty(this, 'getAssetTypeForLandUse', function (landUse) {
+            return (s.include(landUse, 'Cropland') ? 'crop' :
+                (s.include(landUse, 'Cropland') ? 'horticulture' : 'livestock'));
+        });
+
         EnterpriseBudgetBase.validates({
             data: {
                 required: true,
