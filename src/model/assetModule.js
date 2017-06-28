@@ -925,6 +925,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
         }
 
         function generateUniqueName (instance, categoryLabel, assets) {
+            categoryLabel = categoryLabel || '';
+
             var assetCount = underscore.chain(assets)
                 .where({type: instance.type})
                 .reduce(function(assetCount, asset) {
