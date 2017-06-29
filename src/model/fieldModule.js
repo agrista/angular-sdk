@@ -70,8 +70,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         }
 
         function fieldNameUnique (instance, fieldName, farm) {
+            var trimmedValue = s.trim(fieldName || '').toLowerCase();
+
             return (farm && farm.data && !underscore.some(farm.data.fields || [], function (field) {
-                return (field.fieldName === fieldName && !underscore.isEqual(field.loc, instance.loc));
+                return (s.trim(field.fieldName).toLowerCase() === trimmedValue && !underscore.isEqual(field.loc, instance.loc));
             }));
         }
 
