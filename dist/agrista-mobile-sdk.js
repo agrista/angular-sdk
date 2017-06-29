@@ -10616,7 +10616,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             'other': 'Other'
         }, Asset.assetTypes));
 
-        readOnlyProperty(Asset, 'seasonTypes', ['Cape', 'Summer', 'Fruit', 'Winter']);
+        readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
+
+        readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
 
         privateProperty(Asset, 'getAssetKey', function (asset, legalEntity, farm) {
             return generateKey(asset, legalEntity, farm);
