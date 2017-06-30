@@ -142,6 +142,13 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         function convertLandComponent (landComponent) {
             switch (landComponent.type) {
+                case 'Cropland (Dry)':
+                    landComponent.type = 'Cropland';
+                    break;
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    landComponent.type = 'Cropland (Irrigated)';
+                    break;
                 case 'Conservation':
                     landComponent.type = 'Grazing (Bush)';
                     break;
@@ -173,11 +180,7 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         inheritModel(ComparableSale, Model.Base);
 
-        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(Field.landClasses)
-            .without('Cropland', 'Cropland (Emerging)', 'Cropland (Irrigated)', 'Cropland (Smallholding)')
-            .union(['Cropland (Dry)', 'Cropland (Equipped, Irrigable)', 'Cropland (Irrigable)'])
-            .value()
-            .sort(naturalSort));
+        readOnlyProperty(ComparableSale, 'landComponentTypes', Field.landClasses);
 
         readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
             'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',

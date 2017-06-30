@@ -9,6 +9,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                 return s.include(this.landUse, 'Cropland');
             });
 
+            computedProperty(this, 'establishedDateRequired', function () {
+                return s.include(this.landUse, 'Orchard');
+            });
+
             computedProperty(this, 'terrainRequired', function () {
                 return s.include(this.landUse, 'Grazing');
             });
@@ -23,6 +27,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.crop = attrs.crop;
             this.croppingPotential = attrs.croppingPotential;
             this.effectiveDepth = attrs.effectiveDepth;
             this.farmName = attrs.farmName;

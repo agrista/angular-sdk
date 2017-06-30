@@ -526,6 +526,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 'Orchard (Shadenet)',
                 'Vineyard'],
             'plantation': [
+                'Forest',
                 'Pineapple',
                 'Plantation',
                 'Plantation (Smallholding)',
@@ -701,6 +702,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             'Pineapple',
             'Tea',
             'Sisal',
+            'Sugarcane',
+            'Sugarcane (Irrigated)',
             'Wattle'
         ];
         var _vegetableCrops = [
@@ -794,6 +797,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
 
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
+        });
+
+        privateProperty(Asset, 'getDefaultCrop', function (landClass) {
+            return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
         });
 
         privateProperty(Asset, 'getTypeTitle', function (type) {

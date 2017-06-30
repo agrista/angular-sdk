@@ -10358,6 +10358,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 'Orchard (Shadenet)',
                 'Vineyard'],
             'plantation': [
+                'Forest',
                 'Pineapple',
                 'Plantation',
                 'Plantation (Smallholding)',
@@ -10533,6 +10534,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             'Pineapple',
             'Tea',
             'Sisal',
+            'Sugarcane',
+            'Sugarcane (Irrigated)',
             'Wattle'
         ];
         var _vegetableCrops = [
@@ -10626,6 +10629,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
 
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
+        });
+
+        privateProperty(Asset, 'getDefaultCrop', function (landClass) {
+            return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
         });
 
         privateProperty(Asset, 'getTypeTitle', function (type) {
@@ -12850,6 +12857,13 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         function convertLandComponent (landComponent) {
             switch (landComponent.type) {
+                case 'Cropland (Dry)':
+                    landComponent.type = 'Cropland';
+                    break;
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    landComponent.type = 'Cropland (Irrigated)';
+                    break;
                 case 'Conservation':
                     landComponent.type = 'Grazing (Bush)';
                     break;
@@ -12881,11 +12895,7 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         inheritModel(ComparableSale, Model.Base);
 
-        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(Field.landClasses)
-            .without('Cropland', 'Cropland (Emerging)', 'Cropland (Irrigated)', 'Cropland (Smallholding)')
-            .union(['Cropland (Dry)', 'Cropland (Equipped, Irrigable)', 'Cropland (Irrigable)'])
-            .value()
-            .sort(naturalSort));
+        readOnlyProperty(ComparableSale, 'landComponentTypes', Field.landClasses);
 
         readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
             'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
@@ -14773,6 +14783,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                 return s.include(this.landUse, 'Cropland');
             });
 
+            computedProperty(this, 'establishedDateRequired', function () {
+                return s.include(this.landUse, 'Orchard');
+            });
+
             computedProperty(this, 'terrainRequired', function () {
                 return s.include(this.landUse, 'Grazing');
             });
@@ -14787,6 +14801,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.crop = attrs.crop;
             this.croppingPotential = attrs.croppingPotential;
             this.effectiveDepth = attrs.effectiveDepth;
             this.farmName = attrs.farmName;
