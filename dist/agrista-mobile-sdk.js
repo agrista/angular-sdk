@@ -12743,12 +12743,15 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
                         farmName = (farmName || '').toLowerCase();
 
                         var portionSentence = underscore.chain(portions)
-                                .sortBy('portionLabel')
-                                .pluck('portionLabel')
-                                .toSentence()
-                                .value();
+                            .sortBy('portionLabel')
+                            .pluck('portionLabel')
+                            .map(function (portionLabel) {
+                                return s.strLeft(portionLabel, '/');
+                            })
+                            .toSentence()
+                            .value();
 
-                        return (portionSentence + (farmName.length ? ' of ' + (underscore.startsWith(farmName, 'farm') ? '' : 'farm ') + underscore.titleize(farmName) : ''));
+                        return ((s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + (farmName.length ? ' of ' + (underscore.startsWith(farmName, 'farm') ? '' : 'farm ') + underscore.titleize(farmName) : ''));
                     })
                     .toSentence()
                     .value();
@@ -12810,10 +12813,35 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
              * Portion Handling
              */
             privateProperty(this, 'addPortion', function (portion) {
-                this.removePortionBySgKey(portion.sgKey);
+                if (!this.hasPortion(portion)) {
+                    this.portions.push(portion);
+                    recalculateArea(this);
 
-                this.portions.push(portion);
-                recalculateArea(this);
+                    underscore.each(portion.landCover || [], function (landCover) {
+                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
+
+                        if (underscore.isUndefined(landComponent)) {
+                            landComponent = {
+                                type: landCover.label,
+                                assetValue: 0
+                            };
+
+                            this.landComponents.push(landComponent);
+                        }
+
+                        landComponent.area = roundValue((landComponent.area || 0) + landCover.area, 3);
+
+                        if (landComponent.unitValue) {
+                            landComponent.assetValue = landComponent.area * landComponent.unitValue;
+                        }
+                    }, this);
+                }
+            });
+
+            privateProperty(this, 'hasPortion', function (portion) {
+                return underscore.some(this.portions, function (storedPortion) {
+                    return storedPortion.sgKey === portion.sgKey;
+                });
             });
 
             privateProperty(this, 'removePortionBySgKey', function (sgKey) {
