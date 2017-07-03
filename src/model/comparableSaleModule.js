@@ -1,7 +1,7 @@
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'inheritModel', 'landUseHelper', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, landUseHelper, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function ComparableSale (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -129,7 +129,7 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
             this.depImpValue = attrs.depImpValue;
             this.distance = attrs.distance || 0;
             this.geometry = attrs.geometry;
-            this.landComponents = attrs.landComponents || [];
+            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
             this.portions = attrs.portions || [];
             this.regions = attrs.regions || [];
             this.propertyKnowledge = attrs.propertyKnowledge;
@@ -140,6 +140,38 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         var roundValue = $filter('round');
 
+        function convertLandComponent (landComponent) {
+            switch (landComponent.type) {
+                case 'Cropland (Dry)':
+                    landComponent.type = 'Cropland';
+                    break;
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    landComponent.type = 'Cropland (Irrigated)';
+                    break;
+                case 'Conservation':
+                    landComponent.type = 'Grazing (Bush)';
+                    break;
+                case 'Horticulture (Intensive)':
+                    landComponent.type = 'Greenhouses';
+                    break;
+                case 'Horticulture (Perennial)':
+                    landComponent.type = 'Orchard';
+                    break;
+                case 'Horticulture (Seasonal)':
+                    landComponent.type = 'Vegetables';
+                    break;
+                case 'Housing':
+                    landComponent.type = 'Homestead';
+                    break;
+                case 'Wasteland':
+                    landComponent.type = 'Non-vegetated';
+                    break;
+            }
+
+            return landComponent;
+        }
+
         function recalculateArea (instance) {
             instance.area = roundValue(underscore.reduce(instance.portions, function(total, portion) {
                 return total + (portion.area || 0);
@@ -148,11 +180,7 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         inheritModel(ComparableSale, Model.Base);
 
-        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(landUseHelper.landUseTypes())
-            .without('Cropland')
-            .union(['Cropland (Dry)', 'Cropland (Equipped, Irrigable)', 'Cropland (Irrigable)'])
-            .value()
-            .sort(naturalSort));
+        readOnlyProperty(ComparableSale, 'landComponentTypes', Field.landClasses);
 
         readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
             'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',

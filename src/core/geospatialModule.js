@@ -61,7 +61,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
                 lng1 = 0, lng2 = 0;
 
             angular.forEach(bounds, function(coordinate, index) {
-                if (index == 0) {
+                if (index === 0) {
                     lat1 = lat2 = coordinate[0];
                     lng1 = lng2 = coordinate[1];
                 } else {
@@ -87,13 +87,13 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
          * Get Center
          */
         getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds);
+            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
 
             return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
-                coordinates: this.getCenter(bounds).reverse(),
+                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
                 type: 'Point'
             }
         },
@@ -101,7 +101,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);
         },
         setCoordinates: function (coordinates) {
-            if (this._json && this._json.type != 'FeatureCollection') {
+            if (this._json && this._json.type !== 'FeatureCollection') {
                 if (this._json.geometry) {
                     this._json.geometry.coordinates = coordinates;
                 } else {
@@ -113,7 +113,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
             var _this = this;
 
             if (this._json && properties) {
-                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
+                if (_this._json.type !== 'FeatureCollection' && _this._json.type !== 'Feature') {
                     _this._json = {
                         type: 'Feature',
                         geometry: _this._json,
@@ -137,14 +137,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
 
                     this.addProperties(properties);
                 } else {
-                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                    if (this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
                         this._json = {
                             type: 'Feature',
                             geometry: this._json
                         };
                     }
 
-                    if (this._json.type == 'Feature') {
+                    if (this._json.type === 'Feature') {
                         this._json.properties = underscore.defaults(this._json.properties || {}, {
                             featureId: objectId().toString()
                         });
@@ -155,7 +155,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
                         };
                     }
 
-                    if (this._json.type == 'FeatureCollection') {
+                    if (this._json.type === 'FeatureCollection') {
                         this._json.features.push({
                             type: 'Feature',
                             geometry: geometry,
@@ -172,11 +172,11 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         formatGeoJson: function (geoJson, toType) {
             // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
-            if(toType.toLowerCase() == 'point') {
+            if (toType.toLowerCase() === 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
                     // type of Feature
                     case 'feature':
-                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                        if (geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type === 'Point') {
                             return geoJson.geometry;
                         }
                         break;
@@ -197,7 +197,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         validGeoJson: function (geoJson, typeRestriction) {
             // TODO: REFACTOR
             var validate = true;
-            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+            if(!geoJson || geoJson.type === undefined || typeof geoJson.type !== 'string' || (typeRestriction && geoJson.type.toLowerCase() !== typeRestriction)) {
                 return false;
             }
 
@@ -218,8 +218,8 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
                         return false;
                     }
                     var flattenedCoordinates = _.flatten(geoJson.coordinates);
-                    flattenedCoordinates.forEach(function(element, i) {
-                        if(typeof element != 'number') {
+                    flattenedCoordinates.forEach(function(element) {
+                        if (typeof element !== 'number') {
                             validate = false;
                         }
                     });
