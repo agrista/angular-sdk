@@ -15410,22 +15410,26 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
 
 var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
-sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
-    function (Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
+sdkModelLegalEntity.factory('LegalEntity', ['Base', 'Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
+    function (Base, Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
         function LegalEntity (attrs) {
             Model.Base.apply(this, arguments);
 
-            this.data = (attrs && attrs.data) || {};
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'attachments', []);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.id = attrs.id || attrs.$id;
             this.addressCity = attrs.addressCity;
             this.addressCode = attrs.addressCode;
             this.addressDistrict = attrs.addressDistrict;
             this.addressStreet = attrs.addressStreet;
+            this.contactName = attrs.contactName;
             this.email = attrs.email;
             this.fax = attrs.fax;
-            this.id = attrs.id || attrs.$id;
+            this.isActive = attrs.isActive;
+            this.isPrimary = attrs.isPrimary;
             this.mobile = attrs.mobile;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
