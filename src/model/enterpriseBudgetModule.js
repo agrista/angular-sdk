@@ -1212,6 +1212,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Grape (Table)',
                 'Grape (Wine)',
                 'Guava',
+                'Hazelnut',
                 'Hops',
                 'Kiwi',
                 'Lemon',

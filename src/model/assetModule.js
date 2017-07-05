@@ -666,6 +666,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             'Gooseberry',
             'Grapefruit',
             'Guava',
+            'Hazelnut',
             'Kiwi Fruit',
             'Lemon',
             'Litchi',
