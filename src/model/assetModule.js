@@ -870,7 +870,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             };
 
             if (instance.data) {
-                map.title = getTitle(instance);
+                map.title = getTitle(instance, true);
                 map.groupby = instance.farmId;
                 map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
 
