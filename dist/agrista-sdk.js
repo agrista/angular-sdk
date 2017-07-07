@@ -14306,7 +14306,6 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
             privateProperty(this, 'addPortion', function (portion) {
                 if (!this.hasPortion(portion)) {
                     this.portions.push(portion);
-                    recalculateArea(this);
 
                     underscore.each(portion.landCover || [], function (landCover) {
                         var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
@@ -14327,6 +14326,8 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
                         }
                     }, this);
                 }
+
+                recalculateArea(this);
             });
 
             privateProperty(this, 'hasPortion', function (portion) {
