@@ -25,18 +25,16 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
                 return underscore.chain(this.portions)
                     .groupBy('farmLabel')
                     .map(function (portions, farmName) {
-                        farmName = (farmName || '').toLowerCase();
-
                         var portionSentence = underscore.chain(portions)
                             .sortBy('portionLabel')
                             .pluck('portionLabel')
                             .map(function (portionLabel) {
-                                return s.strLeft(portionLabel, '/');
+                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
                             })
                             .toSentence()
                             .value();
 
-                        return ((s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + (farmName.length ? ' of ' + (underscore.startsWith(farmName, 'farm') ? '' : 'farm ') + underscore.titleize(farmName) : ''));
+                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
                     })
                     .toSentence()
                     .value();
