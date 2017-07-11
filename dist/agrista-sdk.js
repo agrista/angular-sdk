@@ -11129,6 +11129,12 @@ sdkInterfaceUiApp.filter('newlines', ['$filter', '$sce', function ($filter, $sce
     }
 }]);
 
+sdkInterfaceUiApp.filter('unsafe', ['$sce', function ($sce) {
+    return function (input) {
+        return $sce.trustAsHtml(input);
+    }
+}]);
+
 sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
