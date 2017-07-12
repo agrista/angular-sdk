@@ -5618,7 +5618,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore'
                 if (item.action === 'invite') {
                     map.subtitle += item.organization.name + ' to create an Agrista account';
                 } else if (item.action === 'register') {
-                    map.subtitle += 'your request to join Agrista';
+                    map.subtitle += 'the request to join Agrista';
                 } else if (item.action === 'create') {
                     map.subtitle += 'a customer portfolio for ' + item.organization.name;
                 }
@@ -5632,7 +5632,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore'
                     map.subtitle += item.organization.name + ' to create an Agrista account';
                     map.referenceState = 'merchant';
                 } else if (item.action === 'register') {
-                    map.subtitle += 'your request to join Agrista';
+                    map.subtitle += 'the request to join Agrista';
                     map.referenceState = 'merchant';
                 } else if (item.action === 'create') {
                     map.subtitle += 'a merchant portfolio for ' + item.organization.name;
@@ -5646,7 +5646,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore'
                 if (item.action === 'invite') {
                     map.subtitle += item.organization.name + ' to create a user';
                 } else if (item.action === 'register') {
-                    map.subtitle += 'your request to create a user';
+                    map.subtitle += 'the request to create a user';
                 }
             } else {
                 map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
