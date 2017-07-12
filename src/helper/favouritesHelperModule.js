@@ -35,40 +35,51 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore'
             }
 
             map.subtitle += ' ' + _getActionVerb(item.action) + ' ';
-            map.referenceId = (underscore.contains(['farmer', 'merchant'], item.referenceType) ? item.organization.id : item[item.referenceType + 'Id']);
+            map.referenceId = (underscore.contains(['farmer', 'merchant', 'user'], item.referenceType) ? item.organization.id : item[item.referenceType + 'Id']);
 
-            if (underscore.contains(['farmer', 'merchant'], item.referenceType)) {
+            if (item.referenceType === 'document' && !underscore.isUndefined(item[item.referenceType])) {
+                map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
+                map.referenceState = 'document.details';
+            } else if (item.referenceType === 'farmer' && !underscore.isUndefined(item.organization)) {
                 if (item.action === 'invite') {
                     map.subtitle += item.organization.name + ' to create an Agrista account';
                 } else if (item.action === 'register') {
                     map.subtitle += 'your request to join Agrista';
                 } else if (item.action === 'create') {
                     map.subtitle += 'a customer portfolio for ' + item.organization.name;
+                }
+
+                map.referenceState = 'customer.details';
+            } else if (item.referenceType === 'task' && !underscore.isUndefined(item[item.referenceType])) {
+                map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
+                map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+            } else if (item.referenceType === 'merchant' && !underscore.isUndefined(item.organization)) {
+                if (item.action === 'invite') {
+                    map.subtitle += item.organization.name + ' to create an Agrista account';
+                    map.referenceState = 'merchant';
+                } else if (item.action === 'register') {
+                    map.subtitle += 'your request to join Agrista';
+                    map.referenceState = 'merchant';
+                } else if (item.action === 'create') {
+                    map.subtitle += 'a merchant portfolio for ' + item.organization.name;
+                    map.referenceState = 'merchant';
                 } else if (item.action === 'decline') {
                     map.subtitle += 'a task for ' + item.organization.name;
                 } else {
                     map.subtitle += 'the portfolio of ' + item.organization.name;
                 }
-
-                map.referenceState = 'customer.details';
+            } else if (item.referenceType === 'user' && !underscore.isUndefined(item.organization)) {
+                if (item.action === 'invite') {
+                    map.subtitle += item.organization.name + ' to create a user';
+                } else if (item.action === 'register') {
+                    map.subtitle += 'your request to create a user';
+                }
             } else {
-                if (item[item.referenceType] !== undefined) {
-                    if (item.referenceType === 'document') {
-                        map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
-                        map.referenceState = 'document.details';
-                    } else if (item.referenceType === 'task') {
-                        map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
-                        map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
-                    } else {
-                        map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
-                    }
-                } else {
-                    map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
-                }
+                map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+            }
 
-                if (item.actor && item.organization && item.organization.name) {
-                    map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
-                }
+            if (item.actor && underscore.contains(['document', 'task'], item.referenceType) && item.organization && item.organization.name) {
+                map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
             }
 
             return map;
