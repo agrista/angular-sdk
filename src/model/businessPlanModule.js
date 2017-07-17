@@ -152,7 +152,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         }
                     }
                 });
-
                 
                 if (cashFlowAdjust) {
                     // Schedule already exists
@@ -172,7 +171,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 reEvaluateBusinessPlan(instance);
             }
 
-            function calculateCashFlow (instance, schedules) {
+            function calculateSchedulesCashFlow (instance, schedules) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     numberOfMonths = instance.numberOfMonths,
                     cashFlowStartMonth = moment(startMonth).subtract(1, 'y'),
@@ -196,6 +195,36 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 return result;
             }
 
+            function initializeProductionCashFlow (instance) {
+                if (underscore.isUndefined(instance.data.cashFlowIncome)) {
+                    reEvaluateProductionSchedules(instance);
+                }
+
+                underscore.chain(instance.models.income)
+                    .filter(function (income) {
+                        return income.type === 'production' && underscore.isUndefined(instance.data.cashFlowIncome[income.name]);
+                    })
+                    .each(instance.addIncome, instance);
+
+                underscore.chain(instance.models.expenses)
+                    .filter(function (expense) {
+                        return expense.type === 'production' && underscore.isUndefined(instance.data.cashFlowExpenditure[expense.name]);
+                    })
+                    .each(instance.addExpense, instance);
+            }
+
+            function calculateIndirectProductionCashFlow (instance, items) {
+                return underscore.chain(items)
+                    .where({type: 'production'})
+                    .reduce(function (productionTotal, item) {
+                        return underscore.reduce(item.months, function (total, monthValue, index) {
+                            total[index + 12] += monthValue;
+                            return total;
+                        }, productionTotal);
+                    }, Base.initializeArray(instance.numberOfMonths + 24, 0))
+                    .value();
+            }
+
             function calculateEnterpriseCashFlowComposition (instance, schedules) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     numberOfMonths = instance.numberOfMonths,
@@ -207,7 +236,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     productionExpenditure = {},
                     incomeComposition = {};
 
-                angular.forEach(schedules, function (productionSchedule) {
+                // Summarize schedules
+                underscore.each(schedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule),
                         commodity = schedule.data.details.commodity;
 
@@ -220,6 +250,31 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     Base.initializeObject(productionExpenditure, commodity, {});
                     extractScheduleCategoryValuePerMonth(productionExpenditure[commodity], schedule, 'EXP', cashFlowStartMonth, cashFlowNumberOfMonths, true);
                 });
+
+                // Summarize indirect production income & expenses
+                underscore.chain(instance.models.income)
+                    .where({type: 'production'})
+                    .each(function (income) {
+                        Base.initializeObject(productionIncome, 'Indirect', {});
+                        Base.initializeObject(productionIncome['Indirect'], income.name, Base.initializeArray(cashFlowNumberOfMonths, 0));
+
+                        underscore.reduce(income.months, function (total, monthValue, index) {
+                            total[index + 12] += monthValue;
+                            return total;
+                        }, productionIncome['Indirect'][income.name])
+                    });
+
+                underscore.chain(instance.models.expenses)
+                    .where({type: 'production'})
+                    .each(function (expense) {
+                        Base.initializeObject(productionExpenditure, 'Indirect', {});
+                        Base.initializeObject(productionExpenditure['Indirect'], expense.name, Base.initializeArray(cashFlowNumberOfMonths, 0));
+
+                        underscore.reduce(expense.months, function (total, monthValue, index) {
+                            total[index + 12] += monthValue;
+                            return total;
+                        }, productionExpenditure['Indirect'][expense.name])
+                    });
 
                 angular.forEach(productionIncomeComposition, function (income, commodity) {
                     angular.forEach(income, function (values, category) {
@@ -286,35 +341,25 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             }
 
             function addProductionScheduleToCashFlow (instance, schedule) {
-                var scheduleCashFlow = calculateCashFlow(instance, [schedule]);
+                var scheduleCashFlow = calculateSchedulesCashFlow(instance, [schedule]);
 
                 angular.forEach(scheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
-                        addScheduleCategoryToCashFlow(instance, section, category, values);
+                        addCategoryValuesToCashFlow(instance, section, category, values);
                     });
                 });
             }
 
-            function addScheduleCategoryToCashFlow (instance, section, category, values) {
-                if (underscore.isUndefined(instance.data[section][category])) {
-                    // Insert new category to section
-                    instance.data[section][category] = values;
-                } else {
-                    // Add schedule category values to category
-                    instance.data[section][category] = addArrayValues(instance.data[section][category], values);
-                }
-            }
-
             function adjustProductionSchedulesInCashFlow (instance, oldSchedules, newSchedules) {
-                var oldScheduleCashFlow = calculateCashFlow(instance, oldSchedules),
-                    newScheduleCashFlow = calculateCashFlow(instance, newSchedules);
+                var oldScheduleCashFlow = calculateSchedulesCashFlow(instance, oldSchedules),
+                    newScheduleCashFlow = calculateSchedulesCashFlow(instance, newSchedules);
 
                 // Add or adjust new categories
                 angular.forEach(newScheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
                         if (underscore.isUndefined(oldScheduleCashFlow[section][category])) {
                             // Add new category
-                            addScheduleCategoryToCashFlow(instance, section, category, values);
+                            addCategoryValuesToCashFlow(instance, section, category, values);
                         } else {
                             // Adjust existing category if different
                             var oldScheduleCategoryTotal = sumCollectionValues(oldScheduleCashFlow[section][category]),
@@ -344,23 +389,33 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 angular.forEach(oldScheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
                         if (underscore.isUndefined(newScheduleCashFlow[section][category])) {
-                            removeScheduleCategoryFromCashFlow(instance, section, category, values);
+                            removeCategoryValuesFromCashFlow(instance, section, category, values);
                         }
                     });
                 });
             }
 
             function removeProductionScheduleFromCashFlow (instance, schedule) {
-                var scheduleCashFlow = calculateCashFlow(instance, [schedule]);
+                var scheduleCashFlow = calculateSchedulesCashFlow(instance, [schedule]);
 
                 angular.forEach(scheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
-                        removeScheduleCategoryFromCashFlow(instance, section, category, values);
+                        removeCategoryValuesFromCashFlow(instance, section, category, values);
                     });
                 });
             }
 
-            function removeScheduleCategoryFromCashFlow (instance, section, category, values) {
+            function addCategoryValuesToCashFlow (instance, section, category, values) {
+                if (underscore.isUndefined(instance.data[section][category])) {
+                    // Insert new category to section
+                    instance.data[section][category] = values;
+                } else {
+                    // Add schedule category values to category
+                    instance.data[section][category] = addArrayValues(instance.data[section][category], values);
+                }
+            }
+
+            function removeCategoryValuesFromCashFlow (instance, section, category, values) {
                 var scheduleCategoryTotal = sumCollectionValues(values),
                     cashFlowCategoryTotal = sumCollectionValues(instance.data[section][category]);
 
@@ -497,7 +552,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 var numberOfMonths = instance.numberOfMonths;
 
                 if (underscore.isUndefined(instance.data.cashFlowIncome)) {
-                    underscore.extend(instance.data, calculateCashFlow(instance, instance.models.productionSchedules));
+                    underscore.extend(instance.data, calculateSchedulesCashFlow(instance, instance.models.productionSchedules));
                 }
 
                 // Production Income/Expenditure
@@ -564,41 +619,104 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             /**
              * Income & Expenses handling
              */
+            function addIncomeExpense (instance, type, section, item) {
+                var oldItem = underscore.findWhere(instance.models[type], {uuid: item.uuid});
+
+                if (underscore.isUndefined(oldItem)) {
+                    instance.models[type].push(item);
+
+                    if (item.type === 'production') {
+                        addIncomeExpenseInCashFlow(instance, section, item);
+                    }
+                } else {
+                    instance.models[type] = underscore.chain(instance.models[type])
+                        .reject(function (model) {
+                            return model.uuid === item.uuid;
+                        })
+                        .union([item])
+                        .value();
+
+                    if (oldItem.type !== 'production' && item.type === 'production') {
+                        addIncomeExpenseToCashFlow(instance, section, item);
+                    } else if (oldItem.type === 'production' && item.type !== 'production') {
+                        removeIncomeExpenseFromCashFlow(instance, section, item);
+                    } else if (oldItem.type === 'production' && item.type === 'production') {
+                        adjustIncomeExpenseInCashFlow(instance, section, oldItem, item);
+                    }
+                }
+
+                reEvaluateBusinessPlan(instance);
+            }
+
+            function removeIncomeExpense (instance, type, section, item) {
+                var oldItem = underscore.findWhere(instance.models[type], {uuid: item.uuid});
+
+                if (!underscore.isUndefined(oldItem)) {
+                    instance.models[type] = underscore.reject(instance.models[type], function (model) {
+                        return model.uuid === item.uuid;
+                    });
+
+                    if (oldItem.type === 'production') {
+                        removeIncomeExpenseFromCashFlow(instance, section, item);
+                    }
+
+                    reEvaluateBusinessPlan(instance);
+                }
+            }
+
             privateProperty(this, 'addIncome', function (income) {
-                this.models.income = underscore.reject(this.models.income, function (item) {
-                    return item.uuid === income.uuid;
-                });
-
-                this.models.income.push(income);
-
-                reEvaluateBusinessPlan(this);
+                addIncomeExpense(this, 'income', 'cashFlowIncome', income);
             });
 
             privateProperty(this, 'removeIncome', function (income) {
-                this.models.income = underscore.reject(this.models.income, function (item) {
-                    return item.uuid === income.uuid;
-                });
-
-                reEvaluateBusinessPlan(this);
+                removeIncomeExpense(this, 'income', 'cashFlowIncome', income);
             });
 
             privateProperty(this, 'addExpense', function (expense) {
-                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
-                    return item.uuid === expense.uuid;
-                });
-
-                this.models.expenses.push(expense);
-
-                reEvaluateBusinessPlan(this);
+                addIncomeExpense(this, 'expense', 'cashFlowExpenditure', expense);
             });
 
             privateProperty(this, 'removeExpense', function (expense) {
-                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
-                    return item.uuid === expense.uuid;
-                });
-
-                reEvaluateBusinessPlan(this);
+                removeIncomeExpense(this, 'expense', 'cashFlowExpenditure', expense);
             });
+
+            function addIncomeExpenseToCashFlow (instance, section, item) {
+                addCategoryValuesToCashFlow(instance, section, item.name, calculateIndirectProductionCashFlow(instance, [item]));
+            }
+
+            function adjustIncomeExpenseInCashFlow (instance, section, oldItem, newItem) {
+                var newItemCashFlow = calculateIndirectProductionCashFlow(instance, [newItem]);
+
+                if (underscore.isUndefined(instance.data[section][newItem.name])) {
+                    // Add new category
+                    addCategoryValuesToCashFlow(instance, section, newItem.name, newItemCashFlow);
+                } else {
+                    var oldItemCashFlow = calculateIndirectProductionCashFlow(instance, [oldItem]),
+                        oldItemTotal = sumCollectionValues(oldItemCashFlow),
+                        newItemTotal = sumCollectionValues(newItemCashFlow);
+
+                    if (oldItemTotal !== newItemTotal) {
+                        if (oldItemTotal === 0) {
+                            // Current cash flow has no values
+                            // - Copy new values to cash flow
+                            instance.data[section][newItem.name] = values;
+                        } else {
+                            // Calculate the ratio between old and new cash flows
+                            var cashFlowTotal = sumCollectionValues(instance.data[section][newItem.name]),
+                                cashFlowDiff = newItemTotal / oldItemTotal,
+                                categoryDiff = (cashFlowTotal - oldItemTotal) / cashFlowTotal;
+
+                            instance.data[section][newItem.name] = underscore.map(instance.data[section][newItem.name], function (value) {
+                                return roundValue((value * categoryDiff) + ((value - (value * categoryDiff)) * cashFlowDiff));
+                            });
+                        }
+                    }
+                }
+            }
+
+            function removeIncomeExpenseFromCashFlow (instance, section, item) {
+                removeCategoryValuesFromCashFlow(instance, section, item.name, calculateIndirectProductionCashFlow(instance, [item]));
+            }
 
             function reEvaluateIncomeAndExpenses (instance) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
@@ -615,7 +733,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         type = (income.type ? income.type : 'other') + 'Income';
 
                     // Check income is not already added
-                    if (registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
+                    if (income.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
                         initializeCategoryValues(instance, type, income.name, numberOfMonths);
 
                         instance.data[type][income.name] = underscore.map(income.months, function (monthValue, index) {
@@ -632,7 +750,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         type = (expense.type ? expense.type : 'other') + 'Expenditure';
 
                     // Check expense is not already added
-                    if (registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
+                    if (expense.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
                         initializeCategoryValues(instance, type, expense.name, numberOfMonths);
 
                         instance.data[type][expense.name] = underscore.map(expense.months, function (monthValue, index) {
@@ -1609,9 +1727,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 recalculatePrimaryAccount(this);
             });
 
-            if (underscore.isEmpty(this.data.cashFlowIncome) || underscore.isEmpty(this.data.cashFlowIncome)) {
-                reEvaluateProductionSchedules(this);
-            }
+            initializeProductionCashFlow(this);
         }
 
         inheritModel(BusinessPlan, Document);
