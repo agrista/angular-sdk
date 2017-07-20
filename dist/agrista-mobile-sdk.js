@@ -11707,11 +11707,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             });
 
             privateProperty(this, 'addExpense', function (expense) {
-                addIncomeExpense(this, 'expense', 'cashFlowExpenditure', expense);
+                addIncomeExpense(this, 'expenses', 'cashFlowExpenditure', expense);
             });
 
             privateProperty(this, 'removeExpense', function (expense) {
-                removeIncomeExpense(this, 'expense', 'cashFlowExpenditure', expense);
+                removeIncomeExpense(this, 'expenses', 'cashFlowExpenditure', expense);
             });
 
             function addIncomeExpenseToCashFlow (instance, section, item) {
