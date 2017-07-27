@@ -1926,8 +1926,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             _preReauthenticate = fn;
         },
 
-        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
-            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
+        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService', 'underscore',
+            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService, underscore) {
                 var _user = _getUser();
 
                 _tokens = localStore.getItem('tokens');
@@ -1951,15 +1951,15 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     _tokens = undefined;
                 });
 
-                function _getUser() {
+                function _getUser () {
                     return localStore.getItem('user') || _defaultUser;
                 }
 
-                function _setUser(user) {
+                function _setUser (user) {
                     user = user || _defaultUser;
 
                     if (user.role === undefined) {
-                        user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
+                        user.role = (user.accessLevel === 'admin' ? _userRoles.admin : _userRoles.user);
                     }
 
                     localStore.setItem('user', user);
@@ -2021,8 +2021,14 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _tokens;
                     },
 
+                    hasApp: function (appName) {
+                        return _user && _user.userRole &&
+                            underscore.some(_user.userRole.apps, function (app) {
+                                return app.name === appName;
+                            });
+                    },
                     isAdmin: function () {
-                        return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
+                        return _user && (_user.accessLevel === 'admin' || (_user.userRole && _user.userRole.name === 'Admin'));
                     },
                     isAllowed: function (level) {
                         return (level & _user.role) != 0;
