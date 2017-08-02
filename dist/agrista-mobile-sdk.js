@@ -13023,35 +13023,33 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
         var roundValue = $filter('round');
 
         function convertLandComponent (landComponent) {
-            switch (landComponent.type) {
-                case 'Cropland (Dry)':
-                    landComponent.type = 'Cropland';
-                    break;
-                case 'Cropland (Equipped, Irrigable)':
-                case 'Cropland (Irrigable)':
-                    landComponent.type = 'Cropland (Irrigated)';
-                    break;
-                case 'Conservation':
-                    landComponent.type = 'Grazing (Bush)';
-                    break;
-                case 'Horticulture (Intensive)':
-                    landComponent.type = 'Greenhouses';
-                    break;
-                case 'Horticulture (Perennial)':
-                    landComponent.type = 'Orchard';
-                    break;
-                case 'Horticulture (Seasonal)':
-                    landComponent.type = 'Vegetables';
-                    break;
-                case 'Housing':
-                    landComponent.type = 'Homestead';
-                    break;
-                case 'Wasteland':
-                    landComponent.type = 'Non-vegetated';
-                    break;
-            }
+            landComponent.type = convertLandComponentType(landComponent.type);
 
             return landComponent;
+        }
+
+        function convertLandComponentType (type) {
+            switch (type) {
+                case 'Cropland (Dry)':
+                    return 'Cropland';
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    return 'Cropland (Irrigated)';
+                case 'Conservation':
+                    return 'Grazing (Bush)';
+                case 'Horticulture (Intensive)':
+                    return 'Greenhouses';
+                case 'Horticulture (Perennial)':
+                    return 'Orchard';
+                case 'Horticulture (Seasonal)':
+                    return 'Vegetables';
+                case 'Housing':
+                    return 'Homestead';
+                case 'Wasteland':
+                    return 'Non-vegetated';
+            }
+
+            return type;
         }
 
         function recalculateArea (instance) {
@@ -13067,6 +13065,8 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
         readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
             'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
             'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
+
+        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
 
         ComparableSale.validates({
             area: {
