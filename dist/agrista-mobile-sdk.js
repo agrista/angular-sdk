@@ -12536,6 +12536,8 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             this.id = attrs.id || attrs.$id;
             this.organization = attrs.organization;
             this.organizationId = attrs.organizationId;
+            this.originUuid = attrs.originUuid;
+            this.origin = attrs.origin;
             this.title = attrs.title;
         }
 
