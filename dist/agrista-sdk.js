@@ -518,7 +518,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
         },
         createDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document', underscore.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document', underscore.omit(data, ['organization', 'origin', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -546,7 +546,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
         },
         updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + data.id, underscore.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + data.id, underscore.omit(data, ['organization', 'origin', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -13998,6 +13998,8 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             this.id = attrs.id || attrs.$id;
             this.organization = attrs.organization;
             this.organizationId = attrs.organizationId;
+            this.originUuid = attrs.originUuid;
+            this.origin = attrs.origin;
             this.title = attrs.title;
         }
 
