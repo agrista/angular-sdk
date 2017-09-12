@@ -177,8 +177,15 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
             });
         },
         getDistinctProductionScheduleCategories: function() {
-            return promiseService.wrap(function(promise) {
+            return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/distinct-production-schedule-categories', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        mapReduce: function(query) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/aggregation/map-reduce', query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
