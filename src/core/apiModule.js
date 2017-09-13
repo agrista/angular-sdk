@@ -177,8 +177,15 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
             });
         },
         getDistinctProductionScheduleCategories: function() {
-            return promiseService.wrap(function(promise) {
+            return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/distinct-production-schedule-categories', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        mapReduce: function(query) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/aggregation/map-reduce', query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -507,7 +514,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
         },
         createDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document', underscore.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document', underscore.omit(data, ['organization', 'origin', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -535,7 +542,7 @@ sdkApiApp.factory('documentApi', ['$cookieStore', '$http', 'pagingService', 'pro
         },
         updateDocument: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + data.id, underscore.omit(data, ['organization', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + data.id, underscore.omit(data, ['organization', 'origin', 'tasks']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1330,11 +1337,47 @@ sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'und
     }
 
     return {
+        getAdminRegion: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchAdminRegions: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/admin-regions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getDistrict: function (query) {
             query = uriEncodeQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFarm: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchFarms: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farms' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

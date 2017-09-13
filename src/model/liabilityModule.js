@@ -56,7 +56,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 if ((this.frequency === 'once' && index === 0) || (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth))) {
                     var installmentPayment = (this.frequency === 'once' ? month.opening : instance.installmentPayment * paymentsPerMonth);
 
-                    if (month.opening > 0) {
+                    if (instance.type === 'rent') {
+                        month.repayment.bank = installmentPayment;
+                    } else if (month.opening > 0) {
                         month.repayment.bank = (month.opening <= installmentPayment ? month.opening : installmentPayment);
                     }
                 }

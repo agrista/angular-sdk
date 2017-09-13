@@ -814,8 +814,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
 
-        privateProperty(Asset, 'getTitle', function (asset) {
-            return getTitle(asset);
+        privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
+            return getTitle(asset, withField, farm);
         });
         
         privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
@@ -870,7 +870,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             };
 
             if (instance.data) {
-                map.title = getTitle(instance);
+                map.title = getTitle(instance, true);
                 map.groupby = instance.farmId;
                 map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
 
