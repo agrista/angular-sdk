@@ -120,17 +120,6 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
         },
-        getSublayerByPoint: function (query) {
-            query = underscore.map(query, function (value, key) {
-                return key + '=' + encodeURIComponent(value);
-            }).join('&');
-
-            return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/aggregation/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
         listValuationStatus: function(params) {
             return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
         },
@@ -188,8 +177,15 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
             });
         },
         getDistinctProductionScheduleCategories: function() {
-            return promiseService.wrap(function(promise) {
+            return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/distinct-production-schedule-categories', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        mapReduce: function(query) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/aggregation/map-reduce', query, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -937,6 +933,13 @@ sdkApiApp.factory('layerApi', ['$http', 'pagingService', 'promiseService', 'conf
     var _host = configuration.getServer();
 
     return {
+        getLayerTypes: function () {
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/layer/types', {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getLayers: function (params) {
             return pagingService.page(_host + 'api/layers', params);
         },
@@ -947,9 +950,16 @@ sdkApiApp.factory('layerApi', ['$http', 'pagingService', 'promiseService', 'conf
                 }, promise.reject);
             });
         },
-        getLayerTypes: function () {
+        createLayer: function (layer) {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/layer/types', {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/layer', layer, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateLayer: function(layer) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'api/layer/' + layer.id, layer, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -981,6 +991,13 @@ sdkApiApp.factory('layerApi', ['$http', 'pagingService', 'promiseService', 'conf
         updateSublayer: function(sublayer) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/sublayer/' + sublayer.id, sublayer, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteSublayer: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/sublayer/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1308,50 +1325,104 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'pagingService', 'promiseSe
 sdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
+    function uriEncodeQuery (query) {
+        return underscore.chain(query)
+            .omit(function (value) {
+                return (value == null || value == '');
+            })
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+
     return {
-        getFieldPolygon: function (lng, lat) {
+        getAdminRegion: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getPortionPolygon: function (lng, lat) {
+        searchAdminRegions: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/admin-regions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistrict: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFarm: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchFarms: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farms' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getField: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getPortion: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchPortions: function (query) {
-            query = underscore.chain(query)
-                .omit(function (value) {
-                    return (value == null || value == '');
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
+            query = uriEncodeQuery(query);
 
             return promiseService.wrap(function (promise) {
-                if (!query) {
-                    promise.reject();
-                }
-                $http.get(_host + 'api/geo/portion-polygons?' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/portions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getDistrictPolygon: function (lng, lat) {
+        getProvince: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getProvincePolygon: function (lng, lat) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province-polygon?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+        getSublayer: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1898,8 +1969,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             _preReauthenticate = fn;
         },
 
-        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService',
-            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService) {
+        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService', 'underscore',
+            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService, underscore) {
                 var _user = _getUser();
 
                 _tokens = localStore.getItem('tokens');
@@ -1923,15 +1994,15 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     _tokens = undefined;
                 });
 
-                function _getUser() {
+                function _getUser () {
                     return localStore.getItem('user') || _defaultUser;
                 }
 
-                function _setUser(user) {
+                function _setUser (user) {
                     user = user || _defaultUser;
 
                     if (user.role === undefined) {
-                        user.role = (user.accessLevel == 'admin' ? _userRoles.admin : _userRoles.user);
+                        user.role = (user.accessLevel === 'admin' ? _userRoles.admin : _userRoles.user);
                     }
 
                     localStore.setItem('user', user);
@@ -1993,8 +2064,14 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _tokens;
                     },
 
+                    hasApp: function (appName) {
+                        return _user && _user.userRole &&
+                            underscore.some(_user.userRole.apps, function (app) {
+                                return app.name === appName;
+                            });
+                    },
                     isAdmin: function () {
-                        return _user && (_user.accessLevel == 'admin' || (_user.userRole && _user.userRole.name == 'Admin'));
+                        return _user && (_user.accessLevel === 'admin' || (_user.userRole && _user.userRole.name === 'Admin'));
                     },
                     isAllowed: function (level) {
                         return (level & _user.role) != 0;
@@ -2174,7 +2251,7 @@ sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider)
 }]);
 var sdkGeospatialApp = angular.module('ag.sdk.geospatial', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
-sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
+sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'underscore', function (objectId, topologyHelper, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
             return new GeojsonHelper(json, properties);
@@ -2183,17 +2260,25 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
         this.addGeometry(json, properties);
     }
 
-    function _recursiveCoordinateFinder (bounds, coordinates) {
+    function recursiveCoordinateFinder (bounds, coordinates) {
         if (coordinates) {
             if (angular.isArray(coordinates[0])) {
                 angular.forEach(coordinates, function(coordinate) {
-                    _recursiveCoordinateFinder(bounds, coordinate);
+                    recursiveCoordinateFinder(bounds, coordinate);
                 });
             } else if (angular.isArray(coordinates)) {
                 bounds.push([coordinates[1], coordinates[0]]);
             }
         }
     }
+
+    function geometryRelation (instance, relation, geometry) {
+        var geom1 = topologyHelper.readGeoJSON(instance._json),
+            geom2 = topologyHelper.readGeoJSON(geometry);
+
+        return (geom1 && geom2 && geom1[relation] ? geom1[relation](geom2) : false);
+    }
+    
 
     GeojsonHelper.prototype = {
         getJson: function () {
@@ -2214,7 +2299,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                 angular.forEach(features, function(feature) {
                     var geometry = feature.geometry || feature;
 
-                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                    recursiveCoordinateFinder(bounds, geometry.coordinates);
                 });
             }
 
@@ -2227,7 +2312,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                 lng1 = 0, lng2 = 0;
 
             angular.forEach(bounds, function(coordinate, index) {
-                if (index == 0) {
+                if (index === 0) {
                     lat1 = lat2 = coordinate[0];
                     lng1 = lng2 = coordinate[1];
                 } else {
@@ -2240,14 +2325,26 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
 
             return [[lat1, lng1], [lat2, lng2]];
         },
+        /**
+         * Geometry Relations
+         */
+        contains: function (geometry) {
+            return geometryRelation(this, 'contains', geometry);
+        },
+        within: function (geometry) {
+            return geometryRelation(this, 'within', geometry);
+        },
+        /**
+         * Get Center
+         */
         getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds);
+            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
 
             return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
-                coordinates: this.getCenter(bounds).reverse(),
+                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
                 type: 'Point'
             }
         },
@@ -2255,7 +2352,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);
         },
         setCoordinates: function (coordinates) {
-            if (this._json && this._json.type != 'FeatureCollection') {
+            if (this._json && this._json.type !== 'FeatureCollection') {
                 if (this._json.geometry) {
                     this._json.geometry.coordinates = coordinates;
                 } else {
@@ -2267,7 +2364,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
             var _this = this;
 
             if (this._json && properties) {
-                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
+                if (_this._json.type !== 'FeatureCollection' && _this._json.type !== 'Feature') {
                     _this._json = {
                         type: 'Feature',
                         geometry: _this._json,
@@ -2291,14 +2388,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
 
                     this.addProperties(properties);
                 } else {
-                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                    if (this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
                         this._json = {
                             type: 'Feature',
                             geometry: this._json
                         };
                     }
 
-                    if (this._json.type == 'Feature') {
+                    if (this._json.type === 'Feature') {
                         this._json.properties = underscore.defaults(this._json.properties || {}, {
                             featureId: objectId().toString()
                         });
@@ -2309,7 +2406,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                         };
                     }
 
-                    if (this._json.type == 'FeatureCollection') {
+                    if (this._json.type === 'FeatureCollection') {
                         this._json.features.push({
                             type: 'Feature',
                             geometry: geometry,
@@ -2326,11 +2423,11 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
         formatGeoJson: function (geoJson, toType) {
             // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
-            if(toType.toLowerCase() == 'point') {
+            if (toType.toLowerCase() === 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
                     // type of Feature
                     case 'feature':
-                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                        if (geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type === 'Point') {
                             return geoJson.geometry;
                         }
                         break;
@@ -2351,7 +2448,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
         validGeoJson: function (geoJson, typeRestriction) {
             // TODO: REFACTOR
             var validate = true;
-            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+            if(!geoJson || geoJson.type === undefined || typeof geoJson.type !== 'string' || (typeRestriction && geoJson.type.toLowerCase() !== typeRestriction)) {
                 return false;
             }
 
@@ -2372,8 +2469,8 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                         return false;
                     }
                     var flattenedCoordinates = _.flatten(geoJson.coordinates);
-                    flattenedCoordinates.forEach(function(element, i) {
-                        if(typeof element != 'number') {
+                    flattenedCoordinates.forEach(function(element) {
+                        if (typeof element !== 'number') {
                             validate = false;
                         }
                     });
@@ -7233,7 +7330,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
     }
 }]);
 
-sdkHelperFarmerApp.factory('landUseHelper', function() {
+sdkHelperFarmerApp.factory('landUseHelper', ['underscore', function (underscore) {
     var _croppingPotentialTypes = ['High', 'Medium', 'Low'];
     var _effectiveDepthTypes = ['0 - 30cm', '30 - 60cm', '60 - 90cm', '90 - 120cm', '120cm +'];
     var _irrigationTypes = ['Centre-Pivot', 'Flood', 'Micro', 'Sub-drainage', 'Sprinkler', 'Drip'];
@@ -7241,13 +7338,6 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
     var _soilTextureTypes = ['Sand', 'Loamy Sand', 'Clay Sand', 'Sandy Loam', 'Fine Sandy Loam', 'Loam', 'Silty Loam', 'Sandy Clay Loam', 'Clay Loam', 'Clay', 'Gravel', 'Other', 'Fine Sandy Clay', 'Medium Sandy Clay Loam', 'Fine Sandy Clay Loam', 'Loamy Medium Sand', 'Medium Sandy Loam', 'Coarse Sandy Clay Loam', 'Coarse Sand', 'Loamy Fine Sand', 'Loamy Coarse Sand', 'Fine Sand', 'Silty Clay', 'Coarse Sandy Loam', 'Medium Sand', 'Medium Sandy Clay', 'Coarse Sandy Clay', 'Sandy Clay'];
     var _terrainTypes = ['Plains', 'Mountains'];
     var _waterSourceTypes = ['Irrigation Scheme', 'River', 'Dam', 'Borehole'];
-
-    var _pipLandUseConvertion = {
-        'Crops': 'Cropland',
-        'Orchards': 'Horticulture (Perennial)',
-        'Plantations': 'Plantation',
-        'Vineyards': 'Horticulture (Perennial)'
-    };
 
     return {
         croppingPotentialTypes: function () {
@@ -7272,184 +7362,144 @@ sdkHelperFarmerApp.factory('landUseHelper', function() {
             return _waterSourceTypes;
         },
         isCroppingPotentialRequired: function (landUse) {
-            return (landUse == 'Cropland');
+            return s.include(landUse, 'Cropland');
         },
         isEstablishedDateRequired: function (landUse) {
             return (landUse == 'Horticulture (Perennial)');
         },
         isTerrainRequired: function (landUse) {
-            return (landUse == 'Grazing');
-        },
-        getPipLandUseType: function (pipLandUse) {
-            return _pipLandUseConvertion[pipLandUse];
-        }
-    }
-});
-
-sdkHelperFarmerApp.factory('farmHelper', ['geoJSONHelper', 'topologyHelper', 'underscore', function(geoJSONHelper, topologyHelper, underscore) {
-    var _listServiceMap = function(item) {
-        return {
-            id: item.id || item.$id,
-            title: item.name
-        };
-    };
-
-    return {
-        listServiceMap: function () {
-            return _listServiceMap;
-        },
-
-        containsPoint: function (geometry, assets, farm) {
-            var point = topologyHelper.readGeojson(geometry);
-
-            return underscore.some(assets, function (asset) {
-                return (asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id && asset.data.loc && point.within(topologyHelper.readGeojson(asset.data.loc)));
-            });
-        },
-        getCenter: function (farmer, farm) {
-            var geojson = geoJSONHelper();
-
-            underscore
-                .chain(farmer.legalEntities)
-                .pluck('assets')
-                .flatten()
-                .compact()
-                .each(function (asset) {
-                    if(asset.type == 'farmland' && asset.farmId && asset.farmId == farm.id) {
-                        geojson.addGeometry(asset.data.loc);
-                    }
-                });
-
-            return geojson.getCenterAsGeojson();
-        },
-
-        validateFieldName: function (farm, newField, oldField) {
-            newField.fieldName = (newField.fieldName ? newField.fieldName.trim().replace(/[^0-9A-Za-z\s]/g, '') : '');
-            var foundField = underscore.find(farm.data.fields, function (field) {
-                return (field.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, '') === newField.fieldName.toUpperCase().replace(/[^0-9A-Z]/g, ''))
-            });
-
-            return (angular.isObject(foundField) ? (angular.isObject(oldField) && foundField.fieldName === oldField.fieldName) : true);
+            return s.include(landUse, 'Grazing');
         }
     }
 }]);
 
 var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk.helper.document', 'ag.sdk.helper.task']);
 
-sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', function(documentHelper) {
-    var _listServiceMap = function(item) {
-        var map = {
-            id: item.id || item.$id,
-            date: item.date
-        };
+sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore',
+    function (documentHelper, underscore) {
+        var _listServiceMap = function(item) {
+            var map = {
+                id: item.id || item.$id,
+                date: item.date
+            };
 
-        if (typeof item.actor === 'object') {
-            // User is the actor
-            if (item.actor.displayName) {
-                map.title = item.actor.displayName;
-                map.subtitle = item.actor.displayName;
-            }
-            else {
-                map.title = item.actor.firstName + ' ' + item.actor.lastName;
-                map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
-            }
+            if (typeof item.actor === 'object') {
+                // User is the actor
+                if (item.actor.displayName) {
+                    map.title = item.actor.displayName;
+                    map.subtitle = item.actor.displayName;
+                }
+                else {
+                    map.title = item.actor.firstName + ' ' + item.actor.lastName;
+                    map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
+                }
 
-            if (item.actor.position) {
-                map.title += ' (' + item.actor.position + ')';
-            }
+                if (item.actor.position) {
+                    map.title += ' (' + item.actor.position + ')';
+                }
 
-            map.profilePhotoSrc = item.actor.profilePhotoSrc;
-        } else if (item.organization) {
-            // Organization is the actor
-            map.title = item.organization.name;
-            map.subtitle = item.organization.name;
-        } else {
-            // Unknown actor
-            map.title = 'Someone';
-            map.subtitle = 'Someone';
-        }
-
-        map.subtitle += ' ' + _getActionVerb(item.action) + ' ';
-
-        map.referenceId = item.referenceType == 'farmer' ? item.organization.id : item[item.referenceType + 'Id'];
-
-        if (item.referenceType == 'farmer') {
-            if (item.action == 'invite') {
-                map.subtitle += item.organization.name + ' to create an Agrista account';
-            } else if (item.action == 'register') {
-                map.subtitle += 'your request to join Agrista';
-            } else if (item.action == 'create') {
-                map.subtitle += 'a customer portfolio for ' + item.organization.name;
-            } else if (item.action == 'decline') {
-                map.subtitle += 'a task for ' + item.organization.name;
+                map.profilePhotoSrc = item.actor.profilePhotoSrc;
+            } else if (item.organization) {
+                // Organization is the actor
+                map.title = item.organization.name;
+                map.subtitle = item.organization.name;
             } else {
-                map.subtitle += 'the portfolio of ' + item.organization.name;
+                // Unknown actor
+                map.title = 'Someone';
+                map.subtitle = 'Someone';
             }
 
-            map.referenceState = 'customer.details';
-        } else {
-            if (item[item.referenceType] !== undefined) {
-                if (item.referenceType == 'document') {
-                    map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
-                    map.referenceState = 'document.details';
-                } else if (item.referenceType == 'task') {
-                    map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
-                    map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+            map.subtitle += ' ' + _getActionVerb(item.action) + ' ';
+            map.referenceId = (underscore.contains(['farmer', 'merchant', 'user'], item.referenceType) ? item.organization.id : item[item.referenceType + 'Id']);
+
+            if (item.referenceType === 'document' && !underscore.isUndefined(item[item.referenceType])) {
+                map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
+                map.referenceState = 'document.details';
+            } else if (item.referenceType === 'farmer' && !underscore.isUndefined(item.organization)) {
+                if (item.action === 'invite') {
+                    map.subtitle += item.organization.name + ' to create an Agrista account';
+                } else if (item.action === 'register') {
+                    map.subtitle += 'the request to join Agrista';
+                } else if (item.action === 'create') {
+                    map.subtitle += 'a customer portfolio for ' + item.organization.name;
+                }
+
+                map.referenceState = 'customer.details';
+            } else if (item.referenceType === 'task' && !underscore.isUndefined(item[item.referenceType])) {
+                map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
+                map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+            } else if (item.referenceType === 'merchant' && !underscore.isUndefined(item.organization)) {
+                if (item.action === 'invite') {
+                    map.subtitle += item.organization.name + ' to create an Agrista account';
+                    map.referenceState = 'merchant';
+                } else if (item.action === 'register') {
+                    map.subtitle += 'the request to join Agrista';
+                    map.referenceState = 'merchant';
+                } else if (item.action === 'create') {
+                    map.subtitle += 'a merchant portfolio for ' + item.organization.name;
+                    map.referenceState = 'merchant';
+                } else if (item.action === 'decline') {
+                    map.subtitle += 'a task for ' + item.organization.name;
                 } else {
-                    map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
+                    map.subtitle += 'the portfolio of ' + item.organization.name;
+                }
+            } else if (item.referenceType === 'user' && !underscore.isUndefined(item.organization)) {
+                if (item.action === 'invite') {
+                    map.subtitle += item.organization.name + ' to create a user';
+                } else if (item.action === 'register') {
+                    map.subtitle += 'the request to create a user';
                 }
             } else {
                 map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
             }
 
-            if (item.actor && item.organization && item.organization.name) {
+            if (item.actor && underscore.contains(['document', 'task'], item.referenceType) && item.organization && item.organization.name) {
                 map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
             }
+
+            return map;
+        };
+
+        var _getActionPreposition = function (action) {
+            return _actionPrepositionExceptionMap[action] || 'for';
+        };
+
+        var _getActionVerb = function (action) {
+            var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+            return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') === action.length - 1 ? action + 'd' : action.lastIndexOf('y') === action.length - 1 ? (vowels.indexOf(action.substr(action.length - 1, action.length)) === -1 ? action.substr(0, action.length - 1)  + 'ied' : action + 'ed') : action + 'ed');
+        };
+
+        var _getReferenceArticle = function (reference) {
+            var vowels = ['a', 'e', 'i', 'o', 'u'];
+
+            return _referenceArticleExceptionMap[reference] || (vowels.indexOf(reference.substr(0, 1)) !== -1 ? 'an' : 'a');
+        };
+
+        var _actionPrepositionExceptionMap = {
+            'share': 'of',
+            'sent': 'to'
+        };
+
+        var _actionVerbExceptionMap = {
+            'register': 'accepted',
+            'sent': 'sent'
+        };
+
+        var _referenceArticleExceptionMap = {
+            'asset register': 'an'
+        };
+
+        return {
+            listServiceMap: function() {
+                return _listServiceMap;
+            },
+            getActionVerb: _getActionVerb,
+            getReferenceArticle: _getReferenceArticle
         }
+    }]);
 
-        return map;
-    };
-
-    var _getActionPreposition = function (action) {
-        return _actionPrepositionExceptionMap[action] || 'for';
-    };
-
-    var _getActionVerb = function (action) {
-        var vowels = ['a', 'e', 'i', 'o', 'u'];
-
-        return _actionVerbExceptionMap[action] || (action.lastIndexOf('e') == action.length - 1 ? action + 'd' : action.lastIndexOf('y') == action.length - 1 ? (vowels.indexOf(action.substr(action.length - 1, action.length)) == -1 ? action.substr(0, action.length - 1)  + 'ied' : action + 'ed') : action + 'ed');
-    };
-
-    var _getReferenceArticle = function (reference) {
-        var vowels = ['a', 'e', 'i', 'o', 'u'];
-
-        return _referenceArticleExceptionMap[reference] || (vowels.indexOf(reference.substr(0, 1)) != -1 ? 'an' : 'a');
-    };
-
-    var _actionPrepositionExceptionMap = {
-        'share': 'of',
-        'sent': 'to'
-    };
-
-    var _actionVerbExceptionMap = {
-        'register': 'accepted',
-        'sent': 'sent'
-    };
-
-    var _referenceArticleExceptionMap = {
-        'asset register': 'an'
-    };
-
-    return {
-        listServiceMap: function() {
-            return _listServiceMap;
-        },
-        getActionVerb: _getActionVerb,
-        getReferenceArticle: _getReferenceArticle
-    }
-}]);
-
-sdkHelperFavouritesApp.factory('notificationHelper', ['taskHelper', 'documentHelper', function (taskHelper, documentHelper) {
+sdkHelperFavouritesApp.factory('notificationHelper', [function () {
     var _listServiceMap = function(item) {
         return {
             id: item.id || item.$id,
@@ -8356,7 +8406,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     color: 'white',
                     opacity: 0.8,
                     fillColor: "#0094D6",
-                    fillOpacity: 0.5
+                    fillOpacity: 0.6
                 }
             },
             farmland: {
@@ -9003,6 +9053,12 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     _this._config.bounds = bounds;
                 });
             },
+            panTo: function (coordinates, options) {
+                this.enqueueRequest('mapbox-' + this._id + '::pan-to', {
+                    coordinates: coordinates,
+                    options: options
+                });
+            },
             zoomTo: function (coordinates, zoom, options) {
                 this.enqueueRequest('mapbox-' + this._id + '::zoom-to', {
                     coordinates: coordinates,
@@ -9028,7 +9084,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     handler: function (layer) {
                         _this._config.leafletLayers[name] = layer;
 
-                        handler(layer);
+                        if (typeof handler === 'function') {
+                            handler(layer);
+                        }
                     }
                 };
 
@@ -9461,6 +9519,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         scope.$on('mapbox-' + id + '::set-bounds', function (event, args) {
             _this.setBounds(args);
+        });
+
+        scope.$on('mapbox-' + id + '::pan-to', function (event, args) {
+            _this.panTo(args);
         });
 
         scope.$on('mapbox-' + id + '::zoom-to', function (event, args) {
@@ -9923,6 +9985,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         }
     };
 
+    Mapbox.prototype.panTo = function (pan) {
+        if (this._map && pan.coordinates) {
+            this._map.panTo(pan.coordinates, pan.options);
+        }
+    };
+
     Mapbox.prototype.zoomTo = function (view) {
         if (this._map && view.coordinates && view.zoom) {
             this._map.setZoomAround(view.coordinates, view.zoom, view.options);
@@ -10006,7 +10074,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             layer = this._layers[name],
             removed = false;
 
-        if (fromLayer) {
+        if (fromLayer && layer) {
             removed = (this._layers[name] != undefined);
             fromLayer.removeLayer(layer);
 
@@ -10386,7 +10454,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion-polygon' + params)
+            $http.get(host + 'api/geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -10407,7 +10475,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion-polygon' + params)
+            $http.get(host + 'api/geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
@@ -10429,7 +10497,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district-polygon' + params)
+            $http.get(host + 'api/geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -10450,7 +10518,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district-polygon' + params)
+            $http.get(host + 'api/geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -10473,7 +10541,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field-polygon' + params)
+            $http.get(host + 'api/geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -10493,7 +10561,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field-polygon' + params)
+            $http.get(host + 'api/geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
@@ -10783,6 +10851,14 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
+            element.on('click', function (e) {
+                if (e.originalEvent) {
+                    e.originalEvent._stopped = true;
+                    e.originalEvent.preventDefault();
+                    e.originalEvent.stopPropagation();
+                }
+            });
+
             element.on('mouseover', function () {
                 map.dragging.disable();
             });
@@ -11113,6 +11189,12 @@ sdkInterfaceUiApp.filter('newlines', ['$filter', '$sce', function ($filter, $sce
     }
 }]);
 
+sdkInterfaceUiApp.filter('unsafe', ['$sce', function ($sce) {
+    return function (input) {
+        return $sce.trustAsHtml(input);
+    }
+}]);
+
 sdkInterfaceUiApp.directive('locationFormatter', ['$filter', function ($filter) {
     return {
         restrict: 'A',
@@ -11304,34 +11386,29 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
     }
 }]);
 
-var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, attachmentHelper, computedProperty, inheritModel, Liability, Model, moment, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'Model', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, Model, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
         function Asset (attrs) {
             Model.Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'attachments', []);
+            Base.initializeObject(this.data, 'zones', []);
 
             privateProperty(this, 'generateKey', function (legalEntity, farm) {
-                this.assetKey = (legalEntity ? 'entity.' + legalEntity.uuid : '') +
-                (this.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
-                (this.type === 'crop' && this.data.season ? '-s.' + this.data.season : '') +
-                (this.data.fieldName ? '-fi.' + this.data.fieldName : '') +
-                (this.data.crop ? '-c.' + this.data.crop : '') +
-                (this.type === 'cropland' && this.data.irrigated ? '-i.' + this.data.irrigation : '') +
-                (this.type === 'farmland' && this.data.sgKey ? '-' + this.data.sgKey : '') +
-                (this.type === 'improvement' || this.type === 'livestock' || this.type === 'vme' ?
-                (this.data.type ? '-t.' + this.data.type : '') +
-                (this.data.category ? '-c.' + this.data.category : '') +
-                (this.data.name ? '-n.' + this.data.name : '') +
-                (this.data.purpose ? '-p.' + this.data.purpose : '') +
-                (this.data.model ? '-m.' + this.data.model : '') +
-                (this.data.identificationNo ? '-in.' + this.data.identificationNo : '') : '') +
-                (this.data.waterSource ? '-ws.' + this.data.waterSource : '') +
-                (this.type === 'other' ? (this.data.name ? '-n.' + this.data.name : '') : '');
+                this.assetKey = generateKey(this, legalEntity, farm);
 
                 return this.assetKey;
+            });
+
+            privateProperty(this, 'generateUniqueName', function (categoryLabel, assets) {
+                this.data.name = generateUniqueName(this, categoryLabel, assets);
+            });
+
+            privateProperty(this, 'getCategories', function () {
+                return Asset.categories[this.type] || [];
             });
 
             privateProperty(this, 'getPhoto', function () {
@@ -11340,6 +11417,19 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
 
             privateProperty(this, 'getTitle', function (withField, farm) {
                 return getTitle(this, withField, farm);
+            });
+
+            privateProperty(this, 'isFieldApplicable', function (field) {
+                return isFieldApplicable(this, field);
+            });
+
+            privateProperty(this, 'clean', function () {
+                if (this.type === 'vme') {
+                    this.data.quantity = (this.data.identificationNo && this.data.identificationNo.length > 0 ? 1 : this.data.quantity);
+                    this.data.identificationNo = (this.data.quantity !== 1 ? '' : this.data.identificationNo);
+                } else if (this.type === 'cropland') {
+                    this.data.equipped = (this.data.irrigated ? this.data.equipped : false);
+                }
             });
 
             computedProperty(this, 'age', function (asOfDate) {
@@ -11376,7 +11466,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             });
 
             // Value / Liability
-
             computedProperty(this, 'liquidityTypeTitle', function () {
                 return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
             });
@@ -11442,6 +11531,406 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'water right': 'Water Rights'
         });
 
+        readOnlyProperty(Asset, 'categories', {
+            improvement: [
+                {category: 'Airport', subCategory: 'Hangar'},
+                {category: 'Airport', subCategory: 'Helipad'},
+                {category: 'Airport', subCategory: 'Runway'},
+                {category: 'Poultry', subCategory: 'Hatchery'},
+                {category: 'Aquaculture', subCategory: 'Pond'},
+                {category: 'Aquaculture', subCategory: 'Net House'},
+                {category: 'Aviary'},
+                {category: 'Beekeeping'},
+                {category: 'Borehole'},
+                {category: 'Borehole', subCategory: 'Equipped'},
+                {category: 'Borehole', subCategory: 'Pump'},
+                {category: 'Borehole', subCategory: 'Windmill'},
+                {category: 'Poultry', subCategory: 'Broiler House'},
+                {category: 'Poultry', subCategory: 'Broiler House - Atmosphere'},
+                {category: 'Poultry', subCategory: 'Broiler House - Semi'},
+                {category: 'Poultry', subCategory: 'Broiler House - Zinc'},
+                {category: 'Building', subCategory: 'Administrative'},
+                {category: 'Building'},
+                {category: 'Building', subCategory: 'Commercial'},
+                {category: 'Building', subCategory: 'Entrance'},
+                {category: 'Building', subCategory: 'Lean-to'},
+                {category: 'Building', subCategory: 'Outbuilding'},
+                {category: 'Building', subCategory: 'Gate'},
+                {category: 'Cold Storage'},
+                {category: 'Commercial', subCategory: 'Coffee Shop'},
+                {category: 'Commercial', subCategory: 'Sales Facility'},
+                {category: 'Commercial', subCategory: 'Shop'},
+                {category: 'Commercial', subCategory: 'Bar'},
+                {category: 'Commercial', subCategory: 'Café'},
+                {category: 'Commercial', subCategory: 'Restaurant'},
+                {category: 'Commercial', subCategory: 'Factory'},
+                {category: 'Commercial', subCategory: 'Tasting Facility'},
+                {category: 'Commercial', subCategory: 'Cloth House'},
+                {category: 'Compost', subCategory: 'Preparing Unit'},
+                {category: 'Crocodile Dam'},
+                {category: 'Crop Processing', subCategory: 'Degreening Room'},
+                {category: 'Crop Processing', subCategory: 'Dehusking Facility'},
+                {category: 'Crop Processing', subCategory: 'Drying Facility'},
+                {category: 'Crop Processing', subCategory: 'Drying Tunnels'},
+                {category: 'Crop Processing', subCategory: 'Sorting Facility'},
+                {category: 'Crop Processing', subCategory: 'Drying Oven'},
+                {category: 'Crop Processing', subCategory: 'Drying Racks'},
+                {category: 'Crop Processing', subCategory: 'Crushing Plant'},
+                {category: 'Crop Processing', subCategory: 'Nut Cracking Facility'},
+                {category: 'Crop Processing', subCategory: 'Nut Factory'},
+                {category: 'Dairy'},
+                {category: 'Dairy', subCategory: 'Pasteurising Facility'},
+                {category: 'Dairy', subCategory: 'Milking Parlour'},
+                {category: 'Dam'},
+                {category: 'Dam', subCategory: 'Filter'},
+                {category: 'Dam', subCategory: 'Trout'},
+                {category: 'Domestic', subCategory: 'Chicken Coop'},
+                {category: 'Domestic', subCategory: 'Chicken Run'},
+                {category: 'Domestic', subCategory: 'Kennels'},
+                {category: 'Domestic', subCategory: 'Gardening Facility'},
+                {category: 'Education', subCategory: 'Conference Room'},
+                {category: 'Education', subCategory: 'Classroom'},
+                {category: 'Education', subCategory: 'Crèche'},
+                {category: 'Education', subCategory: 'School'},
+                {category: 'Education', subCategory: 'Training Facility'},
+                {category: 'Equipment', subCategory: 'Air Conditioner'},
+                {category: 'Equipment', subCategory: 'Gantry'},
+                {category: 'Equipment', subCategory: 'Oven'},
+                {category: 'Equipment', subCategory: 'Pump'},
+                {category: 'Equipment', subCategory: 'Pumphouse'},
+                {category: 'Equipment', subCategory: 'Scale'},
+                {category: 'Feed Mill'},
+                {category: 'Feedlot'},
+                {category: 'Fencing'},
+                {category: 'Fencing', subCategory: 'Electric'},
+                {category: 'Fencing', subCategory: 'Game'},
+                {category: 'Fencing', subCategory: 'Perimeter'},
+                {category: 'Fencing', subCategory: 'Security'},
+                {category: 'Fencing', subCategory: 'Wire'},
+                {category: 'Fuel', subCategory: 'Tanks'},
+                {category: 'Fuel', subCategory: 'Tank Stand'},
+                {category: 'Fuel', subCategory: 'Fuelling Facility'},
+                {category: 'Grain Mill'},
+                {category: 'Greenhouse'},
+                {category: 'Infrastructure'},
+                {category: 'Irrigation', subCategory: 'Sprinklers'},
+                {category: 'Irrigation'},
+                {category: 'Laboratory'},
+                {category: 'Livestock Handling', subCategory: 'Auction Facility'},
+                {category: 'Livestock Handling', subCategory: 'Cages'},
+                {category: 'Livestock Handling', subCategory: 'Growing House'},
+                {category: 'Livestock Handling', subCategory: 'Pens'},
+                {category: 'Livestock Handling', subCategory: 'Shelter'},
+                {category: 'Livestock Handling', subCategory: 'Breeding Facility'},
+                {category: 'Livestock Handling', subCategory: 'Culling Shed'},
+                {category: 'Livestock Handling', subCategory: 'Dipping Facility'},
+                {category: 'Livestock Handling', subCategory: 'Elephant Enclosures'},
+                {category: 'Livestock Handling', subCategory: 'Feed Troughs/Dispensers'},
+                {category: 'Livestock Handling', subCategory: 'Horse Walker'},
+                {category: 'Livestock Handling', subCategory: 'Maternity Shelter/Pen'},
+                {category: 'Livestock Handling', subCategory: 'Quarantine Area'},
+                {category: 'Livestock Handling', subCategory: 'Rehab Facility'},
+                {category: 'Livestock Handling', subCategory: 'Shearing Facility'},
+                {category: 'Livestock Handling', subCategory: 'Stable'},
+                {category: 'Livestock Handling', subCategory: 'Surgery'},
+                {category: 'Livestock Handling', subCategory: 'Treatment Area'},
+                {category: 'Livestock Handling', subCategory: 'Weaner House'},
+                {category: 'Livestock Handling', subCategory: 'Grading Facility'},
+                {category: 'Livestock Handling', subCategory: 'Inspection Facility'},
+                {category: 'Logistics', subCategory: 'Handling Equipment'},
+                {category: 'Logistics', subCategory: 'Handling Facility'},
+                {category: 'Logistics', subCategory: 'Depot'},
+                {category: 'Logistics', subCategory: 'Loading Area'},
+                {category: 'Logistics', subCategory: 'Loading Shed'},
+                {category: 'Logistics', subCategory: 'Hopper'},
+                {category: 'Logistics', subCategory: 'Weigh Bridge'},
+                {category: 'Meat Processing', subCategory: 'Abattoir'},
+                {category: 'Meat Processing', subCategory: 'Deboning Room'},
+                {category: 'Meat Processing', subCategory: 'Skinning Facility'},
+                {category: 'Mill'},
+                {category: 'Mushrooms', subCategory: 'Cultivation'},
+                {category: 'Mushrooms', subCategory: 'Sweat Room'},
+                {category: 'Nursery ', subCategory: 'Plant'},
+                {category: 'Nursery ', subCategory: 'Plant Growing Facility'},
+                {category: 'Office'},
+                {category: 'Packaging Facility'},
+                {category: 'Paddocks', subCategory: 'Camp'},
+                {category: 'Paddocks', subCategory: 'Kraal'},
+                {category: 'Paddocks'},
+                {category: 'Piggery', subCategory: 'Farrowing House'},
+                {category: 'Piggery', subCategory: 'Pig Sty'},
+                {category: 'Processing', subCategory: 'Bottling Facility'},
+                {category: 'Processing', subCategory: 'Flavour Shed'},
+                {category: 'Processing', subCategory: 'Processing Facility'},
+                {category: 'Recreation', subCategory: 'Viewing Area'},
+                {category: 'Recreation', subCategory: 'BBQ'},
+                {category: 'Recreation', subCategory: 'Clubhouse'},
+                {category: 'Recreation', subCategory: 'Event Venue'},
+                {category: 'Recreation', subCategory: 'Gallery'},
+                {category: 'Recreation', subCategory: 'Game Room'},
+                {category: 'Recreation', subCategory: 'Gazebo'},
+                {category: 'Recreation', subCategory: 'Gymnasium'},
+                {category: 'Recreation', subCategory: 'Jacuzzi'},
+                {category: 'Recreation', subCategory: 'Judging Booth'},
+                {category: 'Recreation', subCategory: 'Museum'},
+                {category: 'Recreation', subCategory: 'Play Area'},
+                {category: 'Recreation', subCategory: 'Pool House'},
+                {category: 'Recreation', subCategory: 'Pottery Room'},
+                {category: 'Recreation', subCategory: 'Racing Track'},
+                {category: 'Recreation', subCategory: 'Salon'},
+                {category: 'Recreation', subCategory: 'Sauna'},
+                {category: 'Recreation', subCategory: 'Shooting Range'},
+                {category: 'Recreation', subCategory: 'Spa Facility'},
+                {category: 'Recreation', subCategory: 'Squash Court'},
+                {category: 'Recreation', subCategory: 'Swimming Pool'},
+                {category: 'Recreation'},
+                {category: 'Religeous', subCategory: 'Church'},
+                {category: 'Residential', subCategory: 'Carport'},
+                {category: 'Residential', subCategory: 'Driveway'},
+                {category: 'Residential', subCategory: 'Flooring'},
+                {category: 'Residential', subCategory: 'Paving'},
+                {category: 'Residential', subCategory: 'Roofing'},
+                {category: 'Residential', subCategory: 'Water Feature'},
+                {category: 'Residential', subCategory: 'Hall'},
+                {category: 'Residential', subCategory: 'Balcony'},
+                {category: 'Residential', subCategory: 'Canopy'},
+                {category: 'Residential', subCategory: 'Concrete Surface'},
+                {category: 'Residential', subCategory: 'Courtyard'},
+                {category: 'Residential', subCategory: 'Covered'},
+                {category: 'Residential', subCategory: 'Deck'},
+                {category: 'Residential', subCategory: 'Mezzanine'},
+                {category: 'Residential', subCategory: 'Parking Area'},
+                {category: 'Residential', subCategory: 'Patio'},
+                {category: 'Residential', subCategory: 'Porch'},
+                {category: 'Residential', subCategory: 'Porte Cochere'},
+                {category: 'Residential', subCategory: 'Terrace'},
+                {category: 'Residential', subCategory: 'Veranda'},
+                {category: 'Residential', subCategory: 'Walkways'},
+                {category: 'Residential', subCategory: 'Rondavel'},
+                {category: 'Residential', subCategory: 'Accommodation Units'},
+                {category: 'Residential', subCategory: 'Boma'},
+                {category: 'Residential', subCategory: 'Bungalow'},
+                {category: 'Residential', subCategory: 'Bunker'},
+                {category: 'Residential', subCategory: 'Cabin'},
+                {category: 'Residential', subCategory: 'Chalet'},
+                {category: 'Residential', subCategory: 'Community Centre'},
+                {category: 'Residential', subCategory: 'Dormitory'},
+                {category: 'Residential', subCategory: 'Dwelling'},
+                {category: 'Residential', subCategory: 'Flat'},
+                {category: 'Residential', subCategory: 'Kitchen'},
+                {category: 'Residential', subCategory: 'Lapa'},
+                {category: 'Residential', subCategory: 'Laundry Facility'},
+                {category: 'Residential', subCategory: 'Locker Room'},
+                {category: 'Residential', subCategory: 'Lodge'},
+                {category: 'Residential', subCategory: 'Shower'},
+                {category: 'Residential', subCategory: 'Toilets'},
+                {category: 'Residential', subCategory: 'Room'},
+                {category: 'Residential', subCategory: 'Cottage'},
+                {category: 'Residential', subCategory: 'Garage'},
+                {category: 'Roads', subCategory: 'Access Roads'},
+                {category: 'Roads', subCategory: 'Gravel'},
+                {category: 'Roads', subCategory: 'Tarred'},
+                {category: 'Security', subCategory: 'Control Room'},
+                {category: 'Security', subCategory: 'Guardhouse'},
+                {category: 'Security', subCategory: 'Office'},
+                {category: 'Shade Nets'},
+                {category: 'Silo'},
+                {category: 'Sports', subCategory: 'Arena'},
+                {category: 'Sports', subCategory: 'Tennis Court'},
+                {category: 'Staff', subCategory: 'Hostel'},
+                {category: 'Staff', subCategory: 'Hut'},
+                {category: 'Staff', subCategory: 'Retirement Centre'},
+                {category: 'Staff', subCategory: 'Staff Building'},
+                {category: 'Staff', subCategory: 'Canteen'},
+                {category: 'Staff', subCategory: 'Dining Facility'},
+                {category: 'Storage', subCategory: 'Truck Shelter'},
+                {category: 'Storage', subCategory: 'Barn'},
+                {category: 'Storage', subCategory: 'Dark Room'},
+                {category: 'Storage', subCategory: 'Bin Compartments'},
+                {category: 'Storage', subCategory: 'Machinery'},
+                {category: 'Storage', subCategory: 'Saddle Room'},
+                {category: 'Storage', subCategory: 'Shed'},
+                {category: 'Storage', subCategory: 'Chemicals'},
+                {category: 'Storage', subCategory: 'Tools'},
+                {category: 'Storage', subCategory: 'Dry'},
+                {category: 'Storage', subCategory: 'Equipment'},
+                {category: 'Storage', subCategory: 'Feed'},
+                {category: 'Storage', subCategory: 'Fertilizer'},
+                {category: 'Storage', subCategory: 'Fuel'},
+                {category: 'Storage', subCategory: 'Grain'},
+                {category: 'Storage', subCategory: 'Hides'},
+                {category: 'Storage', subCategory: 'Oil'},
+                {category: 'Storage', subCategory: 'Pesticide'},
+                {category: 'Storage', subCategory: 'Poison'},
+                {category: 'Storage', subCategory: 'Seed'},
+                {category: 'Storage', subCategory: 'Zinc'},
+                {category: 'Storage', subCategory: 'Sulphur'},
+                {category: 'Storage'},
+                {category: 'Storage', subCategory: 'Vitamin Room'},
+                {category: 'Sugar Mill'},
+                {category: 'Tanks', subCategory: 'Water'},
+                {category: 'Timber Mill'},
+                {category: 'Trench'},
+                {category: 'Utilities', subCategory: 'Battery Room'},
+                {category: 'Utilities', subCategory: 'Boiler Room'},
+                {category: 'Utilities', subCategory: 'Compressor Room'},
+                {category: 'Utilities', subCategory: 'Engine Room'},
+                {category: 'Utilities', subCategory: 'Generator'},
+                {category: 'Utilities', subCategory: 'Power Room'},
+                {category: 'Utilities', subCategory: 'Pumphouse'},
+                {category: 'Utilities', subCategory: 'Transformer Room'},
+                {category: 'Utilities'},
+                {category: 'Vacant Area'},
+                {category: 'Vehicles', subCategory: 'Transport Depot'},
+                {category: 'Vehicles', subCategory: 'Truck Wash'},
+                {category: 'Vehicles', subCategory: 'Workshop'},
+                {category: 'Walls'},
+                {category: 'Walls', subCategory: 'Boundary'},
+                {category: 'Walls', subCategory: 'Retaining'},
+                {category: 'Walls', subCategory: 'Security'},
+                {category: 'Warehouse'},
+                {category: 'Water', subCategory: 'Reservoir'},
+                {category: 'Water', subCategory: 'Tower'},
+                {category: 'Water', subCategory: 'Purification Plant'},
+                {category: 'Water', subCategory: 'Reticulation Works'},
+                {category: 'Water', subCategory: 'Filter Station'},
+                {category: 'Wine Cellar', subCategory: 'Tanks'},
+                {category: 'Wine Cellar'},
+                {category: 'Wine Cellar', subCategory: 'Winery'},
+                {category: 'Wine Cellar', subCategory: 'Barrel Maturation Room'}
+            ],
+            livestock: [
+                {category: 'Cattle', subCategory: 'Phase A Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Phase B Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Phase C Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Phase D Bulls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Bull Calves', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Heifer Calves', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Tollies 1-2', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Heifers 1-2', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Culls', purpose: 'Breeding'},
+                {category: 'Cattle', subCategory: 'Bulls', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Dry Cows', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Lactating Cows', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Calves', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Culls', purpose: 'Dairy'},
+                {category: 'Cattle', subCategory: 'Bulls', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Cows', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Weaners', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Calves', purpose: 'Slaughter'},
+                {category: 'Cattle', subCategory: 'Culls', purpose: 'Slaughter'},
+                {category: 'Chickens', subCategory: 'Day Old Chicks', purpose: 'Broilers'},
+                {category: 'Chickens', subCategory: 'Broilers', purpose: 'Broilers'},
+                {category: 'Chickens', subCategory: 'Hens', purpose: 'Layers'},
+                {category: 'Chickens', subCategory: 'Point of Laying Hens', purpose: 'Layers'},
+                {category: 'Chickens', subCategory: 'Culls', purpose: 'Layers'},
+                {category: 'Game', subCategory: 'Game', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Rams', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Breeding Ewes', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Young Ewes', purpose: 'Slaughter'},
+                {category: 'Goats', subCategory: 'Kids', purpose: 'Slaughter'},
+                {category: 'Horses', subCategory: 'Horses', purpose: 'Breeding'},
+                {category: 'Pigs', subCategory: 'Boars', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Breeding Sows', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Weaned pigs', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Piglets', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Porkers', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Baconers', purpose: 'Slaughter'},
+                {category: 'Pigs', subCategory: 'Culls', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Breeding Stock', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Slaughter Birds > 3 months', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Slaughter Birds < 3 months', purpose: 'Slaughter'},
+                {category: 'Ostriches', subCategory: 'Chicks', purpose: 'Slaughter'},
+                {category: 'Rabbits', subCategory: 'Rabbits', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Rams', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Young Rams', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Ewes', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Young Ewes', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Lambs', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Wethers', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Culls', purpose: 'Breeding'},
+                {category: 'Sheep', subCategory: 'Rams', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Ewes', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Lambs', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Wethers', purpose: 'Slaughter'},
+                {category: 'Sheep', subCategory: 'Culls', purpose: 'Slaughter'}
+            ],
+            vme: [
+                {category: 'Vehicles', subCategory: 'Bakkie'},
+                {category: 'Vehicles', subCategory: 'Car'},
+                {category: 'Vehicles', subCategory: 'Truck'},
+                {category: 'Vehicles', subCategory: 'Tractor'},
+                {category: 'Machinery', subCategory: 'Mower'},
+                {category: 'Machinery', subCategory: 'Mower Conditioner'},
+                {category: 'Machinery', subCategory: 'Hay Rake'},
+                {category: 'Machinery', subCategory: 'Hay Baler'},
+                {category: 'Machinery', subCategory: 'Harvester'},
+                {category: 'Equipment', subCategory: 'Plough'},
+                {category: 'Equipment', subCategory: 'Harrow'},
+                {category: 'Equipment', subCategory: 'Ridgers'},
+                {category: 'Equipment', subCategory: 'Rotovator'},
+                {category: 'Equipment', subCategory: 'Cultivator'},
+                {category: 'Equipment', subCategory: 'Planter'},
+                {category: 'Equipment', subCategory: 'Combine'},
+                {category: 'Equipment', subCategory: 'Spreader'},
+                {category: 'Equipment', subCategory: 'Sprayer'},
+                {category: 'Equipment', subCategory: 'Mixer'},
+            ]
+        });
+
+        readOnlyProperty(Asset, 'landClassesByType', {
+            'crop': [
+                'Cropland',
+                'Cropland (Emerging)',
+                'Cropland (Irrigated)',
+                'Cropland (Smallholding)',
+                'Vegetables'],
+            'cropland': [
+                'Cropland',
+                'Cropland (Emerging)',
+                'Cropland (Irrigated)',
+                'Cropland (Smallholding)',
+                'Vegetables'],
+            'farmland': [],
+            'improvement': [],
+            'livestock': [
+                'Grazing',
+                'Grazing (Bush)',
+                'Grazing (Fynbos)',
+                'Grazing (Shrubland)',
+                'Planted Pastures'],
+            'pasture': [
+                'Grazing',
+                'Grazing (Bush)',
+                'Grazing (Fynbos)',
+                'Grazing (Shrubland)',
+                'Planted Pastures'],
+            'permanent crop': [
+                'Greenhouses',
+                'Orchard',
+                'Orchard (Shadenet)',
+                'Vineyard'],
+            'plantation': [
+                'Forest',
+                'Pineapple',
+                'Plantation',
+                'Plantation (Smallholding)',
+                'Sugarcane',
+                'Sugarcane (Emerging)',
+                'Sugarcane (Irrigated)',
+                'Tea'],
+            'vme': [],
+            'wasteland': [
+                'Non-vegetated'],
+            'water right': [
+                'Water',
+                'Water (Seasonal)',
+                'Wetland']
+        });
+
         var _croplandCrops = [
             'Barley',
             'Bean',
@@ -11465,7 +11954,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Leek',
             'Lucerne',
             'Maize',
-            'Maize (Irrigated)',
             'Maize (White)',
             'Maize (Yellow)',
             'Oats',
@@ -11478,19 +11966,23 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Rice',
             'Rye',
             'Soya Bean',
-            'Soya Bean (Irrigated)',
             'Sunflower',
             'Sweet Corn',
             'Sweet Potato',
             'Teff',
-            'Teff (Irrigated)',
             'Tobacco',
             'Triticale',
             'Turnip',
             'Wheat',
-            'Wheat (Durum)',
+            'Wheat (Durum)'
+        ];
+        var _croplandIrrigatedCrops = [
+            'Maize (Irrigated)',
+            'Soya Bean (Irrigated)',
+            'Teff (Irrigated)',
             'Wheat (Irrigated)'
         ];
+        var _croplandAllCrops = underscore.union(_croplandCrops, _croplandIrrigatedCrops).sort(naturalSort);
         var _grazingCrops = [
             'Bahia-Notatum',
             'Birdsfoot Trefoil',
@@ -11560,13 +12052,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Coffee',
             'Fig',
             'Gooseberry',
-            'Grape',
-            'Grape (Bush Vine)',
-            'Grape (Red)',
-            'Grape (Table)',
-            'Grape (White)',
             'Grapefruit',
             'Guava',
+            'Hazelnut',
             'Kiwi Fruit',
             'Lemon',
             'Litchi',
@@ -11587,11 +12075,11 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Plum',
             'Pomegranate',
             'Protea',
+            'Prune',
             'Raspberry',
             'Rooibos',
             'Roses',
             'Strawberry',
-            'Sugarcane',
             'Walnut',
             'Wineberry'
         ];
@@ -11603,12 +12091,69 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'Pineapple',
             'Tea',
             'Sisal',
+            'Sugarcane',
+            'Sugarcane (Irrigated)',
             'Wattle'
         ];
+        var _vegetableCrops = [
+            'Chicory',
+            'Chili',
+            'Garlic',
+            'Lentil',
+            'Melon',
+            'Olive',
+            'Onion',
+            'Pea',
+            'Pumpkin',
+            'Quince',
+            'Strawberry',
+            'Tomato',
+            'Watermelon',
+            'Carrot',
+            'Beet',
+            'Cauliflower',
+            'Broccoli',
+            'Leek',
+            'Butternut',
+            'Cabbage',
+            'Rapeseed'
+        ];
+        var _vineyardCrops = [
+            'Grape',
+            'Grape (Bush Vine)',
+            'Grape (Red)',
+            'Grape (Table)',
+            'Grape (White)'
+        ];
+
+        readOnlyProperty(Asset, 'cropsByLandClass', {
+            'Cropland': _croplandCrops,
+            'Cropland (Emerging)': _croplandCrops,
+            'Cropland (Irrigated)': _croplandIrrigatedCrops,
+            'Cropland (Smallholding)': _croplandCrops,
+            'Forest': ['Pine'],
+            'Grazing': _grazingCrops,
+            'Grazing (Bush)': _grazingCrops,
+            'Grazing (Fynbos)': _grazingCrops,
+            'Grazing (Shrubland)': _grazingCrops,
+            'Greenhouses': [],
+            'Orchard': _perennialCrops,
+            'Orchard (Shadenet)': _perennialCrops,
+            'Pineapple': ['Pineapple'],
+            'Plantation': _plantationCrops,
+            'Plantation (Smallholding)': _plantationCrops,
+            'Planted Pastures': _grazingCrops,
+            'Sugarcane': ['Sugarcane'],
+            'Sugarcane (Emerging)': ['Sugarcane'],
+            'Sugarcane (Irrigated)': ['Sugarcane (Irrigated)'],
+            'Tea': ['Tea'],
+            'Vegetables': _vegetableCrops,
+            'Vineyard': _vineyardCrops
+        });
 
         readOnlyProperty(Asset, 'cropsByType', {
-            'crop': _croplandCrops,
-            'cropland': _croplandCrops,
+            'crop': _croplandAllCrops,
+            'cropland': _croplandAllCrops,
             'livestock': _grazingCrops,
             'pasture': _grazingCrops,
             'permanent crop': _perennialCrops,
@@ -11631,6 +12176,22 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             'other': 'Other'
         }, Asset.assetTypes));
 
+        readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
+
+        readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
+
+        privateProperty(Asset, 'getAssetKey', function (asset, legalEntity, farm) {
+            return generateKey(asset, legalEntity, farm);
+        });
+
+        privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
+            return Asset.cropsByLandClass[landClass] || [];
+        });
+
+        privateProperty(Asset, 'getDefaultCrop', function (landClass) {
+            return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
+        });
+
         privateProperty(Asset, 'getTypeTitle', function (type) {
             return Asset.assetTypes[type] || '';
         });
@@ -11641,10 +12202,14 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
             return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
 
-        privateProperty(Asset, 'getTitle', function (asset) {
-            return getTitle(asset);
+        privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
+            return getTitle(asset, withField, farm);
         });
-
+        
+        privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
+            return listServiceMap(asset, metadata);
+        });
+        
         function getTitle (instance, withField, farm) {
             switch (instance.type) {
                 case 'crop':
@@ -11684,20 +12249,124 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                     return instance.data.name || instance.data.category || Asset.assetTypes[instance.type];
             }
         }
+        
+        function listServiceMap (instance, metadata) {
+            var map = {
+                id: instance.id || instance.$id,
+                type: instance.type,
+                updatedAt: instance.updatedAt
+            };
+
+            if (instance.data) {
+                map.title = getTitle(instance, true);
+                map.groupby = instance.farmId;
+                map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
+
+                switch (instance.type) {
+                    case 'crop':
+                        map.subtitle = (instance.data.season ? instance.data.season : '');
+                        break;
+                    case 'cropland':
+                    case 'pasture':
+                    case 'wasteland':
+                    case 'water right':
+                        map.subtitle = (instance.data.size !== undefined ? 'Area: ' + $filter('number')(instance.data.size, 2) + 'ha' : 'Unknown area');
+                        break;
+                    case 'farmland':
+                        map.subtitle = (instance.data.area !== undefined ? 'Area: ' + $filter('number')(instance.data.area, 2) + 'ha' : 'Unknown area');
+                        break;
+                    case 'permanent crop':
+                    case 'plantation':
+                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + $filter('date')(instance.data.establishedDate, 'dd/MM/yy') : '');
+                        break;
+                    case 'improvement':
+                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
+                        map.summary = (instance.data.description || '');
+                        break;
+                    case 'livestock':
+                        map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
+                        map.summary = (instance.data.description || '');
+                        map.groupby = instance.data.type;
+                        break;
+                    case 'vme':
+                        map.subtitle = 'Quantity: ' + instance.data.quantity;
+                        map.summary = (instance.data.description || '');
+                        map.groupby = instance.data.type;
+                        break;
+                }
+            }
+
+            if (metadata) {
+                map = underscore.extend(map, metadata);
+            }
+
+            return map;
+        }
+
+        function generateKey (instance, legalEntity, farm) {
+            return  (legalEntity ? 'entity.' + legalEntity.uuid : '') +
+                (instance.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (instance.type === 'crop' && instance.data.season ? '-s.' + instance.data.season : '') +
+                (instance.data.fieldName ? '-fi.' + instance.data.fieldName : '') +
+                (instance.data.crop ? '-c.' + instance.data.crop : '') +
+                (instance.type === 'cropland' && instance.data.irrigated ? '-i.' + instance.data.irrigation : '') +
+                (instance.type === 'farmland' && instance.data.sgKey ? '-' + instance.data.sgKey : '') +
+                (instance.type === 'improvement' || instance.type === 'livestock' || instance.type === 'vme' ?
+                    (instance.data.type ? '-t.' + instance.data.type : '') +
+                    (instance.data.category ? '-c.' + instance.data.category : '') +
+                    (instance.data.name ? '-n.' + instance.data.name : '') +
+                    (instance.data.purpose ? '-p.' + instance.data.purpose : '') +
+                    (instance.data.model ? '-m.' + instance.data.model : '') +
+                    (instance.data.identificationNo ? '-in.' + instance.data.identificationNo : '') : '') +
+                (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
+                (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
+        }
+
+        function generateUniqueName (instance, categoryLabel, assets) {
+            categoryLabel = categoryLabel || '';
+
+            var assetCount = underscore.chain(assets)
+                .where({type: instance.type})
+                .reduce(function(assetCount, asset) {
+                    if (asset.data.name) {
+                        var index = asset.data.name.search(/\s+[0-9]+$/),
+                            name = asset.data.name,
+                            number;
+
+                        if (index !== -1) {
+                            name = name.substr(0, index);
+                            number = parseInt(asset.data.name.substring(index).trim());
+                        }
+
+                        if (categoryLabel && name === categoryLabel && (!number || number > assetCount)) {
+                            assetCount = number || 1;
+                        }
+                    }
+
+                    return assetCount;
+                }, -1)
+                .value();
+
+            return categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
+        }
+
+        function isFieldApplicable (instance, field) {
+            return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
+        }
 
         Asset.validates({
             crop: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type);
                 },
                 inclusion: {
-                    in: function (value, instance, field) {
+                    in: function (value, instance) {
                         return Asset.cropsByType[instance.type];
                     }
                 }
             },
             establishedDate: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['permanent crop', 'plantation'], instance.type);
                 },
                 format: {
@@ -11708,7 +12377,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 numeric: true
             },
             fieldName: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation'], instance.type);
                 },
                 length: {
@@ -11724,7 +12393,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'computedProperty
                 required: true
             },
             size: {
-                requiredIf: function (value, instance, field) {
+                requiredIf: function (value, instance) {
                     return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
                 },
                 numeric: true
@@ -12056,7 +12725,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         }
                     }
                 });
-
                 
                 if (cashFlowAdjust) {
                     // Schedule already exists
@@ -12076,7 +12744,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 reEvaluateBusinessPlan(instance);
             }
 
-            function calculateCashFlow (instance, schedules) {
+            function calculateSchedulesCashFlow (instance, schedules) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     numberOfMonths = instance.numberOfMonths,
                     cashFlowStartMonth = moment(startMonth).subtract(1, 'y'),
@@ -12100,6 +12768,36 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 return result;
             }
 
+            function initializeProductionCashFlow (instance) {
+                if (underscore.isUndefined(instance.data.cashFlowIncome)) {
+                    reEvaluateProductionSchedules(instance);
+                }
+
+                underscore.chain(instance.models.income)
+                    .filter(function (income) {
+                        return income.type === 'production' && underscore.isUndefined(instance.data.cashFlowIncome[income.name]);
+                    })
+                    .each(instance.addIncome, instance);
+
+                underscore.chain(instance.models.expenses)
+                    .filter(function (expense) {
+                        return expense.type === 'production' && underscore.isUndefined(instance.data.cashFlowExpenditure[expense.name]);
+                    })
+                    .each(instance.addExpense, instance);
+            }
+
+            function calculateIndirectProductionCashFlow (instance, items) {
+                return underscore.chain(items)
+                    .where({type: 'production'})
+                    .reduce(function (productionTotal, item) {
+                        return underscore.reduce(item.months, function (total, monthValue, index) {
+                            total[index + 12] += monthValue;
+                            return total;
+                        }, productionTotal);
+                    }, Base.initializeArray(instance.numberOfMonths + 24, 0))
+                    .value();
+            }
+
             function calculateEnterpriseCashFlowComposition (instance, schedules) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
                     numberOfMonths = instance.numberOfMonths,
@@ -12111,7 +12809,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     productionExpenditure = {},
                     incomeComposition = {};
 
-                angular.forEach(schedules, function (productionSchedule) {
+                // Summarize schedules
+                underscore.each(schedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule),
                         commodity = schedule.data.details.commodity;
 
@@ -12124,6 +12823,31 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     Base.initializeObject(productionExpenditure, commodity, {});
                     extractScheduleCategoryValuePerMonth(productionExpenditure[commodity], schedule, 'EXP', cashFlowStartMonth, cashFlowNumberOfMonths, true);
                 });
+
+                // Summarize indirect production income & expenses
+                underscore.chain(instance.models.income)
+                    .where({type: 'production'})
+                    .each(function (income) {
+                        Base.initializeObject(productionIncome, 'Indirect', {});
+                        Base.initializeObject(productionIncome['Indirect'], income.name, Base.initializeArray(cashFlowNumberOfMonths, 0));
+
+                        underscore.reduce(income.months, function (total, monthValue, index) {
+                            total[index + 12] += monthValue;
+                            return total;
+                        }, productionIncome['Indirect'][income.name])
+                    });
+
+                underscore.chain(instance.models.expenses)
+                    .where({type: 'production'})
+                    .each(function (expense) {
+                        Base.initializeObject(productionExpenditure, 'Indirect', {});
+                        Base.initializeObject(productionExpenditure['Indirect'], expense.name, Base.initializeArray(cashFlowNumberOfMonths, 0));
+
+                        underscore.reduce(expense.months, function (total, monthValue, index) {
+                            total[index + 12] += monthValue;
+                            return total;
+                        }, productionExpenditure['Indirect'][expense.name])
+                    });
 
                 angular.forEach(productionIncomeComposition, function (income, commodity) {
                     angular.forEach(income, function (values, category) {
@@ -12190,35 +12914,25 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             }
 
             function addProductionScheduleToCashFlow (instance, schedule) {
-                var scheduleCashFlow = calculateCashFlow(instance, [schedule]);
+                var scheduleCashFlow = calculateSchedulesCashFlow(instance, [schedule]);
 
                 angular.forEach(scheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
-                        addScheduleCategoryToCashFlow(instance, section, category, values);
+                        addCategoryValuesToCashFlow(instance, section, category, values);
                     });
                 });
             }
 
-            function addScheduleCategoryToCashFlow (instance, section, category, values) {
-                if (underscore.isUndefined(instance.data[section][category])) {
-                    // Insert new category to section
-                    instance.data[section][category] = values;
-                } else {
-                    // Add schedule category values to category
-                    instance.data[section][category] = addArrayValues(instance.data[section][category], values);
-                }
-            }
-
             function adjustProductionSchedulesInCashFlow (instance, oldSchedules, newSchedules) {
-                var oldScheduleCashFlow = calculateCashFlow(instance, oldSchedules),
-                    newScheduleCashFlow = calculateCashFlow(instance, newSchedules);
+                var oldScheduleCashFlow = calculateSchedulesCashFlow(instance, oldSchedules),
+                    newScheduleCashFlow = calculateSchedulesCashFlow(instance, newSchedules);
 
                 // Add or adjust new categories
                 angular.forEach(newScheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
                         if (underscore.isUndefined(oldScheduleCashFlow[section][category])) {
                             // Add new category
-                            addScheduleCategoryToCashFlow(instance, section, category, values);
+                            addCategoryValuesToCashFlow(instance, section, category, values);
                         } else {
                             // Adjust existing category if different
                             var oldScheduleCategoryTotal = sumCollectionValues(oldScheduleCashFlow[section][category]),
@@ -12248,23 +12962,33 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 angular.forEach(oldScheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
                         if (underscore.isUndefined(newScheduleCashFlow[section][category])) {
-                            removeScheduleCategoryFromCashFlow(instance, section, category, values);
+                            removeCategoryValuesFromCashFlow(instance, section, category, values);
                         }
                     });
                 });
             }
 
             function removeProductionScheduleFromCashFlow (instance, schedule) {
-                var scheduleCashFlow = calculateCashFlow(instance, [schedule]);
+                var scheduleCashFlow = calculateSchedulesCashFlow(instance, [schedule]);
 
                 angular.forEach(scheduleCashFlow, function (categories, section) {
                     angular.forEach(categories, function (values, category) {
-                        removeScheduleCategoryFromCashFlow(instance, section, category, values);
+                        removeCategoryValuesFromCashFlow(instance, section, category, values);
                     });
                 });
             }
 
-            function removeScheduleCategoryFromCashFlow (instance, section, category, values) {
+            function addCategoryValuesToCashFlow (instance, section, category, values) {
+                if (underscore.isUndefined(instance.data[section][category])) {
+                    // Insert new category to section
+                    instance.data[section][category] = values;
+                } else {
+                    // Add schedule category values to category
+                    instance.data[section][category] = addArrayValues(instance.data[section][category], values);
+                }
+            }
+
+            function removeCategoryValuesFromCashFlow (instance, section, category, values) {
                 var scheduleCategoryTotal = sumCollectionValues(values),
                     cashFlowCategoryTotal = sumCollectionValues(instance.data[section][category]);
 
@@ -12401,7 +13125,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 var numberOfMonths = instance.numberOfMonths;
 
                 if (underscore.isUndefined(instance.data.cashFlowIncome)) {
-                    underscore.extend(instance.data, calculateCashFlow(instance, instance.models.productionSchedules));
+                    underscore.extend(instance.data, calculateSchedulesCashFlow(instance, instance.models.productionSchedules));
                 }
 
                 // Production Income/Expenditure
@@ -12468,41 +13192,104 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             /**
              * Income & Expenses handling
              */
+            function addIncomeExpense (instance, type, section, item) {
+                var oldItem = underscore.findWhere(instance.models[type], {uuid: item.uuid});
+
+                if (underscore.isUndefined(oldItem)) {
+                    instance.models[type].push(item);
+
+                    if (item.type === 'production') {
+                        addIncomeExpenseInCashFlow(instance, section, item);
+                    }
+                } else {
+                    instance.models[type] = underscore.chain(instance.models[type])
+                        .reject(function (model) {
+                            return model.uuid === item.uuid;
+                        })
+                        .union([item])
+                        .value();
+
+                    if (oldItem.type !== 'production' && item.type === 'production') {
+                        addIncomeExpenseToCashFlow(instance, section, item);
+                    } else if (oldItem.type === 'production' && item.type !== 'production') {
+                        removeIncomeExpenseFromCashFlow(instance, section, item);
+                    } else if (oldItem.type === 'production' && item.type === 'production') {
+                        adjustIncomeExpenseInCashFlow(instance, section, oldItem, item);
+                    }
+                }
+
+                reEvaluateBusinessPlan(instance);
+            }
+
+            function removeIncomeExpense (instance, type, section, item) {
+                var oldItem = underscore.findWhere(instance.models[type], {uuid: item.uuid});
+
+                if (!underscore.isUndefined(oldItem)) {
+                    instance.models[type] = underscore.reject(instance.models[type], function (model) {
+                        return model.uuid === item.uuid;
+                    });
+
+                    if (oldItem.type === 'production') {
+                        removeIncomeExpenseFromCashFlow(instance, section, item);
+                    }
+
+                    reEvaluateBusinessPlan(instance);
+                }
+            }
+
             privateProperty(this, 'addIncome', function (income) {
-                this.models.income = underscore.reject(this.models.income, function (item) {
-                    return item.uuid === income.uuid;
-                });
-
-                this.models.income.push(income);
-
-                reEvaluateBusinessPlan(this);
+                addIncomeExpense(this, 'income', 'cashFlowIncome', income);
             });
 
             privateProperty(this, 'removeIncome', function (income) {
-                this.models.income = underscore.reject(this.models.income, function (item) {
-                    return item.uuid === income.uuid;
-                });
-
-                reEvaluateBusinessPlan(this);
+                removeIncomeExpense(this, 'income', 'cashFlowIncome', income);
             });
 
             privateProperty(this, 'addExpense', function (expense) {
-                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
-                    return item.uuid === expense.uuid;
-                });
-
-                this.models.expenses.push(expense);
-
-                reEvaluateBusinessPlan(this);
+                addIncomeExpense(this, 'expenses', 'cashFlowExpenditure', expense);
             });
 
             privateProperty(this, 'removeExpense', function (expense) {
-                this.models.expenses = underscore.reject(this.models.expenses, function (item) {
-                    return item.uuid === expense.uuid;
-                });
-
-                reEvaluateBusinessPlan(this);
+                removeIncomeExpense(this, 'expenses', 'cashFlowExpenditure', expense);
             });
+
+            function addIncomeExpenseToCashFlow (instance, section, item) {
+                addCategoryValuesToCashFlow(instance, section, item.name, calculateIndirectProductionCashFlow(instance, [item]));
+            }
+
+            function adjustIncomeExpenseInCashFlow (instance, section, oldItem, newItem) {
+                var newItemCashFlow = calculateIndirectProductionCashFlow(instance, [newItem]);
+
+                if (underscore.isUndefined(instance.data[section][newItem.name])) {
+                    // Add new category
+                    addCategoryValuesToCashFlow(instance, section, newItem.name, newItemCashFlow);
+                } else {
+                    var oldItemCashFlow = calculateIndirectProductionCashFlow(instance, [oldItem]),
+                        oldItemTotal = sumCollectionValues(oldItemCashFlow),
+                        newItemTotal = sumCollectionValues(newItemCashFlow);
+
+                    if (oldItemTotal !== newItemTotal) {
+                        if (oldItemTotal === 0) {
+                            // Current cash flow has no values
+                            // - Copy new values to cash flow
+                            instance.data[section][newItem.name] = values;
+                        } else {
+                            // Calculate the ratio between old and new cash flows
+                            var cashFlowTotal = sumCollectionValues(instance.data[section][newItem.name]),
+                                cashFlowDiff = newItemTotal / oldItemTotal,
+                                categoryDiff = (cashFlowTotal - oldItemTotal) / cashFlowTotal;
+
+                            instance.data[section][newItem.name] = underscore.map(instance.data[section][newItem.name], function (value) {
+                                return roundValue((value * categoryDiff) + ((value - (value * categoryDiff)) * cashFlowDiff));
+                            });
+                        }
+                    }
+                }
+            }
+
+            function removeIncomeExpenseFromCashFlow (instance, section, item) {
+                removeCategoryValuesFromCashFlow(instance, section, item.name, calculateIndirectProductionCashFlow(instance, [item]));
+            }
 
             function reEvaluateIncomeAndExpenses (instance) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
@@ -12519,7 +13306,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         type = (income.type ? income.type : 'other') + 'Income';
 
                     // Check income is not already added
-                    if (registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
+                    if (income.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
                         initializeCategoryValues(instance, type, income.name, numberOfMonths);
 
                         instance.data[type][income.name] = underscore.map(income.months, function (monthValue, index) {
@@ -12536,7 +13323,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                         type = (expense.type ? expense.type : 'other') + 'Expenditure';
 
                     // Check expense is not already added
-                    if (registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
+                    if (expense.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
                         initializeCategoryValues(instance, type, expense.name, numberOfMonths);
 
                         instance.data[type][expense.name] = underscore.map(expense.months, function (monthValue, index) {
@@ -13211,7 +13998,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     mediumLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'closing', startMonth, endMonth),
                     longLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'closing', startMonth, endMonth),
                     totalLiabilities: addArrayValues(calculateMonthlyLiabilityPropertyTotal(instance, [], 'closing', startMonth, endMonth), instance.data.summary.monthly.primaryAccountLiability),
-                    totalRent: calculateMonthlyLiabilityPropertyTotal(instance, ['rent'], 'rent', startMonth, endMonth),
+                    totalRent: calculateMonthlyLiabilityPropertyTotal(instance, ['rent'], 'repayment', startMonth, endMonth),
 
                     // Assets
                     currentAssets: addArrayValues(calculateMonthlyAssetTotal(instance, ['short-term']), instance.data.summary.monthly.primaryAccountCapital),
@@ -13513,9 +14300,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 recalculatePrimaryAccount(this);
             });
 
-            if (underscore.isEmpty(this.data.cashFlowIncome) || underscore.isEmpty(this.data.cashFlowIncome)) {
-                reEvaluateProductionSchedules(this);
-            }
+            initializeProductionCashFlow(this);
         }
 
         inheritModel(BusinessPlan, Document);
@@ -13603,8 +14388,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'inheritModel', 'landUseHelper', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, landUseHelper, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function ComparableSale (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -13628,15 +14413,16 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
                 return underscore.chain(this.portions)
                     .groupBy('farmLabel')
                     .map(function (portions, farmName) {
-                        farmName = (farmName || '').toLowerCase();
-
                         var portionSentence = underscore.chain(portions)
-                                .sortBy('portionLabel')
-                                .pluck('portionLabel')
-                                .toSentence()
-                                .value();
+                            .sortBy('portionLabel')
+                            .pluck('portionLabel')
+                            .map(function (portionLabel) {
+                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
+                            })
+                            .toSentence()
+                            .value();
 
-                        return (portionSentence + (farmName.length ? ' of ' + (underscore.startsWith(farmName, 'farm') ? '' : 'farm ') + underscore.titleize(farmName) : ''));
+                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
                     })
                     .toSentence()
                     .value();
@@ -13698,10 +14484,36 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
              * Portion Handling
              */
             privateProperty(this, 'addPortion', function (portion) {
-                this.removePortionBySgKey(portion.sgKey);
+                if (!this.hasPortion(portion)) {
+                    this.portions.push(portion);
 
-                this.portions.push(portion);
+                    underscore.each(portion.landCover || [], function (landCover) {
+                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
+
+                        if (underscore.isUndefined(landComponent)) {
+                            landComponent = {
+                                type: landCover.label,
+                                assetValue: 0
+                            };
+
+                            this.landComponents.push(landComponent);
+                        }
+
+                        landComponent.area = roundValue((landComponent.area || 0) + landCover.area, 3);
+
+                        if (landComponent.unitValue) {
+                            landComponent.assetValue = landComponent.area * landComponent.unitValue;
+                        }
+                    }, this);
+                }
+
                 recalculateArea(this);
+            });
+
+            privateProperty(this, 'hasPortion', function (portion) {
+                return underscore.some(this.portions, function (storedPortion) {
+                    return storedPortion.sgKey === portion.sgKey;
+                });
             });
 
             privateProperty(this, 'removePortionBySgKey', function (sgKey) {
@@ -13732,7 +14544,7 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
             this.depImpValue = attrs.depImpValue;
             this.distance = attrs.distance || 0;
             this.geometry = attrs.geometry;
-            this.landComponents = attrs.landComponents || [];
+            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
             this.portions = attrs.portions || [];
             this.regions = attrs.regions || [];
             this.propertyKnowledge = attrs.propertyKnowledge;
@@ -13743,6 +14555,36 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         var roundValue = $filter('round');
 
+        function convertLandComponent (landComponent) {
+            landComponent.type = convertLandComponentType(landComponent.type);
+
+            return landComponent;
+        }
+
+        function convertLandComponentType (type) {
+            switch (type) {
+                case 'Cropland (Dry)':
+                    return 'Cropland';
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    return 'Cropland (Irrigated)';
+                case 'Conservation':
+                    return 'Grazing (Bush)';
+                case 'Horticulture (Intensive)':
+                    return 'Greenhouses';
+                case 'Horticulture (Perennial)':
+                    return 'Orchard';
+                case 'Horticulture (Seasonal)':
+                    return 'Vegetables';
+                case 'Housing':
+                    return 'Homestead';
+                case 'Wasteland':
+                    return 'Non-vegetated';
+            }
+
+            return type;
+        }
+
         function recalculateArea (instance) {
             instance.area = roundValue(underscore.reduce(instance.portions, function(total, portion) {
                 return total + (portion.area || 0);
@@ -13751,15 +14593,13 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
         inheritModel(ComparableSale, Model.Base);
 
-        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.chain(landUseHelper.landUseTypes())
-            .without('Cropland')
-            .union(['Cropland (Dry)', 'Cropland (Equipped, Irrigable)', 'Cropland (Irrigable)'])
-            .value()
-            .sort(naturalSort));
+        readOnlyProperty(ComparableSale, 'landComponentTypes', Field.landClasses);
 
         readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
             'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
             'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
+
+        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
 
         ComparableSale.validates({
             area: {
@@ -15018,6 +15858,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         };
 
+        interfaceProperty(this, 'getAssetTypeForLandUse', function (landUse) {
+            return (s.include(landUse, 'Cropland') ? 'crop' :
+                (s.include(landUse, 'Cropland') ? 'horticulture' : 'livestock'));
+        });
+
         EnterpriseBudgetBase.validates({
             data: {
                 required: true,
@@ -15248,6 +16093,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Grape (Table)',
                 'Grape (Wine)',
                 'Guava',
+                'Hazelnut',
                 'Hops',
                 'Kiwi',
                 'Lemon',
@@ -15629,6 +16475,262 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
+var sdkModelField = angular.module('ag.sdk.model.field', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Field (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'croppingPotentialRequired', function () {
+                return s.include(this.landUse, 'Cropland');
+            });
+
+            computedProperty(this, 'establishedDateRequired', function () {
+                return s.include(this.landUse, 'Orchard');
+            });
+
+            computedProperty(this, 'terrainRequired', function () {
+                return s.include(this.landUse, 'Grazing');
+            });
+
+            privateProperty(this, 'setIrrigatedFromLandUse', function () {
+                this.irrigated = s.include(this.landUse, 'Irrigated');
+            });
+
+            privateProperty(this, 'fieldNameUnique', function (fieldName, farm) {
+                return fieldNameUnique(this, fieldName, farm);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.crop = attrs.crop;
+            this.croppingPotential = attrs.croppingPotential;
+            this.effectiveDepth = attrs.effectiveDepth;
+            this.farmName = attrs.farmName;
+            this.fieldName = attrs.fieldName;
+            this.irrigated = attrs.irrigated;
+            this.irrigationType = attrs.irrigationType;
+            this.landUse = attrs.landUse;
+            this.loc = attrs.loc;
+            this.sgKey = attrs.sgKey;
+            this.size = attrs.size;
+            this.soilTexture = attrs.soilTexture;
+            this.source = attrs.source;
+            this.terrain = attrs.terrain;
+            this.waterSource = attrs.waterSource;
+
+            convertLandUse(this);
+        }
+
+        function convertLandUse (instance) {
+            switch (instance.landUse) {
+                case 'Cropland':
+                    if (instance.irrigated) {
+                        instance.landUse = 'Cropland (Irrigated)';
+                    }
+                    break;
+                case 'Conservation':
+                    instance.landUse = 'Grazing (Bush)';
+                    break;
+                case 'Horticulture (Intensive)':
+                    instance.landUse = 'Greenhouses';
+                    break;
+                case 'Horticulture (Perennial)':
+                    instance.landUse = 'Orchard';
+                    break;
+                case 'Horticulture (Seasonal)':
+                    instance.landUse = 'Vegetables';
+                    break;
+                case 'Housing':
+                    instance.landUse = 'Homestead';
+                    break;
+                case 'Wasteland':
+                    instance.landUse = 'Non-vegetated';
+                    break;
+            }
+        }
+
+        function fieldNameUnique (instance, fieldName, farm) {
+            var trimmedValue = s.trim(fieldName || '').toLowerCase();
+
+            return (farm && farm.data && !underscore.some(farm.data.fields || [], function (field) {
+                return (s.trim(field.fieldName).toLowerCase() === trimmedValue && !underscore.isEqual(field.loc, instance.loc));
+            }));
+        }
+
+        inheritModel(Field, Model.Base);
+
+        readOnlyProperty(Field, 'croppingPotentials', [
+            'High',
+            'Medium',
+            'Low']);
+
+        readOnlyProperty(Field, 'effectiveDepths', [
+            '0 - 30cm',
+            '30 - 60cm',
+            '60 - 90cm',
+            '90 - 120cm',
+            '120cm +']);
+
+        readOnlyProperty(Field, 'irrigationTypes', [
+            'Centre-Pivot',
+            'Drip',
+            'Flood',
+            'Micro',
+            'Sprinkler',
+            'Sub-drainage']);
+
+        readOnlyProperty(Field, 'landClasses', [
+            'Building',
+            'Built-up',
+            'Cropland',
+            'Cropland (Emerging)',
+            'Cropland (Irrigated)',
+            'Cropland (Smallholding)',
+            'Erosion',
+            'Forest',
+            'Grazing',
+            'Grazing (Bush)',
+            'Grazing (Fynbos)',
+            'Grazing (Shrubland)',
+            'Greenhouses',
+            'Homestead',
+            'Mining',
+            'Non-vegetated',
+            'Orchard',
+            'Orchard (Shadenet)',
+            'Pineapple',
+            'Plantation',
+            'Plantation (Smallholding)',
+            'Planted Pastures',
+            'Sugarcane',
+            'Sugarcane (Emerging)',
+            'Sugarcane (Irrigated)',
+            'Tea',
+            'Vegetables',
+            'Vineyard',
+            'Water',
+            'Water (Seasonal)',
+            'Wetland']);
+
+        readOnlyProperty(Field, 'soilTextures', [
+            'Clay',
+            'Clay Loam',
+            'Clay Sand',
+            'Coarse Sand',
+            'Coarse Sandy Clay',
+            'Coarse Sandy Clay Loam',
+            'Coarse Sandy Loam',
+            'Fine Sand',
+            'Fine Sandy Clay',
+            'Fine Sandy Clay Loam',
+            'Fine Sandy Loam',
+            'Gravel',
+            'Loam',
+            'Loamy Coarse Sand',
+            'Loamy Fine Sand',
+            'Loamy Medium Sand',
+            'Loamy Sand',
+            'Medium Sand',
+            'Medium Sandy Clay',
+            'Medium Sandy Clay Loam',
+            'Medium Sandy Loam',
+            'Other',
+            'Sand',
+            'Sandy Clay',
+            'Sandy Clay Loam',
+            'Sandy Loam',
+            'Silty Clay',
+            'Silty Loam']);
+
+        readOnlyProperty(Field, 'waterSources', [
+            'Borehole',
+            'Dam',
+            'Irrigation Scheme',
+            'River']);
+
+        readOnlyProperty(Field, 'terrains', [
+            'Mountains',
+            'Plains']);
+
+        Field.validates({
+            croppingPotential: {
+                required: false,
+                inclusion: {
+                    in: Field.croppingPotentials
+                }
+            },
+            effectiveDepth: {
+                required: false,
+                inclusion: {
+                    in: Field.effectiveDepths
+                }
+            },
+            farmName: {
+                required: true,
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            fieldName: {
+                required: true,
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            landUse: {
+                required: true,
+                inclusion: {
+                    in: Field.landClasses
+                }
+            },
+            loc: {
+                required: false,
+                object: true
+            },
+            size: {
+                required: true,
+                numeric: true
+            },
+            sgKey: {
+                required: false,
+                numeric: true
+            },
+            soilTexture: {
+                required: false,
+                inclusion: {
+                    in: Field.soilTextures
+                }
+            },
+            source: {
+                required: false,
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            terrain: {
+                requiredIf: function (value, instance, field) {
+                    return instance.terrainRequired;
+                },
+                inclusion: {
+                    in: Field.terrains
+                }
+            },
+            waterSource: {
+                required: false,
+                inclusion: {
+                    in: Field.waterSources
+                }
+            }
+        });
+
+        return Field;
+    }]);
+
 var sdkModelFinancial = angular.module('ag.sdk.model.financial', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.utilities']);
 
 sdkModelFinancial.factory('Financial', ['$filter', 'inheritModel', 'Model', 'privateProperty', 'underscore',
@@ -15775,9 +16877,13 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
             comments: {
                 required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
+            },
+            geometry: {
+                required: false,
+                object: true
             },
             name: {
                 required: true,
@@ -15791,9 +16897,9 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
                 numeric: true
             },
             province: {
-                required: true,
+                required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
             },
@@ -15810,14 +16916,64 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
     }]);
 
 
-sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologySuite', 'underscore',
-    function (inheritModel, Model, privateProperty, readOnlyProperty, topologySuite, underscore) {
+sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Sublayer (attrs) {
             Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'geom', function () {
+                return topologyHelper.readGeoJSON(this.geometry);
+            });
+
+            privateProperty(this, 'contains', function (geometry) {
+                return geometryRelation(this, 'contains', geometry);
+            });
+
+            privateProperty(this, 'covers', function (geometry) {
+                return geometryRelation(this, 'covers', geometry);
+            });
+
+            privateProperty(this, 'crosses', function (geometry) {
+                return geometryRelation(this, 'crosses', geometry);
+            });
+
+            privateProperty(this, 'intersects', function (geometry) {
+                return geometryRelation(this, 'intersects', geometry);
+            });
+
+            privateProperty(this, 'overlaps', function (geometry) {
+                return geometryRelation(this, 'overlaps', geometry);
+            });
+
+            privateProperty(this, 'touches', function (geometry) {
+                return geometryRelation(this, 'touches', geometry);
+            });
+
+            privateProperty(this, 'within', function (geometry) {
+                return geometryRelation(this, 'within', geometry);
+            });
+
+            privateProperty(this, 'withinOrCovers', function (geometry) {
+                return (geometryRelation(this, 'within', geometry) ||
+                    (geometryRelation(this, 'intersects', geometry) && geometryArea(geometryManipluation(this, 'difference', geometry)) < 0.001));
+            });
+
+            privateProperty(this, 'subtract', function (geometry) {
+                var geom = saveGeometryManipluation(this, 'difference', geometry);
+
+                if (geometryArea(geom) == 0) {
+                    this.geometry = undefined;
+                }
+            });
+
+            privateProperty(this, 'add', function (geometry) {
+                saveGeometryManipluation(this, 'union', geometry);
+            });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
+            this.data = attrs.data;
             this.code = attrs.code;
             this.comments = attrs.comments;
             this.createdAt = attrs.createdAt;
@@ -15825,7 +16981,7 @@ sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', '
             this.geometry = attrs.geometry;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
-            this.regionId = attrs.regionId;
+            this.layerId = attrs.layerId;
             this.type = attrs.type;
             this.updatedAt = attrs.updatedAt;
             this.updatedBy = attrs.updatedBy;
@@ -15844,20 +17000,63 @@ sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', '
             }
         });
 
+        function geometryArea (geometry) {
+            return (geometry && geometry.getArea());
+        }
+
+        function geometryEmpty (geometry) {
+            return (geometry && geometry.isEmpty());
+        }
+
+        function geometryRelation (instance, relation, geometry) {
+            var geom = instance.geom;
+
+            return (geom && geometry && geom[relation] ? geom[relation](geometry) : false);
+        }
+
+        function geometryManipluation (instance, manipluation, geometry) {
+            var geom = instance.geom;
+
+            return (geom && geometry && geom[manipluation] ? geom[manipluation](geometry) : geom);
+        }
+
+        function saveGeometryManipluation (instance, manipluation, geometry) {
+            var geom = geometryManipluation(instance, manipluation, geometry);
+
+            if (geom) {
+                instance.$dirty = true;
+                instance.geometry = topologyHelper.writeGeoJSON(geom);
+            }
+
+            return geom;
+        }
+
         Sublayer.validates({
+            data: {
+                required: false,
+                object: true
+            },
             code: {
                 required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
             },
             comments: {
                 required: false,
                 length: {
-                    min: 1,
+                    min: 0,
                     max: 255
                 }
+            },
+            geometry: {
+                required: true,
+                object: true
+            },
+            layerId: {
+                required: true,
+                numeric: true
             },
             name: {
                 required: true,
@@ -15884,22 +17083,26 @@ sdkModelLayer.factory('Sublayer', ['inheritModel', 'Model', 'privateProperty', '
 
 var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
-sdkModelLegalEntity.factory('LegalEntity', ['Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
-    function (Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
+sdkModelLegalEntity.factory('LegalEntity', ['Base', 'Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
+    function (Base, Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
         function LegalEntity (attrs) {
             Model.Base.apply(this, arguments);
 
-            this.data = (attrs && attrs.data) || {};
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'attachments', []);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
+            this.id = attrs.id || attrs.$id;
             this.addressCity = attrs.addressCity;
             this.addressCode = attrs.addressCode;
             this.addressDistrict = attrs.addressDistrict;
             this.addressStreet = attrs.addressStreet;
+            this.contactName = attrs.contactName;
             this.email = attrs.email;
             this.fax = attrs.fax;
-            this.id = attrs.id || attrs.$id;
+            this.isActive = attrs.isActive;
+            this.isPrimary = attrs.isPrimary;
             this.mobile = attrs.mobile;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
@@ -16070,7 +17273,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 if ((this.frequency === 'once' && index === 0) || (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth))) {
                     var installmentPayment = (this.frequency === 'once' ? month.opening : instance.installmentPayment * paymentsPerMonth);
 
-                    if (month.opening > 0) {
+                    if (instance.type === 'rent') {
+                        month.repayment.bank = installmentPayment;
+                    } else if (month.opening > 0) {
                         month.repayment.bank = (month.opening <= installmentPayment ? month.opening : installmentPayment);
                     }
                 }
@@ -16814,8 +18019,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['$filter', 'Base', 'compu
         return ProductionGroup;
     }]);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, moment, privateProperty, readOnlyProperty, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -17298,7 +18503,17 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['$filter', 'Base', 'co
             livestock: 'Livestock'
         });
 
-        readOnlyProperty(ProductionSchedule, 'allowedLandUse', ['Conservation', 'Cropland', 'Grazing', 'Horticulture (Perennial)', 'Irrigated Cropland', 'Planted Pastures']);
+        readOnlyProperty(ProductionSchedule, 'allowedLandUse', underscore.difference(Field.landClasses, [
+            'Building',
+            'Built-up',
+            'Erosion',
+            'Forest',
+            'Homestead',
+            'Mining',
+            'Non-vegetated',
+            'Water',
+            'Water (Seasonal)',
+            'Wetland']));
 
         readOnlyProperty(ProductionSchedule, 'allowedAssets', ['cropland', 'pasture', 'permanent crop']);
 
@@ -18067,6 +19282,10 @@ sdkModelValidators.factory('Validator.range.to', ['underscore', 'Validatable.Val
 sdkModelValidators.factory('Validator.required', ['underscore', 'Validatable.Validator',
     function (underscore, Validator) {
         function required (value, instance, field) {
+            if (!this.required) {
+                return true;
+            }
+
             if (underscore.isUndefined(value) || underscore.isNull(value)) {
                 return false;
             }
@@ -18199,6 +19418,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
+    'ag.sdk.model.field',
     'ag.sdk.model.financial',
     'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',

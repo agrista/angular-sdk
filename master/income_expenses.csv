@@ -1,0 +1,106 @@
+'code','proposed_code','name','proposed_name','unit','comments','crop','horticulture','livestock (Cattle)','livestock (Goats)','livestock (Sheep)'
+'EXP',,'Expenses',,,,,,,,
+'INC',,'Income',,,,,,,,
+'INC-CPS',,'Crop Sales',,,,,,,,
+'INC-FRS',,'Fruit Sales',,,,,,,,
+'HVT',,'Harvest',,,'Code should be EXP-HVT',,,,,
+'EXP-HVT-LABC',,'Contract work (Harvest)','Harvest labour','ha',,'EXP-HVT-LABC','EXP-HVT-LABC',,,
+'EXP-HVT-STOR',,'Storage',,'days',,,'EXP-HVT-STOR',,,
+'EXP-HVT-PAKM',,'Packaging material',,'each',,,'EXP-HVT-PAKM',,,
+'EXP-HVT-DYCL',,'Drying and cleaning',,'t',,,'EXP-HVT-DYCL',,,
+'EXP-HVT-PAKC',,'Packing cost',,'each',,,'EXP-HVT-PAKC',,,
+'EXP-HVT-HVTT',,'Harvest transport',,,,,'EXP-HVT-HVTT',,,
+'EXP-HVT-FUEL',,'Fuel',,,,,'EXP-HVT-FUEL',,,
+'EXP-HVT-REPP',,'Repairs & maintenance',,,,,'EXP-HVT-REPP',,,
+'INC-HVT-CROP',,'Crop',,'t',,'INC-HVT-CROP',,,,
+'INC-HVT-FRUT',,'Fruit',,'t',,,'INC-HVT-FRUT',,,
+'EXP-EST',,'Establishment',,,,,,,,
+'EXP-EST-LPRP',,'Land preparation',,'sum',,,'EXP-EST-LPRP',,,
+'EXP-EST-IRRG',,'Irrigation',,'sum',,,'EXP-EST-IRRG',,,
+'EXP-EST-DRAN',,'Drainage',,'sum',,,'EXP-EST-DRAN',,,
+'EXP-EST-TRLL',,'Trellising',,'sum',,,'EXP-EST-TRLL',,,
+'HVP',,'Preharvest',,,'Code should be EXP-HVP',,,,,
+'EXP-HVP-SEED',,'Seed',,'kg',,'EXP-HVP-SEED',,,,
+'EXP-HVP-PLTM',,'Plant Material',,'each',,,'EXP-HVP-PLTM',,,
+'EXP-HVP-FERT',,'Fertiliser',,'t',,'EXP-HVP-FERT','EXP-HVP-FERT',,,
+'EXP-HVP-LIME',,'Lime',,'t',,'EXP-HVP-LIME','EXP-HVP-LIME',,,
+'EXP-HVP-HERB',,'Herbicides',,'l',,'EXP-HVP-HERB','EXP-HVP-HERB',,,
+'EXP-HVP-PEST',,'Pesticides',,'l',,'EXP-HVP-PEST','EXP-HVP-PEST',,,
+'EXP-HVP-FUNG',,'Fungicides',,'sum',,,,,,
+'EXP-HVP-PGRG',,'Plant growth regulators',,'sum',,,'EXP-HVP-PGRG',,,
+'EXP-HVP-SPYA',,'Aerial spraying',,'ha',,'EXP-HVP-SPYA','EXP-HVP-SPYA',,,
+'EXP-HVP-INSH',,'Crop Insurance (Hail)','Hail insurance','t',,'EXP-HVP-INSH','EXP-HVP-INSH',,,
+'EXP-HVP-INSM',,'Crop Insurance (Multiperil)','Multiperil insurance','t',,'EXP-HVP-INSM','EXP-HVP-INSM',,,
+'EXP-HVP-HEDG',,'Hedging cost',,'t',,'EXP-HVP-HEDG',,,,
+'EXP-HVP-CONS',,'Consultants',,,,,'EXP-HVP-CONS',,,
+'EXP-HVP-SLAB',,'Seasonal Labour',,,,,'EXP-HVP-SLAB',,,
+'EXP-HVP-FUEL',,'Fuel',,,,,'EXP-HVP-FUEL',,,
+'EXP-HVP-REPP',,'Repairs & maintenance',,,,,'EXP-HVP-REPP',,,
+'EXP-HVP-ELEC',,'Electricity',,,,,'EXP-HVP-ELEC',,,
+'EXP-HVP-POLL',,'Pollination',,,,,'EXP-HVP-POLL',,,
+'EXP-HVP-GENL',,'General',,,,,'EXP-HVP-GENL',,,
+'INC-LSS',,'Livestock Sales',,,,,,,,
+'INC-LSS-SLAMB','INC-LSS-SLMB','Lamb',,'head',,,,,,'INC-LSS-SLAMB'
+'INC-LSS-SWEAN','INC-LSS-SWEN','Weaner lambs',,'head',,,,,,'INC-LSS-SWEAN'
+'INC-LSS-SEWE',,'Ewe',,'head',,,,,,'INC-LSS-SEWE'
+'INC-LSS-SWTH',,'Wether (2-tooth plus)',,'head',,,,,,'INC-LSS-SWTH'
+'INC-LSS-SRAM',,'Ram',,'head',,,,,,'INC-LSS-SRAM'
+'INC-LSS-CCALV',,'Calf',,'head',,,,'INC-LSS-CCALV',,
+'INC-LSS-CWEN',,'Weaner calves',,'head',,,,'INC-LSS-CWEN',,
+'INC-LSS-CCOW',,'Cow or heifer',,'head',,,,'INC-LSS-CCOW',,
+'INC-LSS-CST18',,'Steer (18 months plus)',,'head',,,,'INC-LSS-CST18',,
+'INC-LSS-CST36',,'Steer (3 years plus)',,'head',,,,'INC-LSS-CST36',,
+'INC-LSS-CBULL',,'Bull (3 years plus)',,'head',,,,'INC-LSS-CBULL',,
+'INC-LSS-GKID',,'Kid',,'head',,,,,'INC-LSS-GKID',
+'INC-LSS-GWEAN','INC-LSS-GWEN','Weaner kids',,'head',,,,,'INC-LSS-GWEAN',
+'INC-LSS-GEWE',,'Ewe (2-tooth plus)',,'head',,,,,'INC-LSS-GEWE',
+'INC-LSS-GCAST',,'Castrate (2-tooth plus)',,'head',,,,,'INC-LSS-GCAST',
+'INC-LSS-GRAM',,'Ram (2-tooth plus)',,'head',,,,,'INC-LSS-GRAM',
+'INC-LSP',,'Product Sales',,,,,,,,
+'INC-LSP-MILK',,'Milk',,'l',,,,'INC-LSP-MILK','INC-LSP-MILK','INC-LSP-MILK'
+'INC-LSP-WOOL',,'Wool',,'kg',,,,,'INC-LSP-WOOL','INC-LSP-WOOL'
+'EXP-AMF',,'Animal Feed',,,,,,,,
+'EXP-AMF-LICK',,'Lick',,'kg',,,,'EXP-AMF-LICK','EXP-AMF-LICK','EXP-AMF-LICK'
+'HBD',,'Husbandry',,,'Should be EXP-HBD',,,,,
+'EXP-HBD-VACC',,'Drenching & vaccination',,'head',,,,'EXP-HBD-VACC','EXP-HBD-VACC','EXP-HBD-VACC'
+'EXP-HBD-DIPP',,'Dipping & jetting',,'head',,,,'EXP-HBD-DIPP','EXP-HBD-DIPP','EXP-HBD-DIPP'
+'EXP-HBD-VETY',,'Veterinary',,'head',,,,'EXP-HBD-VETY','EXP-HBD-VETY','EXP-HBD-VETY'
+'EXP-HBD-SHER',,'Shearing',,'head',,,,,'EXP-HBD-SHER','EXP-HBD-SHER'
+'EXP-HBD-CRCH',,'Crutching',,'head',,,,,'EXP-HBD-CRCH','EXP-HBD-CRCH'
+'IDR',,'Indirect Costs',,,'Should be EXP-IDR',,,,,
+'EXP-IDR-FUEL',,'Fuel',,'l',,'EXP-IDR-FUEL','EXP-IDR-FUEL','EXP-IDR-FUEL','EXP-IDR-FUEL','EXP-IDR-FUEL'
+'EXP-IDR-REPP',,'Repairs & parts','Repairs & maintenance','Total',,'EXP-IDR-REPP','EXP-IDR-REPP','EXP-IDR-REPP','EXP-IDR-REPP','EXP-IDR-REPP'
+'EXP-IDR-ELEC',,'Electricity',,'Total',,'EXP-IDR-ELEC','EXP-IDR-ELEC','EXP-IDR-ELEC','EXP-IDR-ELEC','EXP-IDR-ELEC'
+'EXP-IDR-WATR',,'Water',,'Total',,'EXP-IDR-WATR','EXP-IDR-WATR','EXP-IDR-WATR','EXP-IDR-WATR','EXP-IDR-WATR'
+'EXP-IDR-LABP',,'Permanent labour',,'Total',,'EXP-IDR-LABP','EXP-IDR-LABP','EXP-IDR-LABP','EXP-IDR-LABP','EXP-IDR-LABP'
+'EXP-IDR-SCHED','EXP-IDR-SCHD','Scheduling',,'Total',,'EXP-IDR-SCHED','EXP-IDR-SCHED',,,
+'EXP-IDR-LICS',,'License',,'Total',,,'EXP-IDR-LICS','EXP-IDR-LICS','EXP-IDR-LICS','EXP-IDR-LICS'
+'EXP-IDR-INSA',,'Insurance assets',,'Total',,,'EXP-IDR-INSA','EXP-IDR-INSA','EXP-IDR-INSA','EXP-IDR-INSA'
+'EXP-IDR-INTR',,'Interest on loans',,'sum',,'EXP-IDR-INTR','EXP-IDR-INTR',,,
+'EXP-IDR-ODEP',,'Depreciation on orchards',,'sum',,,'EXP-IDR-ODEP',,,
+'EXP-IDR-OTHER','EXP-IDR-OTHR','Other costs','Other overheads','Total',,'EXP-IDR-OTHER','EXP-IDR-OTHER','EXP-IDR-OTHER','EXP-IDR-OTHER','EXP-IDR-OTHER'
+'MRK',,'Marketing',,,'Should be EXP-MRK',,,,,
+'EXP-MRK-LSSF',,'Livestock sales marketing fees',,'t',,,,'EXP-MRK-LSSF','EXP-MRK-LSSF','EXP-MRK-LSSF'
+'EXP-MRK-LSPF',,'Livestock products marketing fees',,'t',,,,'EXP-MRK-LSPF','EXP-MRK-LSPF','EXP-MRK-LSPF'
+'EXP-MRK-HOTF',,'Horticulture marketing fees',,'t',,,'EXP-MRK-HOTF',,,
+'EXP-MRK-CRPF',,'Crop marketing fees',,'t',,'EXP-MRK-CRPF',,,,
+'EXP-MRK-LSTP',,'Livestock transport',,'head',,'EXP-MRK-CRPT',,'EXP-MRK-LSTP','EXP-MRK-LSTP','EXP-MRK-LSTP'
+'EXP-MRK-HOTT',,'Horticulture transport','Fruit transport','t',,,'EXP-MRK-HOTT',,,
+'EXP-MRK-CRPT',,'Crop transport',,'t',,,,,,
+'RPM',,'Replacements',,,,,,,,
+'EXP-RPM-SLAMB','EXP-RPM-SLMB','Lamb',,'head',,,,,,'EXP-RPM-SLAMB'
+'EXP-RPM-SWEAN','EXP-RPM-LWEN','Weaner lambs',,'head',,,,,,'EXP-RPM-SWEAN'
+'EXP-RPM-SEWE',,'Ewe',,'head',,,,,,'EXP-RPM-SEWE'
+'EXP-RPM-SWTH',,'Wether (2-tooth plus)',,'head',,,,,,'EXP-RPM-SWTH'
+'EXP-RPM-SRAM',,'Ram',,'head',,,,,,'EXP-RPM-SRAM'
+'EXP-RPM-CCALV',,'Calf',,'head',,,,'EXP-RPM-CCALV',,
+'EXP-RPM-CWEN',,'Weaner calves',,'head',,,,'EXP-RPM-CWEN',,
+'EXP-RPM-CCOW',,'Cow or heifer',,'head',,,,'EXP-RPM-CCOW',,
+'EXP-RPM-CST18',,'Steer (18 moths plus)',,'head',,,,'EXP-RPM-CST18',,
+'EXP-RPM-CST36',,'Steer (3 years plus)',,'head',,,,'EXP-RPM-CST36',,
+'EXP-RPM-CBULL',,'Bull (3 years plus)',,'head',,,,'EXP-RPM-CBULL',,
+'EXP-RPM-GKID',,'Kid',,'head',,,,,'EXP-RPM-GKID',
+'EXP-RPM-GWEAN','EXP-RPM-GWEN','Weaner kids',,'head',,,,,'EXP-RPM-GWEAN',
+'EXP-RPM-GEWE',,'Ewe (2-tooth plus)',,'head',,,,,'EXP-RPM-GEWE',
+'EXP-RPM-GCAST','EXP-RPM-GCST','Castrate (2-tooth plus)',,'head',,,,,'EXP-RPM-GCAST',
+'EXP-RPM-GRAM',,'Ram (2-tooth plus)',,'head',,,,,'EXP-RPM-GRAM',

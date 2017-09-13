@@ -56,7 +56,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     color: 'white',
                     opacity: 0.8,
                     fillColor: "#0094D6",
-                    fillOpacity: 0.5
+                    fillOpacity: 0.6
                 }
             },
             farmland: {
@@ -703,6 +703,12 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     _this._config.bounds = bounds;
                 });
             },
+            panTo: function (coordinates, options) {
+                this.enqueueRequest('mapbox-' + this._id + '::pan-to', {
+                    coordinates: coordinates,
+                    options: options
+                });
+            },
             zoomTo: function (coordinates, zoom, options) {
                 this.enqueueRequest('mapbox-' + this._id + '::zoom-to', {
                     coordinates: coordinates,
@@ -728,7 +734,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                     handler: function (layer) {
                         _this._config.leafletLayers[name] = layer;
 
-                        handler(layer);
+                        if (typeof handler === 'function') {
+                            handler(layer);
+                        }
                     }
                 };
 
@@ -1161,6 +1169,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         scope.$on('mapbox-' + id + '::set-bounds', function (event, args) {
             _this.setBounds(args);
+        });
+
+        scope.$on('mapbox-' + id + '::pan-to', function (event, args) {
+            _this.panTo(args);
         });
 
         scope.$on('mapbox-' + id + '::zoom-to', function (event, args) {
@@ -1623,6 +1635,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         }
     };
 
+    Mapbox.prototype.panTo = function (pan) {
+        if (this._map && pan.coordinates) {
+            this._map.panTo(pan.coordinates, pan.options);
+        }
+    };
+
     Mapbox.prototype.zoomTo = function (view) {
         if (this._map && view.coordinates && view.zoom) {
             this._map.setZoomAround(view.coordinates, view.zoom, view.options);
@@ -1706,7 +1724,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             layer = this._layers[name],
             removed = false;
 
-        if (fromLayer) {
+        if (fromLayer && layer) {
             removed = (this._layers[name] != undefined);
             fromLayer.removeLayer(layer);
 
@@ -2086,7 +2104,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion-polygon' + params)
+            $http.get(host + 'api/geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -2107,7 +2125,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion-polygon' + params)
+            $http.get(host + 'api/geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
@@ -2129,7 +2147,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district-polygon' + params)
+            $http.get(host + 'api/geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -2150,7 +2168,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district-polygon' + params)
+            $http.get(host + 'api/geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -2173,7 +2191,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field-polygon' + params)
+            $http.get(host + 'api/geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -2193,7 +2211,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field-polygon' + params)
+            $http.get(host + 'api/geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
@@ -2483,6 +2501,14 @@ sdkInterfaceMapApp.directive('mapboxControl', ['$rootScope', function ($rootScop
         var parent = element.parent();
 
         $rootScope.$on('mapbox-' + parent.attr('id') + '::init', function (event, map) {
+            element.on('click', function (e) {
+                if (e.originalEvent) {
+                    e.originalEvent._stopped = true;
+                    e.originalEvent.preventDefault();
+                    e.originalEvent.stopPropagation();
+                }
+            });
+
             element.on('mouseover', function () {
                 map.dragging.disable();
             });

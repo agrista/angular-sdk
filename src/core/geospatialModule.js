@@ -1,6 +1,6 @@
 var sdkGeospatialApp = angular.module('ag.sdk.geospatial', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
-sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (objectId, underscore) {
+sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'underscore', function (objectId, topologyHelper, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
             return new GeojsonHelper(json, properties);
@@ -9,17 +9,25 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
         this.addGeometry(json, properties);
     }
 
-    function _recursiveCoordinateFinder (bounds, coordinates) {
+    function recursiveCoordinateFinder (bounds, coordinates) {
         if (coordinates) {
             if (angular.isArray(coordinates[0])) {
                 angular.forEach(coordinates, function(coordinate) {
-                    _recursiveCoordinateFinder(bounds, coordinate);
+                    recursiveCoordinateFinder(bounds, coordinate);
                 });
             } else if (angular.isArray(coordinates)) {
                 bounds.push([coordinates[1], coordinates[0]]);
             }
         }
     }
+
+    function geometryRelation (instance, relation, geometry) {
+        var geom1 = topologyHelper.readGeoJSON(instance._json),
+            geom2 = topologyHelper.readGeoJSON(geometry);
+
+        return (geom1 && geom2 && geom1[relation] ? geom1[relation](geom2) : false);
+    }
+    
 
     GeojsonHelper.prototype = {
         getJson: function () {
@@ -40,7 +48,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                 angular.forEach(features, function(feature) {
                     var geometry = feature.geometry || feature;
 
-                    _recursiveCoordinateFinder(bounds, geometry.coordinates);
+                    recursiveCoordinateFinder(bounds, geometry.coordinates);
                 });
             }
 
@@ -53,7 +61,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                 lng1 = 0, lng2 = 0;
 
             angular.forEach(bounds, function(coordinate, index) {
-                if (index == 0) {
+                if (index === 0) {
                     lat1 = lat2 = coordinate[0];
                     lng1 = lng2 = coordinate[1];
                 } else {
@@ -66,14 +74,26 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
 
             return [[lat1, lng1], [lat2, lng2]];
         },
+        /**
+         * Geometry Relations
+         */
+        contains: function (geometry) {
+            return geometryRelation(this, 'contains', geometry);
+        },
+        within: function (geometry) {
+            return geometryRelation(this, 'within', geometry);
+        },
+        /**
+         * Get Center
+         */
         getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds);
+            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
 
             return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
         },
         getCenterAsGeojson: function (bounds) {
             return {
-                coordinates: this.getCenter(bounds).reverse(),
+                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
                 type: 'Point'
             }
         },
@@ -81,7 +101,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);
         },
         setCoordinates: function (coordinates) {
-            if (this._json && this._json.type != 'FeatureCollection') {
+            if (this._json && this._json.type !== 'FeatureCollection') {
                 if (this._json.geometry) {
                     this._json.geometry.coordinates = coordinates;
                 } else {
@@ -93,7 +113,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
             var _this = this;
 
             if (this._json && properties) {
-                if (_this._json.type != 'FeatureCollection' && _this._json.type != 'Feature') {
+                if (_this._json.type !== 'FeatureCollection' && _this._json.type !== 'Feature') {
                     _this._json = {
                         type: 'Feature',
                         geometry: _this._json,
@@ -117,14 +137,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
 
                     this.addProperties(properties);
                 } else {
-                    if (this._json.type != 'FeatureCollection' && this._json.type != 'Feature') {
+                    if (this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
                         this._json = {
                             type: 'Feature',
                             geometry: this._json
                         };
                     }
 
-                    if (this._json.type == 'Feature') {
+                    if (this._json.type === 'Feature') {
                         this._json.properties = underscore.defaults(this._json.properties || {}, {
                             featureId: objectId().toString()
                         });
@@ -135,7 +155,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                         };
                     }
 
-                    if (this._json.type == 'FeatureCollection') {
+                    if (this._json.type === 'FeatureCollection') {
                         this._json.features.push({
                             type: 'Feature',
                             geometry: geometry,
@@ -152,11 +172,11 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
         formatGeoJson: function (geoJson, toType) {
             // TODO: REFACTOR
             //todo: maybe we can do the geoJson formation to make it standard instead of doing the validation.
-            if(toType.toLowerCase() == 'point') {
+            if (toType.toLowerCase() === 'point') {
                 switch (geoJson && geoJson.type && geoJson.type.toLowerCase()) {
                     // type of Feature
                     case 'feature':
-                        if(geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type == 'Point') {
+                        if (geoJson.geometry && geoJson.geometry.type && geoJson.geometry.type === 'Point') {
                             return geoJson.geometry;
                         }
                         break;
@@ -177,7 +197,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
         validGeoJson: function (geoJson, typeRestriction) {
             // TODO: REFACTOR
             var validate = true;
-            if(!geoJson || geoJson.type == undefined || typeof geoJson.type != 'string' || (typeRestriction && geoJson.type.toLowerCase() != typeRestriction)) {
+            if(!geoJson || geoJson.type === undefined || typeof geoJson.type !== 'string' || (typeRestriction && geoJson.type.toLowerCase() !== typeRestriction)) {
                 return false;
             }
 
@@ -198,8 +218,8 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'underscore', function (o
                         return false;
                     }
                     var flattenedCoordinates = _.flatten(geoJson.coordinates);
-                    flattenedCoordinates.forEach(function(element, i) {
-                        if(typeof element != 'number') {
+                    flattenedCoordinates.forEach(function(element) {
+                        if (typeof element !== 'number') {
                             validate = false;
                         }
                     });

@@ -1,6 +1,6 @@
 {
     "name": "agrista-sdk",
-    "version": "1.9.13",
+    "version": "1.10.0",
     "dependencies": {
         "angular": "https://github.com/angular/bower-angular.git",
         "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
@@ -15,5 +15,10 @@
         "angular-loader": "https://github.com/angular/bower-angular-loader.git",
         "angular-mocks": "https://github.com/angular/bower-angular-mocks.git",
         "angular-route": "https://github.com/angular/bower-angular-route.git"
+    },
+    "resolutions": {
+        "angular": "^1.4.x",
+        "angular-cookies": "^1.4.x",
+        "leaflet": "^1.0.0"
     }
 }
