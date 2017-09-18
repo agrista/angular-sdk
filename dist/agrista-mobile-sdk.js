@@ -350,8 +350,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                             localStore.removeItem('user');
                             localStore.removeItem('tokens');
                             _tokens = undefined;
+                            _user = _getUser();
 
                             $rootScope.$broadcast('authorization::logout');
+
+                            return _user;
                         });
                     }
                 }
