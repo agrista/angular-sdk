@@ -17101,6 +17101,7 @@ sdkModelLegalEntity.factory('LegalEntity', ['Base', 'Asset', 'inheritModel', 'Li
             this.addressCode = attrs.addressCode;
             this.addressDistrict = attrs.addressDistrict;
             this.addressStreet = attrs.addressStreet;
+            this.cifKey = attrs.cifKey;
             this.contactName = attrs.contactName;
             this.email = attrs.email;
             this.fax = attrs.fax;
