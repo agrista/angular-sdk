@@ -345,7 +345,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CCOW',
-                name: 'Cow or heifer',
+                name: 'Cow',
+                supplyUnit: 'hd',
+                unit: 'kg'
+            }, {
+                code: 'INC-LSS-CHEI',
+                name: 'Heifer',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -660,7 +665,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CCOW',
-                name: 'Cow or heifer',
+                name: 'Cow',
+                unit: 'head'
+            }, {
+                code: 'EXP-RPM-CHEI',
+                name: 'Heifer',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST18',
@@ -805,11 +814,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             livestock: {
                 Cattle: {
                     INC: {
-                        'Livestock Sales': getCategoryArray(['INC-LSS-CCALV', 'INC-LSS-CWEN', 'INC-LSS-CCOW', 'INC-LSS-CST18', 'INC-LSS-CST36', 'INC-LSS-CBULL']),
+                        'Livestock Sales': getCategoryArray(['INC-LSS-CCALV', 'INC-LSS-CWEN', 'INC-LSS-CCOW', 'INC-LSS-CHEI', 'INC-LSS-CST18', 'INC-LSS-CST36', 'INC-LSS-CBULL']),
                         'Product Sales': getCategoryArray(['INC-LSP-MILK'])
                     },
                     EXP: {
-                        'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
+                        'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
                         'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
@@ -818,11 +827,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 },
                 Game: {
                     INC: {
-                        'Livestock Sales': getCategoryArray(['INC-LSS-CCALV', 'INC-LSS-CWEN', 'INC-LSS-CCOW', 'INC-LSS-CST18', 'INC-LSS-CST36', 'INC-LSS-CBULL']),
+                        'Livestock Sales': getCategoryArray(['INC-LSS-CCALV', 'INC-LSS-CWEN', 'INC-LSS-CCOW', 'INC-LSS-CHEI', 'INC-LSS-CST18', 'INC-LSS-CST36', 'INC-LSS-CBULL']),
                         'Product Sales': getCategoryArray(['INC-LSP-WOOL', 'INC-LSP-LFUR'])
                     },
                     EXP: {
-                        'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
+                        'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
                         'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
@@ -919,8 +928,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
         // Livestock
         var representativeAnimal = {
-            Cattle: 'Cow or heifer',
-            Game: 'Cow or heifer',
+            Cattle: 'Cow',
+            Game: 'Cow',
             Goats: 'Ewe (2-tooth plus)',
             Rabbits: 'Doe',
             Sheep: 'Ewe'
@@ -939,7 +948,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             Cattle: {
                 'Calf': 0.32,
                 'Weaner calves': 0.44,
-                'Cow or heifer': 1.1,
+                'Cow': 1.1,
+                'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
                 'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
@@ -948,7 +958,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             Game: {
                 'Calf': 0.32,
                 'Weaner calves': 0.44,
-                'Cow or heifer': 1.1,
+                'Cow': 1.1,
+                'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
                 'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
