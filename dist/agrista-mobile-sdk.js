@@ -1317,6 +1317,38 @@ sdkUtilitiesApp.filter('round', [function () {
         return Number(Math.round(value + 'e' + precision) + 'e-' + precision);
     };
 }]);
+
+sdkUtilitiesApp.factory('safeMath', ['$filter', function ($filter) {
+    var round = $filter('round');
+
+    var countPrecision = function (value) {
+        var match = (''+value).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+
+        return (!match ? 0 : Math.max(0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0)));
+    };
+
+    var maxPrecision = function (valueA, valueB, precision) {
+        return precision || Math.max(countPrecision(valueA), countPrecision(valueB));
+    };
+
+    return {
+        add: function (valueA, valueB, precision) {
+            return round((valueA || 0) + (valueB || 0), maxPrecision(valueA, valueB, precision));
+        },
+        subtract: function (valueA, valueB, precision) {
+            return round((valueA || 0) - (valueB || 0), maxPrecision(valueA, valueB, precision));
+        },
+        divide: function (valueA, valueB, precision) {
+            return (valueB ? round((valueA || 0) / valueB, maxPrecision(valueA, valueB, precision)) : 0);
+        },
+        multiply: function (valueA, valueB, precision) {
+            return round((valueA || 0) * (valueB || 0), maxPrecision(valueA, valueB, precision));
+        },
+        countPrecision: countPrecision,
+        round: round
+    };
+}]);
+
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
@@ -12858,25 +12890,25 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
 
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function ComparableSale (attrs) {
             Model.Base.apply(this, arguments);
 
             computedProperty(this, 'distanceInKm', function () {
-                return (this.distance ? this.distance / 1000.0 : '-');
+                return (this.distance ? safeMath.divide(this.distance, 1000.0) : '-');
             });
 
             computedProperty(this, 'improvedRatePerHa', function () {
-                return this.purchasePrice / this.area;
+                return safeMath.divide(this.purchasePrice, this.area);
             }, {enumerable: true});
 
             computedProperty(this, 'vacantLandValue', function () {
-                return this.valueMinusImprovements / this.area;
+                return safeMath.divide(this.valueMinusImprovements, this.area);
             }, {enumerable: true});
 
             computedProperty(this, 'valueMinusImprovements', function () {
-                return this.purchasePrice - this.depImpValue;
+                return safeMath.subtract(this.purchasePrice,  this.depImpValue);
             }, {enumerable: true});
 
             computedProperty(this, 'farmName', function () {
@@ -12901,13 +12933,13 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
 
             computedProperty(this, 'totalLandComponentArea', function () {
                 return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return total + (landComponent.area || 0);
+                    return safeMath.add(total, landComponent.area);
                 }, 0);
             });
 
             computedProperty(this, 'totalLandComponentValue', function () {
                 return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return total + (landComponent.assetValue || 0);
+                    return safeMath.add(total, landComponent.assetValue);
                 }, 0);
             });
 
@@ -12969,10 +13001,10 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
                             this.landComponents.push(landComponent);
                         }
 
-                        landComponent.area = roundValue((landComponent.area || 0) + landCover.area, 3);
+                        landComponent.area = safeMath.add(landComponent.area || 0, landCover.area, 3);
 
                         if (landComponent.unitValue) {
-                            landComponent.assetValue = landComponent.area * landComponent.unitValue;
+                            landComponent.assetValue = safeMath.multiply(landComponent.area, landComponent.unitValue);
                         }
                     }, this);
                 }
@@ -13023,8 +13055,6 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
             this.useCount = attrs.useCount || 0;
         }
 
-        var roundValue = $filter('round');
-
         function convertLandComponent (landComponent) {
             landComponent.type = convertLandComponentType(landComponent.type);
 
@@ -13056,8 +13086,8 @@ sdkModelComparableSale.factory('ComparableSale', ['$filter', 'computedProperty',
         }
 
         function recalculateArea (instance) {
-            instance.area = roundValue(underscore.reduce(instance.portions, function(total, portion) {
-                return total + (portion.area || 0);
+            instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
+                return safeMath.add(total, portion.area);
             }, 0), 4);
         }
 
