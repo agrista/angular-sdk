@@ -327,3 +327,34 @@ sdkUtilitiesApp.filter('round', [function () {
         return Number(Math.round(value + 'e' + precision) + 'e-' + precision);
     };
 }]);
+
+sdkUtilitiesApp.factory('safeMath', ['$filter', function ($filter) {
+    var round = $filter('round');
+
+    var countPrecision = function (value) {
+        var match = (''+value).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+
+        return (!match ? 0 : Math.max(0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0)));
+    };
+
+    var maxPrecision = function (valueA, valueB, precision) {
+        return precision || Math.max(countPrecision(valueA), countPrecision(valueB));
+    };
+
+    return {
+        add: function (valueA, valueB, precision) {
+            return round((valueA || 0) + (valueB || 0), maxPrecision(valueA, valueB, precision));
+        },
+        subtract: function (valueA, valueB, precision) {
+            return round((valueA || 0) - (valueB || 0), maxPrecision(valueA, valueB, precision));
+        },
+        divide: function (valueA, valueB, precision) {
+            return (valueB ? round((valueA || 0) / valueB, maxPrecision(valueA, valueB, precision)) : 0);
+        },
+        multiply: function (valueA, valueB, precision) {
+            return round((valueA || 0) * (valueB || 0), maxPrecision(valueA, valueB, precision));
+        },
+        countPrecision: countPrecision,
+        round: round
+    };
+}]);
