@@ -1003,8 +1003,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -1401,13 +1401,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             }
         }
 
-        var roundValue = $filter('round');
-
         function recalculateEnterpriseBudget (instance) {
             validateEnterpriseBudget(instance);
 
-            if(instance.assetType === 'livestock' && instance.getConversionRate()) {
-                instance.data.details.calculatedLSU = instance.data.details.herdSize * instance.getConversionRate();
+            if (instance.assetType === 'livestock' && instance.getConversionRate()) {
+                instance.data.details.calculatedLSU = safeMath.times(instance.data.details.herdSize, instance.getConversionRate());
             }
 
             angular.forEach(instance.data.sections, function(section) {
@@ -1415,7 +1413,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                     value: 0
                 };
 
-                if(instance.assetType === 'livestock') {
+                if (instance.assetType === 'livestock') {
                     section.total.valuePerLSU = 0;
                 }
 
@@ -1424,12 +1422,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                         value: 0
                     };
 
-                    if(instance.assetType === 'livestock') {
+                    if (instance.assetType === 'livestock') {
                         group.total.valuePerLSU = 0;
                     }
 
                     angular.forEach(group.productCategories, function(category) {
-                        if(category.unit === '%') {
+                        if (category.unit === '%') {
                             // Convert percentage to total
                             category.unit = 'Total';
                             category.pricePerUnit = category.quantity;
@@ -1438,41 +1436,56 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                             category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
                         }
 
-                        if(instance.assetType === 'livestock' && instance.getConversionRate(category.name)) {
-                            category.valuePerLSU = (category.pricePerUnit || 0) / instance.getConversionRate(category.name);
-                            group.total.valuePerLSU += category.valuePerLSU;
-                        }
-
                         var schedule = (underscore.isArray(category.schedule) ? category.schedule : instance.getSchedule(category.schedule)),
                             scheduleTotalAllocation = underscore.reduce(schedule, function (total, value) {
-                                return total + (value || 0);
+                                return safeMath.plus(total, value);
                             }, 0);
 
-                        category.value = roundValue(((underscore.isUndefined(category.supply) ? 1 : category.supply) * (category.quantity || 0) * (category.pricePerUnit || 0)) * (scheduleTotalAllocation / 100));
+                        category.value = safeMath.chain(underscore.isUndefined(category.supply) ? 1 : category.supply)
+                            .times(category.quantity)
+                            .times(category.pricePerUnit)
+                            .times(scheduleTotalAllocation)
+                            .dividedBy(100)
+                            .toNumber();
+
+                        if (instance.assetType === 'livestock' && instance.getConversionRate(category.name)) {
+                            category.quantityPerLSU = safeMath.times(category.quantity, instance.getConversionRate(category.name));
+                            category.valuePerLSU = safeMath.times(category.value, instance.getConversionRate(category.name));
+
+                            group.total.quantityPerLSU = safeMath.plus(group.total.quantityPerLSU, category.quantityPerLSU);
+                            group.total.valuePerLSU = safeMath.plus(group.total.valuePerLSU, category.valuePerLSU);
+                        }
 
                         category.valuePerMonth = underscore.map(schedule, function (allocation) {
-                            return roundValue(category.value * (allocation / 100));
+                            return safeMath.chain(category.value)
+                                .times(allocation)
+                                .dividedBy(100)
+                                .toNumber();
                         });
 
                         category.quantityPerMonth = underscore.map(schedule, function (allocation) {
-                            return roundValue(category.quantity * (allocation / 100));
+                            return safeMath.chain(category.quantity)
+                                .times(allocation)
+                                .dividedBy(100)
+                                .toNumber();
                         });
 
-                        group.total.value += category.value;
+                        group.total.value = safeMath.plus(group.total.value, category.value);
                         group.total.valuePerMonth = (group.total.valuePerMonth ?
                             underscore.map(group.total.valuePerMonth, function (value, index) {
-                                return roundValue(value + category.valuePerMonth[index]);
+                                return safeMath.plus(value, category.valuePerMonth[index]);
                             }) : angular.copy(category.valuePerMonth));
                     });
 
-                    section.total.value += group.total.value;
+                    section.total.value = safeMath.plus(section.total.value, group.total.value);
                     section.total.valuePerMonth = (section.total.valuePerMonth ?
                         underscore.map(section.total.valuePerMonth, function (value, index) {
-                            return roundValue(value + group.total.valuePerMonth[index]);
+                            return safeMath.plus(value, group.total.valuePerMonth[index]);
                         }) : angular.copy(group.total.valuePerMonth));
 
-                    if(instance.assetType === 'livestock') {
-                        section.total.valuePerLSU += group.total.valuePerLSU;
+                    if (instance.assetType === 'livestock') {
+                        section.total.quantityPerLSU = safeMath.plus(section.total.quantityPerLSU, group.total.quantityPerLSU);
+                        section.total.valuePerLSU = safeMath.plus(section.total.valuePerLSU, group.total.valuePerLSU);
                     }
                 });
             });
@@ -1483,16 +1496,16 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                         .chain(instance.data.sections)
                         .where({costStage: stage})
                         .reduce(function (total, section) {
-                            return (section.code === 'INC' ? total + section.total.value :
-                                (section.code === 'EXP' ? total - section.total.value : total));
+                            return (section.code === 'INC' ? safeMath.plus(total, section.total.value) :
+                                (section.code === 'EXP' ? safeMath.minus(total, section.total.value) : total));
                         }, 0)
                         .value();
                 }));
 
             instance.data.details.grossProfit = instance.data.details.grossProfitByStage[instance.defaultCostStage];
 
-            if(instance.assetType === 'livestock') {
-                instance.data.details.grossProfitPerLSU = instance.data.details.grossProfit / instance.data.details.calculatedLSU;
+            if (instance.assetType === 'livestock') {
+                instance.data.details.grossProfitPerLSU = safeMath.dividedBy(instance.data.details.grossProfit, instance.data.details.calculatedLSU);
             }
         }
 

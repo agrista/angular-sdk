@@ -9,8 +9,8 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             var _constructor = this;
             var _prototype = _constructor.prototype;
 
-            _constructor.new = function (attrs) {
-                var inst = new _constructor(attrs);
+            _constructor.new = function (attrs, options) {
+                var inst = new _constructor(attrs, options);
 
                 if (typeof inst.storable == 'function') {
                     inst.storable(attrs);
@@ -19,8 +19,8 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 return inst;
             };
 
-            _constructor.newCopy = function (attrs) {
-                return _constructor.new(JSON.parse(JSON.stringify(attrs)));
+            _constructor.newCopy = function (attrs, options) {
+                return _constructor.new(JSON.parse(JSON.stringify(attrs)), options);
             };
 
             _constructor.asJSON = function () {

@@ -328,33 +328,27 @@ sdkUtilitiesApp.filter('round', [function () {
     };
 }]);
 
-sdkUtilitiesApp.factory('safeMath', ['$filter', function ($filter) {
-    var round = $filter('round');
-
-    var countPrecision = function (value) {
-        var match = (''+value).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
-
-        return (!match ? 0 : Math.max(0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0)));
-    };
-
-    var maxPrecision = function (valueA, valueB, precision) {
-        return precision || Math.max(countPrecision(valueA), countPrecision(valueB));
-    };
+sdkUtilitiesApp.factory('safeMath', ['bigNumber', function (bigNumber) {
+    bigNumber.config({ERRORS: false});
 
     return {
-        add: function (valueA, valueB, precision) {
-            return round((valueA || 0) + (valueB || 0), maxPrecision(valueA, valueB, precision));
+        chain: function (value) {
+            return new bigNumber(value || 0);
         },
-        subtract: function (valueA, valueB, precision) {
-            return round((valueA || 0) - (valueB || 0), maxPrecision(valueA, valueB, precision));
+        plus: function (valueA, valueB) {
+            return new bigNumber(valueA || 0).plus(valueB || 0).toNumber();
         },
-        divide: function (valueA, valueB, precision) {
-            return (valueB ? round((valueA || 0) / valueB, maxPrecision(valueA, valueB, precision)) : 0);
+        minus: function (valueA, valueB) {
+            return new bigNumber(valueA || 0).minus(valueB || 0).toNumber();
         },
-        multiply: function (valueA, valueB, precision) {
-            return round((valueA || 0) * (valueB || 0), maxPrecision(valueA, valueB, precision));
+        dividedBy: function (valueA, valueB) {
+            return (valueB ? new bigNumber(valueA || 0).dividedBy(valueB).toNumber() : 0);
         },
-        countPrecision: countPrecision,
-        round: round
+        times: function (valueA, valueB) {
+            return new bigNumber(valueA || 0).times(valueB || 0).toNumber();
+        },
+        round: function (value, precision) {
+            return new bigNumber(value || 0).round(precision).toNumber();
+        }
     };
 }]);

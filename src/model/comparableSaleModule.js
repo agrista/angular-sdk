@@ -6,19 +6,19 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
             Model.Base.apply(this, arguments);
 
             computedProperty(this, 'distanceInKm', function () {
-                return (this.distance ? safeMath.divide(this.distance, 1000.0) : '-');
+                return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
             });
 
             computedProperty(this, 'improvedRatePerHa', function () {
-                return safeMath.divide(this.purchasePrice, this.area);
+                return safeMath.dividedBy(this.purchasePrice, this.area);
             }, {enumerable: true});
 
             computedProperty(this, 'vacantLandValue', function () {
-                return safeMath.divide(this.valueMinusImprovements, this.area);
+                return safeMath.dividedBy(this.valueMinusImprovements, this.area);
             }, {enumerable: true});
 
             computedProperty(this, 'valueMinusImprovements', function () {
-                return safeMath.subtract(this.purchasePrice,  this.depImpValue);
+                return safeMath.minus(this.purchasePrice,  this.depImpValue);
             }, {enumerable: true});
 
             computedProperty(this, 'farmName', function () {
@@ -43,13 +43,13 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
 
             computedProperty(this, 'totalLandComponentArea', function () {
                 return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return safeMath.add(total, landComponent.area);
+                    return safeMath.plus(total, landComponent.area);
                 }, 0);
             });
 
             computedProperty(this, 'totalLandComponentValue', function () {
                 return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return safeMath.add(total, landComponent.assetValue);
+                    return safeMath.plus(total, landComponent.assetValue);
                 }, 0);
             });
 
@@ -111,10 +111,10 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
                             this.landComponents.push(landComponent);
                         }
 
-                        landComponent.area = safeMath.add(landComponent.area || 0, landCover.area, 3);
+                        landComponent.area = safeMath.plus(landComponent.area, landCover.area, 3);
 
                         if (landComponent.unitValue) {
-                            landComponent.assetValue = safeMath.multiply(landComponent.area, landComponent.unitValue);
+                            landComponent.assetValue = safeMath.times(landComponent.area, landComponent.unitValue);
                         }
                     }, this);
                 }
@@ -197,7 +197,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
 
         function recalculateArea (instance) {
             instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
-                return safeMath.add(total, portion.area);
+                return safeMath.plus(total, portion.area);
             }, 0), 4);
         }
 
