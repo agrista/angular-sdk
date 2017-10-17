@@ -415,8 +415,13 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 this.startDate = allocationDate.format('YYYY-MM-DD');
                 this.endDate = allocationDate.add(1, 'y').format('YYYY-MM-DD');
 
-                if (this.asset) {
-                    var assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
+                if (this.type === 'horticulture') {
+                    startDate = moment(this.startDate);
+
+                    this.data.details.establishedDate = (underscore.isUndefined(this.data.details.establishedDate) ?
+                        (this.asset && this.asset.data.establishedDate ? this.asset.data.establishedDate : this.startDate) :
+                        this.data.details.establishedDate);
+                    var assetAge = (startDate.isAfter(this.data.details.establishedDate) ? startDate.diff(this.data.details.establishedDate, 'years') : 0);
 
                     if (assetAge !== this.data.details.assetAge) {
                         this.data.details.assetAge = assetAge;
@@ -429,15 +434,21 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             privateProperty(this, 'setAsset', function (asset) {
                 this.asset = underscore.omit(asset, ['liabilities', 'productionSchedules']);
                 this.assetId = this.asset.id || this.asset.$id;
-                this.type = (asset.type === 'cropland' ? 'crop' : (asset.type === 'permanent crop' ? 'horticulture' : 'livestock'));
+
+                this.type = ProductionSchedule.typeByAsset[asset.type];
                 this.data.details.fieldName = this.asset.data.fieldName;
-                this.data.details.assetAge = (this.asset.data.establishedDate ? moment(this.startDate).diff(this.asset.data.establishedDate, 'years') : 0);
 
                 if (asset.data.crop) {
                     this.data.details.commodity = asset.data.crop;
                 }
 
-                if (this.type === 'livestock') {
+                if (this.type === 'horticulture') {
+                    var startDate = moment(this.startDate);
+
+                    this.data.details.establishedDate = this.asset.data.establishedDate || this.startDate;
+                    this.data.details.assetAge = (startDate.isAfter(this.data.details.establishedDate) ?
+                        startDate.diff(this.data.details.establishedDate, 'years') : 0);
+                } else if (this.type === 'livestock') {
                     this.data.details.pastureType = (this.asset.data.irrigated ? 'pasture' : 'grazing');
 
                     if (this.budget && this.budget.data.details.stockingDensity) {
@@ -916,13 +927,21 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
 
         readOnlyProperty(ProductionSchedule, 'allowedAssets', ['cropland', 'pasture', 'permanent crop']);
 
+        readOnlyProperty(ProductionSchedule, 'typeByAsset', {
+            'cropland': 'crop',
+            'pasture': 'livestock',
+            'permanent crop': 'horticulture'
+        });
+
         privateProperty(ProductionSchedule, 'getTypeTitle', function (type) {
             return ProductionSchedule.productionScheduleTypes[type] || '';
         });
 
         ProductionSchedule.validates({
             assetId: {
-                required: true,
+                requiredIf: function (value, instance) {
+                    return !underscore.isUndefined(instance.id);
+                },
                 numeric: true
             },
             budget: {

@@ -125,13 +125,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 instance.models.productionSchedules = [];
 
                 angular.forEach(schedules, function (schedule) {
-                    var productionSchedule = ProductionSchedule.new(schedule);
+                    var productionSchedule = (schedule instanceof ProductionSchedule ? schedule : ProductionSchedule.newCopy(schedule));
 
                     if (productionSchedule.validate() &&
                         (startMonth.isBetween(schedule.startDate, schedule.endDate) ||
                         (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
                         // Add valid production schedule if between business plan dates
-                        instance.models.productionSchedules.push(schedule.asJSON());
+                        instance.models.productionSchedules.push(asJson(schedule, ['asset']));
 
                         if (cashFlowAdjust) {
                             var oldSchedule = underscore.findWhere(productionSchedules, {scheduleKey: schedule.scheduleKey});
