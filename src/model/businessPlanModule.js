@@ -27,6 +27,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
             Base.initializeObject(this.data.account, 'depreciationRate', 0);
 
             Base.initializeObject(this.data.models, 'assets', []);
+            Base.initializeObject(this.data.models, 'budgets', []);
             Base.initializeObject(this.data.models, 'expenses', []);
             Base.initializeObject(this.data.models, 'financials', []);
             Base.initializeObject(this.data.models, 'income', []);
@@ -168,6 +169,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                     });
                 }
 
+                updateBudgets(instance);
                 reEvaluateBusinessPlan(instance);
             }
 
@@ -1727,7 +1729,21 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                 recalculatePrimaryAccount(this);
             });
 
+            if (underscore.isEmpty(this.data.models.budgets) && !underscore.isEmpty(this.data.models.productionSchedules))  {
+                updateBudgets(this);
+            }
+
             initializeProductionCashFlow(this);
+        }
+
+        function updateBudgets (instance) {
+            instance.data.models.budgets = underscore.chain(instance.data.models.productionSchedules)
+                .pluck('budget')
+                .compact()
+                .uniq(false, function (budget) {
+                    return budget.uuid;
+                })
+                .value();
         }
 
         inheritModel(BusinessPlan, Document);
