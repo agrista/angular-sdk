@@ -11419,20 +11419,114 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
 
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'Model', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, Model, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
-        function Asset (attrs) {
+sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function AssetBase (attrs) {
             Model.Base.apply(this, arguments);
-
-            this.data = (attrs && attrs.data ? attrs.data : {});
-            Base.initializeObject(this.data, 'attachments', []);
-            Base.initializeObject(this.data, 'zones', []);
 
             privateProperty(this, 'generateKey', function (legalEntity, farm) {
                 this.assetKey = generateKey(this, legalEntity, farm);
 
                 return this.assetKey;
             });
+
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'attachments', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.assetKey = attrs.assetKey;
+            this.legalEntityId = attrs.legalEntityId;
+            this.type = attrs.type;
+        }
+
+        function generateKey (instance, legalEntity, farm) {
+            return  (legalEntity ? 'entity.' + legalEntity.uuid : '') +
+                (instance.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (instance.type === 'crop' && instance.data.season ? '-s.' + instance.data.season : '') +
+                (instance.data.fieldName ? '-fi.' + instance.data.fieldName : '') +
+                (instance.data.crop ? '-c.' + instance.data.crop : '') +
+                (instance.type === 'cropland' && instance.data.irrigated ? '-i.' + instance.data.irrigation : '') +
+                (instance.type === 'farmland' && instance.data.sgKey ? '-' + instance.data.sgKey : '') +
+                (instance.type === 'improvement' || instance.type === 'livestock' || instance.type === 'vme' ?
+                    (instance.data.type ? '-t.' + instance.data.type : '') +
+                    (instance.data.category ? '-c.' + instance.data.category : '') +
+                    (instance.data.name ? '-n.' + instance.data.name : '') +
+                    (instance.data.purpose ? '-p.' + instance.data.purpose : '') +
+                    (instance.data.model ? '-m.' + instance.data.model : '') +
+                    (instance.data.identificationNo ? '-in.' + instance.data.identificationNo : '') : '') +
+                (instance.type === 'stock' ?
+                    (instance.data.type ? '-t.' + instance.data.type : '') +
+                    (instance.data.category ? '-c.' + instance.data.category : '') +
+                    (instance.data.product ? '-p.' + instance.data.product : '') : '') +
+                (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
+                (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
+        }
+
+        inheritModel(AssetBase, Model.Base);
+
+        readOnlyProperty(AssetBase, 'assetTypes', {
+            'crop': 'Crops',
+            'farmland': 'Farmlands',
+            'improvement': 'Fixed Improvements',
+            'cropland': 'Cropland',
+            'livestock': 'Livestock',
+            'pasture': 'Pastures',
+            'permanent crop': 'Permanent Crops',
+            'plantation': 'Plantations',
+            'stock': 'Stock',
+            'vme': 'Vehicles, Machinery & Equipment',
+            'wasteland': 'Homestead & Wasteland',
+            'water right': 'Water Rights'
+        });
+
+        readOnlyProperty(AssetBase, 'assetTypesWithOther', underscore.extend({
+            'other': 'Other'
+        }, AssetBase.assetTypes));
+
+        privateProperty(AssetBase, 'getAssetKey', function (asset, legalEntity, farm) {
+            return generateKey(asset, legalEntity, farm);
+        });
+
+        privateProperty(AssetBase, 'getTypeTitle', function (type) {
+            return AssetBase.assetTypes[type] || '';
+        });
+
+        privateProperty(AssetBase, 'getTitleType', function (title) {
+            var keys = underscore.keys(AssetBase.assetTypes);
+
+            return keys[underscore.values(AssetBase.assetTypes).indexOf(title)];
+        });
+
+        AssetBase.validates({
+            assetKey: {
+                required: true
+            },
+            data: {
+                required: true,
+                object: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(AssetBase.assetTypesWithOther)
+                }
+            }
+        });
+
+        return AssetBase;
+    }]);
+
+
+sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+        function Asset (attrs) {
+            AssetBase.apply(this, arguments);
 
             privateProperty(this, 'generateUniqueName', function (categoryLabel, assets) {
                 this.data.name = generateUniqueName(this, categoryLabel, assets);
@@ -11523,12 +11617,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 }, 0);
             });
 
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+            Base.initializeObject(this.data, 'zones', []);
 
-            this.id = attrs.id || attrs.$id;
-            this.assetKey = attrs.assetKey;
             this.farmId = attrs.farmId;
-            this.legalEntityId = attrs.legalEntityId;
 
             this.liabilities = underscore.map(attrs.liabilities, function (liability) {
                 return Liability.newCopy(liability);
@@ -11538,29 +11629,13 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 return ProductionSchedule.newCopy(schedule);
             });
 
-            this.type = attrs.type;
-
             if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
                 this.data.assetValuePerHa = (this.data.assetValue / this.size);
                 this.$dirty = true;
             }
         }
 
-        inheritModel(Asset, Model.Base);
-
-        readOnlyProperty(Asset, 'assetTypes', {
-            'crop': 'Crops',
-            'farmland': 'Farmlands',
-            'improvement': 'Fixed Improvements',
-            'cropland': 'Cropland',
-            'livestock': 'Livestock',
-            'pasture': 'Pastures',
-            'permanent crop': 'Permanent Crops',
-            'plantation': 'Plantations',
-            'vme': 'Vehicles, Machinery & Equipment',
-            'wasteland': 'Homestead & Wasteland',
-            'water right': 'Water Rights'
-        });
+        inheritModel(Asset, AssetBase);
 
         readOnlyProperty(Asset, 'categories', {
             improvement: [
@@ -11889,6 +11964,18 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 {category: 'Sheep', subCategory: 'Wethers', purpose: 'Slaughter'},
                 {category: 'Sheep', subCategory: 'Culls', purpose: 'Slaughter'}
             ],
+            stock: [
+                {category: 'Animal Feed', subCategory: 'Lick', unit: 'kg'},
+                {category: 'Indirect Costs', subCategory: 'Fuel', unit: 'l'},
+                {category: 'Indirect Costs', subCategory: 'Water', unit: 'l'},
+                {category: 'Preharvest', subCategory: 'Seed', unit: 'kg'},
+                {category: 'Preharvest', subCategory: 'Plant Material', unit: 'each'},
+                {category: 'Preharvest', subCategory: 'Fertiliser', unit: 't'},
+                {category: 'Preharvest', subCategory: 'Fungicides', unit: 'l'},
+                {category: 'Preharvest', subCategory: 'Lime', unit: 't'},
+                {category: 'Preharvest', subCategory: 'Herbicides', unit: 'l'},
+                {category: 'Preharvest', subCategory: 'Pesticides', unit: 'l'}
+            ],
             vme: [
                 {category: 'Vehicles', subCategory: 'Bakkie'},
                 {category: 'Vehicles', subCategory: 'Car'},
@@ -12203,17 +12290,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             'short-term': ['Crops & Crop Products', 'Cash on Hand', 'Debtors', 'Short-term Investments', 'Prepaid Expenses', 'Production Inputs', 'Life Insurance', 'Livestock Products', 'Marketable Livestock', 'Negotiable Securities', 'Other']
         });
 
-        readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
-            'other': 'Other'
-        }, Asset.assetTypes));
-
         readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
 
         readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
-
-        privateProperty(Asset, 'getAssetKey', function (asset, legalEntity, farm) {
-            return generateKey(asset, legalEntity, farm);
-        });
 
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
@@ -12221,16 +12300,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
 
         privateProperty(Asset, 'getDefaultCrop', function (landClass) {
             return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
-        });
-
-        privateProperty(Asset, 'getTypeTitle', function (type) {
-            return Asset.assetTypes[type] || '';
-        });
-
-        privateProperty(Asset, 'getTitleType', function (title) {
-            var keys = underscore.keys(Asset.assetTypes);
-
-            return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
 
         privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
@@ -12334,25 +12403,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             return map;
         }
 
-        function generateKey (instance, legalEntity, farm) {
-            return  (legalEntity ? 'entity.' + legalEntity.uuid : '') +
-                (instance.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
-                (instance.type === 'crop' && instance.data.season ? '-s.' + instance.data.season : '') +
-                (instance.data.fieldName ? '-fi.' + instance.data.fieldName : '') +
-                (instance.data.crop ? '-c.' + instance.data.crop : '') +
-                (instance.type === 'cropland' && instance.data.irrigated ? '-i.' + instance.data.irrigation : '') +
-                (instance.type === 'farmland' && instance.data.sgKey ? '-' + instance.data.sgKey : '') +
-                (instance.type === 'improvement' || instance.type === 'livestock' || instance.type === 'vme' ?
-                    (instance.data.type ? '-t.' + instance.data.type : '') +
-                    (instance.data.category ? '-c.' + instance.data.category : '') +
-                    (instance.data.name ? '-n.' + instance.data.name : '') +
-                    (instance.data.purpose ? '-p.' + instance.data.purpose : '') +
-                    (instance.data.model ? '-m.' + instance.data.model : '') +
-                    (instance.data.identificationNo ? '-in.' + instance.data.identificationNo : '') : '') +
-                (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
-                (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
-        }
-
         function generateUniqueName (instance, categoryLabel, assets) {
             categoryLabel = categoryLabel || '';
 
@@ -12438,6 +12488,161 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
         });
 
         return Asset;
+    }]);
+
+var sdkModelStock = angular.module('ag.sdk.model.stock', ['ag.sdk.model.asset']);
+
+sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (AssetBase, Base, computedProperty, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+        function Stock (attrs) {
+            AssetBase.apply(this, arguments);
+
+            computedProperty(this, 'startMonth', function () {
+                return moment(underscore.chain(this.data.ledger).pluck('date').first().value(), 'YYYY-MM-DD').date(1);
+            });
+
+            computedProperty(this, 'endMonth', function () {
+                return moment(underscore.chain(this.data.ledger).pluck('date').last().value(), 'YYYY-MM-DD').date(1);
+            });
+
+            privateProperty(this, 'addLedgerEntry', function (item) {
+                if (Stock.isLedgerEntryValid(item)) {
+                    this.data.ledger = underscore.chain(this.data.ledger)
+                        .union([item])
+                        .sortBy(function (item) {
+                            return moment(item.date).valueOf();
+                        })
+                        .value();
+
+                    recalculate(this);
+                }
+            });
+
+            privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
+                var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
+                    rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
+                    appliedStart = this.startMonth.diff(rangeStartDate, 'months'),
+                    startCrop = Math.abs(Math.min(0, appliedStart));
+
+                return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
+                        .concat(_monthly)
+                        .concat(defaultMonths(Math.max(0, rangeEndDate.diff(this.endMonth, 'months')))),
+                    function (monthly, curr) {
+                        balanceEntry(curr, underscore.last(monthly) || defaultMonth());
+                        monthly.push(curr);
+                        return monthly;
+                    }, [])
+                    .slice(startCrop, startCrop + rangeEndDate.diff(rangeStartDate, 'months'));
+            });
+
+            privateProperty(this, 'clearLedger', function () {
+                this.data.ledger = [];
+
+                recalculate(this);
+            });
+
+            var _monthly = [];
+
+            function balanceEntry (curr, prev) {
+                curr.opening = prev.closing;
+                curr.balance = safeMath.chain(curr.opening)
+                    .plus(underscore.reduce(curr.credit, function (total, value) {
+                        return safeMath.plus(total, value);
+                    }, 0))
+                    .minus(underscore.reduce(curr.debit, function (total, value) {
+                        return safeMath.plus(total, value);
+                    }, 0))
+                    .toNumber();
+                curr.closing = curr.balance;
+            }
+
+            function recalculate (instance) {
+                var startMonth = instance.startMonth,
+                    endMonth = instance.endMonth,
+                    numberOfMonths = endMonth.diff(startMonth, 'months');
+
+                _monthly = underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
+                    var offsetDate = moment(startMonth).add(offset, 'M');
+
+                    var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, item) {
+                        var itemDate = moment(item.date);
+
+                        if (offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
+                            underscore.each(['credit', 'debit'], function (key) {
+                                if (underscore.contains(Stock.actions[key], item.action)) {
+                                    month[key][item.action] = month[key][item.action] || 0;
+                                    month[key][item.action] = safeMath.plus(month[key][item.action], item.value);
+                                }
+                            });
+                        }
+
+                        return month;
+                    }, {
+                        credit: {},
+                        debit: {}
+                    }));
+
+                    balanceEntry(curr, underscore.last(monthly) || defaultMonth());
+                    monthly.push(curr);
+                    return monthly;
+                }, []);
+            }
+
+            Base.initializeObject(this.data, 'ledger', []);
+
+            this.type = 'stock';
+
+            recalculate(this);
+        }
+
+        function defaultMonth () {
+            return {
+                opening: 0,
+                credit: {},
+                debit: {},
+                balance: 0,
+                interest: 0,
+                closing: 0
+            }
+        }
+
+        function defaultMonths (size) {
+            return underscore.range(size).map(defaultMonth);
+        }
+
+        inheritModel(Stock, AssetBase);
+
+        readOnlyProperty(Stock, 'actions', {
+            'credit': ['Birth', 'Production', 'Purchase'],
+            'debit': ['Consumption', 'Death', 'Sale']
+        });
+
+        privateProperty(Stock, 'isLedgerEntryValid', function (item) {
+            return item && item.date && moment(item.date).isValid() && underscore.isNumber(item.value) &&
+                (underscore.contains(Stock.actions.credit, item.action) || underscore.contains(Stock.actions.debit, item.action));
+        });
+
+        Stock.validates({
+            assetKey: {
+                required: true
+            },
+            data: {
+                required: true,
+                object: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(AssetBase.assetTypesWithOther)
+                }
+            }
+        });
+
+        return Stock;
     }]);
 
 angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation', 'ag.sdk.model.errors', 'ag.sdk.model.store'])
@@ -12602,10 +12807,249 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, Asset, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+        function ComparableSale (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'distanceInKm', function () {
+                return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
+            });
+
+            computedProperty(this, 'improvedRatePerHa', function () {
+                return safeMath.dividedBy(this.purchasePrice, this.area);
+            }, {enumerable: true});
+
+            computedProperty(this, 'vacantLandValue', function () {
+                return safeMath.dividedBy(this.valueMinusImprovements, this.area);
+            }, {enumerable: true});
+
+            computedProperty(this, 'valueMinusImprovements', function () {
+                return safeMath.minus(this.purchasePrice,  this.depImpValue);
+            }, {enumerable: true});
+
+            computedProperty(this, 'farmName', function () {
+                return underscore.chain(this.portions)
+                    .groupBy('farmLabel')
+                    .map(function (portions, farmName) {
+                        var portionSentence = underscore.chain(portions)
+                            .sortBy('portionLabel')
+                            .pluck('portionLabel')
+                            .map(function (portionLabel) {
+                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
+                            })
+                            .toSentence()
+                            .value();
+
+                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
+                    })
+                    .toSentence()
+                    .value();
+            }, {enumerable: true});
+
+
+            computedProperty(this, 'totalLandComponentArea', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return safeMath.plus(total, landComponent.area);
+                }, 0);
+            });
+
+            computedProperty(this, 'totalLandComponentValue', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return safeMath.plus(total, landComponent.assetValue);
+                }, 0);
+            });
+
+            /**
+             * Attachment Handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.attachments = underscore.reject(this.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            privateProperty(this, 'removeNewAttachments', function () {
+                var attachments = this.attachments;
+
+                this.attachments = underscore.reject(attachments, function (attachment) {
+                    return underscore.isObject(attachment.archive);
+                });
+
+                return underscore.difference(attachments, this.attachments);
+            });
+
+            /**
+             * Land Component Handling
+             */
+            privateProperty(this, 'addLandComponent', function (type) {
+                this.landComponents.push({
+                    type: type,
+                    assetValue: 0
+                });
+            });
+
+            privateProperty(this, 'removeLandComponent', function (landComponent) {
+                this.landComponents = underscore.without(this.landComponents, landComponent);
+            });
+
+            /**
+             * Portion Handling
+             */
+            privateProperty(this, 'addPortion', function (portion) {
+                if (!this.hasPortion(portion)) {
+                    this.portions.push(portion);
+
+                    underscore.each(portion.landCover || [], function (landCover) {
+                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
+
+                        if (underscore.isUndefined(landComponent)) {
+                            landComponent = {
+                                type: landCover.label,
+                                assetValue: 0
+                            };
+
+                            this.landComponents.push(landComponent);
+                        }
+
+                        landComponent.area = safeMath.plus(landComponent.area, landCover.area, 3);
+
+                        if (landComponent.unitValue) {
+                            landComponent.assetValue = safeMath.times(landComponent.area, landComponent.unitValue);
+                        }
+                    }, this);
+                }
+
+                recalculateArea(this);
+            });
+
+            privateProperty(this, 'hasPortion', function (portion) {
+                return underscore.some(this.portions, function (storedPortion) {
+                    return storedPortion.sgKey === portion.sgKey;
+                });
+            });
+
+            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
+                this.portions = underscore.reject(this.portions, function (portion) {
+                    return (portion.sgKey === sgKey);
+                });
+                recalculateArea(this);
+            });
+
+            /**
+             * Edit Authorisation
+             */
+            privateProperty(this, 'isEditable', function (user) {
+                return (user && this.authorData && user.username === this.authorData.username && user.company === this.authorData.company);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid;
+            this.area = attrs.area;
+            this.attachments = attrs.attachments || [];
+            this.authorData = attrs.authorData;
+            this.centroid = attrs.centroid;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.depImpValue = attrs.depImpValue;
+            this.distance = attrs.distance || 0;
+            this.geometry = attrs.geometry;
+            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
+            this.portions = attrs.portions || [];
+            this.regions = attrs.regions || [];
+            this.propertyKnowledge = attrs.propertyKnowledge;
+            this.purchasedAt = attrs.purchasedAt;
+            this.purchasePrice = attrs.purchasePrice || 0;
+            this.useCount = attrs.useCount || 0;
+        }
+
+        function convertLandComponent (landComponent) {
+            landComponent.type = convertLandComponentType(landComponent.type);
+
+            return landComponent;
+        }
+
+        function convertLandComponentType (type) {
+            switch (type) {
+                case 'Cropland (Dry)':
+                    return 'Cropland';
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    return 'Cropland (Irrigated)';
+                case 'Conservation':
+                    return 'Grazing (Bush)';
+                case 'Horticulture (Intensive)':
+                    return 'Greenhouses';
+                case 'Horticulture (Perennial)':
+                    return 'Orchard';
+                case 'Horticulture (Seasonal)':
+                    return 'Vegetables';
+                case 'Housing':
+                    return 'Homestead';
+                case 'Wasteland':
+                    return 'Non-vegetated';
+            }
+
+            return type;
+        }
+
+        function recalculateArea (instance) {
+            instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
+                return safeMath.plus(total, portion.area);
+            }, 0), 4);
+        }
+
+        inheritModel(ComparableSale, Model.Base);
+
+        readOnlyProperty(ComparableSale, 'landComponentTypes', Field.landClasses);
+
+        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
+            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
+            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
+
+        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
+
+        ComparableSale.validates({
+            area: {
+                required: true,
+                numeric: true
+            },
+            landComponents: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            portions: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            purchasePrice: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return ComparableSale;
+    }]);
+
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
+
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'Stock', 'underscore',
+    function ($filter, Asset, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, Stock, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
@@ -13733,18 +14177,20 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                 instance.data.capitalIncome['Land'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         } else if (asset.type === 'other') {
-                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                initializeCategoryValues(instance, 'capitalExpenditure', asset.data.category, numberOfMonths);
+                            asset.data.liquidityCategory = asset.data.liquidityCategory || asset.data.category;
 
-                                instance.data.capitalExpenditure[asset.data.category][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'capitalExpenditure', asset.data.liquidityCategory, numberOfMonths);
+
+                                instance.data.capitalExpenditure[asset.data.liquidityCategory][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
                             }
 
                             if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                initializeCategoryValues(instance, 'assetRMV', asset.data.category, numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalIncome', asset.data.category, numberOfMonths);
+                                initializeCategoryValues(instance, 'assetRMV', asset.data.liquidityCategory, numberOfMonths);
+                                initializeCategoryValues(instance, 'capitalIncome', asset.data.liquidityCategory, numberOfMonths);
 
-                                instance.data.assetRMV[asset.data.category][soldDate.diff(startMonth, 'months')] += asset.data.assetValue;
-                                instance.data.capitalIncome[asset.data.category][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
+                                instance.data.assetRMV[asset.data.liquidityCategory][soldDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                                instance.data.capitalIncome[asset.data.liquidityCategory][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         }
 
@@ -13768,7 +14214,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                     updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
                                     break;
                                 case 'other':
-                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.category, asset);
+                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.liquidityCategory, asset);
                                     break;
                             }
                         }
@@ -14433,245 +14879,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
         return BusinessPlan;
     }]);
 
-var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
-
-sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
-        function ComparableSale (attrs) {
-            Model.Base.apply(this, arguments);
-
-            computedProperty(this, 'distanceInKm', function () {
-                return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
-            });
-
-            computedProperty(this, 'improvedRatePerHa', function () {
-                return safeMath.dividedBy(this.purchasePrice, this.area);
-            }, {enumerable: true});
-
-            computedProperty(this, 'vacantLandValue', function () {
-                return safeMath.dividedBy(this.valueMinusImprovements, this.area);
-            }, {enumerable: true});
-
-            computedProperty(this, 'valueMinusImprovements', function () {
-                return safeMath.minus(this.purchasePrice,  this.depImpValue);
-            }, {enumerable: true});
-
-            computedProperty(this, 'farmName', function () {
-                return underscore.chain(this.portions)
-                    .groupBy('farmLabel')
-                    .map(function (portions, farmName) {
-                        var portionSentence = underscore.chain(portions)
-                            .sortBy('portionLabel')
-                            .pluck('portionLabel')
-                            .map(function (portionLabel) {
-                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
-                            })
-                            .toSentence()
-                            .value();
-
-                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
-                    })
-                    .toSentence()
-                    .value();
-            }, {enumerable: true});
-
-
-            computedProperty(this, 'totalLandComponentArea', function () {
-                return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return safeMath.plus(total, landComponent.area);
-                }, 0);
-            });
-
-            computedProperty(this, 'totalLandComponentValue', function () {
-                return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return safeMath.plus(total, landComponent.assetValue);
-                }, 0);
-            });
-
-            /**
-             * Attachment Handling
-             */
-            privateProperty(this, 'addAttachment', function (attachment) {
-                this.removeAttachment(attachment);
-
-                this.attachments.push(attachment);
-            });
-
-            privateProperty(this, 'removeAttachment', function (attachment) {
-                this.attachments = underscore.reject(this.attachments, function (item) {
-                    return item.key === attachment.key;
-                });
-            });
-
-            privateProperty(this, 'removeNewAttachments', function () {
-                var attachments = this.attachments;
-
-                this.attachments = underscore.reject(attachments, function (attachment) {
-                    return underscore.isObject(attachment.archive);
-                });
-
-                return underscore.difference(attachments, this.attachments);
-            });
-
-            /**
-             * Land Component Handling
-             */
-            privateProperty(this, 'addLandComponent', function (type) {
-                this.landComponents.push({
-                    type: type,
-                    assetValue: 0
-                });
-            });
-
-            privateProperty(this, 'removeLandComponent', function (landComponent) {
-                this.landComponents = underscore.without(this.landComponents, landComponent);
-            });
-
-            /**
-             * Portion Handling
-             */
-            privateProperty(this, 'addPortion', function (portion) {
-                if (!this.hasPortion(portion)) {
-                    this.portions.push(portion);
-
-                    underscore.each(portion.landCover || [], function (landCover) {
-                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
-
-                        if (underscore.isUndefined(landComponent)) {
-                            landComponent = {
-                                type: landCover.label,
-                                assetValue: 0
-                            };
-
-                            this.landComponents.push(landComponent);
-                        }
-
-                        landComponent.area = safeMath.plus(landComponent.area, landCover.area, 3);
-
-                        if (landComponent.unitValue) {
-                            landComponent.assetValue = safeMath.times(landComponent.area, landComponent.unitValue);
-                        }
-                    }, this);
-                }
-
-                recalculateArea(this);
-            });
-
-            privateProperty(this, 'hasPortion', function (portion) {
-                return underscore.some(this.portions, function (storedPortion) {
-                    return storedPortion.sgKey === portion.sgKey;
-                });
-            });
-
-            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
-                this.portions = underscore.reject(this.portions, function (portion) {
-                    return (portion.sgKey === sgKey);
-                });
-                recalculateArea(this);
-            });
-
-            /**
-             * Edit Authorisation
-             */
-            privateProperty(this, 'isEditable', function (user) {
-                return (user && this.authorData && user.username === this.authorData.username && user.company === this.authorData.company);
-            });
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.id = attrs.id || attrs.$id;
-            this.uuid = attrs.uuid;
-            this.area = attrs.area;
-            this.attachments = attrs.attachments || [];
-            this.authorData = attrs.authorData;
-            this.centroid = attrs.centroid;
-            this.comments = attrs.comments;
-            this.createdAt = attrs.createdAt;
-            this.createdBy = attrs.createdBy;
-            this.depImpValue = attrs.depImpValue;
-            this.distance = attrs.distance || 0;
-            this.geometry = attrs.geometry;
-            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
-            this.portions = attrs.portions || [];
-            this.regions = attrs.regions || [];
-            this.propertyKnowledge = attrs.propertyKnowledge;
-            this.purchasedAt = attrs.purchasedAt;
-            this.purchasePrice = attrs.purchasePrice || 0;
-            this.useCount = attrs.useCount || 0;
-        }
-
-        function convertLandComponent (landComponent) {
-            landComponent.type = convertLandComponentType(landComponent.type);
-
-            return landComponent;
-        }
-
-        function convertLandComponentType (type) {
-            switch (type) {
-                case 'Cropland (Dry)':
-                    return 'Cropland';
-                case 'Cropland (Equipped, Irrigable)':
-                case 'Cropland (Irrigable)':
-                    return 'Cropland (Irrigated)';
-                case 'Conservation':
-                    return 'Grazing (Bush)';
-                case 'Horticulture (Intensive)':
-                    return 'Greenhouses';
-                case 'Horticulture (Perennial)':
-                    return 'Orchard';
-                case 'Horticulture (Seasonal)':
-                    return 'Vegetables';
-                case 'Housing':
-                    return 'Homestead';
-                case 'Wasteland':
-                    return 'Non-vegetated';
-            }
-
-            return type;
-        }
-
-        function recalculateArea (instance) {
-            instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
-                return safeMath.plus(total, portion.area);
-            }, 0), 4);
-        }
-
-        inheritModel(ComparableSale, Model.Base);
-
-        readOnlyProperty(ComparableSale, 'landComponentTypes', Field.landClasses);
-
-        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
-            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
-            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
-
-        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
-
-        ComparableSale.validates({
-            area: {
-                required: true,
-                numeric: true
-            },
-            landComponents: {
-                required: true,
-                length: {
-                    min: 1
-                }
-            },
-            portions: {
-                required: true,
-                length: {
-                    min: 1
-                }
-            },
-            purchasePrice: {
-                required: true,
-                numeric: true
-            }
-        });
-
-        return ComparableSale;
-    }]);
-
 var sdkModelDesktopValuationDocument = angular.module('ag.sdk.model.desktop-valuation', ['ag.sdk.model.comparable-sale', 'ag.sdk.model.document']);
 
 sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'ComparableSale', 'computedProperty', 'Document', 'inheritModel', 'privateProperty', 'underscore',
@@ -14922,6 +15129,41 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
         });
 
         return Document;
+    }]);
+
+var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+
+sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
+    function (Asset, computedProperty, Document, inheritModel, privateProperty) {
+        function FarmValuation (attrs) {
+            Document.apply(this, arguments);
+
+            this.docType = 'farm valuation';
+        }
+
+        inheritModel(FarmValuation, Document);
+
+        FarmValuation.validates({
+            author: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            docType: {
+                required: true,
+                equal: {
+                    to: 'farm valuation'
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return FarmValuation;
     }]);
 
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
@@ -16507,41 +16749,6 @@ sdkModelFarm.factory('Farm', ['inheritModel', 'Model', 'privateProperty', 'readO
         });
 
         return Farm;
-    }]);
-
-var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
-
-sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
-    function (Asset, computedProperty, Document, inheritModel, privateProperty) {
-        function FarmValuation (attrs) {
-            Document.apply(this, arguments);
-
-            this.docType = 'farm valuation';
-        }
-
-        inheritModel(FarmValuation, Document);
-
-        FarmValuation.validates({
-            author: {
-                required: true,
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            },
-            docType: {
-                required: true,
-                equal: {
-                    to: 'farm valuation'
-                }
-            },
-            organizationId: {
-                required: true,
-                numeric: true
-            }
-        });
-
-        return FarmValuation;
     }]);
 
 var sdkModelField = angular.module('ag.sdk.model.field', ['ag.sdk.library', 'ag.sdk.model.base']);
@@ -19605,6 +19812,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.liability',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
+    'ag.sdk.model.stock',
     'ag.sdk.model.store',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'

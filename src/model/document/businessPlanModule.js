@@ -1,7 +1,7 @@
-var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, Asset, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'Stock', 'underscore',
+    function ($filter, Asset, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, Stock, underscore) {
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
@@ -1129,18 +1129,20 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                 instance.data.capitalIncome['Land'][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         } else if (asset.type === 'other') {
-                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                initializeCategoryValues(instance, 'capitalExpenditure', asset.data.category, numberOfMonths);
+                            asset.data.liquidityCategory = asset.data.liquidityCategory || asset.data.category;
 
-                                instance.data.capitalExpenditure[asset.data.category][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                initializeCategoryValues(instance, 'capitalExpenditure', asset.data.liquidityCategory, numberOfMonths);
+
+                                instance.data.capitalExpenditure[asset.data.liquidityCategory][acquisitionDate.diff(startMonth, 'months')] += asset.data.assetValue;
                             }
 
                             if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                initializeCategoryValues(instance, 'assetRMV', asset.data.category, numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalIncome', asset.data.category, numberOfMonths);
+                                initializeCategoryValues(instance, 'assetRMV', asset.data.liquidityCategory, numberOfMonths);
+                                initializeCategoryValues(instance, 'capitalIncome', asset.data.liquidityCategory, numberOfMonths);
 
-                                instance.data.assetRMV[asset.data.category][soldDate.diff(startMonth, 'months')] += asset.data.assetValue;
-                                instance.data.capitalIncome[asset.data.category][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
+                                instance.data.assetRMV[asset.data.liquidityCategory][soldDate.diff(startMonth, 'months')] += asset.data.assetValue;
+                                instance.data.capitalIncome[asset.data.liquidityCategory][soldDate.diff(startMonth, 'months')] += asset.data.salePrice;
                             }
                         }
 
@@ -1164,7 +1166,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['$filter', 'Asset', 'Base'
                                     updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
                                     break;
                                 case 'other':
-                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.category, asset);
+                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.liquidityCategory, asset);
                                     break;
                             }
                         }
