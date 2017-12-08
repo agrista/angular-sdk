@@ -280,11 +280,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                     .round(2)
                                     .toNumber();
 
-                                productionCategory.schedule = underscore.reduce(productionCategory.valuePerMonth, function (schedule, value, index) {
-                                    schedule[index] = safeMath.chain(value)
-                                        .times(100)
-                                        .dividedBy(productionCategory.value)
-                                        .toNumber();
+                                productionCategory.schedule = underscore.reduce(productionCategory.quantityPerMonth, function (schedule, value, index) {
+                                    schedule[index] = safeMath.dividedBy(safeMath.times(value, 100), productionCategory.quantity);
 
                                     return schedule;
                                 }, initializeArray(instance.numberOfMonths));
@@ -418,6 +415,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
 
                 this.type = ProductionSchedule.typeByAsset[asset.type];
                 this.data.details.fieldName = this.asset.data.fieldName;
+                this.data.details.irrigated = (this.asset.data.irrigated === true);
 
                 if (asset.data.crop) {
                     this.data.details.commodity = asset.data.crop;
