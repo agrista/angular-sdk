@@ -13593,13 +13593,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 this.data.details.size = size;
 
                 if (this.type === 'livestock') {
-                    this.data.details.calculatedLSU = (this.data.details.stockingDensity ? safeMath.dividedBy(this.allocatedSize, this.data.details.stockingDensity) : 0);
-                    this.data.details.multiplicationFactor = (this.data.details.calculatedLSU ? safeMath.chain(this.allocatedSize)
-                        .dividedBy(this.data.details.stockingDensity)
-                        .dividedBy(this.data.details.calculatedLSU)
-                        .toNumber() : 0);
+                    this.data.details.calculatedLSU = safeMath.dividedBy(this.allocatedSize, this.data.details.stockingDensity);
 
                     if (this.budget) {
+                        this.data.details.multiplicationFactor = Math.floor(safeMath.dividedBy(this.data.details.calculatedLSU, this.budget.data.details.herdSize));
                         this.data.details.herdSize = safeMath.times(this.budget.data.details.herdSize, this.data.details.multiplicationFactor);
                         this.data.details.grossProfit = safeMath.times(this.budget.data.details.grossProfit, this.data.details.multiplicationFactor);
                         this.data.details.grossProfitPerLSU = (this.data.details.calculatedLSU ? safeMath.dividedBy(this.data.details.grossProfit, this.data.details.calculatedLSU) : 0);
@@ -13885,6 +13882,17 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
 
                                 if (productionCategory.supplyUnit && !underscore.isUndefined(category.supply)) {
                                     productionCategory.supply = safeMath.times(category.supply, (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize));
+                                    productionCategory.quantity = instance.applyMaturityFactor(section.code, category.quantity);
+
+                                    productionCategory.quantityPerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.quantityPerMonth), function (value) {
+                                        return instance.applyMaturityFactor(section.code, value);
+                                    });
+                                } else {
+                                    productionCategory.quantity = instance.applyMaturityFactor(section.code, safeMath.times(category.quantity, (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)));
+
+                                    productionCategory.quantityPerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.quantityPerMonth), function (value) {
+                                        return instance.applyMaturityFactor(section.code, safeMath.times(value, (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)));
+                                    });
                                 }
 
                                 productionCategory.schedule = instance.budget.getShiftedSchedule(category.schedule);
@@ -13893,11 +13901,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                                     return instance.applyMaturityFactor(section.code, safeMath.times(value, (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)));
                                 });
 
-                                productionCategory.quantityPerMonth = underscore.map(instance.budget.shiftMonthlyArray(category.quantityPerMonth), function (value) {
-                                    return instance.applyMaturityFactor(section.code, safeMath.times(value, (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)));
-                                });
-
-                                productionCategory.quantity = instance.applyMaturityFactor(section.code, safeMath.times(category.quantity, (instance.type === 'livestock' ? instance.data.details.multiplicationFactor : instance.allocatedSize)));
                                 productionCategory.value = safeMath.chain(productionCategory.supply || 1)
                                     .times(productionCategory.pricePerUnit || 0)
                                     .times(productionCategory.quantity || 0)
