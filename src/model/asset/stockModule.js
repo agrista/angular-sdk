@@ -13,8 +13,30 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 return moment(underscore.chain(this.data.ledger).pluck('date').last().value(), 'YYYY-MM-DD').date(1);
             });
 
+            // Actions
+            readOnlyProperty(this, 'actions', {
+                'credit': [
+                    'Production',
+                    'Purchase'],
+                'debit': [
+                    'Internal Consumption',
+                    'Household Consumption',
+                    'Labour Consumption',
+                    'Sale']
+            }, {configurable: true});
+
+            readOnlyProperty(this, 'actionTitles', {
+                'Production': 'Produce',
+                'Purchase': 'Buy Stock',
+                'Internal Consumption': 'Internal Consumption',
+                'Household Consumption': 'Household Consumption',
+                'Labour Consumption': 'Labour Consumption',
+                'Sale': 'Sell Stock'
+            }, {configurable: true});
+
+            // Ledger
             privateProperty(this, 'addLedgerEntry', function (item) {
-                if (Stock.isLedgerEntryValid(item)) {
+                if (this.isLedgerEntryValid(item)) {
                     this.data.ledger = underscore.chain(this.data.ledger)
                         .union([item])
                         .sortBy(function (item) {
@@ -32,6 +54,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     appliedStart = this.startMonth.diff(rangeStartDate, 'months'),
                     startCrop = Math.abs(Math.min(0, appliedStart));
 
+                if (underscore.isEmpty(_monthly) && !underscore.isEmpty(this.data.ledger)) {
+                    recalculate(this);
+                }
+
                 return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
                         .concat(_monthly)
                         .concat(defaultMonths(Math.max(0, rangeEndDate.diff(this.endMonth, 'months')))),
@@ -41,6 +67,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                         return monthly;
                     }, [])
                     .slice(startCrop, startCrop + rangeEndDate.diff(rangeStartDate, 'months'));
+            });
+
+            privateProperty(this, 'isLedgerEntryValid', function (item) {
+                return isLedgerEntryValid(this, item);
             });
 
             privateProperty(this, 'clearLedger', function () {
@@ -53,14 +83,16 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
             function balanceEntry (curr, prev) {
                 curr.opening = prev.closing;
-                curr.balance = safeMath.chain(curr.opening)
-                    .plus(underscore.reduce(curr.credit, function (total, value) {
-                        return safeMath.plus(total, value);
-                    }, 0))
-                    .minus(underscore.reduce(curr.debit, function (total, value) {
-                        return safeMath.plus(total, value);
-                    }, 0))
-                    .toNumber();
+                curr.balance = underscore.mapObject(curr.opening, function (value, key) {
+                    return safeMath.chain(value)
+                        .plus(underscore.reduce(curr.credit, function (total, item) {
+                            return safeMath.plus(total, item[key]);
+                        }, 0))
+                        .minus(underscore.reduce(curr.debit, function (total, item) {
+                            return safeMath.plus(total, item[key]);
+                        }, 0))
+                        .toNumber();
+                });
                 curr.closing = curr.balance;
             }
 
@@ -77,9 +109,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
                         if (offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
                             underscore.each(['credit', 'debit'], function (key) {
-                                if (underscore.contains(Stock.actions[key], item.action)) {
-                                    month[key][item.action] = month[key][item.action] || 0;
-                                    month[key][item.action] = safeMath.plus(month[key][item.action], item.value);
+                                if (underscore.contains(instance.actions[key], item.action)) {
+                                    month[key][item.action] = underscore.mapObject(month[key][item.action] || defaultItem(), function (value, key) {
+                                        return safeMath.plus(value, item[key]);
+                                    });
                                 }
                             });
                         }
@@ -99,18 +132,23 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             Base.initializeObject(this.data, 'ledger', []);
 
             this.type = 'stock';
+        }
 
-            recalculate(this);
+        function defaultItem () {
+            return {
+                quantity: 0,
+                value: 0
+            }
         }
 
         function defaultMonth () {
             return {
-                opening: 0,
+                opening: defaultItem(),
                 credit: {},
                 debit: {},
-                balance: 0,
+                balance: defaultItem(),
                 interest: 0,
-                closing: 0
+                closing: defaultItem()
             }
         }
 
@@ -118,17 +156,12 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             return underscore.range(size).map(defaultMonth);
         }
 
+        function isLedgerEntryValid (instance, item) {
+            return item && item.date && moment(item.date).isValid() && underscore.isNumber(item.quantity) && underscore.isNumber(item.value) &&
+                (underscore.contains(instance.actions.credit, item.action) || underscore.contains(instance.actions.debit, item.action));
+        }
+
         inheritModel(Stock, AssetBase);
-
-        readOnlyProperty(Stock, 'actions', {
-            'credit': ['Birth', 'Production', 'Purchase'],
-            'debit': ['Consumption', 'Death', 'Sale']
-        });
-
-        privateProperty(Stock, 'isLedgerEntryValid', function (item) {
-            return item && item.date && moment(item.date).isValid() && underscore.isNumber(item.value) &&
-                (underscore.contains(Stock.actions.credit, item.action) || underscore.contains(Stock.actions.debit, item.action));
-        });
 
         Stock.validates({
             assetKey: {

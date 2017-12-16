@@ -11348,12 +11348,13 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
         },
         link: function ($scope, $element, $attrs) {
             var d3 = $window.d3,
-                width = $attrs.width || 100,
+                element = $element[0],
+                width = $attrs.width || element.clientWidth,
                 xExtent = $attrs.xExtent,
-                height = $attrs.height || 20,
+                height = $attrs.height || element.clientHeight,
                 yExtent = $attrs.yExtent || 100,
                 interpolate = $attrs.interpolate || 'step-before',
-                svg = d3.select($element[0]).append('svg').attr('width', width).attr('height', height),
+                svg = d3.select(element).append('svg').attr('width', width).attr('height', height),
                 text = svg.append('text').attr('class', 'sparkline-text').attr('x', width / 2).attr('y', (height / 2) + 5),
                 area = svg.append('path').attr('class', 'sparkline-area'),
                 line = svg.append('path').attr('class', 'sparkline-line');
@@ -11400,7 +11401,7 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
                 });
 
                 // Pad first element
-                $scope.data.unshift({x: -1, y: 0});
+                $scope.data.unshift({x: -1, y: underscore.first($scope.data).y});
 
                 xFn.domain(xExtent && xExtent != 0 ? [0, xExtent] : d3.extent($scope.data, function (d) {
                     return d.x;
@@ -11522,6 +11523,28 @@ sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Model', 'privatePro
         return AssetBase;
     }]);
 
+sdkModelAsset.factory('AssetFactory', ['Asset', 'Livestock', 'Stock',
+    function (Asset, Livestock, Stock) {
+        function apply (attrs, fnName) {
+            switch (attrs.type) {
+                case 'livestock':
+                    return Livestock[fnName](attrs);
+                case 'stock':
+                    return Stock[fnName](attrs);
+            }
+
+            return Asset[fnName](attrs);
+        }
+
+        return {
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }]);
 
 sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
     function ($filter, AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
@@ -12490,6 +12513,65 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
         return Asset;
     }]);
 
+var sdkModelLivestock = angular.module('ag.sdk.model.livestock', ['ag.sdk.model.asset', 'ag.sdk.model.stock']);
+
+sdkModelLivestock.factory('Livestock', ['inheritModel', 'readOnlyProperty', 'Stock',
+    function (inheritModel, readOnlyProperty, Stock) {
+        function Livestock (attrs) {
+            Stock.apply(this, arguments);
+
+            readOnlyProperty(this, 'actions', {
+                'credit': [
+                    'Birth',
+                    'Purchase'],
+                'debit': [
+                    'Death',
+                    'Household Consumption',
+                    'Labour Consumption',
+                    'Sale',
+                    'Slaughter']
+            });
+
+            readOnlyProperty(this, 'actionTitles', {
+                'Birth': 'Register Births',
+                'Purchase': 'Buy Livestock',
+                'Death': 'Register Deaths',
+                'Household Consumption': 'Household Consumption',
+                'Labour Consumption': 'Labour Consumption',
+                'Sale': 'Sell Livestock',
+                'Slaughter': 'Slaughter For Sale'
+            });
+
+            this.type = 'livestock';
+
+
+        }
+
+        inheritModel(Livestock, Stock);
+
+        Livestock.validates({
+            assetKey: {
+                required: true
+            },
+            data: {
+                required: true,
+                object: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            type: {
+                required: true,
+                equal: {
+                    to: 'livestock'
+                }
+            }
+        });
+
+        return Livestock;
+    }]);
+
 var sdkModelStock = angular.module('ag.sdk.model.stock', ['ag.sdk.model.asset']);
 
 sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
@@ -12505,8 +12587,30 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 return moment(underscore.chain(this.data.ledger).pluck('date').last().value(), 'YYYY-MM-DD').date(1);
             });
 
+            // Actions
+            readOnlyProperty(this, 'actions', {
+                'credit': [
+                    'Production',
+                    'Purchase'],
+                'debit': [
+                    'Internal Consumption',
+                    'Household Consumption',
+                    'Labour Consumption',
+                    'Sale']
+            }, {configurable: true});
+
+            readOnlyProperty(this, 'actionTitles', {
+                'Production': 'Produce',
+                'Purchase': 'Buy Stock',
+                'Internal Consumption': 'Internal Consumption',
+                'Household Consumption': 'Household Consumption',
+                'Labour Consumption': 'Labour Consumption',
+                'Sale': 'Sell Stock'
+            }, {configurable: true});
+
+            // Ledger
             privateProperty(this, 'addLedgerEntry', function (item) {
-                if (Stock.isLedgerEntryValid(item)) {
+                if (this.isLedgerEntryValid(item)) {
                     this.data.ledger = underscore.chain(this.data.ledger)
                         .union([item])
                         .sortBy(function (item) {
@@ -12524,6 +12628,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     appliedStart = this.startMonth.diff(rangeStartDate, 'months'),
                     startCrop = Math.abs(Math.min(0, appliedStart));
 
+                if (underscore.isEmpty(_monthly) && !underscore.isEmpty(this.data.ledger)) {
+                    recalculate(this);
+                }
+
                 return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
                         .concat(_monthly)
                         .concat(defaultMonths(Math.max(0, rangeEndDate.diff(this.endMonth, 'months')))),
@@ -12533,6 +12641,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                         return monthly;
                     }, [])
                     .slice(startCrop, startCrop + rangeEndDate.diff(rangeStartDate, 'months'));
+            });
+
+            privateProperty(this, 'isLedgerEntryValid', function (item) {
+                return isLedgerEntryValid(this, item);
             });
 
             privateProperty(this, 'clearLedger', function () {
@@ -12545,14 +12657,16 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
             function balanceEntry (curr, prev) {
                 curr.opening = prev.closing;
-                curr.balance = safeMath.chain(curr.opening)
-                    .plus(underscore.reduce(curr.credit, function (total, value) {
-                        return safeMath.plus(total, value);
-                    }, 0))
-                    .minus(underscore.reduce(curr.debit, function (total, value) {
-                        return safeMath.plus(total, value);
-                    }, 0))
-                    .toNumber();
+                curr.balance = underscore.mapObject(curr.opening, function (value, key) {
+                    return safeMath.chain(value)
+                        .plus(underscore.reduce(curr.credit, function (total, item) {
+                            return safeMath.plus(total, item[key]);
+                        }, 0))
+                        .minus(underscore.reduce(curr.debit, function (total, item) {
+                            return safeMath.plus(total, item[key]);
+                        }, 0))
+                        .toNumber();
+                });
                 curr.closing = curr.balance;
             }
 
@@ -12569,9 +12683,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
                         if (offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
                             underscore.each(['credit', 'debit'], function (key) {
-                                if (underscore.contains(Stock.actions[key], item.action)) {
-                                    month[key][item.action] = month[key][item.action] || 0;
-                                    month[key][item.action] = safeMath.plus(month[key][item.action], item.value);
+                                if (underscore.contains(instance.actions[key], item.action)) {
+                                    month[key][item.action] = underscore.mapObject(month[key][item.action] || defaultItem(), function (value, key) {
+                                        return safeMath.plus(value, item[key]);
+                                    });
                                 }
                             });
                         }
@@ -12591,18 +12706,23 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             Base.initializeObject(this.data, 'ledger', []);
 
             this.type = 'stock';
+        }
 
-            recalculate(this);
+        function defaultItem () {
+            return {
+                quantity: 0,
+                value: 0
+            }
         }
 
         function defaultMonth () {
             return {
-                opening: 0,
+                opening: defaultItem(),
                 credit: {},
                 debit: {},
-                balance: 0,
+                balance: defaultItem(),
                 interest: 0,
-                closing: 0
+                closing: defaultItem()
             }
         }
 
@@ -12610,17 +12730,12 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             return underscore.range(size).map(defaultMonth);
         }
 
+        function isLedgerEntryValid (instance, item) {
+            return item && item.date && moment(item.date).isValid() && underscore.isNumber(item.quantity) && underscore.isNumber(item.value) &&
+                (underscore.contains(instance.actions.credit, item.action) || underscore.contains(instance.actions.debit, item.action));
+        }
+
         inheritModel(Stock, AssetBase);
-
-        readOnlyProperty(Stock, 'actions', {
-            'credit': ['Birth', 'Production', 'Purchase'],
-            'debit': ['Consumption', 'Death', 'Sale']
-        });
-
-        privateProperty(Stock, 'isLedgerEntryValid', function (item) {
-            return item && item.date && moment(item.date).isValid() && underscore.isNumber(item.value) &&
-                (underscore.contains(Stock.actions.credit, item.action) || underscore.contains(Stock.actions.debit, item.action));
-        });
 
         Stock.validates({
             assetKey: {
@@ -13048,8 +13163,10 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
 
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
-    function (Asset, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
+    function (AssetFactory, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
+        var _version = "v3";
+
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
 
@@ -13157,11 +13274,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                 angular.forEach(schedules, function (schedule) {
                     var productionSchedule = (schedule instanceof ProductionSchedule ? schedule : ProductionSchedule.newCopy(schedule));
 
-                    if (productionSchedule.validate() &&
-                        (startMonth.isBetween(schedule.startDate, schedule.endDate) ||
-                            (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
-                        // Add valid production schedule if between business plan dates
-                        instance.models.productionSchedules.push(asJson(schedule, ['asset']));
+                    // Add valid production schedule if between business plan dates
+                    if (productionSchedule.validate() && (startMonth.isBetween(schedule.startDate, schedule.endDate) || (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
+                        extractProductionScheduleLivestockAssets(instance, productionSchedule);
+
+                        instance.models.productionSchedules.push(asJson(productionSchedule, ['asset']));
                     }
                 });
 
@@ -13219,12 +13336,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                 }
             }
 
-            function extractLivestockBreedingStockComposition (instance, schedule) {
+            function extractProductionScheduleLivestockBreedingStock (instance, schedule) {
                 if (schedule.type === 'livestock') {
-                    var livestockSalesGroup = schedule.getGroup('INC', 'Livestock Sales', schedule.defaultCostStage);
+                    var group = schedule.getGroup('INC', 'Livestock Sales', schedule.defaultCostStage);
 
-                    if (livestockSalesGroup) {
-                        underscore.each(livestockSalesGroup.productCategories, function (category) {
+                    if (group) {
+                        underscore.each(group.productCategories, function (category) {
                             if (category.breedingStock && category.stock) {
                                 updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
                                     data: {
@@ -13236,6 +13353,59 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                                 });
                             }
                         });
+                    }
+                }
+            }
+
+            function extractProductionScheduleLivestockAssets (instance, schedule) {
+                if (schedule.type === 'livestock') {
+                    var group = schedule.getGroup('INC', 'Livestock Sales', schedule.defaultCostStage),
+                        startDate = moment(schedule.startDate);
+
+                    if (group) {
+                        underscore.each(group.productCategories, function (category) {
+                            var livestock = AssetFactory.new(underscore.find(instance.models.assets, function (asset) {
+                                return asset.type === 'livestock' && asset.data.type === schedule.commodityType && asset.data.category === category.name;
+                            }) || {
+                                type: 'livestock',
+                                legalEntityId : underscore.chain(instance.data.legalEntities)
+                                    .where({isPrimary: true})
+                                    .pluck('id')
+                                    .first()
+                                    .value(),
+                                data: {
+                                    type: schedule.commodityType,
+                                    category: category.name,
+                                    unit: category.supplyUnit || category.unit
+                                }
+                            });
+
+                            underscore.each(category.valuePerMonth, function (value, index) {
+                                if (value > 0) {
+                                    livestock.addLedgerEntry({
+                                        date: moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
+                                        action: 'Sale',
+                                        reference: schedule.scheduleKey,
+                                        value: value,
+                                        quantity: safeMath.chain(category.supply || 1)
+                                            .dividedBy(category.value)
+                                            .times(value).toNumber()
+                                    });
+                                }
+                            });
+
+                            livestock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: livestock.legalEntityId}));
+
+                            instance.models.assets = underscore.chain(instance.models.assets)
+                                .reject(function (asset) {
+                                    return asset.assetKey === livestock.assetKey;
+                                })
+                                .union([asJson(livestock)])
+                                .value();
+                        });
+
+                        schedule.budget.removeGroup('INC', 'Livestock Sales', schedule.defaultCostStage);
+                        schedule.removeGroup('INC', 'Livestock Sales', schedule.defaultCostStage);
                     }
                 }
             }
@@ -13456,7 +13626,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
             privateProperty(this, 'addAsset', function (asset) {
                 var instance = this;
 
-                asset = Asset.new(asset);
+                asset = AssetFactory.new(asset);
 
                 if (asset.validate()) {
                     instance.models.assets = underscore.reject(instance.models.assets, function (item) {
@@ -13764,7 +13934,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                     if (registerLegalEntity && underscore.isUndefined(evaluatedAsset)) {
                         evaluatedModels.push(asset);
 
-                        asset = Asset.new(asset);
+                        asset = AssetFactory.new(asset);
 
                         var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
                             soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
@@ -13947,7 +14117,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
                 underscore.each(instance.models.productionSchedules, function (productionSchedule) {
                     var schedule = ProductionSchedule.new(productionSchedule);
 
-                    extractLivestockBreedingStockComposition(instance, schedule);
+                    extractProductionScheduleLivestockBreedingStock(instance, schedule);
                 });
             }
 
@@ -14516,6 +14686,11 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['Asset', 'Base', 'computed
 
             if (underscore.isEmpty(this.data.models.budgets) && !underscore.isEmpty(this.data.models.productionSchedules))  {
                 updateBudgets(this);
+            }
+
+            if (this.data.version !== _version) {
+                this.updateProductionSchedules(this.data.models.productionSchedules);
+                this.data.version = _version;
             }
         }
 
@@ -17995,11 +18170,9 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
 
                                 productionCategory.supply = underscore.reduce(productionCategory.categories, reduceProperty('supply'), 0);
 
-                                productionCategory.pricePerUnit = safeMath.chain(productionCategory.value)
-                                    .dividedBy(productionCategory.quantity)
-                                    .dividedBy(productionCategory.supply || 1)
-                                    .round(2)
-                                    .toNumber();
+                                productionCategory.pricePerUnit = safeMath.round(safeMath.dividedBy(
+                                    safeMath.dividedBy(productionCategory.value, productionCategory.quantity),
+                                    productionCategory.supply || 1), 2);
 
                                 productionCategory.schedule = underscore.reduce(productionCategory.quantityPerMonth, function (schedule, value, index) {
                                     schedule[index] = safeMath.dividedBy(safeMath.times(value, 100), productionCategory.quantity);
@@ -18011,6 +18184,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                     productionCategory.quantityPerLSU = safeMath.dividedBy(underscore.reduce(productionCategory.categories, reduceProperty('quantityPerLSU'), 0), productionCategory.categories.length);
                                     productionCategory.valuePerLSU = safeMath.dividedBy(underscore.reduce(productionCategory.categories, reduceProperty('valuePerLSU'), 0), productionCategory.categories.length);
                                 } else {
+                                    productionCategory.quantityPerHa = safeMath.round(safeMath.dividedBy(productionCategory.quantity, instance.allocatedSize), 2);
+
                                     productionCategory.quantityPerHa = safeMath.chain(productionCategory.quantity)
                                         .dividedBy(instance.allocatedSize)
                                         .round(2)
@@ -18018,10 +18193,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                 }
 
                                 if (section.code === 'EXP') {
-                                    productionCategory.valuePerHa = safeMath.chain(productionCategory.value)
-                                        .dividedBy(instance.allocatedSize)
-                                        .round(2)
-                                        .toNumber();
+                                    productionCategory.valuePerHa = safeMath.round(safeMath.dividedBy(productionCategory.value, instance.allocatedSize), 2);
                                 }
                             });
 
@@ -18306,8 +18478,9 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 var scheduleStart = this.getAllocationMonth('EXP'),
                     scheduleEnd = this.getLastAllocationMonth('INC');
 
-                return (rangeStart.isSameOrBefore(scheduleStart) && rangeEnd.isSameOrAfter(scheduleStart)) ||
-                    (rangeStart.isSameOrBefore(scheduleEnd) && rangeEnd.isSameOrAfter(scheduleEnd));
+                return ((rangeStart.isSame(scheduleStart) && rangeEnd.isSame(scheduleEnd)) ||
+                    (rangeStart.isBefore(scheduleStart) && rangeEnd.isAfter(scheduleStart)) ||
+                    (rangeStart.isBefore(scheduleEnd) && rangeEnd.isAfter(scheduleEnd)));
             });
 
             computedProperty(this, 'income', function () {
@@ -19544,6 +19717,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
+    'ag.sdk.model.livestock',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',

@@ -103,6 +103,28 @@ sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Model', 'privatePro
         return AssetBase;
     }]);
 
+sdkModelAsset.factory('AssetFactory', ['Asset', 'Livestock', 'Stock',
+    function (Asset, Livestock, Stock) {
+        function apply (attrs, fnName) {
+            switch (attrs.type) {
+                case 'livestock':
+                    return Livestock[fnName](attrs);
+                case 'stock':
+                    return Stock[fnName](attrs);
+            }
+
+            return Asset[fnName](attrs);
+        }
+
+        return {
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }]);
 
 sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
     function ($filter, AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {

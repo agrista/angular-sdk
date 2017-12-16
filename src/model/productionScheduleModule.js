@@ -274,11 +274,9 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
 
                                 productionCategory.supply = underscore.reduce(productionCategory.categories, reduceProperty('supply'), 0);
 
-                                productionCategory.pricePerUnit = safeMath.chain(productionCategory.value)
-                                    .dividedBy(productionCategory.quantity)
-                                    .dividedBy(productionCategory.supply || 1)
-                                    .round(2)
-                                    .toNumber();
+                                productionCategory.pricePerUnit = safeMath.round(safeMath.dividedBy(
+                                    safeMath.dividedBy(productionCategory.value, productionCategory.quantity),
+                                    productionCategory.supply || 1), 2);
 
                                 productionCategory.schedule = underscore.reduce(productionCategory.quantityPerMonth, function (schedule, value, index) {
                                     schedule[index] = safeMath.dividedBy(safeMath.times(value, 100), productionCategory.quantity);
@@ -290,6 +288,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                     productionCategory.quantityPerLSU = safeMath.dividedBy(underscore.reduce(productionCategory.categories, reduceProperty('quantityPerLSU'), 0), productionCategory.categories.length);
                                     productionCategory.valuePerLSU = safeMath.dividedBy(underscore.reduce(productionCategory.categories, reduceProperty('valuePerLSU'), 0), productionCategory.categories.length);
                                 } else {
+                                    productionCategory.quantityPerHa = safeMath.round(safeMath.dividedBy(productionCategory.quantity, instance.allocatedSize), 2);
+
                                     productionCategory.quantityPerHa = safeMath.chain(productionCategory.quantity)
                                         .dividedBy(instance.allocatedSize)
                                         .round(2)
@@ -297,10 +297,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                 }
 
                                 if (section.code === 'EXP') {
-                                    productionCategory.valuePerHa = safeMath.chain(productionCategory.value)
-                                        .dividedBy(instance.allocatedSize)
-                                        .round(2)
-                                        .toNumber();
+                                    productionCategory.valuePerHa = safeMath.round(safeMath.dividedBy(productionCategory.value, instance.allocatedSize), 2);
                                 }
                             });
 
@@ -585,8 +582,9 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 var scheduleStart = this.getAllocationMonth('EXP'),
                     scheduleEnd = this.getLastAllocationMonth('INC');
 
-                return (rangeStart.isSameOrBefore(scheduleStart) && rangeEnd.isSameOrAfter(scheduleStart)) ||
-                    (rangeStart.isSameOrBefore(scheduleEnd) && rangeEnd.isSameOrAfter(scheduleEnd));
+                return ((rangeStart.isSame(scheduleStart) && rangeEnd.isSame(scheduleEnd)) ||
+                    (rangeStart.isBefore(scheduleStart) && rangeEnd.isAfter(scheduleStart)) ||
+                    (rangeStart.isBefore(scheduleEnd) && rangeEnd.isAfter(scheduleEnd)));
             });
 
             computedProperty(this, 'income', function () {
