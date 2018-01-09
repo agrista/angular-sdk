@@ -12526,8 +12526,8 @@ sdkModelLivestock.factory('Livestock', ['inheritModel', 'readOnlyProperty', 'Sto
                     'Purchase'],
                 'debit': [
                     'Death',
-                    'Household Consumption',
-                    'Labour Consumption',
+                    'Household',
+                    'Labour',
                     'Sale',
                     'Slaughter']
             });
@@ -12536,15 +12536,13 @@ sdkModelLivestock.factory('Livestock', ['inheritModel', 'readOnlyProperty', 'Sto
                 'Birth': 'Register Births',
                 'Purchase': 'Buy Livestock',
                 'Death': 'Register Deaths',
-                'Household Consumption': 'Household Consumption',
-                'Labour Consumption': 'Labour Consumption',
+                'Household': 'Household Consumption',
+                'Labour': 'Labour Consumption',
                 'Sale': 'Sell Livestock',
                 'Slaughter': 'Slaughter For Sale'
             });
 
             this.type = 'livestock';
-
-
         }
 
         inheritModel(Livestock, Stock);
@@ -13981,6 +13979,35 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                                 instance.data.capitalExpenditure['Fixed Improvements'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Fixed Improvements'][monthDiff], asset.data.assetValue);
                             }
+                        } else if (asset.type === 'livestock') {
+                            var monthlyLedger = asset.inventoryInRange(startMonth, endMonth);
+
+                            initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
+                            initializeCategoryValues(instance, 'productionIncome', 'Livestock Consumption', numberOfMonths);
+
+                            instance.data.productionIncome['Livestock Adjustment'] = plusArrayValues(instance.data.productionIncome['Livestock Adjustment'], underscore.map(monthlyLedger, function (ledger) {
+                                return underscore.chain(ledger)
+                                    .pick(['credit', 'debit'])
+                                    .reduce(function (total, actions) {
+                                        return underscore.reduce(actions, function (total, item, action) {
+                                            return (underscore.contains(['Birth'], action) ?
+                                                safeMath.plus(total, item.value) :
+                                                safeMath.minus(total, (underscore.contains(['Death', 'Purchase', 'Sale'], action) ? item.value : 0)));
+                                        }, total);
+                                    }, 0)
+                                    .value();
+                            }));
+
+                            instance.data.productionIncome['Livestock Consumption'] = plusArrayValues(instance.data.productionIncome['Livestock Consumption'], underscore.map(monthlyLedger, function (ledger) {
+                                return underscore.chain(ledger)
+                                    .pick('debit')
+                                    .reduce(function (total, actions) {
+                                        return underscore.reduce(actions, function (total, item, action) {
+                                            return safeMath.plus(total, (underscore.contains(['Household', 'Labour'], action) ? item.value : 0));
+                                        }, total);
+                                    }, 0)
+                                    .value();
+                            }));
                         } else if (asset.type === 'farmland') {
                             if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
                                 monthDiff = acquisitionDate.diff(startMonth, 'months');

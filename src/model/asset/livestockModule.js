@@ -11,8 +11,8 @@ sdkModelLivestock.factory('Livestock', ['inheritModel', 'readOnlyProperty', 'Sto
                     'Purchase'],
                 'debit': [
                     'Death',
-                    'Household Consumption',
-                    'Labour Consumption',
+                    'Household',
+                    'Labour',
                     'Sale',
                     'Slaughter']
             });
@@ -21,15 +21,13 @@ sdkModelLivestock.factory('Livestock', ['inheritModel', 'readOnlyProperty', 'Sto
                 'Birth': 'Register Births',
                 'Purchase': 'Buy Livestock',
                 'Death': 'Register Deaths',
-                'Household Consumption': 'Household Consumption',
-                'Labour Consumption': 'Labour Consumption',
+                'Household': 'Household Consumption',
+                'Labour': 'Labour Consumption',
                 'Sale': 'Sell Livestock',
                 'Slaughter': 'Slaughter For Sale'
             });
 
             this.type = 'livestock';
-
-
         }
 
         inheritModel(Livestock, Stock);
