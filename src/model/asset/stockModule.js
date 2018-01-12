@@ -19,18 +19,18 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     'Production',
                     'Purchase'],
                 'debit': [
-                    'Internal Consumption',
-                    'Household Consumption',
-                    'Labour Consumption',
+                    'Internal',
+                    'Household',
+                    'Labour',
                     'Sale']
             }, {configurable: true});
 
             readOnlyProperty(this, 'actionTitles', {
                 'Production': 'Produce',
                 'Purchase': 'Buy Stock',
-                'Internal Consumption': 'Internal Consumption',
-                'Household Consumption': 'Household Consumption',
-                'Labour Consumption': 'Labour Consumption',
+                'Internal': 'Internal Consumption',
+                'Household': 'Household Consumption',
+                'Labour': 'Labour Consumption',
                 'Sale': 'Sell Stock'
             }, {configurable: true});
 
@@ -46,6 +46,16 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
                     recalculate(this);
                 }
+            });
+
+            privateProperty(this, 'hasLedgerEntries', function () {
+                return this.data.ledger.length > 0;
+            });
+
+            privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
+                this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                    return entry.reference === reference;
+                });
             });
 
             privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {

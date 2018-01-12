@@ -222,6 +222,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return baseAnimal[this.commodityType] || this.commodityType;
             });
 
+            computedProperty(this, 'birthAnimal', function () {
+                return birthAnimal[this.baseAnimal];
+            });
+
             privateProperty(this, 'getBaseAnimal', function () {
                 return this.baseAnimal;
             });
@@ -944,6 +948,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             'Sheep (Stud)': 'Sheep'
         };
 
+        var birthAnimal = {
+            Cattle: 'Weaner calves',
+            Game: 'Weaner calves',
+            Goats: 'Weaner kids',
+            Rabbits: 'Weaner kits',
+            Sheep: 'Weaner lambs'
+        };
+
         var conversionRate = {
             Cattle: {
                 'Calf': 0.32,
@@ -1009,6 +1021,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             EnterpriseBudgetBase.apply(this, arguments);
 
             Base.initializeObject(this.data, 'details', {});
+            Base.initializeObject(this.data, 'events', {});
             Base.initializeObject(this.data, 'schedules', {});
             Base.initializeObject(this.data.details, 'cycleStart', 0);
             Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
@@ -1023,6 +1036,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             privateProperty(this, 'getShiftedCycle', function () {
                 return getShiftedCycle(this);
+            });
+
+            privateProperty(this, 'getEventTypes', function () {
+                return eventTypes[this.assetType] ? eventTypes[this.assetType] : eventTypes.default;
             });
 
             privateProperty(this, 'getScheduleTypes', function () {
@@ -1128,6 +1145,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 this.data.details.representativeAnimal = this.getRepresentativeAnimal();
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
+
+                underscore.each(this.getEventTypes(), function (event) {
+                    Base.initializeObject(this.data.events, event, Base.initializeArray(12));
+                }, this);
             } else if (this.assetType === 'horticulture') {
                 if (this.data.details.maturityFactor instanceof Array) {
                     this.data.details.maturityFactor = {
@@ -1286,6 +1307,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
         function getAssetCommodities (assetType) {
             return EnterpriseBudget.assetCommodities[assetType] || [];
         }
+
+        var eventTypes = {
+            'default': [],
+            'livestock': ['Birth', 'Death']
+        };
 
         var scheduleTypes = {
             'default': ['Fertilise', 'Harvest', 'Plant/Seed', 'Plough', 'Spray'],

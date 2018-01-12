@@ -12591,18 +12591,18 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     'Production',
                     'Purchase'],
                 'debit': [
-                    'Internal Consumption',
-                    'Household Consumption',
-                    'Labour Consumption',
+                    'Internal',
+                    'Household',
+                    'Labour',
                     'Sale']
             }, {configurable: true});
 
             readOnlyProperty(this, 'actionTitles', {
                 'Production': 'Produce',
                 'Purchase': 'Buy Stock',
-                'Internal Consumption': 'Internal Consumption',
-                'Household Consumption': 'Household Consumption',
-                'Labour Consumption': 'Labour Consumption',
+                'Internal': 'Internal Consumption',
+                'Household': 'Household Consumption',
+                'Labour': 'Labour Consumption',
                 'Sale': 'Sell Stock'
             }, {configurable: true});
 
@@ -12618,6 +12618,16 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
                     recalculate(this);
                 }
+            });
+
+            privateProperty(this, 'hasLedgerEntries', function () {
+                return this.data.ledger.length > 0;
+            });
+
+            privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
+                this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                    return entry.reference === reference;
+                });
             });
 
             privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
@@ -13265,11 +13275,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
             function updateProductionSchedules (instance, schedules) {
                 var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
-                    endMonth = moment(instance.endDate, 'YYYY-MM-DD');
+                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
+                    oldSchedules = underscore.map(instance.models.productionSchedules, ProductionSchedule.newCopy);
 
                 instance.models.productionSchedules = [];
 
-                angular.forEach(schedules, function (schedule) {
+                underscore.each(schedules, function (schedule) {
                     var productionSchedule = (schedule instanceof ProductionSchedule ? schedule : ProductionSchedule.newCopy(schedule));
 
                     // Add valid production schedule if between business plan dates
@@ -13277,8 +13288,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         extractProductionScheduleLivestockAssets(instance, productionSchedule);
 
                         instance.models.productionSchedules.push(asJson(productionSchedule, ['asset']));
+
+                        oldSchedules = underscore.reject(oldSchedules, function (oldSchedule) {
+                            return oldSchedule.scheduleKey === schedule.scheduleKey;
+                        });
                     }
                 });
+
+                if (oldSchedules.length > 0) {
+                    var livestockAssets = underscore.chain(instance.models.assets)
+                        .where({type: 'livestock'})
+                        .map(AssetFactory.newCopy)
+                        .value();
+
+                    underscore.each(oldSchedules, function (oldSchedule) {
+                        underscore.each(livestockAssets, function (livestock) {
+                            livestock.removeLedgerEntriesByReference(oldSchedule.scheduleKey);
+
+                            addLivestockAsset(instance, livestock);
+                        });
+                    });
+                }
 
                 updateBudgets(instance);
                 reEvaluateBusinessPlan(instance);
@@ -13355,55 +13385,93 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 }
             }
 
-            function extractProductionScheduleLivestockAssets (instance, schedule) {
-                if (schedule.type === 'livestock') {
-                    var group = schedule.getGroup('INC', 'Livestock Sales', schedule.defaultCostStage),
-                        startDate = moment(schedule.startDate);
+            function getLivestockAsset (instance, type, category, unit) {
+                var livestock = AssetFactory.new(underscore.find(instance.models.assets, function (asset) {
+                    return asset.type === 'livestock' && asset.data.type === type && asset.data.category === category;
+                }) || {
+                    type: 'livestock',
+                    legalEntityId : underscore.chain(instance.data.legalEntities)
+                        .where({isPrimary: true})
+                        .pluck('id')
+                        .first()
+                        .value(),
+                    data: {
+                        type: type,
+                        category: category,
+                        unit: unit || 'hd'
+                    }
+                });
+
+                livestock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: livestock.legalEntityId}));
+
+                return livestock;
+            }
+
+            function addLivestockAsset (instance, livestock) {
+                instance.models.assets = underscore.reject(instance.models.assets, function (asset) {
+                    return asset.assetKey === livestock.assetKey;
+                });
+
+                if (livestock.hasLedgerEntries()) {
+                    instance.models.assets.push(asJson(livestock));
+                }
+            }
+
+            function extractProductionScheduleLivestockAssets (instance, productionSchedule) {
+                if (productionSchedule.type === 'livestock') {
+                    var group = productionSchedule.getGroup('INC', 'Livestock Sales', productionSchedule.defaultCostStage),
+                        startDate = moment(productionSchedule.startDate);
 
                     if (group) {
                         underscore.each(group.productCategories, function (category) {
-                            var livestock = AssetFactory.new(underscore.find(instance.models.assets, function (asset) {
-                                return asset.type === 'livestock' && asset.data.type === schedule.commodityType && asset.data.category === category.name;
-                            }) || {
-                                type: 'livestock',
-                                legalEntityId : underscore.chain(instance.data.legalEntities)
-                                    .where({isPrimary: true})
-                                    .pluck('id')
-                                    .first()
-                                    .value(),
-                                data: {
-                                    type: schedule.commodityType,
-                                    category: category.name,
-                                    unit: category.supplyUnit || category.unit
-                                }
-                            });
+                            var livestock = getLivestockAsset(instance, productionSchedule.commodityType, category.name, category.supplyUnit || category.unit);
+
+                            livestock.data.pricePerUnit = safeMath.dividedBy(category.value, category.supply || 1);
 
                             underscore.each(category.valuePerMonth, function (value, index) {
                                 if (value > 0) {
                                     livestock.addLedgerEntry({
                                         date: moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
                                         action: 'Sale',
-                                        reference: schedule.scheduleKey,
+                                        reference: productionSchedule.scheduleKey,
                                         value: value,
                                         quantity: safeMath.chain(category.supply || 1)
                                             .dividedBy(category.value)
-                                            .times(value).toNumber()
+                                            .times(value)
+                                            .toNumber()
                                     });
                                 }
                             });
 
-                            livestock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: livestock.legalEntityId}));
-
-                            instance.models.assets = underscore.chain(instance.models.assets)
-                                .reject(function (asset) {
-                                    return asset.assetKey === livestock.assetKey;
-                                })
-                                .union([asJson(livestock)])
-                                .value();
+                            addLivestockAsset(instance, livestock);
                         });
 
-                        schedule.budget.removeGroup('INC', 'Livestock Sales', schedule.defaultCostStage);
-                        schedule.removeGroup('INC', 'Livestock Sales', schedule.defaultCostStage);
+                        underscore.each(productionSchedule.budget.data.events, function (schedule, name) {
+                            var livestock = getLivestockAsset(instance, productionSchedule.commodityType, productionSchedule.birthAnimal);
+
+                            underscore.each(productionSchedule.budget.shiftMonthlyArray(schedule), function (rate, index) {
+                                if (rate > 0) {
+                                    var quantity = Math.floor(safeMath.chain(rate)
+                                            .dividedBy(100)
+                                            .times(productionSchedule.data.details.herdSize)
+                                            .toNumber()),
+                                        value = safeMath.times(quantity, livestock.data.pricePerUnit);
+
+                                    livestock.addLedgerEntry({
+                                        date: moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
+                                        action: name,
+                                        reference: productionSchedule.scheduleKey,
+                                        value: value,
+                                        quantity: quantity
+                                    });
+                                }
+                            });
+
+                            addLivestockAsset(instance, livestock);
+                        });
+
+                        productionSchedule.budget.removeGroup('INC', 'Livestock Sales', productionSchedule.defaultCostStage);
+                        productionSchedule.removeGroup('INC', 'Livestock Sales', productionSchedule.defaultCostStage);
                     }
                 }
             }
@@ -15325,6 +15393,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return baseAnimal[this.commodityType] || this.commodityType;
             });
 
+            computedProperty(this, 'birthAnimal', function () {
+                return birthAnimal[this.baseAnimal];
+            });
+
             privateProperty(this, 'getBaseAnimal', function () {
                 return this.baseAnimal;
             });
@@ -16047,6 +16119,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             'Sheep (Stud)': 'Sheep'
         };
 
+        var birthAnimal = {
+            Cattle: 'Weaner calves',
+            Game: 'Weaner calves',
+            Goats: 'Weaner kids',
+            Rabbits: 'Weaner kits',
+            Sheep: 'Weaner lambs'
+        };
+
         var conversionRate = {
             Cattle: {
                 'Calf': 0.32,
@@ -16112,6 +16192,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             EnterpriseBudgetBase.apply(this, arguments);
 
             Base.initializeObject(this.data, 'details', {});
+            Base.initializeObject(this.data, 'events', {});
             Base.initializeObject(this.data, 'schedules', {});
             Base.initializeObject(this.data.details, 'cycleStart', 0);
             Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
@@ -16126,6 +16207,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             privateProperty(this, 'getShiftedCycle', function () {
                 return getShiftedCycle(this);
+            });
+
+            privateProperty(this, 'getEventTypes', function () {
+                return eventTypes[this.assetType] ? eventTypes[this.assetType] : eventTypes.default;
             });
 
             privateProperty(this, 'getScheduleTypes', function () {
@@ -16231,6 +16316,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 this.data.details.representativeAnimal = this.getRepresentativeAnimal();
                 this.data.details.conversions = this.getConversionRates();
                 this.data.details.budgetUnit = 'LSU';
+
+                underscore.each(this.getEventTypes(), function (event) {
+                    Base.initializeObject(this.data.events, event, Base.initializeArray(12));
+                }, this);
             } else if (this.assetType === 'horticulture') {
                 if (this.data.details.maturityFactor instanceof Array) {
                     this.data.details.maturityFactor = {
@@ -16389,6 +16478,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
         function getAssetCommodities (assetType) {
             return EnterpriseBudget.assetCommodities[assetType] || [];
         }
+
+        var eventTypes = {
+            'default': [],
+            'livestock': ['Birth', 'Death']
+        };
 
         var scheduleTypes = {
             'default': ['Fertilise', 'Harvest', 'Plant/Seed', 'Plough', 'Spray'],
