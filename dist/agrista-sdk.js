@@ -13476,6 +13476,50 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 }
             }
 
+            function extractLivestockProductionIncome (instance, livestock, startMonth, endMonth) {
+                var numberOfMonths = endMonth.diff(startMonth, 'months'),
+                    monthlyLedger = livestock.inventoryInRange(startMonth, endMonth),
+                    categoryName = livestock.data.category;
+
+                // Production Income Composition
+                instance.data.productionIncomeComposition[categoryName] = instance.data.productionIncomeComposition[categoryName] || underscore.range(numberOfMonths).map(function () {
+                    return {
+                        unit: livestock.data.unit,
+                        quantity: 0,
+                        value: 0
+                    };
+                });
+
+                instance.data.productionIncomeComposition[categoryName] = underscore.chain(monthlyLedger)
+                    .pluck('debit').pluck('Sale')
+                    .reduce(function (store, item, index) {
+                        if (item) {
+                            var categoryMonth = store[index];
+                            categoryMonth.value = safeMath.plus(categoryMonth.value, item.value);
+                            categoryMonth.quantity = safeMath.plus(categoryMonth.quantity, item.quantity);
+                            categoryMonth.pricePerUnit = safeMath.dividedBy(categoryMonth.value, categoryMonth.quantity);
+                        }
+
+                        return store;
+                    }, instance.data.productionIncomeComposition[categoryName])
+                    .value();
+
+                // Enterprise Production Income
+                Base.initializeObject(instance.data.enterpriseProductionIncome, livestock.data.type, {});
+                instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
+
+                instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'] = underscore.chain(monthlyLedger)
+                    .pluck('debit').pluck('Sale')
+                    .reduce(function (store, item, index) {
+                        if (item) {
+                            store[index] = safeMath.plus(store[index], item.value);
+                        }
+
+                        return store;
+                    }, instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'])
+                    .value();
+            }
+
             function extractProductionScheduleIncomeComposition (dataStore, schedule, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
                     scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD');
@@ -13566,7 +13610,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     extractProductionScheduleCategoryValuePerMonth(instance.data, schedule, 'INC', startMonth, numberOfMonths, true);
                     extractProductionScheduleCategoryValuePerMonth(instance.data, schedule, 'EXP', startMonth, numberOfMonths, true);
                 });
+            }
 
+            function reEvaluateProductionIncomeAndExpenditure (instance, numberOfMonths) {
                 instance.data.productionIncome = underscore.reduce(instance.data.enterpriseProductionIncome, function (results, groupedValues) {
                     return underscore.reduce(groupedValues, function (totals, values, group) {
                         Base.initializeObject(totals, group, Base.initializeArray(numberOfMonths, 0));
@@ -13663,9 +13709,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         evaluatedModels.push(expense);
                     }
                 });
-
-                instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
-                instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
             }
 
             /**
@@ -14050,6 +14093,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         } else if (asset.type === 'livestock') {
                             var monthlyLedger = asset.inventoryInRange(startMonth, endMonth);
 
+                            extractLivestockProductionIncome(instance, asset, startMonth, endMonth);
+
                             initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
                             initializeCategoryValues(instance, 'productionIncome', 'Livestock Consumption', numberOfMonths);
 
@@ -14355,6 +14400,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 reEvaluateProductionSchedules(instance);
                 reEvaluateAssetsAndLiabilities(instance);
                 reEvaluateIncomeAndExpenses(instance);
+                reEvaluateProductionIncomeAndExpenditure(instance, numberOfMonths);
 
                 recalculateIncomeExpensesSummary(instance, startMonth, endMonth, numberOfMonths);
                 recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths);
