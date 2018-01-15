@@ -2,7 +2,7 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
     function (AssetFactory, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = "v3";
+        var _version = "v4";
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -442,21 +442,21 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
             }
 
             function reEvaluateProductionIncomeAndExpenditure (instance, numberOfMonths) {
-                instance.data.productionIncome = underscore.reduce(instance.data.enterpriseProductionIncome, function (results, groupedValues) {
+                instance.data.productionIncome = underscore.extend(instance.data.productionIncome, underscore.reduce(instance.data.enterpriseProductionIncome, function (results, groupedValues) {
                     return underscore.reduce(groupedValues, function (totals, values, group) {
                         Base.initializeObject(totals, group, Base.initializeArray(numberOfMonths, 0));
                         totals[group] = plusArrayValues(totals[group], values);
                         return totals;
                     }, results);
-                }, {});
+                }, {}));
 
-                instance.data.productionExpenditure = underscore.reduce(instance.data.enterpriseProductionExpenditure, function (results, groupedValues) {
+                instance.data.productionExpenditure = underscore.extend(instance.data.productionExpenditure, underscore.reduce(instance.data.enterpriseProductionExpenditure, function (results, groupedValues) {
                     return underscore.reduce(groupedValues, function (totals, values, group) {
                         Base.initializeObject(totals, group, Base.initializeArray(numberOfMonths, 0));
                         totals[group] = plusArrayValues(totals[group], values);
                         return totals;
                     }, results);
-                }, {});
+                }, {}));
 
                 instance.data.unallocatedProductionIncome = instance.data.unallocatedProductionIncome || instance.data.productionIncome;
                 instance.data.unallocatedProductionExpenditure = instance.data.unallocatedProductionExpenditure || instance.data.productionExpenditure;
@@ -1214,6 +1214,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 instance.data.capitalExpenditure = {};
                 instance.data.capitalLoss = {};
                 instance.data.capitalProfit = {};
+                instance.data.cashInflow = {};
+                instance.data.cashOutflow = {};
                 instance.data.debtRedemption = {};
                 instance.data.assetMarketValue = {};
                 instance.data.assetStatement = {};
@@ -1230,6 +1232,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 reEvaluateAssetsAndLiabilities(instance);
                 reEvaluateIncomeAndExpenses(instance);
                 reEvaluateProductionIncomeAndExpenditure(instance, numberOfMonths);
+                reEvaluateCashFlow(instance);
 
                 recalculateIncomeExpensesSummary(instance, startMonth, endMonth, numberOfMonths);
                 recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths);
@@ -1250,13 +1253,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 instance.data.summary.yearly.netProfit = minusArrayValues(instance.data.summary.yearly.ebt, instance.data.summary.yearly.taxPaid);
             }
 
+            function reEvaluateCashFlow (instance) {
+                instance.data.cashInflow = {
+                    capitalIncome: instance.data.capitalIncome,
+                    productionIncome: underscore.omit(instance.data.productionIncome, ['Livestock Adjustment', 'Livestock Consumption']),
+                    otherIncome: instance.data.otherIncome
+                };
+
+                instance.data.cashOutflow = {
+                    capitalExpenditure: instance.data.capitalExpenditure,
+                    productionExpenditure: instance.data.productionExpenditure,
+                    otherExpenditure: instance.data.otherExpenditure
+                };
+            }
+
             function recalculateIncomeExpensesSummary (instance, startMonth, endMonth, numberOfMonths) {
-                var totalIncome = calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
-                    productionCreditRepayments = underscore.reduce(totalIncome, function (repayment, income, index) {
+                var cashInflow = calculateMonthlySectionsTotal([instance.data.cashInflow.capitalIncome, instance.data.cashInflow.productionIncome, instance.data.cashInflow.otherIncome], Base.initializeArray(numberOfMonths)),
+                    productionCreditRepayments = underscore.reduce(cashInflow, function (repayment, income, index) {
                         repayment[index] = (income - repayment[index] < 0 ? income : repayment[index]);
                         return repayment;
                     }, calculateMonthlyLiabilityPropertyTotal(instance, ['production-credit'], 'repayment', startMonth, endMonth)),
-                    totalIncomeAfterRepayments = minusArrayValues(totalIncome, productionCreditRepayments),
+                    cashInflowAfterRepayments = minusArrayValues(cashInflow, productionCreditRepayments),
                     debtRedemptionAfterRepayments = minusArrayValues(calculateMonthlySectionsTotal([instance.data.debtRedemption], Base.initializeArray(numberOfMonths)), productionCreditRepayments);
 
                 underscore.extend(instance.data.summary.monthly, {
@@ -1266,8 +1283,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     capitalProfit: calculateMonthlySectionsTotal([instance.data.capitalProfit], Base.initializeArray(numberOfMonths)),
                     otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
                     nonFarmIncome: calculateMonthlySectionsTotal([instance.data.capitalProfit, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
-                    totalIncome: totalIncome,
-                    totalIncomeAfterRepayments: totalIncomeAfterRepayments,
+                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                    cashInflowAfterRepayments: cashInflowAfterRepayments,
 
                     // Expenses
                     unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], Base.initializeArray(numberOfMonths)),
@@ -1289,7 +1306,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
                     nonFarmIncome: [calculateYearlyTotal(instance.data.summary.monthly.nonFarmIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.nonFarmIncome, 2)],
                     totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
-                    totalIncomeAfterRepayments: [calculateYearlyTotal(instance.data.summary.monthly.totalIncomeAfterRepayments, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncomeAfterRepayments, 2)],
+                    cashInflowAfterRepayments: [calculateYearlyTotal(instance.data.summary.monthly.cashInflowAfterRepayments, 1), calculateYearlyTotal(instance.data.summary.monthly.cashInflowAfterRepayments, 2)],
 
                     // Expenses
                     unallocatedProductionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 2)],
@@ -1396,7 +1413,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     })
                     .reduce(function (monthly, month, index) {
                         month.opening = (index === 0 ? instance.account.openingBalance : monthly[monthly.length - 1].closing);
-                        month.inflow = instance.data.summary.monthly.totalIncomeAfterRepayments[index];
+                        month.inflow = instance.data.summary.monthly.cashInflowAfterRepayments[index];
                         month.outflow = instance.data.summary.monthly.totalExpenditure[index];
                         month.balance = safeMath.plus(month.opening, safeMath.minus(month.inflow, month.outflow));
                         month.interestPayable = (month.balance < 0 && instance.account.interestRateDebit ?
@@ -1500,7 +1517,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     interestCover: calculateRatio(instance, 'operatingProfit', 'totalInterest'),
                     inputOutput: calculateRatio(instance, 'productionIncome', ['productionExpenditure', 'productionCreditInterest', 'primaryAccountInterest']),
                     productionCost: calculateRatio(instance, 'productionExpenditure', 'productionIncome'),
-                    cashFlowBank: calculateRatio(instance, 'totalIncomeAfterRepayments', ['capitalExpenditure', 'unallocatedProductionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
+                    cashFlowBank: calculateRatio(instance, 'cashInflowAfterRepayments', ['capitalExpenditure', 'unallocatedProductionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
                     //TODO: add payments to co-ops with crop deliveries to cashFlowFarming denominator
                     cashFlowFarming: calculateRatio(instance, 'totalIncome', ['capitalExpenditure', 'productionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
                     debtToTurnover: calculateRatio(instance, 'totalLiabilities', ['productionIncome', 'otherIncome']),
@@ -1536,10 +1553,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     plusAccountCapital = plusArrayValues(minusCapitalIncome, slice(instance.data.summary.monthly.primaryAccountCapital)),
                     plusCapitalExpenditure = plusArrayValues(plusAccountCapital, slice(instance.data.summary.monthly.capitalExpenditure)),
                     plusTotalIncome = plusArrayValues(plusCapitalExpenditure, slice(instance.data.summary.monthly.totalIncome)),
-                    minusTotalIncomeAfterRepayments = minusArrayValues(plusTotalIncome, slice(instance.data.summary.monthly.totalIncomeAfterRepayments)),
+                    minusCashInflowAfterRepayments = minusArrayValues(plusTotalIncome, slice(instance.data.summary.monthly.cashInflowAfterRepayments)),
                     totalDebt = slice(instance.data.summary.monthly.totalLiabilities);
 
-                var debtRatio = underscore.map(minusTotalIncomeAfterRepayments, function (month, index) {
+                var debtRatio = underscore.map(minusCashInflowAfterRepayments, function (month, index) {
                     return safeMath.dividedBy(totalDebt[index], month);
                 });
 
