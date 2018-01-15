@@ -215,6 +215,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 this.recalculate();
             });
 
+            privateProperty(this, 'getStockAssets', function () {
+                return (this.assetType !== 'livestock' || underscore.isUndefined(conversionRate[this.baseAnimal]) ? [this.commodityType] : underscore.keys(conversionRate[this.baseAnimal]));
+            });
+
             interfaceProperty(this, 'recalculate', function () {});
 
             // Livestock
@@ -963,7 +967,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 'Cow': 1.1,
                 'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
-                'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
                 'Bull (3 years plus)': 1.36
             },
@@ -973,7 +976,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 'Cow': 1.1,
                 'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
-                'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
                 'Bull (3 years plus)': 1.36
             },

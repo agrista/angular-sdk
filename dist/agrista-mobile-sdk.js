@@ -10503,6 +10503,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 this.recalculate();
             });
 
+            privateProperty(this, 'getStockAssets', function () {
+                return (this.assetType !== 'livestock' || underscore.isUndefined(conversionRate[this.baseAnimal]) ? [this.commodityType] : underscore.keys(conversionRate[this.baseAnimal]));
+            });
+
             interfaceProperty(this, 'recalculate', function () {});
 
             // Livestock
@@ -11251,7 +11255,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 'Cow': 1.1,
                 'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
-                'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
                 'Bull (3 years plus)': 1.36
             },
@@ -11261,7 +11264,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 'Cow': 1.1,
                 'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
-                'Steer (18 moths plus)': 0.75,
                 'Steer (3 years plus)': 1.1,
                 'Bull (3 years plus)': 1.36
             },
@@ -18432,11 +18434,17 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             AssetBase.apply(this, arguments);
 
             computedProperty(this, 'startMonth', function () {
-                return moment(underscore.chain(this.data.ledger).pluck('date').first().value(), 'YYYY-MM-DD').date(1);
+                return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
+                    .pluck('date')
+                    .first()
+                    .value(), 'YYYY-MM-DD').date(1));
             });
 
             computedProperty(this, 'endMonth', function () {
-                return moment(underscore.chain(this.data.ledger).pluck('date').last().value(), 'YYYY-MM-DD').date(1);
+                return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
+                    .pluck('date')
+                    .last()
+                    .value(), 'YYYY-MM-DD').date(1));
             });
 
             // Actions
@@ -18487,7 +18495,9 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
                 var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
                     rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
-                    appliedStart = this.startMonth.diff(rangeStartDate, 'months'),
+                    numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
+                    appliedStart = (this.startMonth ? this.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
+                    appliedEnd = (this.endMonth ? rangeEndDate.diff(this.endMonth, 'months') : 0),
                     startCrop = Math.abs(Math.min(0, appliedStart));
 
                 if (underscore.isEmpty(_monthly) && !underscore.isEmpty(this.data.ledger)) {
@@ -18496,13 +18506,13 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
                 return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
                         .concat(_monthly)
-                        .concat(defaultMonths(Math.max(0, rangeEndDate.diff(this.endMonth, 'months')))),
+                        .concat(defaultMonths(Math.max(0, appliedEnd))),
                     function (monthly, curr) {
                         balanceEntry(curr, underscore.last(monthly) || defaultMonth());
                         monthly.push(curr);
                         return monthly;
                     }, [])
-                    .slice(startCrop, startCrop + rangeEndDate.diff(rangeStartDate, 'months'));
+                    .slice(startCrop, startCrop + numberOfMonths);
             });
 
             privateProperty(this, 'isLedgerEntryValid', function (item) {

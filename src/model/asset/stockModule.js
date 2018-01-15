@@ -6,11 +6,17 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             AssetBase.apply(this, arguments);
 
             computedProperty(this, 'startMonth', function () {
-                return moment(underscore.chain(this.data.ledger).pluck('date').first().value(), 'YYYY-MM-DD').date(1);
+                return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
+                    .pluck('date')
+                    .first()
+                    .value(), 'YYYY-MM-DD').date(1));
             });
 
             computedProperty(this, 'endMonth', function () {
-                return moment(underscore.chain(this.data.ledger).pluck('date').last().value(), 'YYYY-MM-DD').date(1);
+                return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
+                    .pluck('date')
+                    .last()
+                    .value(), 'YYYY-MM-DD').date(1));
             });
 
             // Actions
@@ -61,7 +67,9 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
                 var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
                     rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
-                    appliedStart = this.startMonth.diff(rangeStartDate, 'months'),
+                    numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
+                    appliedStart = (this.startMonth ? this.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
+                    appliedEnd = (this.endMonth ? rangeEndDate.diff(this.endMonth, 'months') : 0),
                     startCrop = Math.abs(Math.min(0, appliedStart));
 
                 if (underscore.isEmpty(_monthly) && !underscore.isEmpty(this.data.ledger)) {
@@ -70,13 +78,13 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
                 return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
                         .concat(_monthly)
-                        .concat(defaultMonths(Math.max(0, rangeEndDate.diff(this.endMonth, 'months')))),
+                        .concat(defaultMonths(Math.max(0, appliedEnd))),
                     function (monthly, curr) {
                         balanceEntry(curr, underscore.last(monthly) || defaultMonth());
                         monthly.push(curr);
                         return monthly;
                     }, [])
-                    .slice(startCrop, startCrop + rangeEndDate.diff(rangeStartDate, 'months'));
+                    .slice(startCrop, startCrop + numberOfMonths);
             });
 
             privateProperty(this, 'isLedgerEntryValid', function (item) {
