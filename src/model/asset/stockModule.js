@@ -87,6 +87,22 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     .slice(startCrop, startCrop + numberOfMonths);
             });
 
+            privateProperty(this, 'inventoryBefore', function (before) {
+                var beforeDate = moment(before, 'YYYY-MM-DD');
+
+                if (this.startMonth && beforeDate.isSameOrAfter(this.startMonth)) {
+                    var numberOfMonths = beforeDate.diff(this.startMonth, 'months');
+
+                    if (underscore.isEmpty(_monthly)) {
+                        recalculate(this);
+                    }
+
+                    return _monthly[numberOfMonths] || underscore.last(_monthly);
+                }
+
+                return defaultMonth();
+            });
+
             privateProperty(this, 'isLedgerEntryValid', function (item) {
                 return isLedgerEntryValid(this, item);
             });

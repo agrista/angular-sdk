@@ -1,7 +1,7 @@
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
-    function (AssetFactory, Base, computedProperty, Document, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
+    function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
         var _version = "v4";
 
         function BusinessPlan (attrs) {
@@ -214,7 +214,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 }
             }
 
-            function getLivestockAsset (instance, type, category, unit) {
+            function getLivestockAsset (instance, type, category, priceUnit, quantityUnit) {
                 var livestock = AssetFactory.new(underscore.find(instance.models.assets, function (asset) {
                     return asset.type === 'livestock' && asset.data.type === type && asset.data.category === category;
                 }) || {
@@ -227,7 +227,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     data: {
                         type: type,
                         category: category,
-                        unit: unit || 'hd'
+                        priceUnit: priceUnit,
+                        quantityUnit: quantityUnit
                     }
                 });
 
@@ -253,7 +254,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                     if (group) {
                         underscore.each(group.productCategories, function (category) {
-                            var livestock = getLivestockAsset(instance, productionSchedule.commodityType, category.name, category.supplyUnit || category.unit);
+                            var livestock = getLivestockAsset(instance, productionSchedule.commodityType, category.name, category.unit, category.supplyUnit);
 
                             livestock.data.pricePerUnit = safeMath.dividedBy(category.value, category.supply || 1);
 
@@ -263,6 +264,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                         date: moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
                                         action: 'Sale',
                                         reference: productionSchedule.scheduleKey,
+                                        rate: category.quantity,
+                                        price: category.pricePerUnit,
                                         value: value,
                                         quantity: safeMath.chain(category.supply || 1)
                                             .dividedBy(category.value)
@@ -303,50 +306,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         productionSchedule.removeGroup('INC', 'Livestock Sales', productionSchedule.defaultCostStage);
                     }
                 }
-            }
-
-            function extractLivestockProductionIncome (instance, livestock, startMonth, endMonth) {
-                var numberOfMonths = endMonth.diff(startMonth, 'months'),
-                    monthlyLedger = livestock.inventoryInRange(startMonth, endMonth),
-                    categoryName = livestock.data.category;
-
-                // Production Income Composition
-                instance.data.productionIncomeComposition[categoryName] = instance.data.productionIncomeComposition[categoryName] || underscore.range(numberOfMonths).map(function () {
-                    return {
-                        unit: livestock.data.unit,
-                        quantity: 0,
-                        value: 0
-                    };
-                });
-
-                instance.data.productionIncomeComposition[categoryName] = underscore.chain(monthlyLedger)
-                    .pluck('debit').pluck('Sale')
-                    .reduce(function (store, item, index) {
-                        if (item) {
-                            var categoryMonth = store[index];
-                            categoryMonth.value = safeMath.plus(categoryMonth.value, item.value);
-                            categoryMonth.quantity = safeMath.plus(categoryMonth.quantity, item.quantity);
-                            categoryMonth.pricePerUnit = safeMath.dividedBy(categoryMonth.value, categoryMonth.quantity);
-                        }
-
-                        return store;
-                    }, instance.data.productionIncomeComposition[categoryName])
-                    .value();
-
-                // Enterprise Production Income
-                Base.initializeObject(instance.data.enterpriseProductionIncome, livestock.data.type, {});
-                instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
-
-                instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'] = underscore.chain(monthlyLedger)
-                    .pluck('debit').pluck('Sale')
-                    .reduce(function (store, item, index) {
-                        if (item) {
-                            store[index] = safeMath.plus(store[index], item.value);
-                        }
-
-                        return store;
-                    }, instance.data.enterpriseProductionIncome[livestock.data.type]['Livestock Sales'])
-                    .value();
             }
 
             function extractProductionScheduleIncomeComposition (dataStore, schedule, startMonth, numberOfMonths) {
@@ -789,12 +748,14 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                             if (!underscore.contains(ignoredItems, item.name)) {
                                 var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1,
                                     assetMarketValue = instance.data.assetMarketValue[item.name] || Base.initializeArray(instance.numberOfMonths),
+                                    assetStockValue = instance.data.assetStockValue[item.name] || Base.initializeArray(instance.numberOfMonths),
                                     capitalExpenditure = instance.data.capitalExpenditure[item.name] || Base.initializeArray(instance.numberOfMonths);
 
                                 item.marketValue = safeMath.times(item.estimatedValue, adjustmentFactor);
 
                                 item.monthly.marketValue = underscore.map(item.monthly.marketValue, function (value, index) {
                                     return safeMath.chain(item.marketValue)
+                                        .plus(sumCollectionValues(assetStockValue.slice(0, index)))
                                         .minus(sumCollectionValues(assetMarketValue.slice(0, index)))
                                         .plus(sumCollectionValues(capitalExpenditure.slice(0, index)))
                                         .toNumber();
@@ -920,36 +881,84 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                 instance.data.capitalExpenditure['Fixed Improvements'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Fixed Improvements'][monthDiff], asset.data.assetValue);
                             }
                         } else if (asset.type === 'livestock') {
-                            var monthlyLedger = asset.inventoryInRange(startMonth, endMonth);
+                            var monthlyLedger = asset.inventoryInRange(startMonth, endMonth),
+                                birthingAnimal = EnterpriseBudget.getBirthingAnimal(asset.data.type);
 
-                            extractLivestockProductionIncome(instance, asset, startMonth, endMonth);
-
-                            initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
-                            initializeCategoryValues(instance, 'productionIncome', 'Livestock Consumption', numberOfMonths);
-
-                            instance.data.productionIncome['Livestock Adjustment'] = plusArrayValues(instance.data.productionIncome['Livestock Adjustment'], underscore.map(monthlyLedger, function (ledger) {
-                                return underscore.chain(ledger)
+                            underscore.each(monthlyLedger, function (ledger, index) {
+                                underscore.chain(ledger)
                                     .pick(['credit', 'debit'])
-                                    .reduce(function (total, actions) {
-                                        return underscore.reduce(actions, function (total, item, action) {
-                                            return (underscore.contains(['Birth'], action) ?
-                                                safeMath.plus(total, item.value) :
-                                                safeMath.minus(total, (underscore.contains(['Death', 'Purchase', 'Sale'], action) ? item.value : 0)));
-                                        }, total);
-                                    }, 0)
-                                    .value();
-                            }));
+                                    .each(function (actions) {
+                                        underscore.each(actions, function (item, action) {
+                                            switch (action) {
+                                                case 'Birth':
+                                                    initializeCategoryValues(instance, 'assetStockValue', 'Marketable Livestock', numberOfMonths);
+                                                    instance.data.assetStockValue['Marketable Livestock'][index] = safeMath.plus(instance.data.assetStockValue['Marketable Livestock'][index], item.value);
 
-                            instance.data.productionIncome['Livestock Consumption'] = plusArrayValues(instance.data.productionIncome['Livestock Consumption'], underscore.map(monthlyLedger, function (ledger) {
-                                return underscore.chain(ledger)
-                                    .pick('debit')
-                                    .reduce(function (total, actions) {
-                                        return underscore.reduce(actions, function (total, item, action) {
-                                            return safeMath.plus(total, (underscore.contains(['Household', 'Labour'], action) ? item.value : 0));
-                                        }, total);
-                                    }, 0)
-                                    .value();
-                            }));
+                                                    initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
+                                                    instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.plus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
+                                                    break;
+                                                case 'Death':
+                                                    initializeCategoryValues(instance, 'assetStockValue', 'Marketable Livestock', numberOfMonths);
+                                                    instance.data.assetStockValue['Marketable Livestock'][index] = safeMath.minus(instance.data.assetStockValue['Marketable Livestock'][index], item.value);
+
+                                                    initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
+                                                    instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
+                                                    break;
+                                                case 'Household':
+                                                case 'Labour':
+                                                    initializeCategoryValues(instance, 'productionIncome', 'Livestock Consumption', numberOfMonths);
+                                                    instance.data.productionIncome['Livestock Consumption'][index] = safeMath.plus(instance.data.productionIncome['Livestock Consumption'][index], item.value);
+                                                    break;
+                                                case 'Purchase':
+                                                    initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
+                                                    instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
+
+                                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
+                                                    instance.data.capitalExpenditure['Livestock'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][monthDiff], item.value);
+                                                    break;
+                                                case 'Sale':
+                                                case 'Slaughter':
+                                                    // Livestock Production Income
+                                                    Base.initializeObject(instance.data.enterpriseProductionIncome, asset.data.type, {});
+                                                    instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
+                                                    instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index], item.value);
+
+                                                    // Composition
+                                                    instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
+                                                        return {
+                                                            unit: asset.data.priceUnit,
+                                                            quantity: 0,
+                                                            value: 0
+                                                        };
+                                                    });
+
+                                                    var compositionMonth = instance.data.productionIncomeComposition[asset.data.category][index];
+                                                    compositionMonth.value = safeMath.plus(compositionMonth.value, item.value);
+                                                    compositionMonth.quantity = safeMath.plus(compositionMonth.quantity, item.quantity);
+                                                    compositionMonth.pricePerUnit = safeMath.dividedBy(compositionMonth.value, compositionMonth.quantity);
+
+                                                    if (action === 'Sale' && birthingAnimal === asset.data.category) {
+                                                        initializeCategoryValues(instance, 'assetMarketValue', 'Marketable Livestock', numberOfMonths);
+                                                        instance.data.assetMarketValue['Marketable Livestock'][index] = safeMath.plus(instance.data.assetMarketValue['Marketable Livestock'][index], item.value);
+
+                                                        initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
+                                                        instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
+                                                    }
+                                                    break;
+                                            }
+                                        });
+                                    });
+
+                                if (index === 0 && birthingAnimal === asset.data.category) {
+                                    updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', {
+                                        data: {
+                                            name: 'Marketable Livestock',
+                                            liquidityType: 'short-term',
+                                            assetValue: ledger.opening.value
+                                        }
+                                    });
+                                }
+                            });
                         } else if (asset.type === 'farmland') {
                             if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
                                 monthDiff = acquisitionDate.diff(startMonth, 'months');
@@ -1218,6 +1227,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 instance.data.cashOutflow = {};
                 instance.data.debtRedemption = {};
                 instance.data.assetMarketValue = {};
+                instance.data.assetStockValue = {};
                 instance.data.assetStatement = {};
                 instance.data.liabilityStatement = {};
                 instance.data.enterpriseProductionIncome = {};

@@ -119,11 +119,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
-                return (this.assetType && EnterpriseBudgetBase.categoryOptions[this.assetType] ?
-                    (this.assetType === 'livestock'
-                        ? (this.baseAnimal ? EnterpriseBudgetBase.categoryOptions[this.assetType][this.baseAnimal][sectionCode] : [])
-                        : EnterpriseBudgetBase.categoryOptions[this.assetType][sectionCode])
-                    : []);
+                return getCategoryOptions(sectionCode, this.assetType, this.baseAnimal);
             });
 
             privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {
@@ -887,6 +883,20 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         });
 
+        privateProperty(EnterpriseBudgetBase, 'getGroupCategories', function (assetType, commodityType, sectionCode, groupName) {
+            var sectionGroupCategories = getCategoryOptions(sectionCode, assetType, baseAnimal[commodityType]);
+
+            return (sectionGroupCategories && sectionGroupCategories[groupName] ? sectionGroupCategories[groupName] : []);
+        });
+
+        function getCategoryOptions (sectionCode, assetType, baseAnimal) {
+            return (assetType && EnterpriseBudgetBase.categoryOptions[assetType] ?
+                (assetType === 'livestock'
+                    ? (baseAnimal ? EnterpriseBudgetBase.categoryOptions[assetType][baseAnimal][sectionCode] : {})
+                    : EnterpriseBudgetBase.categoryOptions[assetType][sectionCode])
+                : {});
+        }
+
         function getCategoryArray (categoryCodes) {
             return underscore.chain(categoryCodes)
                 .map(function (code) {
@@ -1002,7 +1012,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         };
 
-        interfaceProperty(this, 'getAssetTypeForLandUse', function (landUse) {
+        privateProperty(EnterpriseBudgetBase, 'getBirthingAnimal', function (commodityType) {
+            return baseAnimal[commodityType] && birthAnimal[baseAnimal[commodityType]] || commodityType;
+        });
+
+        interfaceProperty(EnterpriseBudgetBase, 'getAssetTypeForLandUse', function (landUse) {
             return (s.include(landUse, 'Cropland') ? 'crop' :
                 (s.include(landUse, 'Cropland') ? 'horticulture' : 'livestock'));
         });
