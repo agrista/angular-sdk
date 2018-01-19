@@ -12672,7 +12672,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     return _monthly[numberOfMonths] || underscore.last(_monthly);
                 }
 
-                return defaultMonth();
+                return openingMonth(this);
             });
 
             privateProperty(this, 'isLedgerEntryValid', function (item) {
@@ -12682,6 +12682,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             privateProperty(this, 'clearLedger', function () {
                 this.data.ledger = [];
 
+                recalculate(this);
+            });
+
+            privateProperty(this, 'recalculateLedger' ,function () {
                 recalculate(this);
             });
 
@@ -12705,34 +12709,36 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             function recalculate (instance) {
                 var startMonth = instance.startMonth,
                     endMonth = instance.endMonth,
-                    numberOfMonths = endMonth.diff(startMonth, 'months');
+                    numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : endMonth);
 
-                _monthly = underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
-                    var offsetDate = moment(startMonth).add(offset, 'M');
+                if (!underscore.isUndefined(numberOfMonths)) {
+                    _monthly = underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
+                        var offsetDate = moment(startMonth).add(offset, 'M');
 
-                    var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, item) {
-                        var itemDate = moment(item.date);
+                        var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, item) {
+                            var itemDate = moment(item.date);
 
-                        if (offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
-                            underscore.each(['credit', 'debit'], function (key) {
-                                if (underscore.contains(instance.actions[key], item.action)) {
-                                    month[key][item.action] = underscore.mapObject(month[key][item.action] || defaultItem(), function (value, key) {
-                                        return safeMath.plus(value, item[key]);
-                                    });
-                                }
-                            });
-                        }
+                            if (offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
+                                underscore.each(['credit', 'debit'], function (key) {
+                                    if (underscore.contains(instance.actions[key], item.action)) {
+                                        month[key][item.action] = underscore.mapObject(month[key][item.action] || defaultItem(), function (value, key) {
+                                            return safeMath.plus(value, item[key]);
+                                        });
+                                    }
+                                });
+                            }
 
-                        return month;
-                    }, {
-                        credit: {},
-                        debit: {}
-                    }));
+                            return month;
+                        }, {
+                            credit: {},
+                            debit: {}
+                        }));
 
-                    balanceEntry(curr, underscore.last(monthly) || defaultMonth());
-                    monthly.push(curr);
-                    return monthly;
-                }, []);
+                        balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
+                        monthly.push(curr);
+                        return monthly;
+                    }, []);
+                }
             }
 
             Base.initializeObject(this.data, 'ledger', []);
@@ -12740,26 +12746,33 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             this.type = 'stock';
         }
 
-        function defaultItem () {
+        function defaultItem (quantity, value) {
             return {
-                quantity: 0,
-                value: 0
+                quantity: quantity || 0,
+                value: value || 0
             }
         }
 
-        function defaultMonth () {
+        function defaultMonth (quantity, value) {
             return {
-                opening: defaultItem(),
+                opening: defaultItem(quantity, value),
                 credit: {},
                 debit: {},
-                balance: defaultItem(),
+                balance: defaultItem(quantity, value),
                 interest: 0,
-                closing: defaultItem()
+                closing: defaultItem(quantity, value)
             }
         }
 
         function defaultMonths (size) {
             return underscore.range(size).map(defaultMonth);
+        }
+
+        function openingMonth (instance) {
+            var quantity = instance.data.openingBalance,
+                value = safeMath.times(instance.data.openingBalance, instance.data.pricePerUnit);
+
+            return defaultMonth(quantity, value);
         }
 
         function isLedgerEntryValid (instance, item) {
@@ -14121,7 +14134,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                     // Composition
                                                     instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
                                                         return {
-                                                            unit: asset.data.priceUnit,
+                                                            unit: asset.data.quantityUnit,
                                                             quantity: 0,
                                                             value: 0
                                                         };
@@ -14499,7 +14512,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
                     nonFarmExpenditure: calculateMonthlySectionsTotal([instance.data.capitalLoss, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
                     debtRedemption: debtRedemptionAfterRepayments,
-                    totalExpenditure: plusArrayValues(debtRedemptionAfterRepayments, calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths))),
+                    totalExpenditure: plusArrayValues(debtRedemptionAfterRepayments, calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)))
                 });
 
                 underscore.extend(instance.data.summary.yearly, {
@@ -14521,7 +14534,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
                     nonFarmExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.nonFarmExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.nonFarmExpenditure, 2)],
                     debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
-                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
+                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)]
                 });
             }
 
