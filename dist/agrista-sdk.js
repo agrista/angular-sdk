@@ -11407,9 +11407,9 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
                     return d.x;
                 }));
 
-                yFn.domain(yExtent && yExtent != 0 ? [0, yExtent] : d3.extent($scope.data, function (d) {
+                yFn.domain(yExtent && yExtent != 0 ? [0, yExtent] : [0, d3.max($scope.data, function (d) {
                     return d.y;
-                }));
+                })]);
 
                 area.attr('d', areaFn($scope.data));
                 line.attr('d', lineFn($scope.data));
@@ -14129,7 +14129,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                     instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
 
                                                     initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
-                                                    instance.data.capitalExpenditure['Livestock'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][monthDiff], item.value);
+                                                    instance.data.capitalExpenditure['Livestock'][index] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][index], item.value);
 
                                                     if (birthingAnimal !== asset.data.category) {
                                                         initializeCategoryValues(instance, 'assetStockValue', 'Breeding Stock', numberOfMonths);

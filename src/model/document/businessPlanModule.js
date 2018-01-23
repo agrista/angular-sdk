@@ -911,7 +911,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                     instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
 
                                                     initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
-                                                    instance.data.capitalExpenditure['Livestock'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][monthDiff], item.value);
+                                                    instance.data.capitalExpenditure['Livestock'][index] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][index], item.value);
 
                                                     if (birthingAnimal !== asset.data.category) {
                                                         initializeCategoryValues(instance, 'assetStockValue', 'Breeding Stock', numberOfMonths);

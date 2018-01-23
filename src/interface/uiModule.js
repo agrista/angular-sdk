@@ -247,9 +247,9 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
                     return d.x;
                 }));
 
-                yFn.domain(yExtent && yExtent != 0 ? [0, yExtent] : d3.extent($scope.data, function (d) {
+                yFn.domain(yExtent && yExtent != 0 ? [0, yExtent] : [0, d3.max($scope.data, function (d) {
                     return d.y;
-                }));
+                })]);
 
                 area.attr('d', areaFn($scope.data));
                 line.attr('d', lineFn($scope.data));
