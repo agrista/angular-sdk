@@ -108,6 +108,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             // Categories
+            privateProperty(this, 'groupAndCategoryAllowed', function (sectionCode, groupName, categoryCode) {
+                var categoryOptions = getCategoryOptions(sectionCode, this.assetType, this.baseAnimal);
+
+                return categoryOptions[groupName] && underscore.findWhere(categoryOptions[groupName], {code: categoryCode});
+            });
+
             privateProperty(this, 'getCategory', function (sectionCode, categoryCode, costStage) {
                 return underscore.chain(this.getSections(sectionCode, costStage))
                     .pluck('productCategoryGroups')

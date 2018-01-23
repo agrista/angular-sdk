@@ -44,7 +44,9 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             privateProperty(this, 'addLedgerEntry', function (item) {
                 if (this.isLedgerEntryValid(item)) {
                     this.data.ledger = underscore.chain(this.data.ledger)
-                        .union([item])
+                        .union([underscore.extend(item, {
+                            date: moment(item.date).format('YYYY-MM-DD')
+                        })])
                         .sortBy(function (item) {
                             return moment(item.date).valueOf();
                         })
@@ -52,6 +54,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
                     recalculate(this);
                 }
+            });
+
+            privateProperty(this, 'findLedgerEntry', function (query) {
+                return underscore.findWhere(this.data.ledger, query);
             });
 
             privateProperty(this, 'hasLedgerEntries', function () {
@@ -65,26 +71,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             });
 
             privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
-                var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
-                    rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
-                    numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
-                    appliedStart = (this.startMonth ? this.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
-                    appliedEnd = (this.endMonth ? rangeEndDate.diff(this.endMonth, 'months') : 0),
-                    startCrop = Math.abs(Math.min(0, appliedStart));
-
-                if (underscore.isEmpty(_monthly) && !underscore.isEmpty(this.data.ledger)) {
-                    recalculate(this);
-                }
-
-                return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
-                        .concat(_monthly)
-                        .concat(defaultMonths(Math.max(0, appliedEnd))),
-                    function (monthly, curr) {
-                        balanceEntry(curr, underscore.last(monthly) || defaultMonth());
-                        monthly.push(curr);
-                        return monthly;
-                    }, [])
-                    .slice(startCrop, startCrop + numberOfMonths);
+                return inventoryInRange(this, rangeStart, rangeEnd);
             });
 
             privateProperty(this, 'inventoryBefore', function (before) {
@@ -132,6 +119,29 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                         .toNumber();
                 });
                 curr.closing = curr.balance;
+            }
+
+            function inventoryInRange(instance, rangeStart, rangeEnd) {
+                var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
+                    rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
+                    numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
+                    appliedStart = (instance.startMonth ? instance.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
+                    appliedEnd = (instance.endMonth ? rangeEndDate.diff(instance.endMonth, 'months') : 0),
+                    startCrop = Math.abs(Math.min(0, appliedStart));
+
+                if (underscore.isEmpty(_monthly) && !underscore.isEmpty(instance.data.ledger)) {
+                    recalculate(instance);
+                }
+
+                return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
+                        .concat(_monthly)
+                        .concat(defaultMonths(Math.max(0, appliedEnd))),
+                    function (monthly, curr) {
+                        balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
+                        monthly.push(curr);
+                        return monthly;
+                    }, [])
+                    .slice(startCrop, startCrop + numberOfMonths);
             }
 
             function recalculate (instance) {
