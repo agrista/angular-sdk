@@ -64,6 +64,14 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 return this.data.ledger.length > 0;
             });
 
+            privateProperty(this, 'removeLedgerEntry', function (ledgerEntry) {
+                this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                    return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
+                });
+
+                recalculate(this);
+            });
+
             privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
                 this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                     return entry.reference === reference;
@@ -180,6 +188,8 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             }
 
             Base.initializeObject(this.data, 'ledger', []);
+            Base.initializeObject(this.data, 'openingBalance', 0);
+
 
             this.type = 'stock';
         }

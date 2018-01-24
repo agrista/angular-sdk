@@ -228,7 +228,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         underscore.each(group.productCategories, function (category) {
                             var livestock = getLivestockAsset(instance, productionSchedule.commodityType, category.name, category.unit, category.supplyUnit);
 
-                            livestock.data.pricePerUnit = safeMath.dividedBy(category.value, category.supply || 1);
+                            Base.initializeObject(livestock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
 
                             underscore.each(category.valuePerMonth, function (value, index) {
                                 if (value > 0) {
@@ -285,11 +285,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                             date: formattedDate,
                                             action: name,
                                             reference: productionSchedule.scheduleKey,
+                                            price: livestock.data.pricePerUnit,
                                             value: value,
                                             quantity: quantity
                                         });
                                     } else if (!ledgerEntry.edited) {
                                         underscore.extend(ledgerEntry, {
+                                            price: livestock.data.pricePerUnit,
                                             value: value,
                                             quantity: quantity
                                         });

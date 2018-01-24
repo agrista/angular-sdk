@@ -12636,6 +12636,14 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 return this.data.ledger.length > 0;
             });
 
+            privateProperty(this, 'removeLedgerEntry', function (ledgerEntry) {
+                this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                    return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
+                });
+
+                recalculate(this);
+            });
+
             privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
                 this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                     return entry.reference === reference;
@@ -12752,6 +12760,8 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             }
 
             Base.initializeObject(this.data, 'ledger', []);
+            Base.initializeObject(this.data, 'openingBalance', 0);
+
 
             this.type = 'stock';
         }
@@ -13446,7 +13456,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         underscore.each(group.productCategories, function (category) {
                             var livestock = getLivestockAsset(instance, productionSchedule.commodityType, category.name, category.unit, category.supplyUnit);
 
-                            livestock.data.pricePerUnit = safeMath.dividedBy(category.value, category.supply || 1);
+                            Base.initializeObject(livestock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
 
                             underscore.each(category.valuePerMonth, function (value, index) {
                                 if (value > 0) {
@@ -13503,11 +13513,13 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                             date: formattedDate,
                                             action: name,
                                             reference: productionSchedule.scheduleKey,
+                                            price: livestock.data.pricePerUnit,
                                             value: value,
                                             quantity: quantity
                                         });
                                     } else if (!ledgerEntry.edited) {
                                         underscore.extend(ledgerEntry, {
+                                            price: livestock.data.pricePerUnit,
                                             value: value,
                                             quantity: quantity
                                         });
