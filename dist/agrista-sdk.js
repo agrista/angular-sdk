@@ -13220,7 +13220,7 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
     function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = 'v5';
+        var _version = 'v6';
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -14178,7 +14178,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                             data: {
                                                 name: 'Marketable Livestock',
                                                 liquidityType: 'short-term',
-                                                assetValue: ledger.opening.value
+                                                assetValue: ledger.opening.value,
+                                                reference: 'production/livestock'
                                             }
                                         });
                                     } else {
@@ -14186,7 +14187,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                             data: {
                                                 name: 'Breeding Stock',
                                                 liquidityType: 'medium-term',
-                                                assetValue: ledger.opening.value
+                                                assetValue: ledger.opening.value,
+                                                reference: 'production/livestock'
                                             }
                                         });
                                     }
@@ -14261,9 +14263,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                     break;
                                 case 'improvement':
                                     updateAssetStatementCategory(instance, 'long-term', 'Fixed Improvements', asset);
-                                    break;
-                                case 'livestock':
-                                    updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', asset);
                                     break;
                                 case 'vme':
                                     updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
