@@ -13230,7 +13230,7 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
     function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = 'v6';
+        var _version = 7;
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -13537,32 +13537,35 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
             function extractProductionScheduleIncomeComposition (dataStore, schedule, startMonth, numberOfMonths) {
                 var section = underscore.findWhere(schedule.data.sections, {code: 'INC'}),
-                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD');
+                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD'),
+                    ignoredGroups = ['Livestock Sales'];
 
                 if (section) {
                     var offset = scheduleStart.diff(startMonth, 'months');
 
                     angular.forEach(section.productCategoryGroups, function (group) {
-                        angular.forEach(group.productCategories, function (category) {
-                            var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name),
-                                index = getLowerIndexBound(category.valuePerMonth, offset),
-                                maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+                        if (!underscore.contains(ignoredGroups, group.name)) {
+                            angular.forEach(group.productCategories, function (category) {
+                                var categoryName = (schedule.type !== 'livestock' ? schedule.data.details.commodity : category.name),
+                                    index = getLowerIndexBound(category.valuePerMonth, offset),
+                                    maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
 
-                            dataStore[categoryName] = dataStore[categoryName] || underscore.range(numberOfMonths).map(function () {
-                                return {
-                                    unit: category.unit,
-                                    quantity: 0,
-                                    value: 0
-                                };
+                                dataStore[categoryName] = dataStore[categoryName] || underscore.range(numberOfMonths).map(function () {
+                                    return {
+                                        unit: category.unit,
+                                        quantity: 0,
+                                        value: 0
+                                    };
+                                });
+
+                                for (; index < maxIndex; index++) {
+                                    var categoryMonth = dataStore[categoryName][index + offset];
+                                    categoryMonth.value = safeMath.plus(categoryMonth.value, category.valuePerMonth[index]);
+                                    categoryMonth.quantity = safeMath.plus(categoryMonth.quantity, safeMath.times(category.quantityPerMonth[index], category.supply || 1));
+                                    categoryMonth.pricePerUnit = safeMath.dividedBy(categoryMonth.value, categoryMonth.quantity);
+                                }
                             });
-
-                            for (; index < maxIndex; index++) {
-                                var categoryMonth = dataStore[categoryName][index + offset];
-                                categoryMonth.value = safeMath.plus(categoryMonth.value, category.valuePerMonth[index]);
-                                categoryMonth.quantity = safeMath.plus(categoryMonth.quantity, safeMath.times(category.quantityPerMonth[index], category.supply || 1));
-                                categoryMonth.pricePerUnit = safeMath.dividedBy(categoryMonth.value, categoryMonth.quantity);
-                            }
-                        });
+                        }
                     });
                 }
             }
