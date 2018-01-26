@@ -72,6 +72,16 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     .value();
             });
 
+            privateProperty(this, 'findGroupNameByCategory', function (sectionCode, groupName, categoryCode) {
+                return (groupName ? groupName : underscore.chain(this.getCategoryOptions(sectionCode))
+                    .map(function (categoryGroup, categoryGroupName) {
+                        return (underscore.where(categoryGroup, {code: categoryCode}).length > 0 ? categoryGroupName : undefined);
+                    })
+                    .compact()
+                    .first()
+                    .value());
+            });
+
             privateProperty(this, 'addGroup', function (sectionCode, groupName, costStage) {
                 var group = this.getGroup(sectionCode, groupName, costStage);
 
@@ -114,7 +124,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return categoryOptions[groupName] && underscore.findWhere(categoryOptions[groupName], {code: categoryCode});
             });
 
-            privateProperty(this, 'getCategory', function (sectionCode, categoryCode, costStage) {
+            interfaceProperty(this, 'getCategory', function (sectionCode, categoryCode, costStage) {
                 return underscore.chain(this.getSections(sectionCode, costStage))
                     .pluck('productCategoryGroups')
                     .flatten()
@@ -145,12 +155,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return getAvailableGroupCategories(this, sectionCode, sectionCategories);
             });
 
-            privateProperty(this, 'addCategory', function (sectionCode, groupName, categoryCode, costStage) {
-                var category = this.getCategory(sectionCode, categoryCode, costStage),
-                    conversionRates = this.getConversionRates();
+            interfaceProperty(this, 'addCategory', function (sectionCode, groupName, categoryCode, costStage) {
+                var category = this.getCategory(sectionCode, categoryCode, costStage);
 
                 if (underscore.isUndefined(category)) {
-                    var group = this.addGroup(sectionCode, findGroupNameByCategory(this, sectionCode, groupName, categoryCode), costStage);
+                    var group = this.addGroup(sectionCode, this.findGroupNameByCategory(sectionCode, groupName, categoryCode), costStage);
 
                     category = underscore.extend({
                         quantity: 0,
@@ -171,10 +180,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                             category.conversionRate = conversionRate;
                         }
 
-                        if (conversionRates && conversionRates[category.name]) {
-                            category.breedingStock = true;
-                        }
-
                         category.valuePerLSU = 0;
                     }
 
@@ -185,7 +190,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             privateProperty(this, 'setCategory', function (sectionCode, groupName, category, costStage) {
-                var group = this.addGroup(sectionCode, findGroupNameByCategory(this, sectionCode, groupName, category.code), costStage);
+                var group = this.addGroup(sectionCode, this.findGroupNameByCategory(sectionCode, groupName, category.code), costStage);
 
                 if (group) {
                     group.productCategories = underscore.chain(group.productCategories)
@@ -200,7 +205,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             privateProperty(this, 'removeCategory', function (sectionCode, groupName, categoryCode, costStage) {
-                groupName = findGroupNameByCategory(this, sectionCode, groupName, categoryCode);
+                groupName = this.findGroupNameByCategory(sectionCode, groupName, categoryCode);
 
                 var group = this.getGroup(sectionCode, groupName, costStage);
 
@@ -913,16 +918,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 .value();
         }
 
-        function findGroupNameByCategory(instance, sectionCode, groupName, categoryCode) {
-            return (groupName ? groupName : underscore.chain(instance.getCategoryOptions(sectionCode))
-                .map(function (categoryGroup, categoryGroupName) {
-                    return (underscore.where(categoryGroup, {code: categoryCode}).length > 0 ? categoryGroupName : undefined);
-                })
-                .compact()
-                .first()
-                .value());
-        }
-
         function getAvailableGroupCategories (instance, sectionCode, usedCategories, groupName) {
             return underscore.chain(instance.getCategoryOptions(sectionCode))
                 .map(function (categoryGroup, categoryGroupName) {
@@ -1482,6 +1477,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                             category.quantity = 1;
                         } else {
                             category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
+                        }
+
+                        if (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code)) {
+                            category.name = instance.commodityType;
                         }
 
                         var schedule = (underscore.isArray(category.schedule) ? category.schedule : instance.getSchedule(category.schedule)),

@@ -2,7 +2,7 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
     function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = 7;
+        var _version = 8;
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -912,8 +912,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                     instance.data.productionIncome['Livestock Consumption'][index] = safeMath.plus(instance.data.productionIncome['Livestock Consumption'][index], item.value);
                                                     break;
                                                 case 'Purchase':
-                                                    initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
-                                                    instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
+                                                    //initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
+                                                    //instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
 
                                                     initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
                                                     instance.data.capitalExpenditure['Livestock'][index] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][index], item.value);
@@ -929,6 +929,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                     Base.initializeObject(instance.data.enterpriseProductionIncome, asset.data.type, {});
                                                     instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
                                                     instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index], item.value);
+
+                                                    initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
+                                                    instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
 
                                                     // Composition
                                                     instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
@@ -947,9 +950,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                     if (action === 'Sale' && birthingAnimal === asset.data.category) {
                                                         initializeCategoryValues(instance, 'assetMarketValue', 'Marketable Livestock', numberOfMonths);
                                                         instance.data.assetMarketValue['Marketable Livestock'][index] = safeMath.plus(instance.data.assetMarketValue['Marketable Livestock'][index], item.value);
-
-                                                        initializeCategoryValues(instance, 'productionIncome', 'Livestock Adjustment', numberOfMonths);
-                                                        instance.data.productionIncome['Livestock Adjustment'][index] = safeMath.minus(instance.data.productionIncome['Livestock Adjustment'][index], item.value);
                                                     } else if (birthingAnimal !== asset.data.category) {
                                                         initializeCategoryValues(instance, 'assetStockValue', 'Breeding Stock', numberOfMonths);
                                                         instance.data.assetStockValue['Breeding Stock'][index] = safeMath.minus(instance.data.assetStockValue['Breeding Stock'][index], item.value);
