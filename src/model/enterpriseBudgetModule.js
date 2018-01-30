@@ -138,6 +138,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return getCategoryOptions(sectionCode, this.assetType, this.baseAnimal);
             });
 
+            interfaceProperty(this, 'getGroupCategoryOptions', function (sectionCode, groupName) {
+                return getGroupCategories(sectionCode, this.assetType, this.baseAnimal, groupName);
+            });
+
             privateProperty(this, 'getAvailableGroupCategories', function (sectionCode, groupName, costStage) {
                 var group = this.getGroup(sectionCode, groupName, costStage);
 
@@ -158,7 +162,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             interfaceProperty(this, 'addCategory', function (sectionCode, groupName, categoryCode, costStage) {
                 var category = this.getCategory(sectionCode, categoryCode, costStage);
 
-                if (underscore.isUndefined(category)) {
+                if (underscore.isUndefined(category) && !underscore.isUndefined(categoryCode)) {
                     var group = this.addGroup(sectionCode, this.findGroupNameByCategory(sectionCode, groupName, categoryCode), costStage);
 
                     category = underscore.extend({
@@ -327,7 +331,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SWEAN',
-                name: 'Weaner lambs',
+                name: 'Weaner lamb',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -355,7 +359,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CWEN',
-                name: 'Weaner calves',
+                name: 'Weaner calf',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -393,7 +397,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GWEAN',
-                name: 'Weaner kids',
+                name: 'Weaner kid',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -421,7 +425,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-RWEN',
-                name: 'Weaner kits',
+                name: 'Weaner kit',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -653,7 +657,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SWEAN',
-                name: 'Weaner lambs',
+                name: 'Weaner lamb',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SEWE',
@@ -676,7 +680,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CWEN',
-                name: 'Weaner calves',
+                name: 'Weaner calf',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CCOW',
@@ -707,7 +711,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GWEAN',
-                name: 'Weaner kids',
+                name: 'Weaner kid',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GEWE',
@@ -729,7 +733,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RWEN',
-                name: 'Weaner kits',
+                name: 'Weaner kit',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RDOE',
@@ -895,9 +899,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         });
 
         privateProperty(EnterpriseBudgetBase, 'getGroupCategories', function (assetType, commodityType, sectionCode, groupName) {
-            var sectionGroupCategories = getCategoryOptions(sectionCode, assetType, baseAnimal[commodityType]);
-
-            return (sectionGroupCategories && sectionGroupCategories[groupName] ? sectionGroupCategories[groupName] : []);
+            return getGroupCategories(sectionCode, assetType, baseAnimal[commodityType], groupName);
         });
 
         function getCategoryOptions (sectionCode, assetType, baseAnimal) {
@@ -906,6 +908,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     ? (baseAnimal ? EnterpriseBudgetBase.categoryOptions[assetType][baseAnimal][sectionCode] : {})
                     : EnterpriseBudgetBase.categoryOptions[assetType][sectionCode])
                 : {});
+        }
+
+        function getGroupCategories (sectionCode, assetType, baseAnimal, groupName) {
+            var sectionGroupCategories = getCategoryOptions(sectionCode, assetType, baseAnimal);
+
+            return (sectionGroupCategories && sectionGroupCategories[groupName] ? sectionGroupCategories[groupName] : []);
         }
 
         function getCategoryArray (categoryCodes) {
@@ -964,17 +972,17 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         };
 
         var birthAnimal = {
-            Cattle: 'Weaner calves',
-            Game: 'Weaner calves',
-            Goats: 'Weaner kids',
-            Rabbits: 'Weaner kits',
-            Sheep: 'Weaner lambs'
+            Cattle: 'Calf',
+            Game: 'Calf',
+            Goats: 'Kid',
+            Rabbits: 'Kit',
+            Sheep: 'Lamb'
         };
 
         var conversionRate = {
             Cattle: {
                 'Calf': 0.32,
-                'Weaner calves': 0.44,
+                'Weaner calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
@@ -983,7 +991,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             Game: {
                 'Calf': 0.32,
-                'Weaner calves': 0.44,
+                'Weaner calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
                 'Steer (18 months plus)': 0.75,
@@ -992,21 +1000,21 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             Goats: {
                 'Kid': 0.08,
-                'Weaner kids': 0.12,
+                'Weaner kid': 0.12,
                 'Ewe (2-tooth plus)': 0.17,
                 'Castrate (2-tooth plus)': 0.17,
                 'Ram (2-tooth plus)': 0.22
             },
             Rabbits: {
                 'Kit': 0.08,
-                'Weaner kits': 0.12,
+                'Weaner kit': 0.12,
                 'Doe': 0.17,
                 'Lapin': 0.17,
                 'Buck': 0.22
             },
             Sheep: {
                 'Lamb': 0.08,
-                'Weaner lambs': 0.11,
+                'Weaner lamb': 0.11,
                 'Ewe': 0.16,
                 'Wether (2-tooth plus)': 0.16,
                 'Ram (2-tooth plus)': 0.23
@@ -1489,8 +1497,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                             }, 0);
 
                         category.value = safeMath.chain(underscore.isUndefined(category.supply) ? 1 : category.supply)
-                            .times(category.quantity)
-                            .times(category.pricePerUnit)
+                            .times(category.quantity || 0)
+                            .times(category.pricePerUnit || 0)
                             .times(scheduleTotalAllocation)
                             .dividedBy(100)
                             .toNumber();
