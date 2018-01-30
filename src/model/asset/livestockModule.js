@@ -1,7 +1,7 @@
 var sdkModelLivestock = angular.module('ag.sdk.model.livestock', ['ag.sdk.model.asset', 'ag.sdk.model.stock']);
 
-sdkModelLivestock.factory('Livestock', ['inheritModel', 'readOnlyProperty', 'Stock',
-    function (inheritModel, readOnlyProperty, Stock) {
+sdkModelLivestock.factory('Livestock', ['inheritModel', 'privateProperty', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
+    function (inheritModel, privateProperty, readOnlyProperty, safeMath, Stock, underscore) {
         function Livestock (attrs) {
             Stock.apply(this, arguments);
 
@@ -13,18 +13,16 @@ sdkModelLivestock.factory('Livestock', ['inheritModel', 'readOnlyProperty', 'Sto
                     'Death',
                     'Household',
                     'Labour',
-                    'Sale',
-                    'Slaughter']
+                    'Sale']
             });
 
             readOnlyProperty(this, 'actionTitles', {
                 'Birth': 'Register Births',
-                'Purchase': 'Buy Livestock',
                 'Death': 'Register Deaths',
+                'Purchase': 'Purchase Livestock',
                 'Household': 'Household Consumption',
                 'Labour': 'Labour Consumption',
-                'Sale': 'Sell Livestock',
-                'Slaughter': 'Slaughter For Sale'
+                'Sale': 'Sell Livestock'
             });
 
             this.type = 'livestock';

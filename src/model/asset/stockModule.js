@@ -98,6 +98,42 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 return openingMonth(this);
             });
 
+            privateProperty(this, 'subtotalInRange', function (actions, rangeStart, rangeEnd) {
+                var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD'),
+                    rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD');
+
+                actions = (underscore.isArray(actions) ? actions : [actions]);
+
+                return underscore.chain(this.data.ledger)
+                    .reject(function (entry) {
+                        var entryDate = moment(entry.date);
+
+                        return !underscore.contains(actions, entry.action) || entryDate.isBefore(rangeStartDate) || entryDate.isSameOrAfter(rangeEndDate);
+                    })
+                    .reduce(function (result, entry) {
+                        result.quantity = safeMath.plus(result.quantity, entry.quantity);
+                        result.value = safeMath.plus(result.value, entry.value);
+                        result.price = safeMath.dividedBy(result.value, result.value);
+                        return result;
+                    }, {})
+                    .value();
+            });
+
+            privateProperty(this, 'marketPriceAtDate', function (before) {
+                var beforeDate = moment(before, 'YYYY-MM-DD'),
+                    actions = ['Purchase', 'Sale'];
+
+                return underscore.chain(this.data.ledger)
+                    .filter(function (entry) {
+                        return underscore.contains(actions, entry.action) && moment(entry.date).isSameOrBefore(beforeDate);
+                    })
+                    .map(function (entry) {
+                        return safeMath.dividedBy(entry.value, entry.quantity);
+                    })
+                    .last()
+                    .value() || this.data.pricePerUnit;
+            });
+
             privateProperty(this, 'isLedgerEntryValid', function (item) {
                 return isLedgerEntryValid(this, item);
             });
