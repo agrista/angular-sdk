@@ -17426,8 +17426,8 @@ mobileSdkHydrationApp.provider('hydration', [function () {
 
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
         function AssetBase (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -17435,6 +17435,12 @@ sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Model', 'privatePro
                 this.assetKey = generateKey(this, legalEntity, farm);
 
                 return this.assetKey;
+            });
+
+            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.liabilities, function (total, liability) {
+                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
+                }, 0);
             });
 
             this.data = (attrs && attrs.data ? attrs.data : {});
@@ -17446,6 +17452,8 @@ sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Model', 'privatePro
             this.assetKey = attrs.assetKey;
             this.legalEntityId = attrs.legalEntityId;
             this.type = attrs.type;
+
+            this.liabilities = underscore.map(attrs.liabilities, Liability.newCopy);
         }
 
         function generateKey (instance, legalEntity, farm) {
@@ -17552,8 +17560,8 @@ sdkModelAsset.factory('AssetFactory', ['Asset', 'Livestock', 'Stock',
         }
     }]);
 
-sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
         function Asset (attrs) {
             AssetBase.apply(this, arguments);
 
@@ -17640,19 +17648,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
                 }, 0);
             });
 
-            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
-                return underscore.reduce(this.liabilities, function (total, liability) {
-                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
-                }, 0);
-            });
-
             Base.initializeObject(this.data, 'zones', []);
 
             this.farmId = attrs.farmId;
-
-            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
-                return Liability.newCopy(liability);
-            });
 
             this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
                 return ProductionSchedule.newCopy(schedule);

@@ -4,7 +4,7 @@
     "dependencies": {
         "angular": "https://github.com/angular/bower-angular.git",
         "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
-        "bignumber": "https://github.com/MikeMcl/bignumber.js.git",
+        "bignumber": "https://github.com/MikeMcl/bignumber.js.git#5.0.0",
         "jsts": "https://github.com/bjornharrtell/jsts.git#0.15.0",
         "moment": "https://github.com/moment/moment.git",
         "satellizer": "https://github.com/sahat/satellizer.git",
