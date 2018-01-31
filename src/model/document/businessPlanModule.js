@@ -280,15 +280,17 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         if (!underscore.isUndefined(category)) {
                             productionSchedule.budget.addCategory('INC', 'Livestock Sales', category.code, productionSchedule.costStage);
 
-                            Base.initializeObject(representativeLivestock.data, 'openingBalance', productionSchedule.data.details.herdSize);
+                            if (!representativeLivestock.data.openingBalance) {
+                                representativeLivestock.data.openingBalance = productionSchedule.data.details.herdSize;
+                            }
 
                             addLivestockAsset(instance, representativeLivestock, true);
                         }
 
                         // Add Livestock Events
                         underscore.each(productionSchedule.budget.data.events, function (schedule, name) {
-                            var livestock = getLivestockAsset(instance, productionSchedule.commodityType, productionSchedule.birthAnimal),
-                                category = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: productionSchedule.birthAnimal});
+                            var category = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: productionSchedule.birthAnimal}),
+                                livestock = getLivestockAsset(instance, productionSchedule.commodityType, productionSchedule.birthAnimal, category && category.unit, category && category.supplyUnit);
 
                             if (!underscore.isUndefined(category)) {
                                 productionSchedule.budget.addCategory('INC', 'Livestock Sales', category.code, productionSchedule.costStage);

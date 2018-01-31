@@ -569,7 +569,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 });
 
                 if (this.type === 'livestock') {
-                    this.data.details = underscore.extend(this.data.details, {
+                    this.data.details = underscore.defaults(this.data.details, {
                         calculatedLSU: 0,
                         grossProfitPerLSU: 0,
                         herdSize: this.budget.data.details.herdSize || 0,
@@ -608,8 +608,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                     this.data.details.calculatedLSU = safeMath.dividedBy(this.allocatedSize, this.data.details.stockingDensity);
 
                     if (this.budget) {
-                        this.data.details.multiplicationFactor = Math.floor(safeMath.dividedBy(this.data.details.calculatedLSU, this.budget.data.details.herdSize));
-                        this.data.details.herdSize = safeMath.times(this.budget.data.details.herdSize, this.data.details.multiplicationFactor);
+                        this.data.details.multiplicationFactor = safeMath.dividedBy(this.data.details.herdSize, this.budget.data.details.herdSize);
                         this.data.details.grossProfit = safeMath.times(this.budget.data.details.grossProfit, this.data.details.multiplicationFactor);
                         this.data.details.grossProfitPerLSU = (this.data.details.calculatedLSU ? safeMath.dividedBy(this.data.details.grossProfit, this.data.details.calculatedLSU) : 0);
                     }

@@ -13732,7 +13732,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 });
 
                 if (this.type === 'livestock') {
-                    this.data.details = underscore.extend(this.data.details, {
+                    this.data.details = underscore.defaults(this.data.details, {
                         calculatedLSU: 0,
                         grossProfitPerLSU: 0,
                         herdSize: this.budget.data.details.herdSize || 0,
@@ -13771,8 +13771,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                     this.data.details.calculatedLSU = safeMath.dividedBy(this.allocatedSize, this.data.details.stockingDensity);
 
                     if (this.budget) {
-                        this.data.details.multiplicationFactor = Math.floor(safeMath.dividedBy(this.data.details.calculatedLSU, this.budget.data.details.herdSize));
-                        this.data.details.herdSize = safeMath.times(this.budget.data.details.herdSize, this.data.details.multiplicationFactor);
+                        this.data.details.multiplicationFactor = safeMath.dividedBy(this.data.details.herdSize, this.budget.data.details.herdSize);
                         this.data.details.grossProfit = safeMath.times(this.budget.data.details.grossProfit, this.data.details.multiplicationFactor);
                         this.data.details.grossProfitPerLSU = (this.data.details.calculatedLSU ? safeMath.dividedBy(this.data.details.grossProfit, this.data.details.calculatedLSU) : 0);
                     }
@@ -19252,15 +19251,17 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         if (!underscore.isUndefined(category)) {
                             productionSchedule.budget.addCategory('INC', 'Livestock Sales', category.code, productionSchedule.costStage);
 
-                            Base.initializeObject(representativeLivestock.data, 'openingBalance', productionSchedule.data.details.herdSize);
+                            if (!representativeLivestock.data.openingBalance) {
+                                representativeLivestock.data.openingBalance = productionSchedule.data.details.herdSize;
+                            }
 
                             addLivestockAsset(instance, representativeLivestock, true);
                         }
 
                         // Add Livestock Events
                         underscore.each(productionSchedule.budget.data.events, function (schedule, name) {
-                            var livestock = getLivestockAsset(instance, productionSchedule.commodityType, productionSchedule.birthAnimal),
-                                category = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: productionSchedule.birthAnimal});
+                            var category = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: productionSchedule.birthAnimal}),
+                                livestock = getLivestockAsset(instance, productionSchedule.commodityType, productionSchedule.birthAnimal, category && category.unit, category && category.supplyUnit);
 
                             if (!underscore.isUndefined(category)) {
                                 productionSchedule.budget.addCategory('INC', 'Livestock Sales', category.code, productionSchedule.costStage);
