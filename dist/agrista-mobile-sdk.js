@@ -10842,7 +10842,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 't'
             }, {
                 code: 'EXP-HVP-INSM',
-                name: 'Multiperil insurance',
+                name: 'Yield insurance',
                 unit: 't'
             }, {
                 code: 'EXP-HVP-HEDG',
@@ -10869,6 +10869,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }, {
                 code: 'EXP-HVT-HVTT',
                 name: 'Harvest transport',
+                unit: 'Total'
+            }, {
+                code: 'EXP-HVT-HVTC',
+                name: 'Harvesting cost',
                 unit: 'Total'
             }, {
                 code: 'EXP-HVT-REPP',
@@ -11101,7 +11105,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 },
                 EXP: {
                     'Preharvest': getCategoryArray(['EXP-HVP-FERT', 'EXP-HVP-FUNG', 'EXP-HVP-HEDG', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-LIME', 'EXP-HVP-PEST', 'EXP-HVP-SEED', 'EXP-HVP-SPYA']),
-                    'Harvest': getCategoryArray(['EXP-HVT-LABC']),
+                    'Harvest': getCategoryArray(['EXP-HVT-LABC', 'EXP-HVT-HVTC']),
                     'Marketing': getCategoryArray(['EXP-MRK-CRPF', 'EXP-MRK-CRPT']),
                     'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-OTHER'])
                 }
@@ -19213,26 +19217,30 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                                     if (underscore.isUndefined(ledgerEntry)) {
                                         livestock.addLedgerEntry({
-                                            date: formattedDate,
                                             action: 'Sale',
-                                            reference: productionSchedule.scheduleKey,
-                                            rate: category.quantity,
+                                            date: formattedDate,
                                             price: category.pricePerUnit,
-                                            value: value,
+                                            priceUnit: livestock.data.priceUnit,
                                             quantity: safeMath.chain(category.supply || 1)
                                                 .dividedBy(category.value)
                                                 .times(value)
-                                                .toNumber()
+                                                .toNumber(),
+                                            quantityUnit: livestock.data.quantityUnit,
+                                            rate: category.quantity,
+                                            reference: productionSchedule.scheduleKey,
+                                            value: value
                                         });
                                     } else if (!ledgerEntry.edited) {
                                         underscore.extend(ledgerEntry, {
-                                            rate: category.quantity,
                                             price: category.pricePerUnit,
-                                            value: value,
+                                            priceUnit: livestock.data.priceUnit,
                                             quantity: safeMath.chain(category.supply || 1)
                                                 .dividedBy(category.value)
                                                 .times(value)
-                                                .toNumber()
+                                                .toNumber(),
+                                            quantityUnit: livestock.data.quantityUnit,
+                                            rate: category.quantity,
+                                            value: value
                                         });
 
                                         livestock.recalculateLedger();
@@ -19279,18 +19287,22 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                                         if (underscore.isUndefined(ledgerEntry)) {
                                             livestock.addLedgerEntry({
-                                                date: formattedDate,
                                                 action: name,
-                                                reference: productionSchedule.scheduleKey,
+                                                date: formattedDate,
                                                 price: livestock.data.pricePerUnit,
-                                                value: value,
-                                                quantity: quantity
+                                                priceUnit: livestock.data.quantityUnit,
+                                                quantity: quantity,
+                                                quantityUnit: livestock.data.quantityUnit,
+                                                reference: productionSchedule.scheduleKey,
+                                                value: value
                                             });
                                         } else if (!ledgerEntry.edited) {
                                             underscore.extend(ledgerEntry, {
                                                 price: livestock.data.pricePerUnit,
-                                                value: value,
-                                                quantity: quantity
+                                                priceUnit: livestock.data.quantityUnit,
+                                                quantity: quantity,
+                                                quantityUnit: livestock.data.quantityUnit,
+                                                value: value
                                             });
 
                                             livestock.recalculateLedger();

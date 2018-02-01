@@ -242,26 +242,30 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                                     if (underscore.isUndefined(ledgerEntry)) {
                                         livestock.addLedgerEntry({
-                                            date: formattedDate,
                                             action: 'Sale',
-                                            reference: productionSchedule.scheduleKey,
-                                            rate: category.quantity,
+                                            date: formattedDate,
                                             price: category.pricePerUnit,
-                                            value: value,
+                                            priceUnit: livestock.data.priceUnit,
                                             quantity: safeMath.chain(category.supply || 1)
                                                 .dividedBy(category.value)
                                                 .times(value)
-                                                .toNumber()
+                                                .toNumber(),
+                                            quantityUnit: livestock.data.quantityUnit,
+                                            rate: category.quantity,
+                                            reference: productionSchedule.scheduleKey,
+                                            value: value
                                         });
                                     } else if (!ledgerEntry.edited) {
                                         underscore.extend(ledgerEntry, {
-                                            rate: category.quantity,
                                             price: category.pricePerUnit,
-                                            value: value,
+                                            priceUnit: livestock.data.priceUnit,
                                             quantity: safeMath.chain(category.supply || 1)
                                                 .dividedBy(category.value)
                                                 .times(value)
-                                                .toNumber()
+                                                .toNumber(),
+                                            quantityUnit: livestock.data.quantityUnit,
+                                            rate: category.quantity,
+                                            value: value
                                         });
 
                                         livestock.recalculateLedger();
@@ -308,18 +312,22 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                                         if (underscore.isUndefined(ledgerEntry)) {
                                             livestock.addLedgerEntry({
-                                                date: formattedDate,
                                                 action: name,
-                                                reference: productionSchedule.scheduleKey,
+                                                date: formattedDate,
                                                 price: livestock.data.pricePerUnit,
-                                                value: value,
-                                                quantity: quantity
+                                                priceUnit: livestock.data.quantityUnit,
+                                                quantity: quantity,
+                                                quantityUnit: livestock.data.quantityUnit,
+                                                reference: productionSchedule.scheduleKey,
+                                                value: value
                                             });
                                         } else if (!ledgerEntry.edited) {
                                             underscore.extend(ledgerEntry, {
                                                 price: livestock.data.pricePerUnit,
-                                                value: value,
-                                                quantity: quantity
+                                                priceUnit: livestock.data.quantityUnit,
+                                                quantity: quantity,
+                                                quantityUnit: livestock.data.quantityUnit,
+                                                value: value
                                             });
 
                                             livestock.recalculateLedger();
