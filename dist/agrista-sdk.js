@@ -17122,12 +17122,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
 var sdkModelFarm = angular.module('ag.sdk.model.farm', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelFarm.factory('Farm', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
         function Farm (attrs) {
             Model.Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'ignoredLandClasses', []);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
