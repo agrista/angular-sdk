@@ -306,7 +306,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                             ledgerEntry = livestock.findLedgerEntry({date: formattedDate, action: name, reference: productionSchedule.scheduleKey}),
                                             quantity = Math.floor(safeMath.chain(rate)
                                                 .dividedBy(100)
-                                                .times(representativeLivestockInventory.opening.quantity)
+                                                .times(representativeLivestockInventory.closing.quantity)
                                                 .toNumber()),
                                             value = safeMath.times(quantity, livestock.data.pricePerUnit);
 
