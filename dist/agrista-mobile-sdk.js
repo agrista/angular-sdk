@@ -13714,7 +13714,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                     this.data.details.assetAge = (startDate.isAfter(this.data.details.establishedDate) ?
                         startDate.diff(this.data.details.establishedDate, 'years') : 0);
                 } else if (this.type === 'livestock') {
-                    this.data.details.pastureType = (this.asset.data.irrigated ? 'pasture' : 'grazing');
+                    this.data.details.pastureType = (this.asset.data.intensified ? 'pasture' : 'grazing');
 
                     if (this.budget && this.budget.data.details.stockingDensity) {
                         this.setLivestockStockingDensity(this.budget.data.details.stockingDensity[this.data.details.pastureType]);
