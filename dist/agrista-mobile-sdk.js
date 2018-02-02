@@ -18978,7 +18978,7 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
     function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = 10;
+        var _version = 11;
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -19840,249 +19840,278 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     evaluatedModels = [],
                     monthDiff = 0;
 
-                underscore.each(instance.models.assets, function (asset) {
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
-                        evaluatedAsset = underscore.findWhere(evaluatedModels, {assetKey: asset.assetKey});
+                var assetRank = {
+                    'cropland': 1,
+                    'pasture': 1,
+                    'permanent crop': 1,
+                    'plantation': 1,
+                    'wasteland': 1,
+                    'farmland': 2
+                };
 
-                    // Check asset is not already added
-                    if (registerLegalEntity && underscore.isUndefined(evaluatedAsset)) {
-                        evaluatedModels.push(asset);
+                underscore.chain(instance.models.assets)
+                    .sortBy(function (asset) {
+                        return assetRank[asset.type] || 0;
+                    })
+                    .each(function (asset) {
+                        var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
+                            evaluatedAsset = underscore.findWhere(evaluatedModels, {assetKey: asset.assetKey});
 
-                        asset = AssetFactory.new(asset);
+                        // Check asset is not already added
+                        if (registerLegalEntity && underscore.isUndefined(evaluatedAsset)) {
+                            evaluatedModels.push(asset);
 
-                        var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
-                            soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
-                            constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
-                            demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate) : undefined);
+                            asset = AssetFactory.new(asset);
 
-                        // VME
-                        if (asset.type === 'vme') {
-                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                monthDiff = acquisitionDate.diff(startMonth, 'months');
+                            var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
+                                soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
+                                constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
+                                demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate) : undefined);
 
-                                initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                            // VME
+                            if (asset.type === 'vme') {
+                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    monthDiff = acquisitionDate.diff(startMonth, 'months');
 
-                                instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff], asset.data.assetValue);
-                            }
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                            if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                monthDiff = soldDate.diff(startMonth, 'months');
-
-                                var value = safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
-                                    .dividedBy(100)
-                                    .dividedBy(12)
-                                    .times(asset.data.assetValue)
-                                    .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
-                                        soldDate.diff(acquisitionDate, 'months') :
-                                        monthDiff + 1)
-                                    .toNumber());
-
-                                initializeCategoryValues(instance, 'assetMarketValue', 'Vehicles, Machinery & Equipment', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalIncome', 'Vehicles, Machinery & Equipment', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalProfit', 'Vehicles, Machinery & Equipment', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalLoss', 'Vehicles, Machinery & Equipment', numberOfMonths);
-
-                                instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff], safeMath.plus(asset.data.assetValue, value));
-                                instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff], asset.data.salePrice);
-                                instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
-                                instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
-                            }
-                        } else if (asset.type === 'improvement') {
-                            if (asset.data.assetValue && constructionDate && constructionDate.isBetween(startMonth, endMonth)) {
-                                monthDiff = constructionDate.diff(startMonth, 'months');
-
-                                initializeCategoryValues(instance, 'capitalExpenditure', 'Fixed Improvements', numberOfMonths);
-
-                                instance.data.capitalExpenditure['Fixed Improvements'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Fixed Improvements'][monthDiff], asset.data.assetValue);
-                            }
-                        } else if (asset.type === 'livestock') {
-                            var monthlyLedger = asset.inventoryInRange(startMonth, endMonth),
-                                birthingAnimal = EnterpriseBudget.getBirthingAnimal(asset.data.type);
-
-                            underscore.each(monthlyLedger, function (ledger, index) {
-                                var offsetDate = moment(instance.startDate, 'YYYY-MM-DD').add(index, 'M'),
-                                    stockValue = safeMath.times(ledger.closing.quantity, asset.marketPriceAtDate(offsetDate));
-
-                                if (birthingAnimal === asset.data.category) {
-                                    initializeCategoryValues(instance, 'assetStockValue', 'Marketable Livestock', numberOfMonths);
-                                    instance.data.assetStockValue['Marketable Livestock'][index] = safeMath.plus(instance.data.assetStockValue['Marketable Livestock'][index], stockValue);
-                                } else {
-                                    initializeCategoryValues(instance, 'assetStockValue', 'Breeding Stock', numberOfMonths);
-                                    instance.data.assetStockValue['Breeding Stock'][index] = safeMath.plus(instance.data.assetStockValue['Breeding Stock'][index], stockValue);
+                                    instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff], asset.data.assetValue);
                                 }
 
-                                underscore.chain(ledger)
-                                    .pick(['credit', 'debit'])
-                                    .each(function (actions) {
-                                        underscore.each(actions, function (item, action) {
-                                            switch (action) {
-                                                case 'Household':
-                                                    initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
-                                                    instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], item.value);
-                                                    break;
-                                                case 'Labour':
-                                                    Base.initializeObject(instance.data.enterpriseProductionExpenditure, asset.data.type, {});
-                                                    instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
-                                                    instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index], item.value);
-                                                    break;
-                                                case 'Purchase':
-                                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
-                                                    instance.data.capitalExpenditure['Livestock'][index] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][index], item.value);
-                                                    break;
-                                                case 'Sale':
-                                                    // Livestock Production Income
-                                                    Base.initializeObject(instance.data.enterpriseProductionIncome, asset.data.type, {});
-                                                    instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
-                                                    instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index], item.value);
+                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                    monthDiff = soldDate.diff(startMonth, 'months');
 
-                                                    // Composition
-                                                    instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
-                                                        return {
-                                                            unit: asset.data.quantityUnit,
-                                                            quantity: 0,
-                                                            value: 0
-                                                        };
-                                                    });
+                                    var value = safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
+                                        .dividedBy(100)
+                                        .dividedBy(12)
+                                        .times(asset.data.assetValue)
+                                        .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
+                                            soldDate.diff(acquisitionDate, 'months') :
+                                            monthDiff + 1)
+                                        .toNumber());
 
-                                                    var compositionMonth = instance.data.productionIncomeComposition[asset.data.category][index];
-                                                    compositionMonth.value = safeMath.plus(compositionMonth.value, item.value);
-                                                    compositionMonth.quantity = safeMath.plus(compositionMonth.quantity, item.quantity);
-                                                    compositionMonth.pricePerUnit = safeMath.dividedBy(compositionMonth.value, compositionMonth.quantity);
-                                                    break;
-                                            }
-                                        });
-                                    });
+                                    initializeCategoryValues(instance, 'assetMarketValue', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalProfit', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalLoss', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                                if (index === 0) {
+                                    instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff], safeMath.plus(asset.data.assetValue, value));
+                                    instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff], asset.data.salePrice);
+                                    instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
+                                    instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
+                                }
+                            } else if (asset.type === 'improvement') {
+                                if (asset.data.assetValue && constructionDate && constructionDate.isBetween(startMonth, endMonth)) {
+                                    monthDiff = constructionDate.diff(startMonth, 'months');
+
+                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Fixed Improvements', numberOfMonths);
+
+                                    instance.data.capitalExpenditure['Fixed Improvements'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Fixed Improvements'][monthDiff], asset.data.assetValue);
+                                }
+                            } else if (asset.type === 'livestock') {
+                                var monthlyLedger = asset.inventoryInRange(startMonth, endMonth),
+                                    birthingAnimal = EnterpriseBudget.getBirthingAnimal(asset.data.type);
+
+                                underscore.each(monthlyLedger, function (ledger, index) {
+                                    var offsetDate = moment(instance.startDate, 'YYYY-MM-DD').add(index, 'M'),
+                                        stockValue = safeMath.times(ledger.closing.quantity, asset.marketPriceAtDate(offsetDate));
+
                                     if (birthingAnimal === asset.data.category) {
-                                        updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', {
-                                            data: {
-                                                name: asset.data.category,
-                                                liquidityType: 'short-term',
-                                                assetValue: ledger.opening.value,
-                                                reference: 'production/livestock'
-                                            }
-                                        });
+                                        initializeCategoryValues(instance, 'assetStockValue', 'Marketable Livestock', numberOfMonths);
+                                        instance.data.assetStockValue['Marketable Livestock'][index] = safeMath.plus(instance.data.assetStockValue['Marketable Livestock'][index], stockValue);
                                     } else {
-                                        updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
-                                            data: {
-                                                name: asset.data.category,
-                                                liquidityType: 'medium-term',
-                                                assetValue: ledger.opening.value,
-                                                reference: 'production/livestock'
-                                            }
-                                        });
+                                        initializeCategoryValues(instance, 'assetStockValue', 'Breeding Stock', numberOfMonths);
+                                        instance.data.assetStockValue['Breeding Stock'][index] = safeMath.plus(instance.data.assetStockValue['Breeding Stock'][index], stockValue);
                                     }
-                                }
-                            });
-                        } else if (asset.type === 'farmland') {
-                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                monthDiff = acquisitionDate.diff(startMonth, 'months');
 
-                                initializeCategoryValues(instance, 'capitalExpenditure', 'Land', numberOfMonths);
+                                    underscore.chain(ledger)
+                                        .pick(['credit', 'debit'])
+                                        .each(function (actions) {
+                                            underscore.each(actions, function (item, action) {
+                                                switch (action) {
+                                                    case 'Household':
+                                                        initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
+                                                        instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], item.value);
+                                                        break;
+                                                    case 'Labour':
+                                                        Base.initializeObject(instance.data.enterpriseProductionExpenditure, asset.data.type, {});
+                                                        instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
+                                                        instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index], item.value);
+                                                        break;
+                                                    case 'Purchase':
+                                                        initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
+                                                        instance.data.capitalExpenditure['Livestock'][index] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][index], item.value);
+                                                        break;
+                                                    case 'Sale':
+                                                        // Livestock Production Income
+                                                        Base.initializeObject(instance.data.enterpriseProductionIncome, asset.data.type, {});
+                                                        instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
+                                                        instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index], item.value);
 
-                                instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], asset.data.assetValue);
-                            }
+                                                        // Composition
+                                                        instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
+                                                            return {
+                                                                unit: asset.data.quantityUnit,
+                                                                quantity: 0,
+                                                                value: 0
+                                                            };
+                                                        });
 
-                            if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                monthDiff = soldDate.diff(startMonth, 'months');
+                                                        var compositionMonth = instance.data.productionIncomeComposition[asset.data.category][index];
+                                                        compositionMonth.value = safeMath.plus(compositionMonth.value, item.value);
+                                                        compositionMonth.quantity = safeMath.plus(compositionMonth.quantity, item.quantity);
+                                                        compositionMonth.pricePerUnit = safeMath.dividedBy(compositionMonth.value, compositionMonth.quantity);
+                                                        break;
+                                                }
+                                            });
+                                        });
 
-                                initializeCategoryValues(instance, 'assetMarketValue', 'Land', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalIncome', 'Land', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalProfit', 'Land', numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalLoss', 'Land', numberOfMonths);
-
-                                instance.data.assetMarketValue['Land'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Land'][monthDiff], asset.data.assetValue);
-                                instance.data.capitalIncome['Land'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Land'][monthDiff], asset.data.salePrice);
-                                instance.data.capitalProfit['Land'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, asset.data.assetValue)));
-                                instance.data.capitalLoss['Land'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.assetValue, asset.data.salePrice)));
-                            }
-                        } else if (asset.type === 'other') {
-                            asset.data.liquidityCategory = asset.data.liquidityCategory || asset.data.category;
-
-                            if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                monthDiff = acquisitionDate.diff(startMonth, 'months');
-
-                                initializeCategoryValues(instance, 'capitalExpenditure', asset.data.liquidityCategory, numberOfMonths);
-
-                                instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
-                            }
-
-                            if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                monthDiff = soldDate.diff(startMonth, 'months');
-
-                                var value = (asset.data.liquidityCategory !== 'Vehicles, Machinery & Equipment' ? asset.data.assetValue : safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
-                                    .dividedBy(100)
-                                    .dividedBy(12)
-                                    .times(asset.data.assetValue)
-                                    .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
-                                        soldDate.diff(acquisitionDate, 'months') :
-                                        monthDiff + 1)
-                                    .toNumber()));
-
-                                initializeCategoryValues(instance, 'assetMarketValue', asset.data.liquidityCategory, numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalIncome', asset.data.liquidityCategory, numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalProfit', asset.data.liquidityCategory, numberOfMonths);
-                                initializeCategoryValues(instance, 'capitalLoss', asset.data.liquidityCategory, numberOfMonths);
-
-                                instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
-                                instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff], asset.data.salePrice);
-                                instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
-                                instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
-                            }
-                        }
-
-                        if (!(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
-                            switch(asset.type) {
-                                case 'cropland':
-                                case 'farmland':
-                                case 'pasture':
-                                case 'permanent crop':
-                                case 'plantation':
-                                case 'wasteland':
-                                    updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
-                                    break;
-                                case 'improvement':
-                                    updateAssetStatementCategory(instance, 'long-term', 'Fixed Improvements', asset);
-                                    break;
-                                case 'vme':
-                                    updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
-                                    break;
-                                case 'other':
-                                    updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.liquidityCategory, asset);
-                                    break;
-                            }
-                        }
-
-                        angular.forEach(asset.liabilities, function (liability) {
-                            // Check liability is not already added
-                            if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
-                                evaluatedModels.push(liability);
-
-                                var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
-                                    typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
-                                    liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
-
-                                if (asset.type === 'farmland' && liability.type !== 'rent' && moment(liability.startDate, 'YYYY-MM-DD').isBetween(startMonth, endMonth)) {
-                                    monthDiff = moment(liability.startDate, 'YYYY-MM-DD').diff(startMonth, 'months');
+                                    if (index === 0) {
+                                        if (birthingAnimal === asset.data.category) {
+                                            updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', {
+                                                data: {
+                                                    name: asset.data.category,
+                                                    liquidityType: 'short-term',
+                                                    assetValue: ledger.opening.value,
+                                                    reference: 'production/livestock'
+                                                }
+                                            });
+                                        } else {
+                                            updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
+                                                data: {
+                                                    name: asset.data.category,
+                                                    liquidityType: 'medium-term',
+                                                    assetValue: ledger.opening.value,
+                                                    reference: 'production/livestock'
+                                                }
+                                            });
+                                        }
+                                    }
+                                });
+                            } else if (asset.type === 'farmland') {
+                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    monthDiff = acquisitionDate.diff(startMonth, 'months');
 
                                     initializeCategoryValues(instance, 'capitalExpenditure', 'Land', numberOfMonths);
 
-                                    instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], liability.openingBalance);
+                                    instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], asset.data.assetValue);
                                 }
 
-                                initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                    monthDiff = soldDate.diff(startMonth, 'months');
 
-                                instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                                    return safeMath.plus(month.repayment && month.repayment.bank, instance.data[section][typeTitle][index]);
-                                });
+                                    initializeCategoryValues(instance, 'assetMarketValue', 'Land', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalIncome', 'Land', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalProfit', 'Land', numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalLoss', 'Land', numberOfMonths);
 
-                                // TODO: deal with missing liquidityType for 'Other' liabilities
-                                updateLiabilityStatementCategory(instance, liability)
+                                    instance.data.assetMarketValue['Land'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Land'][monthDiff], asset.data.assetValue);
+                                    instance.data.capitalIncome['Land'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Land'][monthDiff], asset.data.salePrice);
+                                    instance.data.capitalProfit['Land'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, asset.data.assetValue)));
+                                    instance.data.capitalLoss['Land'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.assetValue, asset.data.salePrice)));
+                                }
+                            } else if (asset.type === 'other') {
+                                asset.data.liquidityCategory = asset.data.liquidityCategory || asset.data.category;
+
+                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                    monthDiff = acquisitionDate.diff(startMonth, 'months');
+
+                                    initializeCategoryValues(instance, 'capitalExpenditure', asset.data.liquidityCategory, numberOfMonths);
+
+                                    instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
+                                }
+
+                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                    monthDiff = soldDate.diff(startMonth, 'months');
+
+                                    var value = (asset.data.liquidityCategory !== 'Vehicles, Machinery & Equipment' ? asset.data.assetValue : safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
+                                        .dividedBy(100)
+                                        .dividedBy(12)
+                                        .times(asset.data.assetValue)
+                                        .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
+                                            soldDate.diff(acquisitionDate, 'months') :
+                                            monthDiff + 1)
+                                        .toNumber()));
+
+                                    initializeCategoryValues(instance, 'assetMarketValue', asset.data.liquidityCategory, numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalIncome', asset.data.liquidityCategory, numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalProfit', asset.data.liquidityCategory, numberOfMonths);
+                                    initializeCategoryValues(instance, 'capitalLoss', asset.data.liquidityCategory, numberOfMonths);
+
+                                    instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
+                                    instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff], asset.data.salePrice);
+                                    instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
+                                    instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
+                                }
                             }
-                        });
-                    }
-                });
+
+                            if (!(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
+                                switch(asset.type) {
+                                    case 'cropland':
+                                    case 'pasture':
+                                    case 'permanent crop':
+                                    case 'plantation':
+                                    case 'wasteland':
+                                        updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
+                                        break;
+                                    case 'farmland':
+                                        instance.data.assetStatement['long-term'] = instance.data.assetStatement['long-term'] || [];
+
+                                        var assetCategory = underscore.findWhere(instance.data.assetStatement['long-term'], {name: 'Land'}) || {},
+                                            landUseValue = underscore.chain(assetCategory.assets || [])
+                                                .reject(function (statementAsset) {
+                                                    return statementAsset.farmId !== asset.farmId || statementAsset.type === 'farmland';
+                                                })
+                                                .reduce(function (total, statementAsset) {
+                                                    return safeMath.plus(total, statementAsset.data.assetValue);
+                                                }, 0)
+                                                .value();
+
+                                        if (landUseValue === 0) {
+                                            updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
+                                        }
+                                        break;
+                                    case 'improvement':
+                                        updateAssetStatementCategory(instance, 'long-term', 'Fixed Improvements', asset);
+                                        break;
+                                    case 'vme':
+                                        updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
+                                        break;
+                                    case 'other':
+                                        updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.liquidityCategory, asset);
+                                        break;
+                                }
+                            }
+
+                            angular.forEach(asset.liabilities, function (liability) {
+                                // Check liability is not already added
+                                if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
+                                    evaluatedModels.push(liability);
+
+                                    var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
+                                        typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
+                                        liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+
+                                    if (asset.type === 'farmland' && liability.type !== 'rent' && moment(liability.startDate, 'YYYY-MM-DD').isBetween(startMonth, endMonth)) {
+                                        monthDiff = moment(liability.startDate, 'YYYY-MM-DD').diff(startMonth, 'months');
+
+                                        initializeCategoryValues(instance, 'capitalExpenditure', 'Land', numberOfMonths);
+
+                                        instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], liability.openingBalance);
+                                    }
+
+                                    initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                                    instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                                        return safeMath.plus(month.repayment && month.repayment.bank, instance.data[section][typeTitle][index]);
+                                    });
+
+                                    // TODO: deal with missing liquidityType for 'Other' liabilities
+                                    updateLiabilityStatementCategory(instance, liability)
+                                }
+                            });
+                        }
+                    });
 
                 underscore.each(instance.models.liabilities, function (liability) {
                     // Check liability is not already added
