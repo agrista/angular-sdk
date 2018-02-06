@@ -18816,17 +18816,15 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                         return schedule;
                                     }, initializeArray(instance.numberOfMonths));
 
-                                    var totalSize = underscore.reduce(productionCategory.categories, reduceProperty('size'), 0);
-
                                     if (productionSchedule.type === 'livestock') {
                                         productionCategory.quantityPerLSU = safeMath.dividedBy(underscore.reduce(productionCategory.categories, reduceProperty('quantityPerLSU'), 0), productionCategory.categories.length);
                                         productionCategory.valuePerLSU = safeMath.dividedBy(underscore.reduce(productionCategory.categories, reduceProperty('valuePerLSU'), 0), productionCategory.categories.length);
                                     } else {
-                                        productionCategory.quantityPerHa = safeMath.round(safeMath.dividedBy(productionCategory.quantity, totalSize), 2);
-                                    }
+                                        productionCategory.quantityPerHa = safeMath.round(safeMath.dividedBy(productionCategory.quantity, size), 2);
 
-                                    if (section.code === 'EXP') {
-                                        productionCategory.valuePerHa = safeMath.round(safeMath.dividedBy(productionCategory.value, totalSize), 2);
+                                        if (section.code === 'EXP') {
+                                            productionCategory.valuePerHa = safeMath.round(safeMath.dividedBy(productionCategory.value, size), 2);
+                                        }
                                     }
                                 }
                             });
@@ -19288,6 +19286,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                                     }
                                 } else {
                                     productionCategory.quantityPerHa = instance.applyMaturityFactor(section.code, category.quantity);
+
+                                    if (section.code === 'EXP') {
+                                        productionCategory.valuePerHa = instance.applyMaturityFactor(section.code, category.value);
+                                    }
                                 }
 
                                 if (section.code === 'INC' && productionCategory.supplyUnit && productionCategory.unit !== category.unit) {
@@ -19295,10 +19297,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                                     category.supply = category.quantity;
                                     category.quantity = 1;
                                     category.unit = productionCategory.unit;
-                                }
-
-                                if (section.code === 'EXP') {
-                                    productionCategory.valuePerHa = instance.applyMaturityFactor(section.code, category.value);
                                 }
 
                                 if (productionCategory.supplyUnit && !underscore.isUndefined(category.supply)) {
