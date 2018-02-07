@@ -188,12 +188,13 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
         },
         link: function ($scope, $element, $attrs) {
             var d3 = $window.d3,
-                width = $attrs.width || 100,
+                element = $element[0],
+                width = $attrs.width || element.clientWidth,
                 xExtent = $attrs.xExtent,
-                height = $attrs.height || 20,
+                height = $attrs.height || element.clientHeight,
                 yExtent = $attrs.yExtent || 100,
                 interpolate = $attrs.interpolate || 'step-before',
-                svg = d3.select($element[0]).append('svg').attr('width', width).attr('height', height),
+                svg = d3.select(element).append('svg').attr('width', width).attr('height', height),
                 text = svg.append('text').attr('class', 'sparkline-text').attr('x', width / 2).attr('y', (height / 2) + 5),
                 area = svg.append('path').attr('class', 'sparkline-area'),
                 line = svg.append('path').attr('class', 'sparkline-line');
@@ -240,15 +241,15 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
                 });
 
                 // Pad first element
-                $scope.data.unshift({x: -1, y: 0});
+                $scope.data.unshift({x: -1, y: underscore.first($scope.data).y});
 
                 xFn.domain(xExtent && xExtent != 0 ? [0, xExtent] : d3.extent($scope.data, function (d) {
                     return d.x;
                 }));
 
-                yFn.domain(yExtent && yExtent != 0 ? [0, yExtent] : d3.extent($scope.data, function (d) {
+                yFn.domain(yExtent && yExtent != 0 ? [0, yExtent] : [0, d3.max($scope.data, function (d) {
                     return d.y;
-                }));
+                })]);
 
                 area.attr('d', areaFn($scope.data));
                 line.attr('d', lineFn($scope.data));

@@ -1,19 +1,143 @@
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'Liability', 'Model', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, attachmentHelper, Base, computedProperty, Field, inheritModel, Liability, Model, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
-        function Asset (attrs) {
+sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+        function AssetBase (attrs) {
             Model.Base.apply(this, arguments);
-
-            this.data = (attrs && attrs.data ? attrs.data : {});
-            Base.initializeObject(this.data, 'attachments', []);
-            Base.initializeObject(this.data, 'zones', []);
 
             privateProperty(this, 'generateKey', function (legalEntity, farm) {
                 this.assetKey = generateKey(this, legalEntity, farm);
 
                 return this.assetKey;
             });
+
+            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
+                return underscore.reduce(this.liabilities, function (total, liability) {
+                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
+                }, 0);
+            });
+
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'attachments', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.assetKey = attrs.assetKey;
+            this.legalEntityId = attrs.legalEntityId;
+            this.type = attrs.type;
+
+            this.liabilities = underscore.map(attrs.liabilities, Liability.newCopy);
+        }
+
+        function generateKey (instance, legalEntity, farm) {
+            return  (legalEntity ? 'entity.' + legalEntity.uuid : '') +
+                (instance.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
+                (instance.type === 'crop' && instance.data.season ? '-s.' + instance.data.season : '') +
+                (instance.data.fieldName ? '-fi.' + instance.data.fieldName : '') +
+                (instance.data.crop ? '-c.' + instance.data.crop : '') +
+                (instance.type === 'cropland' && instance.data.irrigated ? '-i.' + instance.data.irrigation : '') +
+                (instance.type === 'farmland' && instance.data.sgKey ? '-' + instance.data.sgKey : '') +
+                (instance.type === 'improvement' || instance.type === 'livestock' || instance.type === 'vme' ?
+                    (instance.data.type ? '-t.' + instance.data.type : '') +
+                    (instance.data.category ? '-c.' + instance.data.category : '') +
+                    (instance.data.name ? '-n.' + instance.data.name : '') +
+                    (instance.data.purpose ? '-p.' + instance.data.purpose : '') +
+                    (instance.data.model ? '-m.' + instance.data.model : '') +
+                    (instance.data.identificationNo ? '-in.' + instance.data.identificationNo : '') : '') +
+                (instance.type === 'stock' ?
+                    (instance.data.type ? '-t.' + instance.data.type : '') +
+                    (instance.data.category ? '-c.' + instance.data.category : '') +
+                    (instance.data.product ? '-p.' + instance.data.product : '') : '') +
+                (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
+                (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
+        }
+
+        inheritModel(AssetBase, Model.Base);
+
+        readOnlyProperty(AssetBase, 'assetTypes', {
+            'crop': 'Crops',
+            'farmland': 'Farmlands',
+            'improvement': 'Fixed Improvements',
+            'cropland': 'Cropland',
+            'livestock': 'Livestock',
+            'pasture': 'Pastures',
+            'permanent crop': 'Permanent Crops',
+            'plantation': 'Plantations',
+            'stock': 'Stock',
+            'vme': 'Vehicles, Machinery & Equipment',
+            'wasteland': 'Homestead & Wasteland',
+            'water right': 'Water Rights'
+        });
+
+        readOnlyProperty(AssetBase, 'assetTypesWithOther', underscore.extend({
+            'other': 'Other'
+        }, AssetBase.assetTypes));
+
+        privateProperty(AssetBase, 'getAssetKey', function (asset, legalEntity, farm) {
+            return generateKey(asset, legalEntity, farm);
+        });
+
+        privateProperty(AssetBase, 'getTypeTitle', function (type) {
+            return AssetBase.assetTypes[type] || '';
+        });
+
+        privateProperty(AssetBase, 'getTitleType', function (title) {
+            var keys = underscore.keys(AssetBase.assetTypes);
+
+            return keys[underscore.values(AssetBase.assetTypes).indexOf(title)];
+        });
+
+        AssetBase.validates({
+            assetKey: {
+                required: true
+            },
+            data: {
+                required: true,
+                object: true
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(AssetBase.assetTypesWithOther)
+                }
+            }
+        });
+
+        return AssetBase;
+    }]);
+
+sdkModelAsset.factory('AssetFactory', ['Asset', 'Livestock', 'Stock',
+    function (Asset, Livestock, Stock) {
+        function apply (attrs, fnName) {
+            switch (attrs.type) {
+                case 'livestock':
+                    return Livestock[fnName](attrs);
+                case 'stock':
+                    return Stock[fnName](attrs);
+            }
+
+            return Asset[fnName](attrs);
+        }
+
+        return {
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }]);
+
+sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+    function ($filter, AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+        function Asset (attrs) {
+            AssetBase.apply(this, arguments);
 
             privateProperty(this, 'generateUniqueName', function (categoryLabel, assets) {
                 this.data.name = generateUniqueName(this, categoryLabel, assets);
@@ -98,28 +222,13 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 }, 0);
             });
 
-            privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
-                return underscore.reduce(this.liabilities, function (total, liability) {
-                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
-                }, 0);
-            });
+            Base.initializeObject(this.data, 'zones', []);
 
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.id = attrs.id || attrs.$id;
-            this.assetKey = attrs.assetKey;
             this.farmId = attrs.farmId;
-            this.legalEntityId = attrs.legalEntityId;
-
-            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
-                return Liability.newCopy(liability);
-            });
 
             this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
                 return ProductionSchedule.newCopy(schedule);
             });
-
-            this.type = attrs.type;
 
             if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
                 this.data.assetValuePerHa = (this.data.assetValue / this.size);
@@ -127,21 +236,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             }
         }
 
-        inheritModel(Asset, Model.Base);
-
-        readOnlyProperty(Asset, 'assetTypes', {
-            'crop': 'Crops',
-            'farmland': 'Farmlands',
-            'improvement': 'Fixed Improvements',
-            'cropland': 'Cropland',
-            'livestock': 'Livestock',
-            'pasture': 'Pastures',
-            'permanent crop': 'Permanent Crops',
-            'plantation': 'Plantations',
-            'vme': 'Vehicles, Machinery & Equipment',
-            'wasteland': 'Homestead & Wasteland',
-            'water right': 'Water Rights'
-        });
+        inheritModel(Asset, AssetBase);
 
         readOnlyProperty(Asset, 'categories', {
             improvement: [
@@ -470,6 +565,18 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
                 {category: 'Sheep', subCategory: 'Wethers', purpose: 'Slaughter'},
                 {category: 'Sheep', subCategory: 'Culls', purpose: 'Slaughter'}
             ],
+            stock: [
+                {category: 'Animal Feed', subCategory: 'Lick', unit: 'kg'},
+                {category: 'Indirect Costs', subCategory: 'Fuel', unit: 'l'},
+                {category: 'Indirect Costs', subCategory: 'Water', unit: 'l'},
+                {category: 'Preharvest', subCategory: 'Seed', unit: 'kg'},
+                {category: 'Preharvest', subCategory: 'Plant Material', unit: 'each'},
+                {category: 'Preharvest', subCategory: 'Fertiliser', unit: 't'},
+                {category: 'Preharvest', subCategory: 'Fungicides', unit: 'l'},
+                {category: 'Preharvest', subCategory: 'Lime', unit: 't'},
+                {category: 'Preharvest', subCategory: 'Herbicides', unit: 'l'},
+                {category: 'Preharvest', subCategory: 'Pesticides', unit: 'l'}
+            ],
             vme: [
                 {category: 'Vehicles', subCategory: 'Bakkie'},
                 {category: 'Vehicles', subCategory: 'Car'},
@@ -784,17 +891,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             'short-term': ['Crops & Crop Products', 'Cash on Hand', 'Debtors', 'Short-term Investments', 'Prepaid Expenses', 'Production Inputs', 'Life Insurance', 'Livestock Products', 'Marketable Livestock', 'Negotiable Securities', 'Other']
         });
 
-        readOnlyProperty(Asset, 'assetTypesWithOther', underscore.extend({
-            'other': 'Other'
-        }, Asset.assetTypes));
-
         readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
 
         readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
-
-        privateProperty(Asset, 'getAssetKey', function (asset, legalEntity, farm) {
-            return generateKey(asset, legalEntity, farm);
-        });
 
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
@@ -802,16 +901,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
 
         privateProperty(Asset, 'getDefaultCrop', function (landClass) {
             return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
-        });
-
-        privateProperty(Asset, 'getTypeTitle', function (type) {
-            return Asset.assetTypes[type] || '';
-        });
-
-        privateProperty(Asset, 'getTitleType', function (title) {
-            var keys = underscore.keys(Asset.assetTypes);
-
-            return keys[underscore.values(Asset.assetTypes).indexOf(title)];
         });
 
         privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
@@ -913,25 +1002,6 @@ sdkModelAsset.factory('Asset', ['$filter', 'attachmentHelper', 'Base', 'computed
             }
 
             return map;
-        }
-
-        function generateKey (instance, legalEntity, farm) {
-            return  (legalEntity ? 'entity.' + legalEntity.uuid : '') +
-                (instance.type !== 'farmland' && farm ? '-f.' + farm.name : '') +
-                (instance.type === 'crop' && instance.data.season ? '-s.' + instance.data.season : '') +
-                (instance.data.fieldName ? '-fi.' + instance.data.fieldName : '') +
-                (instance.data.crop ? '-c.' + instance.data.crop : '') +
-                (instance.type === 'cropland' && instance.data.irrigated ? '-i.' + instance.data.irrigation : '') +
-                (instance.type === 'farmland' && instance.data.sgKey ? '-' + instance.data.sgKey : '') +
-                (instance.type === 'improvement' || instance.type === 'livestock' || instance.type === 'vme' ?
-                    (instance.data.type ? '-t.' + instance.data.type : '') +
-                    (instance.data.category ? '-c.' + instance.data.category : '') +
-                    (instance.data.name ? '-n.' + instance.data.name : '') +
-                    (instance.data.purpose ? '-p.' + instance.data.purpose : '') +
-                    (instance.data.model ? '-m.' + instance.data.model : '') +
-                    (instance.data.identificationNo ? '-in.' + instance.data.identificationNo : '') : '') +
-                (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
-                (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
         }
 
         function generateUniqueName (instance, categoryLabel, assets) {
