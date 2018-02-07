@@ -18546,6 +18546,26 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                 return moment(this.endDate).diff(this.startDate, 'months');
             });
 
+            computedProperty(this, 'startDateOffset', function () {
+                return Math.max(0, moment(underscore.chain(this.productionSchedules)
+                    .sortBy(function (productionSchedule) {
+                        return moment(productionSchedule.startDate).unix();
+                    })
+                    .pluck('startDate')
+                    .first()
+                    .value()).diff(this.startDate, 'months'));
+            });
+
+            computedProperty(this, 'endDateOffset', function () {
+                return safeMath.minus(this.numberOfMonths - 1, Math.max(0, moment(this.endDate).diff(underscore.chain(this.productionSchedules)
+                    .sortBy(function (productionSchedule) {
+                        return moment(productionSchedule.endDate).unix();
+                    })
+                    .pluck('endDate')
+                    .last()
+                    .value(), 'months')));
+            });
+
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             if (options.startDate && options.endDate) {
