@@ -32,10 +32,10 @@ sdkInterfaceUiApp.directive('defaultSrc', [function () {
 sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     return function (value, abs) {
         var geometry = value && value.geometry || value,
-            coords = (geometry && geometry.coordinates ? {lng: geometry.coordinates[0], lat: geometry.coordinates[1]} : geometry);
+            coords = geometry && geometry.coordinates || geometry;
 
-        return ((coords ? ($filter('number')(abs ? Math.abs(coords.lat) : coords.lng, 3) + (abs ? '° ' + (coords.lat >= 0 ? 'N' : 'S') : '') + ', '
-        + $filter('number')(abs ? Math.abs(coords.lng) : coords.lat, 3) + (abs ? '° ' + (coords.lng <= 0 ? 'W' : 'E') : '')) : '')
+        return ((coords ? ($filter('number')(abs ? Math.abs(coords[1]) : coords[0], 3) + (abs ? '° ' + (coords[1] >= 0 ? 'N' : 'S') : '') + ', '
+        + $filter('number')(abs ? Math.abs(coords[0]) : coords[1], 3) + (abs ? '° ' + (coords[0] <= 0 ? 'W' : 'E') : '')) : '')
         + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);

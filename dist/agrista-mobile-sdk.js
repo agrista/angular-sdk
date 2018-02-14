@@ -9397,10 +9397,10 @@ sdkInterfaceUiApp.directive('defaultSrc', [function () {
 sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     return function (value, abs) {
         var geometry = value && value.geometry || value,
-            coords = (geometry && geometry.coordinates ? {lng: geometry.coordinates[0], lat: geometry.coordinates[1]} : geometry);
+            coords = geometry && geometry.coordinates || geometry;
 
-        return ((coords ? ($filter('number')(abs ? Math.abs(coords.lat) : coords.lng, 3) + (abs ? '° ' + (coords.lat >= 0 ? 'N' : 'S') : '') + ', '
-        + $filter('number')(abs ? Math.abs(coords.lng) : coords.lat, 3) + (abs ? '° ' + (coords.lng <= 0 ? 'W' : 'E') : '')) : '')
+        return ((coords ? ($filter('number')(abs ? Math.abs(coords[1]) : coords[0], 3) + (abs ? '° ' + (coords[1] >= 0 ? 'N' : 'S') : '') + ', '
+        + $filter('number')(abs ? Math.abs(coords[0]) : coords[1], 3) + (abs ? '° ' + (coords[0] <= 0 ? 'W' : 'E') : '')) : '')
         + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);
@@ -13164,6 +13164,92 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         });
 
         return Liability;
+    }]);
+
+var sdkModelMapTheme = angular.module('ag.sdk.model.map-theme', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelMapTheme.factory('MapTheme', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function MapTheme (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'categories', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+
+            // Models
+            this.organization = attrs.organization;
+
+            checkVersion(this);
+        }
+
+        function checkVersion(instance) {
+            switch (instance.data.version) {
+                case undefined:
+                    instance.data = underscore.extend({
+                        baseTheme: (instance.data.baseTile && MapTheme.defaultThemes[instance.data.baseTile] ? instance.data.baseTile : 'Agriculture'),
+                        categories: instance.data.categories,
+                        center: [instance.data.center.lng, instance.data.center.lat],
+                        zoom: {
+                            value: instance.data.zoom
+                        }
+                    }, MapTheme.defaultThemes[instance.data.baseTile] || MapTheme.defaultThemes['Agriculture']);
+            }
+
+            instance.data.version = MapTheme.version;
+        }
+
+        inheritModel(MapTheme, Model.Base);
+
+        readOnlyProperty(MapTheme, 'version', 1);
+
+        readOnlyProperty(MapTheme, 'defaultThemes', {
+            'Agriculture': {
+                style: 'mapbox://styles/agrista/cjdmrq0wu0iq02so2sevccwlm',
+                sources: [],
+                layers: []
+            },
+            'Satellite': {
+                style: 'mapbox://styles/agrista/cjdmt8w570l3r2sql91xzgmbn',
+                sources: [],
+                layers: []
+            },
+            'Light': {
+                style: 'mapbox://styles/agrista/cjdmt9c8q0mr02srgvyfo2qwg',
+                sources: [],
+                layers: []
+            },
+            'Dark': {
+                style: 'mapbox://styles/agrista/cjdmt9w8d0o8x2so2xpcu4mm0',
+                sources: [],
+                layers: []
+            }
+        });
+
+        MapTheme.validates({
+            data: {
+                required: true,
+                object: true
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return MapTheme;
     }]);
 
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
@@ -21959,6 +22045,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.livestock',
+    'ag.sdk.model.map-theme',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',
