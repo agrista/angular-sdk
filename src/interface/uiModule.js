@@ -31,12 +31,13 @@ sdkInterfaceUiApp.directive('defaultSrc', [function () {
 
 sdkInterfaceUiApp.filter('location', ['$filter', function ($filter) {
     return function (value, abs) {
-        var geometry = value && value.geometry || value,
-            coords = geometry && geometry.coordinates || geometry;
+        var jsonGeom = value && value.geometry || value,
+            jsonCoords = jsonGeom && jsonGeom.coordinates || jsonGeom,
+            coords = typeof jsonCoords == 'object' ? [jsonCoords.lng, jsonCoords.lat] : jsonCoords;
 
         return ((coords ? ($filter('number')(abs ? Math.abs(coords[1]) : coords[0], 3) + (abs ? '° ' + (coords[1] >= 0 ? 'N' : 'S') : '') + ', '
-        + $filter('number')(abs ? Math.abs(coords[0]) : coords[1], 3) + (abs ? '° ' + (coords[0] <= 0 ? 'W' : 'E') : '')) : '')
-        + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
+            + $filter('number')(abs ? Math.abs(coords[0]) : coords[1], 3) + (abs ? '° ' + (coords[0] <= 0 ? 'W' : 'E') : '')) : '')
+            + (value && value.properties && value.properties.accuracy ? ' at ' + $filter('number')(value.properties.accuracy, 2) + 'm' : ''));
     };
 }]);
 

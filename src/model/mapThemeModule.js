@@ -24,13 +24,13 @@ sdkModelMapTheme.factory('MapTheme', ['Base', 'inheritModel', 'Model', 'privateP
             switch (instance.data.version) {
                 case undefined:
                     instance.data = underscore.extend({
-                        baseTheme: (instance.data.baseTile && MapTheme.defaultThemes[instance.data.baseTile] ? instance.data.baseTile : 'Agriculture'),
+                        baseStyle: (instance.data.baseTile && MapTheme.baseStyles[instance.data.baseTile] ? instance.data.baseTile : 'Agriculture'),
                         categories: instance.data.categories,
-                        center: [instance.data.center.lng, instance.data.center.lat],
+                        center: instance.data.center,
                         zoom: {
                             value: instance.data.zoom
                         }
-                    }, MapTheme.defaultThemes[instance.data.baseTile] || MapTheme.defaultThemes['Agriculture']);
+                    }, MapTheme.baseStyles[instance.data.baseTile] || MapTheme.baseStyles['Agriculture']);
             }
 
             instance.data.version = MapTheme.version;
@@ -40,7 +40,7 @@ sdkModelMapTheme.factory('MapTheme', ['Base', 'inheritModel', 'Model', 'privateP
 
         readOnlyProperty(MapTheme, 'version', 1);
 
-        readOnlyProperty(MapTheme, 'defaultThemes', {
+        readOnlyProperty(MapTheme, 'baseStyles', {
             'Agriculture': {
                 style: 'mapbox://styles/agrista/cjdmrq0wu0iq02so2sevccwlm',
                 sources: [],
