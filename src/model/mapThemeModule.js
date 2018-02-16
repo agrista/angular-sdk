@@ -11,8 +11,12 @@ sdkModelMapTheme.factory('MapTheme', ['Base', 'inheritModel', 'Model', 'privateP
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
 
             // Models
             this.organization = attrs.organization;
