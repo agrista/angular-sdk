@@ -1279,50 +1279,104 @@ mobileSdkApiApp.factory('organizationalUnitApi', ['api', function (api) {
 mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
+    function uriEncodeQuery (query) {
+        return underscore.chain(query)
+            .omit(function (value) {
+                return (value == null || value == '');
+            })
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+
     return {
-        getFieldPolygon: function (lng, lat) {
+        getAdminRegion: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getPortionPolygon: function (lng, lat) {
+        searchAdminRegions: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/admin-regions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistrict: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFarm: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchFarms: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farms' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getField: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getPortion: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchPortions: function (query) {
-            query = underscore.chain(query)
-                .omit(function (value) {
-                    return (value == null || value == '');
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
+            query = uriEncodeQuery(query);
 
             return promiseService.wrap(function (promise) {
-                if (!query) {
-                    promise.reject();
-                }
-                $http.get(_host + 'api/geo/portions?' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/portions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getDistrictPolygon: function (lng, lat) {
+        getProvince: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getProvincePolygon: function (lng, lat) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+        getSublayer: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

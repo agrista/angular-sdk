@@ -87,15 +87,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
          * Get Center
          */
         getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
+            var geom = topologyHelper.readGeoJSON(this._json);
 
-            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
+            return (geom ? geom.getCentroid() : geom);
         },
         getCenterAsGeojson: function (bounds) {
-            return {
-                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
-                type: 'Point'
-            }
+            var geom = topologyHelper.readGeoJSON(this._json);
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
         },
         getProperty: function (name) {
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);

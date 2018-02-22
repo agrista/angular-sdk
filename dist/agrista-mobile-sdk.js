@@ -546,15 +546,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
          * Get Center
          */
         getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
+            var geom = topologyHelper.readGeoJSON(this._json);
 
-            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
+            return (geom ? geom.getCentroid() : geom);
         },
         getCenterAsGeojson: function (bounds) {
-            return {
-                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
-                type: 'Point'
-            }
+            var geom = topologyHelper.readGeoJSON(this._json);
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
         },
         getProperty: function (name) {
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);
@@ -864,7 +863,7 @@ sdkMonitorApp.config(['$provide', function ($provide) {
             log[level] = function () {
                 var args = [].slice.call(arguments),
                     caller = (arguments.callee && arguments.callee.caller && arguments.callee.caller.name.length > 0 ? arguments.callee.caller.name + ' :: ' : ''),
-                    output = (underscore.isObject(args[0]) ? '\n' + $filter('json')(args[0]) : args[0]);
+                    output = (underscore.isObject(args[0]) ? (typeof args[0].toString === 'function' ? args[0].toString() : '\n' + $filter('json')(args[0])) : args[0]);
 
                 args[0] = moment().format('YYYY-MM-DDTHH:mm:ss.SSS') + underscore.lpad(' [' + level.toUpperCase() + '] ', 7, ' ') +  caller + output;
 
@@ -9977,6 +9976,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 : defaultValue;
         });
 
+        privateProperty(Base, 'jsonValue', function (object) {
+            return (object && typeof object.asJSON === 'function' ? object.asJSON() : object);
+        });
+
         return Base;
     }])
     .factory('computedProperty', ['underscore', function (underscore) {
@@ -11895,12 +11898,41 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
 var sdkModelFarm = angular.module('ag.sdk.model.farm', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelFarm.factory('Farm', ['Base', 'geoJSONHelper', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (Base, geoJSONHelper, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Farm (attrs) {
             Model.Base.apply(this, arguments);
 
+            // Fields
+            privateProperty(this, 'addField', function (field) {
+                addItem(this, 'fields', field, 'fieldName');
+            });
+
+            privateProperty(this, 'removeField', function (field) {
+                removeItem(this, 'fields', field, 'fieldName');
+            });
+
+            // Gates
+            privateProperty(this, 'addGate', function (gate) {
+                addItem(this, 'gates', gate, 'name');
+            });
+
+            privateProperty(this, 'removeGate', function (gate) {
+                removeItem(this, 'gates', gate, 'name');
+            });
+
+            // Geom
+            privateProperty(this, 'contains', function (geojson, assets) {
+                return contains(this, geojson, assets);
+            });
+
+            privateProperty(this, 'centroid', function (assets) {
+                return centroid(this, assets);
+            });
+
             this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'fields', []);
+            Base.initializeObject(this.data, 'gates', []);
             Base.initializeObject(this.data, 'ignoredLandClasses', []);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -11908,6 +11940,7 @@ sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty'
             this.id = attrs.id || attrs.$id;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
+            this.legalEntityId = attrs.legalEntityId;
 
             // Models
             this.organization = attrs.organization;
@@ -11915,7 +11948,63 @@ sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty'
 
         inheritModel(Farm, Model.Base);
 
+        function addItem (instance, dataStore, item, compareProp) {
+            if (item) {
+                instance.data[dataStore] = underscore.chain(instance.data[dataStore])
+                    .reject(function (dsItem) {
+                        return dsItem[compareProp] === item[compareProp];
+                    })
+                    .union([Base.jsonValue(item)])
+                    .value()
+                    .sort(function (a, b) {
+                        return naturalSort(a[compareProp], b[compareProp]);
+                    });
+
+                instance.$dirty = true;
+            }
+        }
+
+        function removeItem (instance, dataStore, item, compareProp) {
+            if (item) {
+                instance.data[dataStore] = underscore.reject(instance.data[dataStore], function (dsItem) {
+                    return dsItem[compareProp] === item[compareProp];
+                });
+
+                instance.$dirty = true;
+            }
+        }
+
+        function getAssetsGeom (instance, assets) {
+            return underscore.chain(assets)
+                .filter(function (asset) {
+                    return asset.farmId === instance.id && asset.data && asset.data.loc;
+                })
+                .reduce(function (geom, asset) {
+                    var assetGeom = topologyHelper.readGeoJSON(asset.data.loc);
+
+                    return (geom && assetGeom.isValid() ? geom.union(assetGeom) : geom || assetGeom);
+                }, null)
+                .value();
+        }
+
+        function contains (instance, geojson, assets) {
+            var farmGeom = getAssetsGeom(instance, assets),
+                queryGeom = topologyHelper.readGeoJSON(geojson);
+
+            return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
+        }
+
+        function centroid (instance, assets) {
+            var geom = getAssetsGeom(instance, assets);
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
+        }
+
         Farm.validates({
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
             name: {
                 required: true,
                 length: {
@@ -12471,14 +12560,14 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             return (geom && geometry && geom[relation] ? geom[relation](geometry) : false);
         }
 
-        function geometryManipluation (instance, manipluation, geometry) {
+        function geometryManipluation (instance, manipulation, geometry) {
             var geom = instance.geom;
 
-            return (geom && geometry && geom[manipluation] ? geom[manipluation](geometry) : geom);
+            return (geom && geometry && geom[manipulation] ? geom[manipulation](geometry) : geom);
         }
 
-        function saveGeometryManipluation (instance, manipluation, geometry) {
-            var geom = geometryManipluation(instance, manipluation, geometry);
+        function saveGeometryManipluation (instance, manipulation, geometry) {
+            var geom = geometryManipluation(instance, manipulation, geometry);
 
             if (geom) {
                 instance.$dirty = true;
@@ -16255,50 +16344,104 @@ mobileSdkApiApp.factory('organizationalUnitApi', ['api', function (api) {
 mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
+    function uriEncodeQuery (query) {
+        return underscore.chain(query)
+            .omit(function (value) {
+                return (value == null || value == '');
+            })
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+
     return {
-        getFieldPolygon: function (lng, lat) {
+        getAdminRegion: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getPortionPolygon: function (lng, lat) {
+        searchAdminRegions: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/admin-regions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getDistrict: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFarm: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchFarms: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farms' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getField: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getPortion: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         searchPortions: function (query) {
-            query = underscore.chain(query)
-                .omit(function (value) {
-                    return (value == null || value == '');
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
+            query = uriEncodeQuery(query);
 
             return promiseService.wrap(function (promise) {
-                if (!query) {
-                    promise.reject();
-                }
-                $http.get(_host + 'api/geo/portions?' + query, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/portions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getDistrictPolygon: function (lng, lat) {
+        getProvince: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getProvincePolygon: function (lng, lat) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
+        getSublayer: function (query) {
+            query = uriEncodeQuery(query);
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -18397,7 +18540,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
             'cropland': _croplandAllCrops,
             'livestock': _grazingCrops,
             'pasture': _grazingCrops,
-            'permanent crop': _perennialCrops,
+            'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
             'plantation': _plantationCrops
         });
 
@@ -18578,6 +18721,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
                 }
             },
             farmId: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                },
                 numeric: true
             },
             fieldName: {

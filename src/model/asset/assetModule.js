@@ -875,7 +875,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
             'cropland': _croplandAllCrops,
             'livestock': _grazingCrops,
             'pasture': _grazingCrops,
-            'permanent crop': _perennialCrops,
+            'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
             'plantation': _plantationCrops
         });
 
@@ -1056,6 +1056,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
                 }
             },
             farmId: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                },
                 numeric: true
             },
             fieldName: {

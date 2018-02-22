@@ -173,14 +173,14 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             return (geom && geometry && geom[relation] ? geom[relation](geometry) : false);
         }
 
-        function geometryManipluation (instance, manipluation, geometry) {
+        function geometryManipluation (instance, manipulation, geometry) {
             var geom = instance.geom;
 
-            return (geom && geometry && geom[manipluation] ? geom[manipluation](geometry) : geom);
+            return (geom && geometry && geom[manipulation] ? geom[manipulation](geometry) : geom);
         }
 
-        function saveGeometryManipluation (instance, manipluation, geometry) {
-            var geom = geometryManipluation(instance, manipluation, geometry);
+        function saveGeometryManipluation (instance, manipulation, geometry) {
+            var geom = geometryManipluation(instance, manipulation, geometry);
 
             if (geom) {
                 instance.$dirty = true;

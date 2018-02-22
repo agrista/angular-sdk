@@ -2341,15 +2341,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
          * Get Center
          */
         getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
+            var geom = topologyHelper.readGeoJSON(this._json);
 
-            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
+            return (geom ? geom.getCentroid() : geom);
         },
         getCenterAsGeojson: function (bounds) {
-            return {
-                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
-                type: 'Point'
-            }
+            var geom = topologyHelper.readGeoJSON(this._json);
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
         },
         getProperty: function (name) {
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);
@@ -2659,7 +2658,7 @@ sdkMonitorApp.config(['$provide', function ($provide) {
             log[level] = function () {
                 var args = [].slice.call(arguments),
                     caller = (arguments.callee && arguments.callee.caller && arguments.callee.caller.name.length > 0 ? arguments.callee.caller.name + ' :: ' : ''),
-                    output = (underscore.isObject(args[0]) ? '\n' + $filter('json')(args[0]) : args[0]);
+                    output = (underscore.isObject(args[0]) ? (typeof args[0].toString === 'function' ? args[0].toString() : '\n' + $filter('json')(args[0])) : args[0]);
 
                 args[0] = moment().format('YYYY-MM-DDTHH:mm:ss.SSS') + underscore.lpad(' [' + level.toUpperCase() + '] ', 7, ' ') +  caller + output;
 
@@ -12296,7 +12295,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
             'cropland': _croplandAllCrops,
             'livestock': _grazingCrops,
             'pasture': _grazingCrops,
-            'permanent crop': _perennialCrops,
+            'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
             'plantation': _plantationCrops
         });
 
@@ -12477,6 +12476,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
                 }
             },
             farmId: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                },
                 numeric: true
             },
             fieldName: {
@@ -13054,6 +13056,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             object[property] = (object[property] && Object.prototype.toString.call(object[property]) == Object.prototype.toString.call(defaultValue))
                 ? object[property]
                 : defaultValue;
+        });
+
+        privateProperty(Base, 'jsonValue', function (object) {
+            return (object && typeof object.asJSON === 'function' ? object.asJSON() : object);
         });
 
         return Base;
@@ -17152,12 +17158,41 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
 var sdkModelFarm = angular.module('ag.sdk.model.farm', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelFarm.factory('Farm', ['Base', 'geoJSONHelper', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (Base, geoJSONHelper, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Farm (attrs) {
             Model.Base.apply(this, arguments);
 
+            // Fields
+            privateProperty(this, 'addField', function (field) {
+                addItem(this, 'fields', field, 'fieldName');
+            });
+
+            privateProperty(this, 'removeField', function (field) {
+                removeItem(this, 'fields', field, 'fieldName');
+            });
+
+            // Gates
+            privateProperty(this, 'addGate', function (gate) {
+                addItem(this, 'gates', gate, 'name');
+            });
+
+            privateProperty(this, 'removeGate', function (gate) {
+                removeItem(this, 'gates', gate, 'name');
+            });
+
+            // Geom
+            privateProperty(this, 'contains', function (geojson, assets) {
+                return contains(this, geojson, assets);
+            });
+
+            privateProperty(this, 'centroid', function (assets) {
+                return centroid(this, assets);
+            });
+
             this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'fields', []);
+            Base.initializeObject(this.data, 'gates', []);
             Base.initializeObject(this.data, 'ignoredLandClasses', []);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -17165,6 +17200,7 @@ sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty'
             this.id = attrs.id || attrs.$id;
             this.name = attrs.name;
             this.organizationId = attrs.organizationId;
+            this.legalEntityId = attrs.legalEntityId;
 
             // Models
             this.organization = attrs.organization;
@@ -17172,7 +17208,63 @@ sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty'
 
         inheritModel(Farm, Model.Base);
 
+        function addItem (instance, dataStore, item, compareProp) {
+            if (item) {
+                instance.data[dataStore] = underscore.chain(instance.data[dataStore])
+                    .reject(function (dsItem) {
+                        return dsItem[compareProp] === item[compareProp];
+                    })
+                    .union([Base.jsonValue(item)])
+                    .value()
+                    .sort(function (a, b) {
+                        return naturalSort(a[compareProp], b[compareProp]);
+                    });
+
+                instance.$dirty = true;
+            }
+        }
+
+        function removeItem (instance, dataStore, item, compareProp) {
+            if (item) {
+                instance.data[dataStore] = underscore.reject(instance.data[dataStore], function (dsItem) {
+                    return dsItem[compareProp] === item[compareProp];
+                });
+
+                instance.$dirty = true;
+            }
+        }
+
+        function getAssetsGeom (instance, assets) {
+            return underscore.chain(assets)
+                .filter(function (asset) {
+                    return asset.farmId === instance.id && asset.data && asset.data.loc;
+                })
+                .reduce(function (geom, asset) {
+                    var assetGeom = topologyHelper.readGeoJSON(asset.data.loc);
+
+                    return (geom && assetGeom.isValid() ? geom.union(assetGeom) : geom || assetGeom);
+                }, null)
+                .value();
+        }
+
+        function contains (instance, geojson, assets) {
+            var farmGeom = getAssetsGeom(instance, assets),
+                queryGeom = topologyHelper.readGeoJSON(geojson);
+
+            return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
+        }
+
+        function centroid (instance, assets) {
+            var geom = getAssetsGeom(instance, assets);
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
+        }
+
         Farm.validates({
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
             name: {
                 required: true,
                 length: {
@@ -17728,14 +17820,14 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             return (geom && geometry && geom[relation] ? geom[relation](geometry) : false);
         }
 
-        function geometryManipluation (instance, manipluation, geometry) {
+        function geometryManipluation (instance, manipulation, geometry) {
             var geom = instance.geom;
 
-            return (geom && geometry && geom[manipluation] ? geom[manipluation](geometry) : geom);
+            return (geom && geometry && geom[manipulation] ? geom[manipulation](geometry) : geom);
         }
 
-        function saveGeometryManipluation (instance, manipluation, geometry) {
-            var geom = geometryManipluation(instance, manipluation, geometry);
+        function saveGeometryManipluation (instance, manipulation, geometry) {
+            var geom = geometryManipluation(instance, manipulation, geometry);
 
             if (geom) {
                 instance.$dirty = true;

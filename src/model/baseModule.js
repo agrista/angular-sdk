@@ -89,6 +89,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 : defaultValue;
         });
 
+        privateProperty(Base, 'jsonValue', function (object) {
+            return (object && typeof object.asJSON === 'function' ? object.asJSON() : object);
+        });
+
         return Base;
     }])
     .factory('computedProperty', ['underscore', function (underscore) {
