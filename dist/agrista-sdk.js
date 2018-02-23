@@ -6507,7 +6507,7 @@ sdkHelperEnterpriseBudgetApp.factory('enterpriseBudgetHelper', ['naturalSort', '
     // When updating, also update the _enterpriseTypes list in the legalEntityHelper (farmerHelperModule.js)
     var _commodities = {
         crop: ['Barley', 'Bean (Dry)', 'Bean (Green)', 'Beet', 'Broccoli', 'Butternut', 'Cabbage', 'Canola', 'Carrot', 'Cauliflower', 'Cotton', 'Cowpea', 'Grain Sorghum', 'Groundnut', 'Leek', 'Lucerne', 'Lupin', 'Maize', 'Maize (Fodder)', 'Maize (Green)', 'Maize (Irrigated)', 'Maize (Seed)', 'Maize (White)', 'Maize (Yellow)', 'Multispecies Pasture', 'Oats', 'Onion', 'Potato', 'Pumpkin', 'Rapeseed', 'Rye', 'Soya Bean', 'Soya Bean (Irrigated)', 'Sunflower', 'Sweet Corn', 'Teff', 'Teff (Irrigated)', 'Tobacco', 'Triticale', 'Turnip', 'Wheat', 'Wheat (Irrigated)'],
-        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Bush Vine)', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Lemon', 'Lentil', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prickly Pear', 'Prune', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
+        horticulture: ['Almond', 'Apple', 'Apricot', 'Avocado', 'Banana', 'Blueberry', 'Cherry', 'Chicory', 'Chili', 'Citrus (Hardpeel)', 'Citrus (Softpeel)', 'Coffee', 'Fig', 'Garlic', 'Grape (Bush Vine)', 'Grape (Table)', 'Grape (Wine)', 'Guava', 'Hops', 'Kiwi', 'Kumquat', 'Lemon', 'Lentil', 'Lime', 'Macadamia Nut', 'Mango', 'Melon', 'Nectarine', 'Olive', 'Orange', 'Papaya', 'Pea', 'Peach', 'Peanut', 'Pear', 'Pecan Nut', 'Persimmon', 'Pineapple', 'Pistachio Nut', 'Plum', 'Pomegranate', 'Prickly Pear', 'Prune', 'Quince', 'Rooibos', 'Strawberry', 'Sugarcane', 'Tomato', 'Watermelon'],
         livestock: ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Chicken (Broilers)', 'Chicken (Layers)', 'Dairy', 'Game', 'Goats', 'Horses', 'Ostrich', 'Pigs', 'Rabbits', 'Sheep (Extensive)', 'Sheep (Feedlot)', 'Sheep (Stud)']
     };
 
@@ -7230,12 +7230,14 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Kale',
             'Kiwi Fruit',
             'Kohlrabi',
+            'Kumquat',
             'Leek',
             'Lemon',
             'Lentil',
             'Lespedeza',
             'Lettuce',
             'Litchi',
+            'Lime',
             'Macadamia Nut',
             'Makataan',
             'Mandarin',
@@ -12195,7 +12197,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
             'Guava',
             'Hazelnut',
             'Kiwi Fruit',
+            'Kumquat',
             'Lemon',
+            'Lime',
             'Litchi',
             'Macadamia Nut',
             'Mandarin',
@@ -16821,8 +16825,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 'Hazelnut',
                 'Hops',
                 'Kiwi',
+                'Kumquat',
                 'Lemon',
                 'Lentil',
+                'Lime',
                 'Macadamia Nut',
                 'Mandarin',
                 'Mango',
@@ -17267,8 +17273,8 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         function fieldNameUnique (instance, fieldName, farm) {
             var trimmedValue = s.trim(fieldName || '').toLowerCase();
 
-            return (farm && farm.data && !underscore.some(farm.data.fields || [], function (field) {
-                return (s.trim(field.fieldName).toLowerCase() === trimmedValue && !underscore.isEqual(field.loc, instance.loc));
+            return (farm && farm.data && !underscore.isEmpty(trimmedValue) && !underscore.some(farm.data.fields || [], function (field) {
+                return (s.trim(field.fieldName).toLowerCase() === trimmedValue || (!underscore.isUndefined(instance.loc) && underscore.isEqual(field.loc, instance.loc)));
             }));
         }
 
