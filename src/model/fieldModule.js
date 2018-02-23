@@ -77,8 +77,8 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         function fieldNameUnique (instance, fieldName, farm) {
             var trimmedValue = s.trim(fieldName || '').toLowerCase();
 
-            return (farm && farm.data && !underscore.some(farm.data.fields || [], function (field) {
-                return (s.trim(field.fieldName).toLowerCase() === trimmedValue && !underscore.isEqual(field.loc, instance.loc));
+            return (farm && farm.data && !underscore.isEmpty(trimmedValue) && !underscore.some(farm.data.fields || [], function (field) {
+                return (s.trim(field.fieldName).toLowerCase() === trimmedValue || (!underscore.isUndefined(instance.loc) && underscore.isEqual(field.loc, instance.loc)));
             }));
         }
 
