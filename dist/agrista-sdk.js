@@ -11422,8 +11422,8 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
 
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
         function AssetBase (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -11431,6 +11431,10 @@ sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Liability', 'Model'
                 this.assetKey = generateKey(this, legalEntity, farm);
 
                 return this.assetKey;
+            });
+
+            computedProperty(this, 'hasGeometry', function () {
+                return !underscore.isUndefined(this.data.loc);
             });
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
@@ -11535,18 +11539,27 @@ sdkModelAsset.factory('AssetBase', ['Base', 'inheritModel', 'Liability', 'Model'
 
 sdkModelAsset.factory('AssetFactory', ['Asset', 'Livestock', 'Stock',
     function (Asset, Livestock, Stock) {
+        var instances = {
+            'livestock': Livestock,
+            'stock': Stock
+        };
+
         function apply (attrs, fnName) {
-            switch (attrs.type) {
-                case 'livestock':
-                    return Livestock[fnName](attrs);
-                case 'stock':
-                    return Stock[fnName](attrs);
+            if (instances[attrs.type]) {
+                return instances[attrs.type][fnName](attrs);
             }
 
             return Asset[fnName](attrs);
         }
 
         return {
+            isInstanceOf: function (asset) {
+                return (asset ?
+                    (instances[asset.type] ?
+                        asset instanceof instances[asset.type] :
+                        asset instanceof Asset) :
+                    false);
+            },
             new: function (attrs) {
                 return apply(attrs, 'new');
             },
@@ -11556,8 +11569,92 @@ sdkModelAsset.factory('AssetFactory', ['Asset', 'Livestock', 'Stock',
         }
     }]);
 
-sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
-    function ($filter, AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
+sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'safeMath', 'underscore',
+    function (Asset, AssetFactory, computedProperty, inheritModel, Model, privateProperty, safeMath, underscore) {
+        function AssetGroup (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data ? attrs.data : {});
+
+            this.assets = [];
+
+            privateProperty(this, 'addAsset', function (asset) {
+                addAsset(this, asset);
+            });
+
+            privateProperty(this, 'adjustProperty', function (property, value) {
+                adjustProperty(this, property, value);
+            });
+
+            privateProperty(this, 'availableCrops', function (field) {
+                return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
+            });
+
+            computedProperty(this, 'hasGeometry', function () {
+                return underscore.some(this.assets, function (asset) {
+                    return !underscore.isUndefined(asset.data.loc);
+                });
+            });
+
+            privateProperty(this, 'recalculate', function () {
+                recalculate(this);
+            });
+
+            underscore.each(attrs.assets, this.addAsset, this);
+        }
+
+        inheritModel(AssetGroup, Model.Base);
+
+        function addAsset (instance, asset) {
+            asset = (AssetFactory.isInstanceOf(asset) ? asset : AssetFactory.new(asset));
+
+            if (underscore.isUndefined(instance.type) || instance.type === asset.type) {
+                instance.type = asset.type;
+                instance.assets = underscore.chain(instance.assets)
+                    .reject(function (item) {
+                        return item.assetKey === asset.assetKey;
+                    })
+                    .union([asset])
+                    .value();
+
+                if (underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
+                    instance.data.crop = asset.data.crop;
+                }
+
+                if (underscore.contains(['permanent crop', 'plantation'], instance.type) && asset.data.establishedDate) {
+                    instance.data.establishedDate = asset.data.establishedDate;
+                }
+
+                instance.recalculate();
+            }
+        }
+
+        function adjustProperty (instance, property, value) {
+            underscore.each(instance.assets, function (asset) {
+                if (asset.data[property] !== instance.data[property]) {
+                    asset.data[property] = instance.data[property];
+                    asset.data.assetValue = safeMath.times(asset.data.assetValuePerHa, asset.data.size);
+                    asset.$dirty = true;
+                }
+            });
+        }
+
+        function recalculate (instance) {
+            instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
+                totals.size = safeMath.plus(totals.size, asset.data.size);
+                totals.assetValuePerHa = asset.data.assetValuePerHa || (asset.data.assetValue ? safeMath.dividedBy(asset.data.assetValue, asset.data.size) : totals.assetValuePerHa);
+
+                return totals;
+            }, {}));
+
+            instance.data.assetValue = safeMath.times(instance.data.assetValuePerHa, instance.data.size);
+        }
+
+        return AssetGroup;
+    }]);
+
+sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, underscore) {
         function Asset (attrs) {
             AssetBase.apply(this, arguments);
 
@@ -11571,6 +11668,10 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
 
             privateProperty(this, 'getPhoto', function () {
                 return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+            });
+
+            privateProperty(this, 'getCustomTitle', function (props, options) {
+                return getCustomTitle(this, props, options);
             });
 
             privateProperty(this, 'getTitle', function (withField, farm) {
@@ -11611,8 +11712,8 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
             });
 
             // Crop
-            privateProperty(this, 'availableCrops', function () {
-                return Asset.cropsByType[this.type] || [];
+            privateProperty(this, 'availableCrops', function (field) {
+                return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
             });
 
             computedProperty(this, 'crop', function () {
@@ -12299,7 +12400,7 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
             'cropland': _croplandAllCrops,
             'livestock': _grazingCrops,
             'pasture': _grazingCrops,
-            'permanent crop': _perennialCrops,
+            'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
             'plantation': _plantationCrops
         });
 
@@ -12327,52 +12428,104 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
             return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
         });
 
+        privateProperty(Asset, 'getCustomTitle', function (asset, props, options) {
+            return getCustomTitle(asset, props, options);
+        });
+
         privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
             return getTitle(asset, withField, farm);
         });
-        
+
         privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
             return listServiceMap(asset, metadata);
         });
-        
-        function getTitle (instance, withField, farm) {
+
+        function getDefaultProps (instance) {
             switch (instance.type) {
                 case 'crop':
                 case 'permanent crop':
                 case 'plantation':
-                    return (instance.data.plantedArea ? $filter('number')(instance.data.plantedArea, 2) + 'ha' : '') +
-                        (instance.data.plantedArea && instance.data.crop ? ' of ' : '') +
-                        (instance.data.crop ? instance.data.crop : '') +
-                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
-                        (farm ? ' on farm ' + farm.name : '');
+                    return ['plantedArea', 'crop', 'fieldName', 'farmName'];
                 case 'farmland':
-                    return (instance.data.label ? instance.data.label :
-                        (instance.data.portionLabel ? instance.data.portionLabel :
-                            (instance.data.portionNumber ? 'Ptn. ' + instance.data.portionNumber : 'Rem. extent of farm')));
+                    return [['label', 'portionLabel', 'portionNumber']];
                 case 'cropland':
-                    return (instance.data.irrigation ? instance.data.irrigation + ' irrigated' :
-                            (instance.data.irrigated ? 'Irrigated' + (instance.data.equipped ? ', equipped' : ', unequipped') : 'Non irrigable'))
-                        + ' ' + instance.type + (instance.data.waterSource ? ' from ' + instance.data.waterSource : '') +
-                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
-                        (farm ? ' on farm ' + farm.name : '');
+                    return ['typeTitle', function (instance) {
+                        return (instance.data.irrigation ?
+                            instance.data.irrigation + ' irrigated' :
+                            (instance.data.irrigated ?
+                                'Irrigated (' + (instance.data.equipped ? 'equipped' : 'unequipped') + ')':
+                                'Non irrigable'))
+                    }, 'waterSource', 'fieldName', 'farmName'];
                 case 'livestock':
-                    return instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
+                    return ['type', 'category'];
                 case 'pasture':
-                    return (instance.data.intensified ? (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type : 'Natural grazing') +
-                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
-                        (farm ? ' on farm ' + farm.name : '');
+                    return [function (instance) {
+                        return (instance.data.intensified ?
+                            (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type :
+                            'Natural Grazing');
+                    }, 'fieldName', 'farmName'];
                 case 'vme':
-                    return instance.data.category + (instance.data.model ? ' model ' + instance.data.model : '');
+                    return ['category', 'model'];
                 case 'wasteland':
-                    return 'Homestead & Wasteland';
+                    return ['typeTitle'];
                 case 'water source':
                 case 'water right':
-                    return instance.data.waterSource +
-                        (withField && instance.data.fieldName ? ' on field ' + instance.data.fieldName : '') +
-                        (farm ? ' on farm ' + farm.name : '');
+                    return ['waterSource', 'fieldName', 'farmName'];
                 default:
-                    return instance.data.name || instance.data.category || Asset.assetTypes[instance.type];
+                    return [['name', 'category', 'typeTitle']];
             }
+        }
+
+        function getProps (instance, props, options) {
+            return underscore.chain(props)
+                .map(function (prop) {
+                    if (underscore.isArray(prop)) {
+                        return underscore.first(getProps(instance, prop, options));
+                    } else if (underscore.isFunction(prop)) {
+                        return prop(instance, options);
+                    } else {
+                        switch (prop) {
+                            case 'age':
+                                return (instance.data.establishedDate ? moment(options.asOfDate).from(instance.data.establishedDate, true) : 0);
+                            case 'farmName':
+                                return options.withFarm && options.field && options.field[prop];
+                            case 'fieldName':
+                                return options.withField && instance.data[prop];
+                            case 'landUse':
+                                return options.field && options.field[prop];
+                            case 'area':
+                            case 'plantedArea':
+                            case 'size':
+                                return instance.data[prop] && safeMath.round(instance.data[prop], 2) + 'ha';
+                            case 'portionNumber':
+                                return (instance.data.portionNumber ? 'Ptn. ' + instance.data.portionNumber : 'Rem. extent of farm');
+                            case 'typeTitle':
+                                return Asset.assetTypes[instance.type];
+                            default:
+                                return instance.data[prop];
+                        }
+                    }
+                })
+                .compact()
+                .uniq()
+                .value();
+        }
+
+        function getCustomTitle (instance, props, options) {
+            options = underscore.defaults(options || {}, {
+                separator: ', '
+            });
+
+            return getProps(instance, props || getDefaultProps(instance), options).join(options.separator);
+        }
+        
+        function getTitle (instance, withField, farm) {
+            return getCustomTitle(instance, getDefaultProps(instance), {
+                farm: farm,
+                withFarm: !underscore.isUndefined(farm),
+                field: farm && underscore.findWhere(farm.data.fields, {fieldName: instance.data.fieldName}),
+                withField: withField
+            });
         }
         
         function listServiceMap (instance, metadata) {
@@ -12395,14 +12548,14 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
                     case 'pasture':
                     case 'wasteland':
                     case 'water right':
-                        map.subtitle = (instance.data.size !== undefined ? 'Area: ' + $filter('number')(instance.data.size, 2) + 'ha' : 'Unknown area');
+                        map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
                         break;
                     case 'farmland':
-                        map.subtitle = (instance.data.area !== undefined ? 'Area: ' + $filter('number')(instance.data.area, 2) + 'ha' : 'Unknown area');
+                        map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
                         break;
                     case 'permanent crop':
                     case 'plantation':
-                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + $filter('date')(instance.data.establishedDate, 'dd/MM/yy') : '');
+                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('DD-MM-YYYY') : '');
                         break;
                     case 'improvement':
                         map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
@@ -12480,6 +12633,9 @@ sdkModelAsset.factory('Asset', ['$filter', 'AssetBase', 'attachmentHelper', 'Bas
                 }
             },
             farmId: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                },
                 numeric: true
             },
             fieldName: {
@@ -17203,6 +17359,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
             computedProperty(this, 'croppingPotentialRequired', function () {
                 return s.include(this.landUse, 'Cropland');
+            });
+
+            computedProperty(this, 'hasGeometry', function () {
+                return !underscore.isUndefined(this.loc);
             });
 
             computedProperty(this, 'establishedDateRequired', function () {
