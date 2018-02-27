@@ -9,6 +9,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                 return s.include(this.landUse, 'Cropland');
             });
 
+            computedProperty(this, 'hasGeometry', function () {
+                return !underscore.isUndefined(this.loc);
+            });
+
             computedProperty(this, 'establishedDateRequired', function () {
                 return s.include(this.landUse, 'Orchard');
             });
