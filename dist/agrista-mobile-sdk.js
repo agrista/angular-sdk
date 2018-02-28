@@ -18505,7 +18505,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                     } else {
                         switch (prop) {
                             case 'age':
-                                return (instance.data.establishedDate ? moment(options.asOfDate).from(instance.data.establishedDate, true) : 0);
+                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
                             case 'farmName':
                                 return options.withFarm && options.field && options.field[prop];
                             case 'fieldName':
