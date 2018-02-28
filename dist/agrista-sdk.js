@@ -11617,7 +11617,7 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
                     .union([asset])
                     .value();
 
-                if (underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
+                if (underscore.contains(['crop', 'pasture', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
                     instance.data.crop = asset.data.crop;
                 }
 
@@ -11642,12 +11642,15 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
+                totals.assetValue = safeMath.plus(totals.assetValue, asset.data.assetValue);
                 totals.assetValuePerHa = asset.data.assetValuePerHa || (asset.data.assetValue ? safeMath.dividedBy(asset.data.assetValue, asset.data.size) : totals.assetValuePerHa);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = safeMath.times(instance.data.assetValuePerHa, instance.data.size);
+            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa?
+                safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
+                instance.data.assetValue);
         }
 
         return AssetGroup;
@@ -12487,6 +12490,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                         switch (prop) {
                             case 'age':
                                 return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
+                            case 'defaultTitle':
+                                return getProps(instance, getDefaultProps(instance), options);
                             case 'farmName':
                                 return options.withFarm && options.field && options.field[prop];
                             case 'fieldName':
@@ -12516,7 +12521,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 separator: ', '
             });
 
-            return getProps(instance, props || getDefaultProps(instance), options).join(options.separator);
+            return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
         }
         
         function getTitle (instance, withField, farm) {
