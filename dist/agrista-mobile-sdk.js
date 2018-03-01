@@ -18567,19 +18567,23 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 switch (instance.type) {
                     case 'crop':
                         map.subtitle = (instance.data.season ? instance.data.season : '');
+                        map.size = instance.data.size;
                         break;
                     case 'cropland':
                     case 'pasture':
                     case 'wasteland':
                     case 'water right':
                         map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.size;
                         break;
                     case 'farmland':
                         map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.area;
                         break;
                     case 'permanent crop':
                     case 'plantation':
                         map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('DD-MM-YYYY') : '');
+                        map.size = instance.data.size;
                         break;
                     case 'improvement':
                         map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
