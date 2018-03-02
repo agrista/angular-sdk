@@ -5194,16 +5194,12 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
                 return activeFlag.flag.type;
             })
             .map(function (group, type) {
-                var hasOpen = false;
-                angular.forEach(group, function(activeFlag) {
-                    if(activeFlag.status == 'open') {
-                        hasOpen = true;
-                    }
-                });
                 return {
                     label: typeColorMap[type],
                     count: group.length,
-                    hasOpen: hasOpen
+                    hasOpen: underscore.some(group, function (flag) {
+                        return flag.status === 'open';
+                    })
                 }
             })
             .value();
@@ -5211,24 +5207,20 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
         return {
             id: item.id || item.$id,
             title: item.name,
-            subtitle: item.operationType,
+            subtitle: item.customerId,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item),
             flags: flagLabels
         };
 
-        function searchingIndex(item) {
-            var index = [];
-
-            angular.forEach(item.legalEntities, function(entity) {
-                index.push(entity.name);
-
-                if(entity.registrationNumber) {
-                    index.push(entity.registrationNumber);
-                }
-            });
-
-            return index;
+        function searchingIndex (item) {
+            return underscore.chain(item.legalEntities)
+                .map(function (entity) {
+                    return underscore.compact([entity.cifKey, entity.name, entity.registrationNumber]);
+                })
+                .flatten()
+                .uniq()
+                .value()
         }
     };
 
@@ -5923,9 +5915,11 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
 
     var _listServiceMap = function (item) {
         var title = item.documentKey;
-        var mappedItems = underscore.filter(item.subtasks, function (task) {
-            return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
-        }).map(function (task) {
+        var mappedItems = underscore.chain(item.subtasks)
+            .filter(function (task) {
+                return (task.type === 'child' && _validTaskStatuses.indexOf(task.status) !== -1);
+            })
+            .map(function (task) {
                 return {
                     id: task.id || item.$id,
                     title: item.organization.name,
@@ -5937,7 +5931,8 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                         label: _getStatusLabelClass(task.status)
                     }
                 }
-            });
+            })
+            .value();
 
         return (mappedItems.length ? mappedItems : undefined);
     };
@@ -5963,7 +5958,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
     var _getTaskTitle = function (taskType, task) {
         var taskMap = _taskTodoMap[taskType];
 
-        return (taskMap !== undefined ? (typeof taskMap.title == 'string' ? taskMap.title : taskMap.title(task)) : undefined);
+        return (taskMap !== undefined ? (typeof taskMap.title === 'string' ? taskMap.title : taskMap.title(task)) : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
