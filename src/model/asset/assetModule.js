@@ -195,7 +195,7 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
                     .union([asset])
                     .value();
 
-                if (underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
+                if (underscore.contains(['crop', 'pasture', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
                     instance.data.crop = asset.data.crop;
                 }
 
@@ -220,12 +220,15 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
+                totals.assetValue = safeMath.plus(totals.assetValue, asset.data.assetValue);
                 totals.assetValuePerHa = asset.data.assetValuePerHa || (asset.data.assetValue ? safeMath.dividedBy(asset.data.assetValue, asset.data.size) : totals.assetValuePerHa);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = safeMath.times(instance.data.assetValuePerHa, instance.data.size);
+            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa?
+                safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
+                instance.data.assetValue);
         }
 
         return AssetGroup;
@@ -1064,7 +1067,9 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                     } else {
                         switch (prop) {
                             case 'age':
-                                return (instance.data.establishedDate ? moment(options.asOfDate).from(instance.data.establishedDate, true) : 0);
+                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
+                            case 'defaultTitle':
+                                return getProps(instance, getDefaultProps(instance), options);
                             case 'farmName':
                                 return options.withFarm && options.field && options.field[prop];
                             case 'fieldName':
@@ -1094,7 +1099,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 separator: ', '
             });
 
-            return getProps(instance, props || getDefaultProps(instance), options).join(options.separator);
+            return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
         }
         
         function getTitle (instance, withField, farm) {
@@ -1121,19 +1126,23 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 switch (instance.type) {
                     case 'crop':
                         map.subtitle = (instance.data.season ? instance.data.season : '');
+                        map.size = instance.data.size;
                         break;
                     case 'cropland':
                     case 'pasture':
                     case 'wasteland':
                     case 'water right':
                         map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.size;
                         break;
                     case 'farmland':
                         map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.area;
                         break;
                     case 'permanent crop':
                     case 'plantation':
                         map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('DD-MM-YYYY') : '');
+                        map.size = instance.data.size;
                         break;
                     case 'improvement':
                         map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
