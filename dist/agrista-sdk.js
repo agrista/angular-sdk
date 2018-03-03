@@ -6989,16 +6989,12 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
                 return activeFlag.flag.type;
             })
             .map(function (group, type) {
-                var hasOpen = false;
-                angular.forEach(group, function(activeFlag) {
-                    if(activeFlag.status == 'open') {
-                        hasOpen = true;
-                    }
-                });
                 return {
                     label: typeColorMap[type],
                     count: group.length,
-                    hasOpen: hasOpen
+                    hasOpen: underscore.some(group, function (flag) {
+                        return flag.status === 'open';
+                    })
                 }
             })
             .value();
@@ -7006,24 +7002,20 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
         return {
             id: item.id || item.$id,
             title: item.name,
-            subtitle: item.operationType,
+            subtitle: item.customerId,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item),
             flags: flagLabels
         };
 
-        function searchingIndex(item) {
-            var index = [];
-
-            angular.forEach(item.legalEntities, function(entity) {
-                index.push(entity.name);
-
-                if(entity.registrationNumber) {
-                    index.push(entity.registrationNumber);
-                }
-            });
-
-            return index;
+        function searchingIndex (item) {
+            return underscore.chain(item.legalEntities)
+                .map(function (entity) {
+                    return underscore.compact([entity.cifKey, entity.name, entity.registrationNumber]);
+                })
+                .flatten()
+                .uniq()
+                .value()
         }
     };
 
@@ -7718,9 +7710,11 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
 
     var _listServiceMap = function (item) {
         var title = item.documentKey;
-        var mappedItems = underscore.filter(item.subtasks, function (task) {
-            return (task.type && _validTaskStatuses.indexOf(task.status) !== -1 && task.type == 'child');
-        }).map(function (task) {
+        var mappedItems = underscore.chain(item.subtasks)
+            .filter(function (task) {
+                return (task.type === 'child' && _validTaskStatuses.indexOf(task.status) !== -1);
+            })
+            .map(function (task) {
                 return {
                     id: task.id || item.$id,
                     title: item.organization.name,
@@ -7732,7 +7726,8 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                         label: _getStatusLabelClass(task.status)
                     }
                 }
-            });
+            })
+            .value();
 
         return (mappedItems.length ? mappedItems : undefined);
     };
@@ -7758,7 +7753,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
     var _getTaskTitle = function (taskType, task) {
         var taskMap = _taskTodoMap[taskType];
 
-        return (taskMap !== undefined ? (typeof taskMap.title == 'string' ? taskMap.title : taskMap.title(task)) : undefined);
+        return (taskMap !== undefined ? (typeof taskMap.title === 'string' ? taskMap.title : taskMap.title(task)) : undefined);
     };
 
     var _getStatusTitle = function (taskStatus) {
@@ -11617,7 +11612,7 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
                     .union([asset])
                     .value();
 
-                if (underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
+                if (underscore.contains(['crop', 'pasture', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
                     instance.data.crop = asset.data.crop;
                 }
 
@@ -11642,12 +11637,15 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
+                totals.assetValue = safeMath.plus(totals.assetValue, asset.data.assetValue);
                 totals.assetValuePerHa = asset.data.assetValuePerHa || (asset.data.assetValue ? safeMath.dividedBy(asset.data.assetValue, asset.data.size) : totals.assetValuePerHa);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = safeMath.times(instance.data.assetValuePerHa, instance.data.size);
+            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa?
+                safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
+                instance.data.assetValue);
         }
 
         return AssetGroup;
@@ -12486,7 +12484,9 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                     } else {
                         switch (prop) {
                             case 'age':
-                                return (instance.data.establishedDate ? moment(options.asOfDate).from(instance.data.establishedDate, true) : 0);
+                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
+                            case 'defaultTitle':
+                                return getProps(instance, getDefaultProps(instance), options);
                             case 'farmName':
                                 return options.withFarm && options.field && options.field[prop];
                             case 'fieldName':
@@ -12516,7 +12516,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 separator: ', '
             });
 
-            return getProps(instance, props || getDefaultProps(instance), options).join(options.separator);
+            return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
         }
         
         function getTitle (instance, withField, farm) {
@@ -12543,19 +12543,23 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 switch (instance.type) {
                     case 'crop':
                         map.subtitle = (instance.data.season ? instance.data.season : '');
+                        map.size = instance.data.size;
                         break;
                     case 'cropland':
                     case 'pasture':
                     case 'wasteland':
                     case 'water right':
                         map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.size;
                         break;
                     case 'farmland':
                         map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.area;
                         break;
                     case 'permanent crop':
                     case 'plantation':
                         map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('DD-MM-YYYY') : '');
+                        map.size = instance.data.size;
                         break;
                     case 'improvement':
                         map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
