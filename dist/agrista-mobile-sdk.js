@@ -1281,6 +1281,8 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
     return function (url, params) {
+        params = params || {};
+
         return $http(underscore.extend(underscore.isObject(params.resulttype) ? {
             method: 'POST',
             data: params.resulttype,

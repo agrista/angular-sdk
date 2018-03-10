@@ -625,7 +625,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'httpRequestor', 'pagingServi
             });
         },
         searchEnterpriseBudgets: function (query) {
-            return httpRequestor(_host + 'api/budgets/search', underscore.extend({resulttype: 'simple'}, query));
+            return httpRequestor(_host + 'api/budgets/search', query);
         },
         createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {

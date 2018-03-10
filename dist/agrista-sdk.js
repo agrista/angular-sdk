@@ -726,7 +726,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'httpRequestor', 'pagingServi
             });
         },
         searchEnterpriseBudgets: function (query) {
-            return httpRequestor(_host + 'api/budgets/search', underscore.extend({resulttype: 'simple'}, query));
+            return httpRequestor(_host + 'api/budgets/search', query);
         },
         createEnterpriseBudget: function (budgetData) {
             return promiseService.wrap(function (promise) {
@@ -735,12 +735,8 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'httpRequestor', 'pagingServi
                 }, promise.reject);
             });
         },
-        getEnterpriseBudget: function (id, requesttype) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        getEnterpriseBudget: function (id, query) {
+            return httpRequestor(_host + 'api/budget/' + id, query);
         },
         getEnterpriseBudgetPublishers: function () {
             return promiseService.wrap(function (promise) {
@@ -2973,6 +2969,8 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
     return function (url, params) {
+        params = params || {};
+
         return $http(underscore.extend(underscore.isObject(params.resulttype) ? {
             method: 'POST',
             data: params.resulttype,
