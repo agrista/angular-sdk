@@ -1,3 +1,104 @@
+var sdkApiGeoApp = angular.module('ag.sdk.api.geo', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library']);
+
+
+/**
+ * PIP Geo API
+ */
+sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', function ($http, configuration, pagingService, promiseService, underscore) {
+    var _host = configuration.getServer();
+
+    function trimQuery (query) {
+        return underscore.omit(query, function (value) {
+            return (value == null || value == '');
+        });
+    }
+
+    function uriEncodeQuery (query) {
+        return underscore.map(trimQuery(query), function (value, key) {
+            return key + '=' + encodeURIComponent(value);
+        });
+    }
+
+    function uriEncodeQueryJoin (query) {
+        return uriEncodeQuery(query).join('&');
+    }
+
+    return {
+        getAdminRegion: function (query) {
+            query = uriEncodeQueryJoin(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchAdminRegions: function (params) {
+            return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
+        },
+        getDistrict: function (query) {
+            query = uriEncodeQueryJoin(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFarm: function (query) {
+            query = uriEncodeQueryJoin(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchFarms: function (params) {
+            return pagingService.page(_host + 'api/geo/farms', trimQuery(params));
+        },
+        getField: function (query) {
+            query = uriEncodeQueryJoin(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getPortion: function (query) {
+            query = uriEncodeQueryJoin(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchPortions: function (params) {
+            return pagingService.page(_host + 'api/geo/portions', trimQuery(params));
+        },
+        getProvince: function (query) {
+            query = uriEncodeQueryJoin(query);
+
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getSublayer: function (query) {
+            query = uriEncodeQueryJoin(query);
+
+            return promiseService.wrap(function(promise) {
+                $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    }
+}]);
+
 var sdkAuthorizationApp = angular.module('ag.sdk.authorization', ['ag.sdk.config', 'ag.sdk.utilities', 'satellizer']);
 
 sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'configuration', 'underscore', function($http, promiseService, configuration, underscore) {
@@ -1180,6 +1281,8 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
     return function (url, params) {
+        params = params || {};
+
         return $http(underscore.extend(underscore.isObject(params.resulttype) ? {
             method: 'POST',
             data: params.resulttype,
@@ -14888,7 +14991,7 @@ cordovaToasterApp.factory('toasterService', [function () {
     };
 }]);
 
-var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.hydration', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.connection', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library']);
+var mobileSdkApiApp = angular.module('ag.mobile-sdk.api', ['ag.sdk.utilities', 'ag.sdk.monitor', 'ag.mobile-sdk.hydration', 'ag.mobile-sdk.data', 'ag.mobile-sdk.cordova.connection', 'ag.mobile-sdk.cordova.storage', 'ag.sdk.library', 'ag.sdk.api.geo']);
 
 var _errors = {
     TypeParamRequired: {code: 'TypeParamRequired', message: 'Type parameter is required'},
@@ -16166,60 +16269,6 @@ mobileSdkApiApp.factory('organizationalUnitApi', ['api', function (api) {
     };
 }]);
 
-mobileSdkApiApp.factory('pipGeoApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
-    var _host = configuration.getServer();
-
-    return {
-        getFieldPolygon: function (lng, lat) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getPortionPolygon: function (lng, lat) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        searchPortions: function (query) {
-            query = underscore.chain(query)
-                .omit(function (value) {
-                    return (value == null || value == '');
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
-
-            return promiseService.wrap(function (promise) {
-                if (!query) {
-                    promise.reject();
-                }
-                $http.get(_host + 'api/geo/portions?' + query, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getDistrictPolygon: function (lng, lat) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getProvincePolygon: function (lng, lat) {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province?x=' + lng + '&y=' + lat, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        }
-    }
-}]);
-
 mobileSdkApiApp.provider('productionScheduleApi', ['hydrationProvider', function (hydrationProvider) {
     hydrationProvider.registerHydrate('productionSchedules', ['productionScheduleApi', function (productionScheduleApi) {
         return function (obj, type) {
@@ -16341,6 +16390,65 @@ mobileSdkApiApp.factory('userApi', ['api', function (api) {
         deleteUser: userApi.deleteItem
     };
 }]);
+
+var mobileSdkCacheApp = angular.module('ag.mobile-sdk.cache', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library', 'lokijs']);
+
+
+mobileSdkCacheApp.provider('lokiCache', [function () {
+    var _adapterProvider = function (name) {
+        return new LokiCordovaFSAdapter({'prefix': 'loki'});
+    };
+
+    return {
+        setAdapterProvider: function (adapterProvider) {
+            _adapterProvider = adapterProvider;
+        },
+        $get: ['Loki', 'underscore',
+            function (Loki, underscore) {
+                var cacheStore = {},
+                    adapter = _adapterProvider('loki');
+
+                return function (dbName, options) {
+                    if (underscore.isUndefined(cacheStore[dbName])) {
+                        cacheStore[dbName] = new Loki(dbName, underscore.defaults(options || {}, {
+                            adapter: adapter
+                        }));
+                    }
+
+                    return cacheStore[dbName];
+                };
+            }]
+    }
+}]);
+
+mobileSdkCacheApp.factory('lokiCollectionCache', ['lokiCache', 'promiseService', 'underscore',
+    function (lokiCache, promiseService, underscore) {
+        var collectionStore = {};
+
+        return function (dbName, collectionName, options) {
+            return promiseService.wrap(function (promise) {
+                var key = dbName + '-' + collectionName;
+
+                if (underscore.isUndefined(collectionStore[key])) {
+                    var db = lokiCache(dbName, underscore.defaults(options || {}, {
+                        autoload: true,
+                        autosave: true,
+                        autoloadCallback: function () {
+                            collectionStore[key] = db.getCollection(collectionName);
+
+                            if (collectionStore[key] == null) {
+                                collectionStore[key] = db.addCollection(collectionName);
+                            }
+
+                            promise.resolve(collectionStore[key]);
+                        }
+                    }));
+                } else {
+                    promise.resolve(collectionStore[key]);
+                }
+            });
+        };
+    }]);
 
 var mobileSdkDataApp = angular.module('ag.mobile-sdk.data', ['ag.sdk.utilities', 'ag.sdk.config', 'ag.sdk.monitor', 'ag.sdk.library', 'ag.mobile-sdk.cordova.storage']);
 
