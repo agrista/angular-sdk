@@ -735,8 +735,12 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'httpRequestor', 'pagingServi
                 }, promise.reject);
             });
         },
-        getEnterpriseBudget: function (id, query) {
-            return httpRequestor(_host + 'api/budget/' + id, query);
+        getEnterpriseBudget: function (id, requesttype) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
         },
         getEnterpriseBudgetPublishers: function () {
             return promiseService.wrap(function (promise) {
