@@ -6,7 +6,13 @@ sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty'
             Model.Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'fields', []);
+            Base.initializeObject(this.data, 'gates', []);
             Base.initializeObject(this.data, 'ignoredLandClasses', []);
+
+            privateProperty(this, 'farmNameUnique', function (name, farms) {
+                return farmNameUnique(this, name, farms);
+            });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -16,6 +22,19 @@ sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty'
 
             // Models
             this.organization = attrs.organization;
+        }
+
+        function farmNameUnique (instance, name, farms) {
+            var trimmedValue = s.trim(name || '').toLowerCase();
+
+            return !underscore.isEmpty(trimmedValue) && !underscore.chain(farms)
+                .reject(function (farm) {
+                    return instance.id === farm.id;
+                })
+                .some(function (farm) {
+                    return (s.trim(farm.name).toLowerCase() === trimmedValue);
+                })
+                .value();
         }
 
         inheritModel(Farm, Model.Base);

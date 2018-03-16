@@ -330,6 +330,12 @@ sdkUtilitiesApp.filter('round', [function () {
     };
 }]);
 
+sdkUtilitiesApp.factory('asJson', ['underscore', function (underscore) {
+    return function (object, omit) {
+        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON() : object, omit || []);
+    }
+}]);
+
 sdkUtilitiesApp.factory('safeMath', ['bigNumber', function (bigNumber) {
     bigNumber.config({ERRORS: false});
 
