@@ -2971,6 +2971,25 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
     };
 }]);
 
+sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function (pagingService, promiseService) {
+    return function (initializeFn, params) {
+        return promiseService.wrap(function (promise) {
+            var results = [];
+            var paging = pagingService.initialize(initializeFn, function (items) {
+                results = results.concat(items);
+
+                if (paging.complete) {
+                    promise.resolve(results);
+                } else {
+                    paging.request().catch(promise.reject);
+                }
+            }, params);
+
+            paging.request().catch(promise.reject);
+        });
+    }
+}]);
+
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
     return function (url, params) {
         params = params || {};
@@ -3049,9 +3068,9 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     };
 
     return {
-        all: function (promises) {
-            return $q.all(promises);
-        },
+        all: $q.all,
+        reject: $q.reject,
+        resolve: $q.resolve,
         chain: function (action) {
             return _chainAll(action, []);
         },
@@ -3070,9 +3089,6 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         },
         objectWrap: function (action) {
             return _wrapAll(action, {});
-        },
-        reject: function (obj) {
-            return $q.reject(obj);
         },
         throwError: function (err) {
             throw err;
@@ -8709,23 +8725,23 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             baseTile: 'Agriculture',
             baseLayers: {
                 'Agriculture': {
-                    tiles: 'agrista.f9f5628d',
+                    template: 'agrista.f9f5628d',
                     type: 'mapbox'
                 },
                 'Satellite': {
-                    tiles: 'agrista.a7235891',
+                    template: 'agrista.a7235891',
                     type: 'mapbox'
                 },
                 'Hybrid': {
-                    tiles: 'agrista.01e3fb18',
+                    template: 'agrista.01e3fb18',
                     type: 'mapbox'
                 },
                 'Light': {
-                    tiles: 'agrista.e7367e07',
+                    template: 'agrista.e7367e07',
                     type: 'mapbox'
                 },
                 'Production Regions': {
-                    tiles: 'agrista.87ceb2ab',
+                    template: 'agrista.87ceb2ab',
                     type: 'mapbox'
                 }
             },
@@ -9872,20 +9888,20 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
     Mapbox.prototype.addBaseLayer = function (baselayer, name, show) {
         if (this._layerControls.baseLayers[name] === undefined) {
-            if (baselayer.type == 'tile') {
-                baselayer.layer = L.tileLayer(baselayer.tiles);
-            } else if (baselayer.type == 'mapbox') {
-                baselayer.layer = L.mapbox.tileLayer(baselayer.tiles);
-            } else if (baselayer.type == 'google' && typeof L.Google === 'function') {
-                baselayer.layer = new L.Google(baselayer.tiles);
+            if (baselayer.type === 'mapbox') {
+                baselayer.layer = L.mapbox.tileLayer(baselayer.template, baselayer.options);
+            } else if (typeof L[baselayer.type] === 'function') {
+                baselayer.layer = L[baselayer.type](baselayer.template, baselayer.options);
             }
 
-            if (name === this._layerControls.baseTile || show) {
-                baselayer.layer.addTo(this._map);
-            }
+            if (baselayer.layer) {
+                if (name === this._layerControls.baseTile || show) {
+                    baselayer.layer.addTo(this._map);
+                }
 
-            this._layerControls.baseLayers[name] = baselayer;
-            this._layerControls.control.addBaseLayer(baselayer.layer, name);
+                this._layerControls.baseLayers[name] = baselayer;
+                this._layerControls.control.addBaseLayer(baselayer.layer, name);
+            }
         }
     };
 

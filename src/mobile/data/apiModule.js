@@ -177,7 +177,31 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(farms, function (farm) {
                             if (farm.$dirty === true) {
                                 chain.push(function () {
-                                    return farmApi.postFarm({data: farm});
+                                    if (farm.$local === true) {
+                                        return farmApi.postFarm({data: farm}).then(function (res) {
+                                            return assetApi.getAssets({
+                                                template: '',
+                                                options: {
+                                                    readLocal: true,
+                                                    hydrate: false,
+                                                    filter: function (dataItem) {
+                                                        return dataItem.farmId && dataItem.farmId === farm.$id;
+                                                    }
+                                                }
+                                            }).then(function (assets) {
+                                                return promiseService.wrapAll(function (promises) {
+                                                    underscore.each(assets, function (asset) {
+                                                        asset.$dirty = true;
+                                                        asset.farmId = res.id;
+
+                                                        promises.push(assetApi.updateAsset({data: asset}));
+                                                    });
+                                                });
+                                            });
+                                        });
+                                    } else {
+                                        return farmApi.postFarm({data: farm});
+                                    }
                                 });
                             }
                         });
@@ -523,7 +547,7 @@ mobileSdkApiApp.constant('apiConstants', {
     MissingParams: {code: 'MissingParams', message: 'Missing parameters for api call'}
 });
 
-mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', 'underscore', function (apiConstants, dataStore, promiseService, underscore) {
+mobileSdkApiApp.factory('api', ['apiConstants', 'asJson', 'dataStore', 'promiseService', 'underscore', function (apiConstants, asJson, dataStore, promiseService, underscore) {
     var _apis = {};
 
     return function (options) {
@@ -541,19 +565,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
                 apiTemplate: options.singular + '/:id',
                 hydrate: options.hydrate,
                 dehydrate: options.dehydrate
-            }), _stripProperties = function (data) {
-                if (typeof data.copy == 'function') {
-                    var strippedData = data.copy();
-
-                    angular.forEach(options.strip, function (prop) {
-                        delete strippedData[prop];
-                    });
-
-                    return strippedData;
-                } else {
-                    return (options.strip ? underscore.omit(data, options.strip) : data);
-                }
-            };
+            });
 
             _apis[options.singular] = {
                 options: options,
@@ -574,7 +586,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
                     request.options = underscore.defaults((request.options ? angular.copy(request.options) : {}), {one: false});
 
                     return _itemStore.transaction().then(function (tx) {
-                        if (request.template) {
+                        if (!underscore.isUndefined(request.template)) {
                             return tx.getItems({template: request.template, schema: request.schema, options: request.options, params: request.params});
                         } else if (request.search) {
                             request.options.readLocal = false;
@@ -603,7 +615,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.createItems({template: request.template, schema: request.schema, data: request.data, options: request.options});
+                            return tx.createItems({template: request.template, schema: request.schema, data: asJson(request.data), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
@@ -664,7 +676,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.updateItems({data: _stripProperties(request.data), options: request.options});
+                            return tx.updateItems({data: asJson(request.data, options.strip), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
@@ -685,7 +697,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.postItems({template: request.template, schema: request.schema, data: _stripProperties(request.data), options: request.options});
+                            return tx.postItems({template: request.template, schema: request.schema, data: asJson(request.data, options.strip), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }

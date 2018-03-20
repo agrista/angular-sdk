@@ -186,6 +186,25 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
     };
 }]);
 
+sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function (pagingService, promiseService) {
+    return function (initializeFn, params) {
+        return promiseService.wrap(function (promise) {
+            var results = [];
+            var paging = pagingService.initialize(initializeFn, function (items) {
+                results = results.concat(items);
+
+                if (paging.complete) {
+                    promise.resolve(results);
+                } else {
+                    paging.request().catch(promise.reject);
+                }
+            }, params);
+
+            paging.request().catch(promise.reject);
+        });
+    }
+}]);
+
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
     return function (url, params) {
         params = params || {};
@@ -264,9 +283,9 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     };
 
     return {
-        all: function (promises) {
-            return $q.all(promises);
-        },
+        all: $q.all,
+        reject: $q.reject,
+        resolve: $q.resolve,
         chain: function (action) {
             return _chainAll(action, []);
         },
@@ -285,9 +304,6 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         },
         objectWrap: function (action) {
             return _wrapAll(action, {});
-        },
-        reject: function (obj) {
-            return $q.reject(obj);
         },
         throwError: function (err) {
             throw err;

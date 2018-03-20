@@ -10,19 +10,33 @@ mobileSdkCacheApp.provider('lokiCache', [function () {
         setAdapterProvider: function (adapterProvider) {
             _adapterProvider = adapterProvider;
         },
-        $get: ['Loki', 'underscore',
-            function (Loki, underscore) {
+        $get: ['Loki', 'promiseService', 'underscore',
+            function (Loki, promiseService, underscore) {
                 var cacheStore = {},
                     adapter = _adapterProvider('loki');
 
                 return function (dbName, options) {
-                    if (underscore.isUndefined(cacheStore[dbName])) {
-                        cacheStore[dbName] = new Loki(dbName, underscore.defaults(options || {}, {
-                            adapter: adapter
-                        }));
-                    }
+                    return promiseService.wrap(function (promise) {
+                        if (underscore.isUndefined(cacheStore[dbName])) {
+                            cacheStore[dbName] = promise;
 
-                    return cacheStore[dbName];
+                            var lokiInstance = new Loki(dbName, underscore.defaults(options || {}, {
+                                adapter: adapter,
+                                autoload: true,
+                                autosave: true,
+                                autoloadCallback: function () {
+                                    var promise = cacheStore[dbName];
+                                    cacheStore[dbName] = lokiInstance;
+
+                                    promise.resolve(cacheStore[dbName]);
+                                }
+                            }));
+                        } else if (typeof cacheStore[dbName].promise === 'object') {
+                            promise.resolve(cacheStore[dbName].promise);
+                        } else {
+                            promise.resolve(cacheStore[dbName]);
+                        }
+                    });
                 };
             }]
     }
@@ -37,19 +51,15 @@ mobileSdkCacheApp.factory('lokiCollectionCache', ['lokiCache', 'promiseService',
                 var key = dbName + '-' + collectionName;
 
                 if (underscore.isUndefined(collectionStore[key])) {
-                    var db = lokiCache(dbName, underscore.defaults(options || {}, {
-                        autoload: true,
-                        autosave: true,
-                        autoloadCallback: function () {
-                            collectionStore[key] = db.getCollection(collectionName);
+                    lokiCache(dbName, options).then(function (db) {
+                        collectionStore[key] = db.getCollection(collectionName);
 
-                            if (collectionStore[key] == null) {
-                                collectionStore[key] = db.addCollection(collectionName);
-                            }
-
-                            promise.resolve(collectionStore[key]);
+                        if (collectionStore[key] === null) {
+                            collectionStore[key] = db.addCollection(collectionName);
                         }
-                    }));
+
+                        promise.resolve(collectionStore[key]);
+                    }, promise.reject);
                 } else {
                     promise.resolve(collectionStore[key]);
                 }

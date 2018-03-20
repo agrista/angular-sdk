@@ -1279,6 +1279,25 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
     };
 }]);
 
+sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function (pagingService, promiseService) {
+    return function (initializeFn, params) {
+        return promiseService.wrap(function (promise) {
+            var results = [];
+            var paging = pagingService.initialize(initializeFn, function (items) {
+                results = results.concat(items);
+
+                if (paging.complete) {
+                    promise.resolve(results);
+                } else {
+                    paging.request().catch(promise.reject);
+                }
+            }, params);
+
+            paging.request().catch(promise.reject);
+        });
+    }
+}]);
+
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
     return function (url, params) {
         params = params || {};
@@ -1357,9 +1376,9 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     };
 
     return {
-        all: function (promises) {
-            return $q.all(promises);
-        },
+        all: $q.all,
+        reject: $q.reject,
+        resolve: $q.resolve,
         chain: function (action) {
             return _chainAll(action, []);
         },
@@ -1378,9 +1397,6 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         },
         objectWrap: function (action) {
             return _wrapAll(action, {});
-        },
-        reject: function (obj) {
-            return $q.reject(obj);
         },
         throwError: function (err) {
             throw err;
@@ -7017,23 +7033,23 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             baseTile: 'Agriculture',
             baseLayers: {
                 'Agriculture': {
-                    tiles: 'agrista.f9f5628d',
+                    template: 'agrista.f9f5628d',
                     type: 'mapbox'
                 },
                 'Satellite': {
-                    tiles: 'agrista.a7235891',
+                    template: 'agrista.a7235891',
                     type: 'mapbox'
                 },
                 'Hybrid': {
-                    tiles: 'agrista.01e3fb18',
+                    template: 'agrista.01e3fb18',
                     type: 'mapbox'
                 },
                 'Light': {
-                    tiles: 'agrista.e7367e07',
+                    template: 'agrista.e7367e07',
                     type: 'mapbox'
                 },
                 'Production Regions': {
-                    tiles: 'agrista.87ceb2ab',
+                    template: 'agrista.87ceb2ab',
                     type: 'mapbox'
                 }
             },
@@ -8180,20 +8196,20 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
     Mapbox.prototype.addBaseLayer = function (baselayer, name, show) {
         if (this._layerControls.baseLayers[name] === undefined) {
-            if (baselayer.type == 'tile') {
-                baselayer.layer = L.tileLayer(baselayer.tiles);
-            } else if (baselayer.type == 'mapbox') {
-                baselayer.layer = L.mapbox.tileLayer(baselayer.tiles);
-            } else if (baselayer.type == 'google' && typeof L.Google === 'function') {
-                baselayer.layer = new L.Google(baselayer.tiles);
+            if (baselayer.type === 'mapbox') {
+                baselayer.layer = L.mapbox.tileLayer(baselayer.template, baselayer.options);
+            } else if (typeof L[baselayer.type] === 'function') {
+                baselayer.layer = L[baselayer.type](baselayer.template, baselayer.options);
             }
 
-            if (name === this._layerControls.baseTile || show) {
-                baselayer.layer.addTo(this._map);
-            }
+            if (baselayer.layer) {
+                if (name === this._layerControls.baseTile || show) {
+                    baselayer.layer.addTo(this._map);
+                }
 
-            this._layerControls.baseLayers[name] = baselayer;
-            this._layerControls.control.addBaseLayer(baselayer.layer, name);
+                this._layerControls.baseLayers[name] = baselayer;
+                this._layerControls.control.addBaseLayer(baselayer.layer, name);
+            }
         }
     };
 
@@ -14811,6 +14827,7 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
         getBaseDirectory: function (directory) {
             return (cordova.file && cordova.file[directory] ? cordova.file[directory] : '');
         },
+        getFileEntry: _getFileEntry,
         /**
          * Check if a file exists
          * @param {string} fileURI The file to check
@@ -15195,7 +15212,31 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         angular.forEach(farms, function (farm) {
                             if (farm.$dirty === true) {
                                 chain.push(function () {
-                                    return farmApi.postFarm({data: farm});
+                                    if (farm.$local === true) {
+                                        return farmApi.postFarm({data: farm}).then(function (res) {
+                                            return assetApi.getAssets({
+                                                template: '',
+                                                options: {
+                                                    readLocal: true,
+                                                    hydrate: false,
+                                                    filter: function (dataItem) {
+                                                        return dataItem.farmId && dataItem.farmId === farm.$id;
+                                                    }
+                                                }
+                                            }).then(function (assets) {
+                                                return promiseService.wrapAll(function (promises) {
+                                                    underscore.each(assets, function (asset) {
+                                                        asset.$dirty = true;
+                                                        asset.farmId = res.id;
+
+                                                        promises.push(assetApi.updateAsset({data: asset}));
+                                                    });
+                                                });
+                                            });
+                                        });
+                                    } else {
+                                        return farmApi.postFarm({data: farm});
+                                    }
                                 });
                             }
                         });
@@ -15541,7 +15582,7 @@ mobileSdkApiApp.constant('apiConstants', {
     MissingParams: {code: 'MissingParams', message: 'Missing parameters for api call'}
 });
 
-mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', 'underscore', function (apiConstants, dataStore, promiseService, underscore) {
+mobileSdkApiApp.factory('api', ['apiConstants', 'asJson', 'dataStore', 'promiseService', 'underscore', function (apiConstants, asJson, dataStore, promiseService, underscore) {
     var _apis = {};
 
     return function (options) {
@@ -15559,19 +15600,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
                 apiTemplate: options.singular + '/:id',
                 hydrate: options.hydrate,
                 dehydrate: options.dehydrate
-            }), _stripProperties = function (data) {
-                if (typeof data.copy == 'function') {
-                    var strippedData = data.copy();
-
-                    angular.forEach(options.strip, function (prop) {
-                        delete strippedData[prop];
-                    });
-
-                    return strippedData;
-                } else {
-                    return (options.strip ? underscore.omit(data, options.strip) : data);
-                }
-            };
+            });
 
             _apis[options.singular] = {
                 options: options,
@@ -15592,7 +15621,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
                     request.options = underscore.defaults((request.options ? angular.copy(request.options) : {}), {one: false});
 
                     return _itemStore.transaction().then(function (tx) {
-                        if (request.template) {
+                        if (!underscore.isUndefined(request.template)) {
                             return tx.getItems({template: request.template, schema: request.schema, options: request.options, params: request.params});
                         } else if (request.search) {
                             request.options.readLocal = false;
@@ -15621,7 +15650,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.createItems({template: request.template, schema: request.schema, data: request.data, options: request.options});
+                            return tx.createItems({template: request.template, schema: request.schema, data: asJson(request.data), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
@@ -15682,7 +15711,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.updateItems({data: _stripProperties(request.data), options: request.options});
+                            return tx.updateItems({data: asJson(request.data, options.strip), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
@@ -15703,7 +15732,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', '
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.postItems({template: request.template, schema: request.schema, data: _stripProperties(request.data), options: request.options});
+                            return tx.postItems({template: request.template, schema: request.schema, data: asJson(request.data, options.strip), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
@@ -16428,19 +16457,33 @@ mobileSdkCacheApp.provider('lokiCache', [function () {
         setAdapterProvider: function (adapterProvider) {
             _adapterProvider = adapterProvider;
         },
-        $get: ['Loki', 'underscore',
-            function (Loki, underscore) {
+        $get: ['Loki', 'promiseService', 'underscore',
+            function (Loki, promiseService, underscore) {
                 var cacheStore = {},
                     adapter = _adapterProvider('loki');
 
                 return function (dbName, options) {
-                    if (underscore.isUndefined(cacheStore[dbName])) {
-                        cacheStore[dbName] = new Loki(dbName, underscore.defaults(options || {}, {
-                            adapter: adapter
-                        }));
-                    }
+                    return promiseService.wrap(function (promise) {
+                        if (underscore.isUndefined(cacheStore[dbName])) {
+                            cacheStore[dbName] = promise;
 
-                    return cacheStore[dbName];
+                            var lokiInstance = new Loki(dbName, underscore.defaults(options || {}, {
+                                adapter: adapter,
+                                autoload: true,
+                                autosave: true,
+                                autoloadCallback: function () {
+                                    var promise = cacheStore[dbName];
+                                    cacheStore[dbName] = lokiInstance;
+
+                                    promise.resolve(cacheStore[dbName]);
+                                }
+                            }));
+                        } else if (typeof cacheStore[dbName].promise === 'object') {
+                            promise.resolve(cacheStore[dbName].promise);
+                        } else {
+                            promise.resolve(cacheStore[dbName]);
+                        }
+                    });
                 };
             }]
     }
@@ -16455,19 +16498,15 @@ mobileSdkCacheApp.factory('lokiCollectionCache', ['lokiCache', 'promiseService',
                 var key = dbName + '-' + collectionName;
 
                 if (underscore.isUndefined(collectionStore[key])) {
-                    var db = lokiCache(dbName, underscore.defaults(options || {}, {
-                        autoload: true,
-                        autosave: true,
-                        autoloadCallback: function () {
-                            collectionStore[key] = db.getCollection(collectionName);
+                    lokiCache(dbName, options).then(function (db) {
+                        collectionStore[key] = db.getCollection(collectionName);
 
-                            if (collectionStore[key] == null) {
-                                collectionStore[key] = db.addCollection(collectionName);
-                            }
-
-                            promise.resolve(collectionStore[key]);
+                        if (collectionStore[key] === null) {
+                            collectionStore[key] = db.addCollection(collectionName);
                         }
-                    }));
+
+                        promise.resolve(collectionStore[key]);
+                    }, promise.reject);
                 } else {
                     promise.resolve(collectionStore[key]);
                 }
@@ -16827,7 +16866,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 return dataStoreUtilities
                     .transactionPromise(_localDatabase)
                     .then(function (tx) {
-                        return dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name + ' WHERE uri = ?', [uri]);
+                        return (underscore.isEmpty(uri) ?
+                            dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name) :
+                            dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name + ' WHERE uri = ?', [uri]));
                     }, promiseService.throwError)
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {
