@@ -14748,6 +14748,32 @@ cordovaGeolocationApp.factory('geolocationService', ['promiseService', 'undersco
     };
 }]);
 
+var cordovaMapApp = angular.module('ag.mobile-sdk.cordova.map', ['ag.sdk.library']);
+
+cordovaMapApp.factory('cordovaTileCache', ['mapConfig', 'underscore',
+    function (mapConfig, underscore) {
+        function getTileLayers () {
+            return underscore.chain(mapConfig.layerControl && mapConfig.layerControl.baseLayers || [])
+                .omit(function (layer) {
+                    return layer.type !== 'tileLayerCordova';
+                })
+                .mapObject(function (layer) {
+                    return L[layer.type](layer.template, layer.options);
+                })
+                .value();
+        }
+
+        return {
+            clear: function () {
+                underscore.each(getTileLayers(), function (tileLayer) {
+                    tileLayer.emptyCache();
+                });
+            },
+            getTileLayer: function (name) {
+                return getTileLayers()[name];
+            }
+        }
+    }]);
 var cordovaStorageApp = angular.module('ag.mobile-sdk.cordova.storage', ['ag.sdk.utilities']);
 
 /**
@@ -22317,6 +22343,16 @@ angular.module('ag.sdk.test', [
     'ag.sdk.test.data'
 ]);
 
+angular.module('ag.mobile-sdk.cordova', [
+    'ag.mobile-sdk.cordova.camera',
+    'ag.mobile-sdk.cordova.connection',
+    'ag.mobile-sdk.cordova.geolocation',
+    'ag.mobile-sdk.cordova.map',
+    'ag.mobile-sdk.cordova.storage',
+    'ag.mobile-sdk.cordova.toaster'
+]);
+
+
 angular.module('ag.mobile-sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
@@ -22328,6 +22364,7 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.helper',
     'ag.sdk.library',
     'ag.sdk.test',
+    'ag.mobile-sdk.cordova',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',
     'ag.mobile-sdk.data',
