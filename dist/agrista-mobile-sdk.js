@@ -17883,10 +17883,6 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 return Asset.categories[this.type] || [];
             });
 
-            privateProperty(this, 'getPhoto', function () {
-                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
-            });
-
             privateProperty(this, 'getCustomTitle', function (props, options) {
                 return getCustomTitle(this, props, options);
             });
@@ -17906,6 +17902,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 } else if (this.type === 'cropland') {
                     this.data.equipped = (this.data.irrigated ? this.data.equipped : false);
                 }
+            });
+
+            computedProperty(this, 'thumbnailUrl', function () {
+                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
             });
 
             computedProperty(this, 'age', function (asOfDate) {
@@ -22351,7 +22351,6 @@ angular.module('ag.mobile-sdk.cordova', [
     'ag.mobile-sdk.cordova.storage',
     'ag.mobile-sdk.cordova.toaster'
 ]);
-
 
 angular.module('ag.mobile-sdk', [
     'ag.sdk.authorization',

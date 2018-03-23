@@ -59,7 +59,6 @@ angular.module('ag.mobile-sdk.cordova', [
     'ag.mobile-sdk.cordova.toaster'
 ]);
 
-
 angular.module('ag.mobile-sdk', [
     'ag.sdk.authorization',
     'ag.sdk.id',
