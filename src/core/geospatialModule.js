@@ -21,8 +21,15 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         }
     }
 
+    function getGeometry (instance) {
+        return (instance._json.type !== 'FeatureCollection' ? instance._json : {
+            type: 'GeometryCollection',
+            geometries: underscore.pluck(instance._json.features, 'geometry')
+        });
+    }
+
     function geometryRelation (instance, relation, geometry) {
-        var geom1 = topologyHelper.readGeoJSON(instance._json),
+        var geom1 = topologyHelper.readGeoJSON(getGeometry(instance)),
             geom2 = topologyHelper.readGeoJSON(geometry);
 
         return (geom1 && geom2 && geom1[relation] ? geom1[relation](geom2) : false);
@@ -86,16 +93,16 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         /**
          * Get Center
          */
-        getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
+        getCenter: function () {
+            var geom = topologyHelper.readGeoJSON(getGeometry(this)),
+                coord = (geom ? geom.getCentroid().getCoordinate() : geom);
 
-            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
+            return (coord ? geom.getCentroid().getCoordinate() : coord);
         },
-        getCenterAsGeojson: function (bounds) {
-            return {
-                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
-                type: 'Point'
-            }
+        getCenterAsGeojson: function () {
+            var geom = topologyHelper.readGeoJSON(getGeometry(this));
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
         },
         getProperty: function (name) {
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);

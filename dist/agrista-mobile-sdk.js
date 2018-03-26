@@ -581,8 +581,15 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         }
     }
 
+    function getGeometry (instance) {
+        return (instance._json.type !== 'FeatureCollection' ? instance._json : {
+            type: 'GeometryCollection',
+            geometries: underscore.pluck(instance._json.features, 'geometry')
+        });
+    }
+
     function geometryRelation (instance, relation, geometry) {
-        var geom1 = topologyHelper.readGeoJSON(instance._json),
+        var geom1 = topologyHelper.readGeoJSON(getGeometry(instance)),
             geom2 = topologyHelper.readGeoJSON(geometry);
 
         return (geom1 && geom2 && geom1[relation] ? geom1[relation](geom2) : false);
@@ -646,16 +653,16 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         /**
          * Get Center
          */
-        getCenter: function (bounds) {
-            var boundingBox = this.getBoundingBox(bounds || this.getBounds());
+        getCenter: function () {
+            var geom = topologyHelper.readGeoJSON(getGeometry(this)),
+                coord = (geom ? geom.getCentroid().getCoordinate() : geom);
 
-            return [boundingBox[0][0] + ((boundingBox[1][0] - boundingBox[0][0]) / 2), boundingBox[0][1] + ((boundingBox[1][1] - boundingBox[0][1]) / 2)];
+            return (coord ? geom.getCentroid().getCoordinate() : coord);
         },
-        getCenterAsGeojson: function (bounds) {
-            return {
-                coordinates: this.getCenter(bounds || this.getBounds()).reverse(),
-                type: 'Point'
-            }
+        getCenterAsGeojson: function () {
+            var geom = topologyHelper.readGeoJSON(getGeometry(this));
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
         },
         getProperty: function (name) {
             return (this._json && this._json.properties ? this._json.properties[name] : undefined);
@@ -965,7 +972,7 @@ sdkMonitorApp.config(['$provide', function ($provide) {
             log[level] = function () {
                 var args = [].slice.call(arguments),
                     caller = (arguments.callee && arguments.callee.caller && arguments.callee.caller.name.length > 0 ? arguments.callee.caller.name + ' :: ' : ''),
-                    output = (underscore.isObject(args[0]) ? '\n' + $filter('json')(args[0]) : args[0]);
+                    output = (underscore.isObject(args[0]) ? (typeof args[0].toString === 'function' ? args[0].toString() : '\n' + $filter('json')(args[0])) : args[0]);
 
                 args[0] = moment().format('YYYY-MM-DDTHH:mm:ss.SSS') + underscore.lpad(' [' + level.toUpperCase() + '] ', 7, ' ') +  caller + output;
 
@@ -12018,10 +12025,37 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
 var sdkModelFarm = angular.module('ag.sdk.model.farm', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelFarm.factory('Farm', ['asJson', 'Base', 'geoJSONHelper', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (asJson, Base, geoJSONHelper, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Farm (attrs) {
             Model.Base.apply(this, arguments);
+
+            // Fields
+            privateProperty(this, 'addField', function (field) {
+                addItem(this, 'fields', field, 'fieldName');
+            });
+
+            privateProperty(this, 'removeField', function (field) {
+                removeItem(this, 'fields', field, 'fieldName');
+            });
+
+            // Gates
+            privateProperty(this, 'addGate', function (gate) {
+                addItem(this, 'gates', gate, 'name');
+            });
+
+            privateProperty(this, 'removeGate', function (gate) {
+                removeItem(this, 'gates', gate, 'name');
+            });
+
+            // Geom
+            privateProperty(this, 'contains', function (geojson, assets) {
+                return contains(this, geojson, assets);
+            });
+
+            privateProperty(this, 'centroid', function (assets) {
+                return centroid(this, assets);
+            });
 
             this.data = (attrs && attrs.data) || {};
             Base.initializeObject(this.data, 'fields', []);
@@ -12056,6 +12090,58 @@ sdkModelFarm.factory('Farm', ['Base', 'inheritModel', 'Model', 'privateProperty'
         }
 
         inheritModel(Farm, Model.Base);
+
+        function addItem (instance, dataStore, item, compareProp) {
+            if (item) {
+                instance.data[dataStore] = underscore.chain(instance.data[dataStore])
+                    .reject(function (dsItem) {
+                        return dsItem[compareProp] === item[compareProp];
+                    })
+                    .union([asJson(item)])
+                    .value()
+                    .sort(function (a, b) {
+                        return naturalSort(a[compareProp], b[compareProp]);
+                    });
+
+                instance.$dirty = true;
+            }
+        }
+
+        function removeItem (instance, dataStore, item, compareProp) {
+            if (item) {
+                instance.data[dataStore] = underscore.reject(instance.data[dataStore], function (dsItem) {
+                    return dsItem[compareProp] === item[compareProp];
+                });
+
+                instance.$dirty = true;
+            }
+        }
+
+        function getAssetsGeom (instance, assets) {
+            return underscore.chain(assets)
+                .filter(function (asset) {
+                    return asset.farmId === instance.id && asset.data && asset.data.loc;
+                })
+                .reduce(function (geom, asset) {
+                    var assetGeom = topologyHelper.readGeoJSON(asset.data.loc);
+
+                    return (geom && assetGeom.isValid() ? geom.union(assetGeom) : geom || assetGeom);
+                }, null)
+                .value();
+        }
+
+        function contains (instance, geojson, assets) {
+            var farmGeom = getAssetsGeom(instance, assets),
+                queryGeom = topologyHelper.readGeoJSON(geojson);
+
+            return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
+        }
+
+        function centroid (instance, assets) {
+            var geom = getAssetsGeom(instance, assets);
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
+        }
 
         Farm.validates({
             name: {
@@ -12558,11 +12644,11 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
 
             privateProperty(this, 'withinOrCovers', function (geometry) {
                 return (geometryRelation(this, 'within', geometry) ||
-                    (geometryRelation(this, 'intersects', geometry) && geometryArea(geometryManipluation(this, 'difference', geometry)) < 0.001));
+                    (geometryRelation(this, 'intersects', geometry) && geometryArea(geometryManipulation(this, 'difference', geometry)) < 0.001));
             });
 
             privateProperty(this, 'subtract', function (geometry) {
-                var geom = saveGeometryManipluation(this, 'difference', geometry);
+                var geom = saveGeometryManipulation(this, 'difference', geometry);
 
                 if (geometryArea(geom) == 0) {
                     this.geometry = undefined;
@@ -12570,7 +12656,7 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             });
 
             privateProperty(this, 'add', function (geometry) {
-                saveGeometryManipluation(this, 'union', geometry);
+                saveGeometryManipulation(this, 'union', geometry);
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -12617,14 +12703,14 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             return (geom && geometry && geom[relation] ? geom[relation](geometry) : false);
         }
 
-        function geometryManipluation (instance, manipluation, geometry) {
+        function geometryManipulation (instance, manipulation, geometry) {
             var geom = instance.geom;
 
-            return (geom && geometry && geom[manipluation] ? geom[manipluation](geometry) : geom);
+            return (geom && geometry && geom[manipulation] ? geom[manipulation](geometry) : geom);
         }
 
-        function saveGeometryManipluation (instance, manipluation, geometry) {
-            var geom = geometryManipluation(instance, manipluation, geometry);
+        function saveGeometryManipulation (instance, manipulation, geometry) {
+            var geom = geometryManipulation(instance, manipulation, geometry);
 
             if (geom) {
                 instance.$dirty = true;
@@ -13311,6 +13397,96 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
         });
 
         return Liability;
+    }]);
+
+var sdkModelMapTheme = angular.module('ag.sdk.model.map-theme', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelMapTheme.factory('MapTheme', ['Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function MapTheme (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'categories', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.name = attrs.name;
+            this.organizationId = attrs.organizationId;
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
+
+            // Models
+            this.organization = attrs.organization;
+
+            checkVersion(this);
+        }
+
+        function checkVersion(instance) {
+            switch (instance.data.version) {
+                case undefined:
+                    instance.data = underscore.extend({
+                        baseStyle: (instance.data.baseTile && MapTheme.baseStyles[instance.data.baseTile] ? instance.data.baseTile : 'Agriculture'),
+                        categories: instance.data.categories,
+                        center: instance.data.center,
+                        zoom: {
+                            value: instance.data.zoom
+                        }
+                    }, MapTheme.baseStyles[instance.data.baseTile] || MapTheme.baseStyles['Agriculture']);
+            }
+
+            instance.data.version = MapTheme.version;
+        }
+
+        inheritModel(MapTheme, Model.Base);
+
+        readOnlyProperty(MapTheme, 'version', 1);
+
+        readOnlyProperty(MapTheme, 'baseStyles', {
+            'Agriculture': {
+                style: 'mapbox://styles/agrista/cjdmrq0wu0iq02so2sevccwlm',
+                sources: [],
+                layers: []
+            },
+            'Satellite': {
+                style: 'mapbox://styles/agrista/cjdmt8w570l3r2sql91xzgmbn',
+                sources: [],
+                layers: []
+            },
+            'Light': {
+                style: 'mapbox://styles/agrista/cjdmt9c8q0mr02srgvyfo2qwg',
+                sources: [],
+                layers: []
+            },
+            'Dark': {
+                style: 'mapbox://styles/agrista/cjdmt9w8d0o8x2so2xpcu4mm0',
+                sources: [],
+                layers: []
+            }
+        });
+
+        MapTheme.validates({
+            data: {
+                required: true,
+                object: true
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return MapTheme;
     }]);
 
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
@@ -21525,6 +21701,101 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
+var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', 'privateProperty', 'topologyHelper', 'underscore',
+    function (Base, inheritModel, Model, privateProperty, topologyHelper, underscore) {
+        function Organization (attrs) {
+            Model.Base.apply(this, arguments);
+
+            // Geom
+            privateProperty(this, 'contains', function (geojson) {
+                return contains(this, geojson);
+            });
+
+            privateProperty(this, 'centroid', function () {
+                return centroid(this);
+            });
+
+            this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'attachments', []);
+            Base.initializeObject(this.data, 'baseStyles', {});
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.email = attrs.email;
+            this.hostUrl = attrs.hostUrl;
+            this.name = attrs.name;
+            this.registered = attrs.registered;
+            this.services = attrs.services;
+            this.status = attrs.status;
+            this.uuid = attrs.uuid;
+        }
+
+        inheritModel(Organization, Model.Base);
+
+        function getAssetsGeom (instance) {
+            return underscore.chain(instance.legalEntities)
+                .pluck('assets')
+                .flatten().compact()
+                .filter(function (asset) {
+                    return asset.data && asset.data.loc;
+                })
+                .reduce(function (geom, asset) {
+                    var assetGeom = topologyHelper.readGeoJSON(asset.data.loc);
+
+                    return (geom && assetGeom.isValid() ? geom.union(assetGeom) : geom || assetGeom);
+                }, null)
+                .value();
+        }
+
+        function contains (instance, geojson) {
+            var farmGeom = getAssetsGeom(instance),
+                queryGeom = topologyHelper.readGeoJSON(geojson);
+
+            return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
+        }
+
+        function centroid (instance) {
+            var geom = getAssetsGeom(instance);
+
+            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
+        }
+
+        privateProperty(Organization, 'contains', function (instance, geojson) {
+            return contains(instance, geojson);
+        });
+
+        privateProperty(Organization, 'centroid', function (instance) {
+            return centroid(instance);
+        });
+
+        Organization.validates({
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return Organization;
+    }]);
+
+
+
 var sdkModelErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
@@ -22331,6 +22602,8 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.livestock',
+    'ag.sdk.model.map-theme',
+    'ag.sdk.model.organization',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',
