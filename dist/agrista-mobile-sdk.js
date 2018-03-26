@@ -12025,10 +12025,22 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
 var sdkModelFarm = angular.module('ag.sdk.model.farm', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelFarm.factory('Farm', ['asJson', 'Base', 'geoJSONHelper', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
-    function (asJson, Base, geoJSONHelper, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, topologyHelper, underscore) {
+sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelper', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (asJson, Base, computedProperty, geoJSONHelper, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Farm (attrs) {
             Model.Base.apply(this, arguments);
+
+            privateProperty(this, 'farmNameUnique', function (name, farms) {
+                return farmNameUnique(this, name, farms);
+            });
+
+            computedProperty(this, 'fields', function () {
+                return this.data.fields;
+            });
+
+            computedProperty(this, 'gates', function () {
+                return this.data.gates;
+            });
 
             // Fields
             privateProperty(this, 'addField', function (field) {
@@ -12061,10 +12073,6 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'geoJSONHelper', 'inheritModel',
             Base.initializeObject(this.data, 'fields', []);
             Base.initializeObject(this.data, 'gates', []);
             Base.initializeObject(this.data, 'ignoredLandClasses', []);
-
-            privateProperty(this, 'farmNameUnique', function (name, farms) {
-                return farmNameUnique(this, name, farms);
-            });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -18055,6 +18063,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 this.data.name = generateUniqueName(this, categoryLabel, assets);
             });
 
+            privateProperty(this, 'getAge', function (asOfDate) {
+                return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
+            });
+
             privateProperty(this, 'getCategories', function () {
                 return Asset.categories[this.type] || [];
             });
@@ -18084,8 +18096,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
             });
 
-            computedProperty(this, 'age', function (asOfDate) {
-                return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
+            computedProperty(this, 'age', function () {
+                return (this.data.establishedDate ? moment().diff(this.data.establishedDate, 'years', true) : 0);
             });
 
             computedProperty(this, 'title', function () {

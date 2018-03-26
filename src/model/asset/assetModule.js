@@ -243,6 +243,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 this.data.name = generateUniqueName(this, categoryLabel, assets);
             });
 
+            privateProperty(this, 'getAge', function (asOfDate) {
+                return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
+            });
+
             privateProperty(this, 'getCategories', function () {
                 return Asset.categories[this.type] || [];
             });
@@ -272,8 +276,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
             });
 
-            computedProperty(this, 'age', function (asOfDate) {
-                return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
+            computedProperty(this, 'age', function () {
+                return (this.data.establishedDate ? moment().diff(this.data.establishedDate, 'years', true) : 0);
             });
 
             computedProperty(this, 'title', function () {
