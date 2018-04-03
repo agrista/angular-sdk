@@ -348,7 +348,7 @@ sdkUtilitiesApp.filter('round', [function () {
 
 sdkUtilitiesApp.factory('asJson', ['underscore', function (underscore) {
     return function (object, omit) {
-        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON() : object, omit || []);
+        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : object, omit || []);
     }
 }]);
 

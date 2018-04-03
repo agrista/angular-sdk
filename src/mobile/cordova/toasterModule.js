@@ -1,10 +1,12 @@
 var cordovaToasterApp = angular.module('ag.mobile-sdk.cordova.toaster', []);
 
-cordovaToasterApp.factory('toasterService', [function () {
+cordovaToasterApp.factory('toasterService', ['$log', function ($log) {
     var _show = function (message, duration, position) {
         var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
 
-        if (_toaster && typeof _toaster.show == 'function') {
+        $log.debug('Toaster: ' + message);
+
+        if (_toaster && typeof _toaster.show === 'function') {
             _toaster.show(message, duration || 'long', position || 'bottom');
         }
     };
@@ -12,7 +14,7 @@ cordovaToasterApp.factory('toasterService', [function () {
     var _hide = function () {
         var _toaster = (window.plugins && window.plugins.toast ? window.plugins.toast : undefined);
 
-        if (_toaster && typeof _toaster.hide == 'function') {
+        if (_toaster && typeof _toaster.hide === 'function') {
             _toaster.hide();
         }
     }

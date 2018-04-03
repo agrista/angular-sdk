@@ -533,7 +533,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
 
             privateProperty(this, 'setAsset', function (asset) {
                 this.asset = underscore.omit(asset, ['liabilities', 'productionSchedules']);
-                this.assetId = this.asset.id || this.asset.$id;
+                this.assetId = this.asset.id;
 
                 this.type = ProductionSchedule.typeByAsset[asset.type];
                 this.data.details.fieldName = this.asset.data.fieldName;
