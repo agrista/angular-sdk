@@ -1532,13 +1532,6 @@ sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseServic
                 }, promise.reject);
             });
         },
-        sendTask: function (id, requestData) {
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + id + '/send', requestData, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
         updateTask: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/task/' + data.id, asJson(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {

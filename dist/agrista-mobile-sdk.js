@@ -13706,6 +13706,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
             replaceAllStock(this, attrs.stock || []);
 
             underscore.each(attrs.productionSchedules, this.addProductionSchedule, this);
+
+            this.recalculate();
         }
 
         inheritModel(ProductionGroup, EnterpriseBudgetBase);
@@ -13714,8 +13716,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
             instance.productionSchedules.push(schedule);
 
             instance.data.details.size = underscore.reduce(instance.productionSchedules, reduceProperty('allocatedSize'), 0);
-
-            instance.recalculate();
         }
 
         function addStock (instance, stock) {

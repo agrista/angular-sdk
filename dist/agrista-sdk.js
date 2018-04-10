@@ -1633,13 +1633,6 @@ sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseServic
                 }, promise.reject);
             });
         },
-        sendTask: function (id, requestData) {
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + id + '/send', requestData, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
         updateTask: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/task/' + data.id, asJson(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
@@ -19126,6 +19119,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
             replaceAllStock(this, attrs.stock || []);
 
             underscore.each(attrs.productionSchedules, this.addProductionSchedule, this);
+
+            this.recalculate();
         }
 
         inheritModel(ProductionGroup, EnterpriseBudgetBase);
@@ -19134,8 +19129,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
             instance.productionSchedules.push(schedule);
 
             instance.data.details.size = underscore.reduce(instance.productionSchedules, reduceProperty('allocatedSize'), 0);
-
-            instance.recalculate();
         }
 
         function addStock (instance, stock) {
