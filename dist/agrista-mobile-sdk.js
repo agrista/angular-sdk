@@ -15424,6 +15424,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
             function _getOrganizationalUnits (params) {
                 return _getItems('organizational-unit', {
                     resulttype: {
+                        costCenterCode: 1,
                         name: 1,
                         type: 1
                     }
