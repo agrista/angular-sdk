@@ -548,7 +548,7 @@ mobileSdkApiApp.constant('apiConstants', {
     MissingParams: {code: 'MissingParams', message: 'Missing parameters for api call'}
 });
 
-mobileSdkApiApp.factory('api', ['apiConstants', 'asJson', 'dataStore', 'promiseService', 'underscore', function (apiConstants, asJson, dataStore, promiseService, underscore) {
+mobileSdkApiApp.factory('api', ['apiConstants', 'dataStore', 'promiseService', 'underscore', function (apiConstants, dataStore, promiseService, underscore) {
     var _apis = {};
 
     return function (options) {
@@ -566,7 +566,9 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'asJson', 'dataStore', 'promiseS
                 apiTemplate: options.singular + '/:id',
                 hydrate: options.hydrate,
                 dehydrate: options.dehydrate
-            });
+            }), _stripProperties = function (object, omit) {
+                return underscore.omit(JSON.parse(JSON.stringify(object)), omit || []);
+            };
 
             _apis[options.singular] = {
                 options: options,
@@ -616,7 +618,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'asJson', 'dataStore', 'promiseS
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.createItems({template: request.template, schema: request.schema, data: asJson(request.data), options: request.options});
+                            return tx.createItems({template: request.template, schema: request.schema, data: _stripProperties(request.data), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
@@ -677,7 +679,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'asJson', 'dataStore', 'promiseS
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.updateItems({data: asJson(request.data, options.strip), options: request.options});
+                            return tx.updateItems({data: _stripProperties(request.data, options.strip), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
@@ -698,7 +700,7 @@ mobileSdkApiApp.factory('api', ['apiConstants', 'asJson', 'dataStore', 'promiseS
 
                     return _itemStore.transaction().then(function (tx) {
                         if (request.data) {
-                            return tx.postItems({template: request.template, schema: request.schema, data: asJson(request.data, options.strip), options: request.options});
+                            return tx.postItems({template: request.template, schema: request.schema, data: _stripProperties(request.data, options.strip), options: request.options});
                         } else {
                             promiseService.throwError(apiConstants.MissingParams);
                         }
