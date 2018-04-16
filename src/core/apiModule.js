@@ -810,7 +810,6 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'pagingService', 'promiseServ
         inviteFarmer: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/farmer/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
-
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1628,6 +1627,13 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
         createUser: function (userData) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/user', userData, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        inviteUser: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/user/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
