@@ -657,7 +657,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
             var geom = topologyHelper.readGeoJSON(getGeometry(this)),
                 coord = (geom ? geom.getCentroid().getCoordinate() : geom);
 
-            return (coord ? geom.getCentroid().getCoordinate() : coord);
+            return (coord ? [coord.x, coord.y] : coord);
         },
         getCenterAsGeojson: function () {
             var geom = topologyHelper.readGeoJSON(getGeometry(this));
