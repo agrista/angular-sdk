@@ -15411,6 +15411,7 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                         assetType: 1,
                         cloneCount: 1,
                         commodityType: 1,
+                        details: 1,
                         favoriteCount: 1,
                         internallyPublished: 1,
                         name: 1,
