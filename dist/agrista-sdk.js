@@ -1035,6 +1035,23 @@ sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configu
 }]);
 
 /**
+ * Invite API
+ */
+sdkApiApp.factory('inviteApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+    var _host = configuration.getServer();
+
+    return {
+        getInvite: function (hash) {
+            return promiseService.wrap(function (promise) {
+                $http.get(_host + 'api/invite/' + hash, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Layers API
  */
 sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
