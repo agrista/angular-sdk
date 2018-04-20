@@ -582,10 +582,15 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
     }
 
     function getGeometry (instance) {
-        return (instance._json.type !== 'FeatureCollection' ? instance._json : {
-            type: 'GeometryCollection',
-            geometries: underscore.pluck(instance._json.features, 'geometry')
-        });
+        return (instance._json.type === 'Feature' ?
+                instance._json.geometry :
+                (instance._json.type !== 'FeatureCollection' ?
+                        instance._json : {
+                            type: 'GeometryCollection',
+                            geometries: underscore.pluck(instance._json.features, 'geometry')
+                        }
+                )
+        );
     }
 
     function geometryRelation (instance, relation, geometry) {
