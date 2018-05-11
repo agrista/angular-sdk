@@ -585,7 +585,8 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         return (instance._json.type === 'Feature' ?
                 instance._json.geometry :
                 (instance._json.type !== 'FeatureCollection' ?
-                        instance._json : {
+                        instance._json :
+                        {
                             type: 'GeometryCollection',
                             geometries: underscore.pluck(instance._json.features, 'geometry')
                         }
@@ -18961,6 +18962,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                                 return options.withFarm && options.field && options.field[prop];
                             case 'fieldName':
                                 return options.withField && instance.data[prop];
+                            case 'croppingPotential':
+                                return options.field && options.field[prop] && options.field[prop] + ' Potential';
                             case 'landUse':
                                 return options.field && options.field[prop];
                             case 'area':
