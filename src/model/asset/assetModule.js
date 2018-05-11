@@ -877,6 +877,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Cloudberry',
             'Coconut',
             'Coffee',
+            'Date',
             'Fig',
             'Gooseberry',
             'Grapefruit',

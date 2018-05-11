@@ -230,6 +230,7 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
             'Coffee',
             'Cucumber',
             'Cucurbit',
+            'Date',
             'Fig',
             'Garlic',
             'Ginger',
