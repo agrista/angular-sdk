@@ -624,6 +624,7 @@ sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUs
             'Cloudberry',
             'Coconut',
             'Coffee',
+            'Date',
             'Fig',
             'Gooseberry',
             'Grape',
