@@ -1,7 +1,7 @@
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'privateProperty', 'ProductionSchedule', 'safeMath', 'underscore',
-    function (Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, privateProperty, ProductionSchedule, safeMath, underscore) {
+sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'safeMath', 'underscore',
+    function (Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, safeMath, underscore) {
         function ProductionGroup (attrs, options) {
             options = options || {};
 
@@ -11,6 +11,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
             Base.initializeObject(this.data.details, 'grossProfit', 0);
             Base.initializeObject(this.data.details, 'size', 0);
 
+            this.commodities = [];
             this.productionSchedules = [];
             this.stock = [];
 
@@ -163,6 +164,11 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
 
         function addProductionSchedule (instance, schedule) {
             instance.productionSchedules.push(schedule);
+            instance.commodities = underscore.chain(instance.commodities)
+                .union([schedule.commodityType])
+                .uniq()
+                .value()
+                .sort(naturalSort);
 
             instance.data.details.size = underscore.reduce(instance.productionSchedules, reduceProperty('allocatedSize'), 0);
         }
@@ -342,7 +348,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                             angular.forEach(group.productCategories, function (category) {
                                 var productionCategory = instance.addCategory(section.code, group.name, underscore.pick(category, ['code', 'name']), instance.defaultCostStage),
                                     stock = underscore.find(instance.stock, function (stock) {
-                                        return stock.data.type === productionSchedule.data.details.commodity && stock.data.category === category.name;
+                                        return stock.data.category === category.name && (underscore.isUndefined(stock.data.type) || stock.data.type === productionSchedule.data.details.commodity);
                                     });
 
                                 if (stock) {
@@ -353,8 +359,11 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                             .reject(function (ledgerEntry) {
                                                 var entryDate = moment(ledgerEntry.date);
 
-                                                return (entryDate.isBefore(instance.startDate) || entryDate.isAfter(instance.endDate) ||
-                                                    (section.code === 'INC' ? ledgerEntry.action !== 'Sale' : ledgerEntry.action !== 'Purchase'));
+                                                return ledgerEntry.deleted ||
+                                                    (ledgerEntry.commodity && !underscore.contains(instance.commodities, ledgerEntry.commodity)) ||
+                                                    entryDate.isBefore(instance.startDate) ||
+                                                    entryDate.isSameOrAfter(instance.endDate) ||
+                                                    underscore.contains(stock.actions[(section.code === 'INC' ? 'debit' : 'credit')], ledgerEntry.action);
                                             })
                                             .reduce(function (result, ledgerEntry) {
                                                 result.value = safeMath.plus(result.value, ledgerEntry.value);

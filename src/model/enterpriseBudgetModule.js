@@ -262,10 +262,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             // Properties
+            this.assetType = attrs && attrs.assetType;
             this.data = (attrs && attrs.data ? attrs.data : {});
             Base.initializeObject(this.data, 'sections', []);
 
             this.sortSections();
+
         }
 
         inheritModel(EnterpriseBudgetBase, Model.Base);
@@ -810,6 +812,50 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         ], 'code'));
 
+
+        readOnlyProperty(EnterpriseBudgetBase, 'stockableCategoryCodes', [
+            'INC-LSS-SLAMB',
+            'INC-LSS-SWEAN',
+            'INC-LSS-SEWE',
+            'INC-LSS-SWTH',
+            'INC-LSS-SRAM',
+            'INC-LSS-CCALV',
+            'INC-LSS-CWEN',
+            'INC-LSS-CCOW',
+            'INC-LSS-CHEI',
+            'INC-LSS-CST18',
+            'INC-LSS-CST36',
+            'INC-LSS-CBULL',
+            'INC-LSS-GKID',
+            'INC-LSS-GWEAN',
+            'INC-LSS-GEWE',
+            'INC-LSS-GCAST',
+            'INC-LSS-GRAM',
+            'INC-LSS-RKIT',
+            'INC-LSS-RWEN',
+            'INC-LSS-RDOE',
+            'INC-LSS-RLAP',
+            'INC-LSS-RBUC',
+            'INC-LSP-MILK',
+            'INC-LSP-WOOL',
+            'INC-LSP-LFUR',
+            'INC-HVT-CROP',
+            'INC-HVT-FRUT',
+            'EXP-HVP-SEED',
+            'EXP-HVP-PLTM',
+            'EXP-HVP-FERT',
+            'EXP-HVP-FUEL',
+            'EXP-HVP-FUNG',
+            'EXP-HVP-LIME',
+            'EXP-HVP-HERB',
+            'EXP-HVP-PEST',
+            'EXP-HVP-PGRG',
+            'EXP-HVT-FUEL',
+            'EXP-IDR-FUEL',
+            'EXP-IDR-WATR',
+            'EXP-AMF-LICK'
+        ]);
+
         readOnlyProperty(EnterpriseBudgetBase, 'categoryOptions', {
             crop: {
                 INC: {
@@ -900,6 +946,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
                 }
             }
+        });
+
+        privateProperty(EnterpriseBudgetBase, 'getBaseCategory', function (categoryCode) {
+            return EnterpriseBudgetBase.categories[categoryCode];
         });
 
         privateProperty(EnterpriseBudgetBase, 'getGroupCategories', function (assetType, commodityType, sectionCode, groupName) {
@@ -1145,7 +1195,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
-            this.assetType = attrs.assetType;
             this.averaged = attrs.averaged || false;
             this.cloneCount = attrs.cloneCount || 0;
             this.createdAt = attrs.createdAt;
