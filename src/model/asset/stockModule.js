@@ -242,6 +242,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                         if (!item.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
                             underscore.each(['credit', 'debit'], function (key) {
                                 if (underscore.contains(instance.actions[key], item.action)) {
+                                    month.entries.push(item);
                                     month[key][item.action] = underscore.mapObject(month[key][item.action] || defaultItem(), function (value, key) {
                                         return safeMath.plus(value, item[key]);
                                     });
@@ -252,7 +253,8 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                         return month;
                     }, {
                         credit: {},
-                        debit: {}
+                        debit: {},
+                        entries: []
                     }));
 
                     balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
@@ -284,6 +286,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 opening: defaultItem(quantity, value),
                 credit: {},
                 debit: {},
+                entries: [],
                 balance: defaultItem(quantity, value),
                 interest: 0,
                 closing: defaultItem(quantity, value)
