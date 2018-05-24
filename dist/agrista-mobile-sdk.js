@@ -13255,6 +13255,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return repaymentRemainder;
             });
 
+            privateProperty(this, 'removeRepaymentInMonth', function (month, source) {
+                source = source || 'cank';
+
+                underscore.each(this.data.monthly, function (item, key) {
+                    if (month === key) {
+                        delete item.repayment[source];
+                    }
+                });
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
             privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
                 var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),
@@ -13973,7 +13985,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                                     (ledgerEntry.commodity && !underscore.contains(instance.commodities, ledgerEntry.commodity)) ||
                                                     entryDate.isBefore(instance.startDate) ||
                                                     entryDate.isSameOrAfter(instance.endDate) ||
-                                                    underscore.contains(stock.actions[(section.code === 'INC' ? 'debit' : 'credit')], ledgerEntry.action);
+                                                    underscore.contains(stock.actions[(section.code === 'INC' ? 'credit' : 'debit')], ledgerEntry.action);
                                             })
                                             .reduce(function (result, ledgerEntry) {
                                                 result.value = safeMath.plus(result.value, ledgerEntry.value);
@@ -19404,6 +19416,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     'Internal',
                     'Household',
                     'Labour',
+                    'Repay',
                     'Sale']
             }, {configurable: true});
 
@@ -19414,6 +19427,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 'Labour': 'Labour Consumption',
                 'Production': 'Produce',
                 'Purchase': 'Buy Stock',
+                'Repay': 'Repay Credit',
                 'Sale': 'Sell Stock'
             }, {configurable: true});
 
@@ -19470,9 +19484,13 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             privateProperty(this, 'hasQuantityBefore', function (before) {
                 var beforeDate = moment(before, 'YYYY-MM-DD');
 
-                return underscore.some(this.data.ledger, function (entry) {
-                    return moment(entry.date).isSameOrBefore(beforeDate) && !underscore.isUndefined(entry.quantity);
-                });
+                return !underscore.isUndefined(underscore.chain(this.data.ledger)
+                    .filter(function (entry) {
+                        return moment(entry.date).isSameOrBefore(beforeDate);
+                    })
+                    .pluck('quantity')
+                    .last()
+                    .value());
             });
 
             privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, markDeleted) {
@@ -19485,6 +19503,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 }
 
                 recalculateAndCache(this);
+            });
+
+            privateProperty(this, 'generateLedgerEntryReference', function (entry) {
+                return '/' + underscore.compact([entry.action, entry.date]).join('/');
             });
 
             privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
@@ -19684,10 +19706,6 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 (underscore.contains(instance.actions.credit, item.action) || underscore.contains(instance.actions.debit, item.action));
         }
 
-        privateProperty(Stock, 'generateLedgerEntryReference', function (entry) {
-            return '/' + underscore.compact([entry.action, entry.date]).join('/');
-        });
-
         inheritModel(Stock, AssetBase);
 
         Stock.validates({
@@ -19768,10 +19786,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     .value();
             }
 
-            function sumCollectionValues (collection) {
+            function sumCollectionValues (collection, initialValue) {
                 return underscore.reduce(collection || [], function (total, value) {
                     return safeMath.plus(total, value);
-                }, 0);
+                }, initialValue || 0);
             }
 
             function divideArrayValues (numeratorValues, denominatorValues) {
@@ -20936,7 +20954,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                     initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
                                     instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                                        return safeMath.plus(month.repayment && month.repayment.bank, instance.data[section][typeTitle][index]);
+                                        return sumCollectionValues(month.repayment, instance.data[section][typeTitle][index]);
                                     });
 
                                     // TODO: deal with missing liquidityType for 'Other' liabilities
@@ -20960,7 +20978,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
                         instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                            return safeMath.plus(month.repayment && month.repayment.bank, instance.data[section][typeTitle][index]);
+                            return sumCollectionValues(month.repayment, instance.data[section][typeTitle][index]);
                         });
 
                         updateLiabilityStatementCategory(instance, liability);

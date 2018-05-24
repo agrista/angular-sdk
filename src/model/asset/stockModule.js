@@ -29,6 +29,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     'Internal',
                     'Household',
                     'Labour',
+                    'Repay',
                     'Sale']
             }, {configurable: true});
 
@@ -39,6 +40,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 'Labour': 'Labour Consumption',
                 'Production': 'Produce',
                 'Purchase': 'Buy Stock',
+                'Repay': 'Repay Credit',
                 'Sale': 'Sell Stock'
             }, {configurable: true});
 
@@ -95,9 +97,13 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             privateProperty(this, 'hasQuantityBefore', function (before) {
                 var beforeDate = moment(before, 'YYYY-MM-DD');
 
-                return underscore.some(this.data.ledger, function (entry) {
-                    return moment(entry.date).isSameOrBefore(beforeDate) && !underscore.isUndefined(entry.quantity);
-                });
+                return !underscore.isUndefined(underscore.chain(this.data.ledger)
+                    .filter(function (entry) {
+                        return moment(entry.date).isSameOrBefore(beforeDate);
+                    })
+                    .pluck('quantity')
+                    .last()
+                    .value());
             });
 
             privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, markDeleted) {
@@ -110,6 +116,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 }
 
                 recalculateAndCache(this);
+            });
+
+            privateProperty(this, 'generateLedgerEntryReference', function (entry) {
+                return '/' + underscore.compact([entry.action, entry.date]).join('/');
             });
 
             privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
@@ -308,10 +318,6 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             return item && item.date && moment(item.date).isValid() && /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
                 (underscore.contains(instance.actions.credit, item.action) || underscore.contains(instance.actions.debit, item.action));
         }
-
-        privateProperty(Stock, 'generateLedgerEntryReference', function (entry) {
-            return '/' + underscore.compact([entry.action, entry.date]).join('/');
-        });
 
         inheritModel(Stock, AssetBase);
 

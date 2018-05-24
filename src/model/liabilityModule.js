@@ -229,6 +229,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 return repaymentRemainder;
             });
 
+            privateProperty(this, 'removeRepaymentInMonth', function (month, source) {
+                source = source || 'cank';
+
+                underscore.each(this.data.monthly, function (item, key) {
+                    if (month === key) {
+                        delete item.repayment[source];
+                    }
+                });
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
             privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
                 var startMonth = moment(this.offsetDate, 'YYYY-MM-DD'),
                     currentMonth = moment(month, 'YYYY-MM-DD'),

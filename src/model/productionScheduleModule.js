@@ -363,7 +363,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                                     (ledgerEntry.commodity && !underscore.contains(instance.commodities, ledgerEntry.commodity)) ||
                                                     entryDate.isBefore(instance.startDate) ||
                                                     entryDate.isSameOrAfter(instance.endDate) ||
-                                                    underscore.contains(stock.actions[(section.code === 'INC' ? 'debit' : 'credit')], ledgerEntry.action);
+                                                    underscore.contains(stock.actions[(section.code === 'INC' ? 'credit' : 'debit')], ledgerEntry.action);
                                             })
                                             .reduce(function (result, ledgerEntry) {
                                                 result.value = safeMath.plus(result.value, ledgerEntry.value);

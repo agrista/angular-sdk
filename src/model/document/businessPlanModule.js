@@ -53,10 +53,10 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     .value();
             }
 
-            function sumCollectionValues (collection) {
+            function sumCollectionValues (collection, initialValue) {
                 return underscore.reduce(collection || [], function (total, value) {
                     return safeMath.plus(total, value);
-                }, 0);
+                }, initialValue || 0);
             }
 
             function divideArrayValues (numeratorValues, denominatorValues) {
@@ -1221,7 +1221,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                     initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
                                     instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                                        return safeMath.plus(month.repayment && month.repayment.bank, instance.data[section][typeTitle][index]);
+                                        return sumCollectionValues(month.repayment, instance.data[section][typeTitle][index]);
                                     });
 
                                     // TODO: deal with missing liquidityType for 'Other' liabilities
@@ -1245,7 +1245,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
                         instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                            return safeMath.plus(month.repayment && month.repayment.bank, instance.data[section][typeTitle][index]);
+                            return sumCollectionValues(month.repayment, instance.data[section][typeTitle][index]);
                         });
 
                         updateLiabilityStatementCategory(instance, liability);
