@@ -44,6 +44,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 'Sale': 'Sell Stock'
             }, {configurable: true});
 
+            privateProperty(this, 'getActionTitle', function (action) {
+                return this.actionTitles[action];
+            }, {configurable: true});
+
             // Ledger
             function addLedgerEntry (instance, item) {
                 if (instance.isLedgerEntryValid(item)) {
@@ -56,7 +60,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                         })
                         .value();
 
-                    recalculateAndCache(instance);
+                    recalculateAndCache(instance, {checkEntries: true});
                 }
             }
 
@@ -68,7 +72,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 return underscore.chain(instance.actions)
                     .keys()
                     .filter(function (group) {
-                        return underscore.contains(instance.actions[group], action);
+                        return underscore.contains(instance.actions[group], asPureAction(action));
                     })
                     .first()
                     .value();
@@ -107,15 +111,17 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             });
 
             privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, markDeleted) {
-                if (markDeleted) {
-                    ledgerEntry.deleted = true;
-                } else {
-                    this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
-                        return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
-                    });
-                }
+                if (ledgerEntry) {
+                    if (markDeleted) {
+                        ledgerEntry.deleted = true;
+                    } else {
+                        this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                            return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
+                        });
+                    }
 
-                recalculateAndCache(this);
+                    recalculateAndCache(this);
+                }
             });
 
             privateProperty(this, 'generateLedgerEntryReference', function (entry) {
@@ -126,6 +132,8 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                     return s.include(entry.reference, reference);
                 });
+
+                recalculateAndCache(this);
             });
 
             privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
@@ -238,23 +246,32 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     .slice(startCrop, startCrop + numberOfMonths);
             }
 
-            function recalculate (instance) {
+            function recalculate (instance, options) {
                 var startMonth = instance.startMonth,
                     endMonth = instance.endMonth,
                     numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : -1);
 
+                options = underscore.defaults(options || {}, {
+                    checkEntries: false
+                });
+
                 return underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
                     var offsetDate = moment(startMonth).add(offset, 'M');
 
-                    var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, item) {
-                        var itemDate = moment(item.date);
+                    var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, entry) {
+                        var itemDate = moment(entry.date),
+                            pureAction = asPureAction(entry.action);
 
-                        if (!item.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
+                        if (!entry.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
                             underscore.each(['credit', 'debit'], function (key) {
-                                if (underscore.contains(instance.actions[key], item.action)) {
-                                    month.entries.push(item);
-                                    month[key][item.action] = underscore.mapObject(month[key][item.action] || defaultItem(), function (value, key) {
-                                        return safeMath.plus(value, item[key]);
+                                if (underscore.contains(instance.actions[key], pureAction)) {
+                                    if (options.checkEntries) {
+                                        recalculateEntry(instance, entry);
+                                    }
+
+                                    month.entries.push(entry);
+                                    month[key][pureAction] = underscore.mapObject(month[key][pureAction] || defaultItem(), function (value, key) {
+                                        return safeMath.plus(value, entry[key]);
                                     });
                                 }
                             });
@@ -273,8 +290,15 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 }, []);
             }
 
-            function recalculateAndCache (instance) {
-                _monthly = recalculate(instance);
+            function recalculateEntry (instance, entry) {
+                if (underscore.isUndefined(entry.price) && !underscore.isUndefined(entry.quantity) && !underscore.isUndefined(instance.data.pricePerUnit)) {
+                    entry.price = instance.data.pricePerUnit;
+                    entry.value = safeMath.times((entry.rate || 1), safeMath.times(entry.price, entry.quantity));
+                }
+            }
+
+            function recalculateAndCache (instance, options) {
+                _monthly = recalculate(instance, options);
             }
 
             Base.initializeObject(this.data, 'ledger', []);
@@ -282,6 +306,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
 
             this.type = 'stock';
+        }
+
+        function asPureAction (action) {
+            return s.strLeft(action, ':');
         }
 
         function defaultItem (quantity, value) {
@@ -315,8 +343,9 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
         }
 
         function isLedgerEntryValid (instance, item) {
+            var pureAction = asPureAction(item.action);
             return item && item.date && moment(item.date).isValid() && /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
-                (underscore.contains(instance.actions.credit, item.action) || underscore.contains(instance.actions.debit, item.action));
+                (underscore.contains(instance.actions.credit, pureAction) || underscore.contains(instance.actions.debit, pureAction));
         }
 
         inheritModel(Stock, AssetBase);

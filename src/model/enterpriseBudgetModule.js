@@ -118,6 +118,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             // Categories
+            privateProperty(this, 'categoryAllowed', function (sectionCode, categoryQuery) {
+                return underscore.chain(getCategoryOptions(sectionCode, this.assetType, this.baseAnimal))
+                    .values()
+                    .flatten()
+                    .findWhere(categoryQuery)
+                    .isObject()
+                    .value();
+            });
+
             privateProperty(this, 'groupAndCategoryAllowed', function (sectionCode, groupName, categoryCode) {
                 var categoryOptions = getCategoryOptions(sectionCode, this.assetType, this.baseAnimal);
 
@@ -333,7 +342,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SWEAN',
-                name: 'Weaner lamb',
+                name: 'Weaner Lamb',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -343,12 +352,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SWTH',
-                name: 'Wether (2-tooth plus)',
+                name: 'Wether',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -361,7 +370,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CWEN',
-                name: 'Weaner calf',
+                name: 'Weaner Calf',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -376,17 +385,17 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CST18',
-                name: 'Steer (18 months plus)',
+                name: 'Steer',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CST36',
-                name: 'Steer (3 years plus)',
+                name: 'Ox',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CBULL',
-                name: 'Bull (3 years plus)',
+                name: 'Bull',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -399,22 +408,22 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GWEAN',
-                name: 'Weaner kid',
+                name: 'Weaner Kid',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GEWE',
-                name: 'Ewe (2-tooth plus)',
+                name: 'Ewe',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GCAST',
-                name: 'Castrate (2-tooth plus)',
+                name: 'Castrate',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -427,7 +436,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-RWEN',
-                name: 'Weaner kit',
+                name: 'Weaner Kit',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -602,7 +611,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'each'
             }, {
                 code: 'EXP-HVT-DYCL',
-                name: 'Drying and cleaning',
+                name: 'Drying & cleaning',
                 unit: 't'
             }, {
                 code: 'EXP-HVT-PAKC',
@@ -663,7 +672,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SWEAN',
-                name: 'Weaner lamb',
+                name: 'Weaner Lamb',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SEWE',
@@ -671,11 +680,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SWTH',
-                name: 'Wether (2-tooth plus)',
+                name: 'Wether',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 unit: 'head'
             },
 
@@ -686,7 +695,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CWEN',
-                name: 'Weaner calf',
+                name: 'Weaner Calf',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CCOW',
@@ -698,15 +707,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST18',
-                name: 'Steer (18 months plus)',
+                name: 'Steer',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST36',
-                name: 'Steer (3 years plus)',
+                name: 'Ox',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CBULL',
-                name: 'Bull (3 years plus)',
+                name: 'Bull',
                 unit: 'head'
             },
 
@@ -717,19 +726,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GWEAN',
-                name: 'Weaner kid',
+                name: 'Weaner Kid',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GEWE',
-                name: 'Ewe (2-tooth plus)',
+                name: 'Ewe',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GCAST',
-                name: 'Castrate (2-tooth plus)',
+                name: 'Castrate',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 unit: 'head'
             },
             //Rabbits
@@ -739,7 +748,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RWEN',
-                name: 'Weaner kit',
+                name: 'Weaner Kit',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RDOE',
@@ -756,9 +765,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             //Animal feed
             {
+                code: 'EXP-AMF-CROP',
+                name: 'Crop',
+                unit: 'kg'
+            },
+            {
                 code: 'EXP-AMF-LICK',
                 name: 'Lick',
-                unit: 'kg'
+                unit: 't'
             },
             //Husbandry
             {
@@ -853,6 +867,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             'EXP-HVT-FUEL',
             'EXP-IDR-FUEL',
             'EXP-IDR-WATR',
+            'EXP-AMF-CROP',
             'EXP-AMF-LICK'
         ]);
 
@@ -888,7 +903,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -901,7 +916,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -914,7 +929,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-GKID', 'EXP-RPM-GWEAN', 'EXP-RPM-GEWE', 'EXP-RPM-GCAST', 'EXP-RPM-GRAM']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -939,7 +954,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-SLAMB', 'EXP-RPM-SWEAN', 'EXP-RPM-SEWE', 'EXP-RPM-SWTH', 'EXP-RPM-SRAM']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -948,8 +963,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         });
 
-        privateProperty(EnterpriseBudgetBase, 'getBaseCategory', function (categoryCode) {
-            return EnterpriseBudgetBase.categories[categoryCode];
+        privateProperty(EnterpriseBudgetBase, 'getBaseCategory', function (query) {
+            return underscore.findWhere(EnterpriseBudgetBase.categories, query);
         });
 
         privateProperty(EnterpriseBudgetBase, 'getGroupCategories', function (assetType, commodityType, sectionCode, groupName) {
@@ -1011,7 +1026,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         var representativeAnimal = {
             Cattle: 'Cow',
             Game: 'Cow',
-            Goats: 'Ewe (2-tooth plus)',
+            Goats: 'Ewe',
             Rabbits: 'Doe',
             Sheep: 'Ewe'
         };
@@ -1036,47 +1051,49 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         var conversionRate = {
             Cattle: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Game: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Goats: {
                 'Kid': 0.08,
-                'Weaner kid': 0.12,
-                'Ewe (2-tooth plus)': 0.17,
-                'Castrate (2-tooth plus)': 0.17,
-                'Ram (2-tooth plus)': 0.22
+                'Weaner Kid': 0.12,
+                'Ewe': 0.17,
+                'Castrate': 0.17,
+                'Ram': 0.22
             },
             Rabbits: {
                 'Kit': 0.08,
-                'Weaner kit': 0.12,
+                'Weaner Kit': 0.12,
                 'Doe': 0.17,
                 'Lapin': 0.17,
                 'Buck': 0.22
             },
             Sheep: {
                 'Lamb': 0.08,
-                'Weaner lamb': 0.11,
+                'Weaner Lamb': 0.11,
                 'Ewe': 0.16,
-                'Wether (2-tooth plus)': 0.16,
-                'Ram (2-tooth plus)': 0.23
+                'Wether': 0.16,
+                'Ram': 0.23
             }
         };
 
         privateProperty(EnterpriseBudgetBase, 'getBirthingAnimal', function (commodityType) {
-            return baseAnimal[commodityType] && birthAnimal[baseAnimal[commodityType]] || commodityType;
+            var base = baseAnimal[commodityType] || commodityType;
+
+            return base && birthAnimal[base];
         });
 
         interfaceProperty(EnterpriseBudgetBase, 'getAssetTypeForLandUse', function (landUse) {
@@ -1544,9 +1561,9 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                             category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
                         }
 
-                        if (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code)) {
-                            category.name = instance.commodityType;
-                        }
+                        category.name = (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code) ?
+                            instance.commodityType :
+                            EnterpriseBudgetBase.categories[category.code].name);
 
                         var schedule = (underscore.isArray(category.schedule) ? category.schedule : instance.getSchedule(category.schedule)),
                             scheduleTotalAllocation = underscore.reduce(schedule, function (total, value) {

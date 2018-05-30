@@ -1331,7 +1331,7 @@ sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http
     }
 }]);
 
-sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safeApply) {
+sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', function ($timeout, $q, safeApply) {
     var _defer = function() {
         var deferred = $q.defer();
 
@@ -1398,7 +1398,9 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         wrap: function(action) {
             var deferred = _defer();
 
-            action(deferred);
+            $timeout(function () {
+                action(deferred);
+            }, 0);
 
             return deferred.promise;
         },
@@ -10595,6 +10597,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             // Categories
+            privateProperty(this, 'categoryAllowed', function (sectionCode, categoryQuery) {
+                return underscore.chain(getCategoryOptions(sectionCode, this.assetType, this.baseAnimal))
+                    .values()
+                    .flatten()
+                    .findWhere(categoryQuery)
+                    .isObject()
+                    .value();
+            });
+
             privateProperty(this, 'groupAndCategoryAllowed', function (sectionCode, groupName, categoryCode) {
                 var categoryOptions = getCategoryOptions(sectionCode, this.assetType, this.baseAnimal);
 
@@ -10810,7 +10821,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SWEAN',
-                name: 'Weaner lamb',
+                name: 'Weaner Lamb',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -10820,12 +10831,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SWTH',
-                name: 'Wether (2-tooth plus)',
+                name: 'Wether',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -10838,7 +10849,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CWEN',
-                name: 'Weaner calf',
+                name: 'Weaner Calf',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -10853,17 +10864,17 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CST18',
-                name: 'Steer (18 months plus)',
+                name: 'Steer',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CST36',
-                name: 'Steer (3 years plus)',
+                name: 'Ox',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CBULL',
-                name: 'Bull (3 years plus)',
+                name: 'Bull',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -10876,22 +10887,22 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GWEAN',
-                name: 'Weaner kid',
+                name: 'Weaner Kid',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GEWE',
-                name: 'Ewe (2-tooth plus)',
+                name: 'Ewe',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GCAST',
-                name: 'Castrate (2-tooth plus)',
+                name: 'Castrate',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -10904,7 +10915,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-RWEN',
-                name: 'Weaner kit',
+                name: 'Weaner Kit',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -11079,7 +11090,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'each'
             }, {
                 code: 'EXP-HVT-DYCL',
-                name: 'Drying and cleaning',
+                name: 'Drying & cleaning',
                 unit: 't'
             }, {
                 code: 'EXP-HVT-PAKC',
@@ -11140,7 +11151,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SWEAN',
-                name: 'Weaner lamb',
+                name: 'Weaner Lamb',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SEWE',
@@ -11148,11 +11159,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SWTH',
-                name: 'Wether (2-tooth plus)',
+                name: 'Wether',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 unit: 'head'
             },
 
@@ -11163,7 +11174,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CWEN',
-                name: 'Weaner calf',
+                name: 'Weaner Calf',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CCOW',
@@ -11175,15 +11186,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST18',
-                name: 'Steer (18 months plus)',
+                name: 'Steer',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST36',
-                name: 'Steer (3 years plus)',
+                name: 'Ox',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CBULL',
-                name: 'Bull (3 years plus)',
+                name: 'Bull',
                 unit: 'head'
             },
 
@@ -11194,19 +11205,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GWEAN',
-                name: 'Weaner kid',
+                name: 'Weaner Kid',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GEWE',
-                name: 'Ewe (2-tooth plus)',
+                name: 'Ewe',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GCAST',
-                name: 'Castrate (2-tooth plus)',
+                name: 'Castrate',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 unit: 'head'
             },
             //Rabbits
@@ -11216,7 +11227,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RWEN',
-                name: 'Weaner kit',
+                name: 'Weaner Kit',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RDOE',
@@ -11233,9 +11244,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             //Animal feed
             {
+                code: 'EXP-AMF-CROP',
+                name: 'Crop',
+                unit: 'kg'
+            },
+            {
                 code: 'EXP-AMF-LICK',
                 name: 'Lick',
-                unit: 'kg'
+                unit: 't'
             },
             //Husbandry
             {
@@ -11330,6 +11346,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             'EXP-HVT-FUEL',
             'EXP-IDR-FUEL',
             'EXP-IDR-WATR',
+            'EXP-AMF-CROP',
             'EXP-AMF-LICK'
         ]);
 
@@ -11365,7 +11382,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -11378,7 +11395,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -11391,7 +11408,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-GKID', 'EXP-RPM-GWEAN', 'EXP-RPM-GEWE', 'EXP-RPM-GCAST', 'EXP-RPM-GRAM']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -11416,7 +11433,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-SLAMB', 'EXP-RPM-SWEAN', 'EXP-RPM-SEWE', 'EXP-RPM-SWTH', 'EXP-RPM-SRAM']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -11425,8 +11442,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         });
 
-        privateProperty(EnterpriseBudgetBase, 'getBaseCategory', function (categoryCode) {
-            return EnterpriseBudgetBase.categories[categoryCode];
+        privateProperty(EnterpriseBudgetBase, 'getBaseCategory', function (query) {
+            return underscore.findWhere(EnterpriseBudgetBase.categories, query);
         });
 
         privateProperty(EnterpriseBudgetBase, 'getGroupCategories', function (assetType, commodityType, sectionCode, groupName) {
@@ -11488,7 +11505,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         var representativeAnimal = {
             Cattle: 'Cow',
             Game: 'Cow',
-            Goats: 'Ewe (2-tooth plus)',
+            Goats: 'Ewe',
             Rabbits: 'Doe',
             Sheep: 'Ewe'
         };
@@ -11513,47 +11530,49 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         var conversionRate = {
             Cattle: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Game: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Goats: {
                 'Kid': 0.08,
-                'Weaner kid': 0.12,
-                'Ewe (2-tooth plus)': 0.17,
-                'Castrate (2-tooth plus)': 0.17,
-                'Ram (2-tooth plus)': 0.22
+                'Weaner Kid': 0.12,
+                'Ewe': 0.17,
+                'Castrate': 0.17,
+                'Ram': 0.22
             },
             Rabbits: {
                 'Kit': 0.08,
-                'Weaner kit': 0.12,
+                'Weaner Kit': 0.12,
                 'Doe': 0.17,
                 'Lapin': 0.17,
                 'Buck': 0.22
             },
             Sheep: {
                 'Lamb': 0.08,
-                'Weaner lamb': 0.11,
+                'Weaner Lamb': 0.11,
                 'Ewe': 0.16,
-                'Wether (2-tooth plus)': 0.16,
-                'Ram (2-tooth plus)': 0.23
+                'Wether': 0.16,
+                'Ram': 0.23
             }
         };
 
         privateProperty(EnterpriseBudgetBase, 'getBirthingAnimal', function (commodityType) {
-            return baseAnimal[commodityType] && birthAnimal[baseAnimal[commodityType]] || commodityType;
+            var base = baseAnimal[commodityType] || commodityType;
+
+            return base && birthAnimal[base];
         });
 
         interfaceProperty(EnterpriseBudgetBase, 'getAssetTypeForLandUse', function (landUse) {
@@ -12021,9 +12040,9 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                             category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
                         }
 
-                        if (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code)) {
-                            category.name = instance.commodityType;
-                        }
+                        category.name = (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code) ?
+                            instance.commodityType :
+                            EnterpriseBudgetBase.categories[category.code].name);
 
                         var schedule = (underscore.isArray(category.schedule) ? category.schedule : instance.getSchedule(category.schedule)),
                             scheduleTotalAllocation = underscore.reduce(schedule, function (total, value) {
@@ -13975,6 +13994,8 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
 
                                 if (stock) {
                                     if (underscore.isUndefined(productionCategory.stock)) {
+                                        var ignoredActions = underscore.union(stock.actions[(section.code === 'INC' ? 'credit' : 'debit')], ['Death', 'Consumption', 'Internal', 'Household', 'Retain:' + stock.data.category, 'Retained:' + stock.data.category]);
+
                                         productionCategory.stock = stock;
 
                                         underscore.extend(productionCategory, underscore.chain(stock.data.ledger)
@@ -13985,7 +14006,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                                     (ledgerEntry.commodity && !underscore.contains(instance.commodities, ledgerEntry.commodity)) ||
                                                     entryDate.isBefore(instance.startDate) ||
                                                     entryDate.isSameOrAfter(instance.endDate) ||
-                                                    underscore.contains(stock.actions[(section.code === 'INC' ? 'credit' : 'debit')], ledgerEntry.action);
+                                                    underscore.contains(ignoredActions, ledgerEntry.action);
                                             })
                                             .reduce(function (result, ledgerEntry) {
                                                 result.value = safeMath.plus(result.value, ledgerEntry.value);
@@ -19233,38 +19254,75 @@ sdkModelLivestock.factory('Livestock', ['computedProperty', 'inheritModel', 'pri
             readOnlyProperty(this, 'actions', {
                 'credit': [
                     'Birth',
+                    'Retained',
                     'Purchase'],
                 'debit': [
                     'Death',
                     'Household',
                     'Labour',
+                    'Retain',
                     'Sale']
             });
 
             computedProperty(this, 'actionTitles', function () {
-                return (this.birthAnimal === this.data.category ? actionTitles : underscore.omit(actionTitles, ['Birth', 'Death']));
+                return getActionTitles(this);
+            });
+
+            privateProperty(this, 'getActionTitle', function (action) {
+                var splitAction = action.split(':', 2);
+
+                if (splitAction.length === 2) {
+                    switch (splitAction[0]) {
+                        case 'Retain':
+                            return (this.birthAnimal === this.data.category ? 'Wean Livestock' : 'Retain ' + splitAction[1]);
+                        case 'Retained':
+                            return (this.weanedAnimal === this.data.category ? 'Weaned Livestock' : 'Retained ' + splitAction[1]);
+                        default:
+                            return splitAction[0];
+                    }
+                }
+
+                return this.actionTitles[action];
             });
 
             computedProperty(this, 'baseAnimal', function () {
-                return baseAnimal[this.data.type] || this.data.type;
+                return baseAnimals[this.data.type] || this.data.type;
             });
 
             computedProperty(this, 'birthAnimal', function () {
-                return birthAnimal[this.baseAnimal];
+                return getBirthingAnimal(this.data.type);
+            });
+
+            computedProperty(this, 'weanedAnimal', function () {
+                return getWeanedAnimal(this.data.type);
             });
 
             privateProperty(this, 'conversionRate', function () {
-                return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][this.data.category] || conversionRate[this.baseAnimal][representativeAnimal[this.baseAnimal]]);
+                return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][this.data.category] || conversionRate[this.baseAnimal][representativeAnimals[this.baseAnimal]]);
             });
 
             computedProperty(this, 'representativeAnimal', function () {
-                return representativeAnimal[this.baseAnimal];
+                return representativeAnimals[this.baseAnimal];
             });
 
             this.type = 'livestock';
         }
 
         inheritModel(Livestock, Stock);
+
+        function getActionTitles (instance) {
+            return underscore.chain(actionTitles)
+                .pairs()
+                .union(underscore.map(animalGrowthStages[instance.baseAnimal][instance.data.category], function (category) {
+                    return ['Retain:' + category, (instance.birthAnimal === instance.data.category ? 'Wean Livestock' : 'Retain ' + category)];
+                }))
+                .sortBy(function (pair) {
+                    return pair[0];
+                })
+                .object()
+                .omit(instance.birthAnimal === instance.data.category ? [] : ['Birth', 'Death'])
+                .value();
+        }
 
         var actionTitles = {
             'Birth': 'Register Births',
@@ -19275,7 +19333,7 @@ sdkModelLivestock.factory('Livestock', ['computedProperty', 'inheritModel', 'pri
             'Sale': 'Sell Livestock'
         };
 
-        var baseAnimal = {
+        var baseAnimals = {
             'Cattle (Extensive)': 'Cattle',
             'Cattle (Feedlot)': 'Cattle',
             'Cattle (Stud)': 'Cattle',
@@ -19284,7 +19342,7 @@ sdkModelLivestock.factory('Livestock', ['computedProperty', 'inheritModel', 'pri
             'Sheep (Stud)': 'Sheep'
         };
 
-        var birthAnimal = {
+        var birthAnimals = {
             Cattle: 'Calf',
             Game: 'Calf',
             Goats: 'Kid',
@@ -19292,74 +19350,145 @@ sdkModelLivestock.factory('Livestock', ['computedProperty', 'inheritModel', 'pri
             Sheep: 'Lamb'
         };
 
-        var representativeAnimal = {
+        var representativeAnimals = {
             Cattle: 'Cow',
             Game: 'Cow',
-            Goats: 'Ewe (2-tooth plus)',
+            Goats: 'Ewe',
             Rabbits: 'Doe',
             Sheep: 'Ewe'
+        };
+
+        var animalGrowthStages = {
+            Cattle: {
+                'Calf': ['Weaner Calf'],
+                'Weaner Calf': ['Bull', 'Heifer', 'Steer'],
+                'Heifer': ['Cow'],
+                'Cow': [],
+                'Steer': ['Ox'],
+                'Ox': [],
+                'Bull': []
+            },
+            Game: {
+                'Calf': ['Weaner Calf'],
+                'Weaner Calf': ['Heifer', 'Steer', 'Bull'],
+                'Heifer': ['Cow'],
+                'Cow': [],
+                'Steer': ['Ox'],
+                'Ox': [],
+                'Bull': []
+            },
+            Goats: {
+                'Kid': ['Weaner Kid'],
+                'Weaner Kid': ['Ewe', 'Castrate', 'Ram'],
+                'Ewe': [],
+                'Castrate': [],
+                'Ram': []
+            },
+            Rabbits: {
+                'Kit': ['Weaner Kit'],
+                'Weaner Kit': ['Doe', 'Lapin', 'Buck'],
+                'Doe': [],
+                'Lapin': [],
+                'Buck': []
+            },
+            Sheep: {
+                'Lamb': ['Weaner Lamb'],
+                'Weaner Lamb': ['Ewe', 'Wether', 'Ram'],
+                'Ewe': [],
+                'Wether': [],
+                'Ram': []
+            }
         };
 
         var conversionRate = {
             Cattle: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Game: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Goats: {
                 'Kid': 0.08,
-                'Weaner kid': 0.12,
-                'Ewe (2-tooth plus)': 0.17,
-                'Castrate (2-tooth plus)': 0.17,
-                'Ram (2-tooth plus)': 0.22
+                'Weaner Kid': 0.12,
+                'Ewe': 0.17,
+                'Castrate': 0.17,
+                'Ram': 0.22
             },
             Rabbits: {
                 'Kit': 0.08,
-                'Weaner kit': 0.12,
+                'Weaner Kit': 0.12,
                 'Doe': 0.17,
                 'Lapin': 0.17,
                 'Buck': 0.22
             },
             Sheep: {
                 'Lamb': 0.08,
-                'Weaner lamb': 0.11,
+                'Weaner Lamb': 0.11,
                 'Ewe': 0.16,
-                'Wether (2-tooth plus)': 0.16,
-                'Ram (2-tooth plus)': 0.23
+                'Wether': 0.16,
+                'Ram': 0.23
             }
         };
 
         privateProperty(Livestock, 'getBaseAnimal', function (type) {
-            return baseAnimal[type] || type;
+            return baseAnimals[type] || type;
         });
 
+        function getBirthingAnimal (type) {
+            var baseAnimal = baseAnimals[type] || type;
+
+            return baseAnimal && birthAnimals[baseAnimal];
+        }
+
         privateProperty(Livestock, 'getBirthingAnimal', function (type) {
-            return baseAnimal[type] && birthAnimal[baseAnimal[type]] || type;
+            return getBirthingAnimal(type);
+        });
+
+        function getWeanedAnimal (type) {
+            var baseAnimal = baseAnimals[type] || type,
+                birthAnimal = birthAnimals[baseAnimal];
+
+            return birthAnimal && animalGrowthStages[baseAnimal] && underscore.first(animalGrowthStages[baseAnimal][birthAnimal]);
+        }
+
+        privateProperty(Livestock, 'getWeanedAnimal', function (type) {
+            return getWeanedAnimal(type);
+        });
+
+        privateProperty(Livestock, 'getAnimalGrowthStages', function (type) {
+            var baseAnimal = baseAnimals[type] || type;
+
+            return baseAnimal && animalGrowthStages[baseAnimal] || [];
         });
 
         privateProperty(Livestock, 'getConversionRate', function (type, category) {
-            return baseAnimal[type] && conversionRate[baseAnimal[type]] && (conversionRate[baseAnimal[type]][category] || conversionRate[baseAnimal[type]][representativeAnimal[baseAnimal[type]]]);
+            var baseAnimal = baseAnimals[type] || type;
+
+            return baseAnimal && conversionRate[baseAnimal] && (conversionRate[baseAnimal][category] || conversionRate[baseAnimal][representativeAnimals[baseAnimal]]);
         });
 
         privateProperty(Livestock, 'getConversionRates', function (type) {
-            return baseAnimal[type] && conversionRate[baseAnimal[type]] || {};
+            var baseAnimal = baseAnimals[type] || type;
+
+            return baseAnimal && conversionRate[baseAnimal] || {};
         });
 
         privateProperty(Livestock, 'getRepresentativeAnimal', function (type) {
-            return baseAnimal[type] && representativeAnimal[baseAnimal[type]] || type;
+            var baseAnimal = baseAnimals[type] || type;
+
+            return baseAnimal && representativeAnimals[baseAnimal];
         });
 
         Livestock.validates({
@@ -19431,6 +19560,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 'Sale': 'Sell Stock'
             }, {configurable: true});
 
+            privateProperty(this, 'getActionTitle', function (action) {
+                return this.actionTitles[action];
+            }, {configurable: true});
+
             // Ledger
             function addLedgerEntry (instance, item) {
                 if (instance.isLedgerEntryValid(item)) {
@@ -19443,7 +19576,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                         })
                         .value();
 
-                    recalculateAndCache(instance);
+                    recalculateAndCache(instance, {checkEntries: true});
                 }
             }
 
@@ -19455,7 +19588,7 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 return underscore.chain(instance.actions)
                     .keys()
                     .filter(function (group) {
-                        return underscore.contains(instance.actions[group], action);
+                        return underscore.contains(instance.actions[group], asPureAction(action));
                     })
                     .first()
                     .value();
@@ -19494,15 +19627,17 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
             });
 
             privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, markDeleted) {
-                if (markDeleted) {
-                    ledgerEntry.deleted = true;
-                } else {
-                    this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
-                        return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
-                    });
-                }
+                if (ledgerEntry) {
+                    if (markDeleted) {
+                        ledgerEntry.deleted = true;
+                    } else {
+                        this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                            return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
+                        });
+                    }
 
-                recalculateAndCache(this);
+                    recalculateAndCache(this);
+                }
             });
 
             privateProperty(this, 'generateLedgerEntryReference', function (entry) {
@@ -19513,6 +19648,8 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                     return s.include(entry.reference, reference);
                 });
+
+                recalculateAndCache(this);
             });
 
             privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
@@ -19625,23 +19762,32 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                     .slice(startCrop, startCrop + numberOfMonths);
             }
 
-            function recalculate (instance) {
+            function recalculate (instance, options) {
                 var startMonth = instance.startMonth,
                     endMonth = instance.endMonth,
                     numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : -1);
 
+                options = underscore.defaults(options || {}, {
+                    checkEntries: false
+                });
+
                 return underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
                     var offsetDate = moment(startMonth).add(offset, 'M');
 
-                    var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, item) {
-                        var itemDate = moment(item.date);
+                    var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, entry) {
+                        var itemDate = moment(entry.date),
+                            pureAction = asPureAction(entry.action);
 
-                        if (!item.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
+                        if (!entry.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
                             underscore.each(['credit', 'debit'], function (key) {
-                                if (underscore.contains(instance.actions[key], item.action)) {
-                                    month.entries.push(item);
-                                    month[key][item.action] = underscore.mapObject(month[key][item.action] || defaultItem(), function (value, key) {
-                                        return safeMath.plus(value, item[key]);
+                                if (underscore.contains(instance.actions[key], pureAction)) {
+                                    if (options.checkEntries) {
+                                        recalculateEntry(instance, entry);
+                                    }
+
+                                    month.entries.push(entry);
+                                    month[key][pureAction] = underscore.mapObject(month[key][pureAction] || defaultItem(), function (value, key) {
+                                        return safeMath.plus(value, entry[key]);
                                     });
                                 }
                             });
@@ -19660,8 +19806,15 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
                 }, []);
             }
 
-            function recalculateAndCache (instance) {
-                _monthly = recalculate(instance);
+            function recalculateEntry (instance, entry) {
+                if (underscore.isUndefined(entry.price) && !underscore.isUndefined(entry.quantity) && !underscore.isUndefined(instance.data.pricePerUnit)) {
+                    entry.price = instance.data.pricePerUnit;
+                    entry.value = safeMath.times((entry.rate || 1), safeMath.times(entry.price, entry.quantity));
+                }
+            }
+
+            function recalculateAndCache (instance, options) {
+                _monthly = recalculate(instance, options);
             }
 
             Base.initializeObject(this.data, 'ledger', []);
@@ -19669,6 +19822,10 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
 
             this.type = 'stock';
+        }
+
+        function asPureAction (action) {
+            return s.strLeft(action, ':');
         }
 
         function defaultItem (quantity, value) {
@@ -19702,8 +19859,9 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
         }
 
         function isLedgerEntryValid (instance, item) {
+            var pureAction = asPureAction(item.action);
             return item && item.date && moment(item.date).isValid() && /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
-                (underscore.contains(instance.actions.credit, item.action) || underscore.contains(instance.actions.debit, item.action));
+                (underscore.contains(instance.actions.credit, pureAction) || underscore.contains(instance.actions.debit, pureAction));
         }
 
         inheritModel(Stock, AssetBase);
@@ -19733,9 +19891,9 @@ sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheri
 
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
-    function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = 12;
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
+    function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
+        var _version = 13;
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -19972,7 +20130,9 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                     stockType = (section.code === 'INC' ? productionSchedule.commodityType : undefined),
                                     stock = getStockAsset(instance, assetType, stockType, category.name, priceUnit, category.supplyUnit);
 
-                                //Base.initializeObject(stock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
+                                if (assetType === 'livestock' && category.value) {
+                                    Base.initializeObject(stock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
+                                }
 
                                 underscore.each(category.valuePerMonth, function (value, index) {
                                     if (value > 0) {
@@ -20134,11 +20294,12 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         if (group.code === 'INC-LSS') {
                             // Add Representative Animal
                             var representativeAnimal = productionSchedule.getRepresentativeAnimal(),
-                                category = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: representativeAnimal}),
-                                representativeLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, representativeAnimal, category && category.unit, category && category.supplyUnit);
+                                representativeCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: representativeAnimal});
 
-                            if (!underscore.isUndefined(category)) {
-                                productionSchedule.budget.addCategory('INC', 'Livestock Sales', category.code, productionSchedule.costStage);
+                            if (!underscore.isUndefined(representativeCategory)) {
+                                var representativeLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, representativeAnimal, representativeCategory.unit, representativeCategory.supplyUnit);
+                                
+                                productionSchedule.budget.addCategory('INC', 'Livestock Sales', representativeCategory.code, productionSchedule.costStage);
 
                                 if (!representativeLivestock.data.openingBalance) {
                                     representativeLivestock.data.openingBalance = productionSchedule.data.details.herdSize;
@@ -20148,52 +20309,107 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                             }
 
                             // Add Livestock Events
-                            underscore.each(productionSchedule.budget.data.events, function (schedule, name) {
-                                var category = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: productionSchedule.birthAnimal}),
-                                    livestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, productionSchedule.birthAnimal, category && category.unit, category && category.supplyUnit);
+                            var birthAnimal = productionSchedule.birthAnimal,
+                                birthCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: birthAnimal});
 
-                                if (!underscore.isUndefined(category)) {
-                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', category.code, productionSchedule.costStage);
+                            if (!underscore.isUndefined(birthCategory)) {
+                                var birthLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, birthAnimal, birthCategory.unit, birthCategory.supplyUnit),
+                                    weanedLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, Livestock.getWeanedAnimal(productionSchedule.commodityType), birthCategory.unit, birthCategory.supplyUnit),
+                                    retainLivestockMap = {
+                                        'Retain': birthLivestock,
+                                        'Retained': weanedLivestock
+                                    };
 
-                                    underscore.each(productionSchedule.budget.shiftMonthlyArray(schedule), function (rate, index) {
+                                underscore.each(underscore.keys(productionSchedule.budget.data.events).sort(), function (action) {
+                                    var shiftedSchedule = productionSchedule.budget.shiftMonthlyArray(productionSchedule.budget.data.events[action]);
+
+                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', birthCategory.code, productionSchedule.costStage);
+
+                                    underscore.each(shiftedSchedule, function (rate, index) {
                                         if (rate > 0) {
                                             var formattedDate = moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
                                                 representativeLivestockInventory = representativeLivestock.inventoryBefore(formattedDate),
-                                                ledgerEntry = livestock.findLedgerEntry({date: formattedDate, action: name, reference: productionSchedule.scheduleKey}),
+                                                ledgerEntry = birthLivestock.findLedgerEntry({date: formattedDate, action: action, reference: productionSchedule.scheduleKey}),
+                                                actionReference = [productionSchedule.scheduleKey, action, formattedDate].join('/'),
                                                 quantity = Math.floor(safeMath.chain(rate)
                                                     .dividedBy(100)
                                                     .times(representativeLivestockInventory.closing.quantity)
                                                     .toNumber()),
-                                                value = safeMath.times(quantity, livestock.data.pricePerUnit);
+                                                value = safeMath.times(quantity, birthLivestock.data.pricePerUnit);
 
                                             if (underscore.isUndefined(ledgerEntry)) {
-                                                livestock.addLedgerEntry({
-                                                    action: name,
+                                                birthLivestock.addLedgerEntry({
+                                                    action: action,
                                                     date: formattedDate,
-                                                    price: livestock.data.pricePerUnit,
-                                                    priceUnit: livestock.data.quantityUnit,
+                                                    price: birthLivestock.data.pricePerUnit,
+                                                    priceUnit: birthLivestock.data.quantityUnit,
                                                     quantity: quantity,
-                                                    quantityUnit: livestock.data.quantityUnit,
-                                                    reference: productionSchedule.scheduleKey,
+                                                    quantityUnit: birthLivestock.data.quantityUnit,
+                                                    reference: actionReference,
                                                     value: value
                                                 });
                                             } else if (!ledgerEntry.edited) {
                                                 underscore.extend(ledgerEntry, {
-                                                    price: livestock.data.pricePerUnit,
-                                                    priceUnit: livestock.data.quantityUnit,
+                                                    price: birthLivestock.data.pricePerUnit,
+                                                    priceUnit: birthLivestock.data.quantityUnit,
                                                     quantity: quantity,
-                                                    quantityUnit: livestock.data.quantityUnit,
+                                                    quantityUnit: birthLivestock.data.quantityUnit,
+                                                    reference: actionReference,
                                                     value: value
                                                 });
 
-                                                livestock.recalculateLedger();
+                                                birthLivestock.recalculateLedger();
+                                            }
+
+                                            if (action === 'Death') {
+                                                var retainReference = [productionSchedule.scheduleKey, 'Retain:' + birthAnimal, formattedDate].join('/'),
+                                                    weanLedgerEntry = birthLivestock.findLedgerEntry(retainReference);
+
+                                                if (underscore.isUndefined(weanLedgerEntry) || !weanLedgerEntry.edited) {
+                                                    // Removed already included retained entries, as it affects the inventory balance
+                                                    birthLivestock.removeLedgerEntry(weanLedgerEntry);
+
+                                                    // Retains birth animal as weaned animal
+                                                    var inventory = birthLivestock.inventoryBefore(formattedDate);
+
+                                                    underscore.each(underscore.keys(retainLivestockMap), function (retainAction) {
+                                                        var retainLivestock = retainLivestockMap[retainAction],
+                                                            retainLedgerEntry = retainLivestock.findLedgerEntry(retainReference),
+                                                            value = inventory.closing.value || safeMath.times(retainLivestock.data.pricePerUnit, inventory.closing.quantity);
+
+                                                        if (underscore.isUndefined(retainLedgerEntry)) {
+                                                            retainLivestock.addLedgerEntry({
+                                                                action: retainAction + ':' + birthAnimal,
+                                                                date: formattedDate,
+                                                                price: retainLivestock.data.pricePerUnit,
+                                                                priceUnit: retainLivestock.data.quantityUnit,
+                                                                quantity: inventory.closing.quantity,
+                                                                quantityUnit: retainLivestock.data.quantityUnit,
+                                                                reference: retainReference,
+                                                                value: value
+                                                            });
+                                                        } else if (!retainLedgerEntry.edited) {
+                                                            underscore.extend(retainLedgerEntry, {
+                                                                price: retainLivestock.data.pricePerUnit,
+                                                                priceUnit: retainLivestock.data.quantityUnit,
+                                                                quantity: inventory.closing.quantity,
+                                                                quantityUnit: retainLivestock.data.quantityUnit,
+                                                                reference: retainReference,
+                                                                value: value
+                                                            });
+
+                                                            retainLivestock.recalculateLedger();
+                                                        }
+                                                    });
+                                                }
                                             }
                                         }
                                     });
 
-                                    addStockAsset(instance, livestock, true);
-                                }
-                            });
+                                    addStockAsset(instance, birthLivestock, true);
+                                    addStockAsset(instance, weanedLivestock, true);
+                                });
+                            }
                         }
                     });
                 });

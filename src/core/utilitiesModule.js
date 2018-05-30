@@ -225,7 +225,7 @@ sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http
     }
 }]);
 
-sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safeApply) {
+sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', function ($timeout, $q, safeApply) {
     var _defer = function() {
         var deferred = $q.defer();
 
@@ -292,7 +292,9 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         wrap: function(action) {
             var deferred = _defer();
 
-            action(deferred);
+            $timeout(function () {
+                action(deferred);
+            }, 0);
 
             return deferred.promise;
         },
