@@ -419,20 +419,22 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                             // Add Livestock Events
                             var birthAnimal = productionSchedule.birthAnimal,
-                                birthCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: birthAnimal});
+                                birthCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: birthAnimal}),
+                                weanedCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: Livestock.getWeanedAnimal(productionSchedule.commodityType)});
 
-                            if (!underscore.isUndefined(birthCategory)) {
+                            if (!underscore.isUndefined(birthCategory) && !underscore.isUndefined(weanedCategory)) {
                                 var birthLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, birthAnimal, birthCategory.unit, birthCategory.supplyUnit),
-                                    weanedLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, Livestock.getWeanedAnimal(productionSchedule.commodityType), birthCategory.unit, birthCategory.supplyUnit),
+                                    weanedLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, weanedCategory.name, weanedCategory.unit, weanedCategory.supplyUnit),
                                     retainLivestockMap = {
                                         'Retain': birthLivestock,
                                         'Retained': weanedLivestock
                                     };
 
+                                productionSchedule.budget.addCategory('INC', 'Livestock Sales', birthCategory.code, productionSchedule.costStage);
+                                productionSchedule.budget.addCategory('INC', 'Livestock Sales', weanedCategory.code, productionSchedule.costStage);
+
                                 underscore.each(underscore.keys(productionSchedule.budget.data.events).sort(), function (action) {
                                     var shiftedSchedule = productionSchedule.budget.shiftMonthlyArray(productionSchedule.budget.data.events[action]);
-
-                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', birthCategory.code, productionSchedule.costStage);
 
                                     underscore.each(shiftedSchedule, function (rate, index) {
                                         if (rate > 0) {

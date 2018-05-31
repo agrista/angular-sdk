@@ -353,7 +353,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
 
                                 if (stock) {
                                     if (underscore.isUndefined(productionCategory.stock)) {
-                                        var ignoredActions = underscore.union(stock.actions[(section.code === 'INC' ? 'credit' : 'debit')], ['Death', 'Consumption', 'Internal', 'Household', 'Retain:' + stock.data.category, 'Retained:' + stock.data.category]);
+                                        var ignoredActions = underscore.union(stock.actions[(section.code === 'INC' ? 'credit' : 'debit')], ['Death', 'Consumption', 'Internal', 'Household', 'Retain']);
 
                                         productionCategory.stock = stock;
 
@@ -365,7 +365,9 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                                     (ledgerEntry.commodity && !underscore.contains(instance.commodities, ledgerEntry.commodity)) ||
                                                     entryDate.isBefore(instance.startDate) ||
                                                     entryDate.isSameOrAfter(instance.endDate) ||
-                                                    underscore.contains(ignoredActions, ledgerEntry.action);
+                                                    underscore.some(ignoredActions, function (action) {
+                                                        return s.include(ledgerEntry.action, action);
+                                                    });
                                             })
                                             .reduce(function (result, ledgerEntry) {
                                                 result.value = safeMath.plus(result.value, ledgerEntry.value);
