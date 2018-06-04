@@ -10726,19 +10726,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             computedProperty(this, 'birthAnimal', function () {
-                return birthAnimal[this.baseAnimal];
+                return EnterpriseBudgetBase.birthAnimals[this.baseAnimal];
             });
 
             privateProperty(this, 'getBaseAnimal', function () {
                 return this.baseAnimal;
             });
 
-            privateProperty(this, 'getRepresentativeAnimal', function() {
-                return representativeAnimal[this.baseAnimal];
+            privateProperty(this, 'getRepresentativeAnimal', function () {
+                return EnterpriseBudgetBase.representativeAnimals[this.baseAnimal];
             });
 
             privateProperty(this, 'getConversionRate', function(animal) {
-                return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][animal] || conversionRate[this.baseAnimal][representativeAnimal[this.baseAnimal]]);
+                return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][animal] || conversionRate[this.baseAnimal][EnterpriseBudgetBase.representativeAnimals[this.baseAnimal]]);
             });
 
             privateProperty(this, 'getConversionRates', function() {
@@ -10755,7 +10755,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             Base.initializeObject(this.data, 'sections', []);
 
             this.sortSections();
-
         }
 
         inheritModel(EnterpriseBudgetBase, Model.Base);
@@ -11502,13 +11501,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         };
 
         // Livestock
-        var representativeAnimal = {
+        readOnlyProperty(EnterpriseBudgetBase, 'representativeAnimals', {
             Cattle: 'Cow',
             Game: 'Cow',
             Goats: 'Ewe',
             Rabbits: 'Doe',
             Sheep: 'Ewe'
-        };
+        });
 
         var baseAnimal = {
             'Cattle (Extensive)': 'Cattle',
@@ -11519,13 +11518,21 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             'Sheep (Stud)': 'Sheep'
         };
 
-        var birthAnimal = {
+        readOnlyProperty(EnterpriseBudgetBase, 'birthAnimals', {
             Cattle: 'Calf',
             Game: 'Calf',
             Goats: 'Kid',
             Rabbits: 'Kit',
             Sheep: 'Lamb'
-        };
+        });
+
+        readOnlyProperty(EnterpriseBudgetBase, 'weanedAnimals', {
+            Cattle: 'Weaner Calf',
+            Game: 'Weaner Calf',
+            Goats: 'Weaner Kid',
+            Rabbits: 'Weaner Kit',
+            Sheep: 'Weaner Lamb'
+        });
 
         var conversionRate = {
             Cattle: {
@@ -11572,12 +11579,24 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         privateProperty(EnterpriseBudgetBase, 'getBirthingAnimal', function (commodityType) {
             var base = baseAnimal[commodityType] || commodityType;
 
-            return base && birthAnimal[base];
+            return base && EnterpriseBudgetBase.birthAnimals[base];
         });
 
         interfaceProperty(EnterpriseBudgetBase, 'getAssetTypeForLandUse', function (landUse) {
             return (s.include(landUse, 'Cropland') ? 'crop' :
                 (s.include(landUse, 'Cropland') ? 'horticulture' : 'livestock'));
+        });
+
+        privateProperty(EnterpriseBudgetBase, 'getCategorySortKey', function (categoryName) {
+            if (underscore.contains(underscore.values(EnterpriseBudgetBase.representativeAnimals), categoryName)) {
+                return 0 + categoryName;
+            } else if (underscore.contains(underscore.values(EnterpriseBudgetBase.birthAnimals), categoryName)) {
+                return 1 + categoryName;
+            } else if (underscore.contains(underscore.values(EnterpriseBudgetBase.weanedAnimals), categoryName)) {
+                return 2 + categoryName;
+            }
+
+            return 3 + categoryName;
         });
 
         EnterpriseBudgetBase.validates({
@@ -13714,41 +13733,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
             });
 
             privateProperty(this, 'addCategory', function (sectionCode, groupName, categoryQuery, costStage) {
-                var category = this.getCategory(sectionCode, categoryQuery, costStage);
-
-                if (underscore.isUndefined(category)) {
-                    var group = this.addGroup(sectionCode, this.findGroupNameByCategory(sectionCode, groupName, categoryQuery.code), costStage);
-
-                    category = underscore.extend({
-                        quantity: 0,
-                        value: 0
-                    }, EnterpriseBudgetBase.categories[categoryQuery.code]);
-
-                    // WA: Modify enterprise budget model to specify input costs as "per ha"
-                    if (sectionCode === 'EXP') {
-                        category.unit = 'Total'
-                    }
-
-                    if (categoryQuery.name) {
-                        category.name = categoryQuery.name;
-                    }
-
-                    category.per = (this.assetType === 'livestock' ? 'LSU' : 'ha');
-
-                    if (this.assetType === 'livestock') {
-                        var conversionRate = this.getConversionRate(category.name);
-
-                        if (conversionRate) {
-                            category.conversionRate = conversionRate;
-                        }
-
-                        category.valuePerLSU = 0;
-                    }
-
-                    group.productCategories.push(category);
-                }
-
-                return category;
+                return addCategory(this, sectionCode, groupName, categoryQuery, costStage);
             });
 
             privateProperty(this, 'recalculate', function () {
@@ -13812,6 +13797,49 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                 .sort(naturalSort);
 
             instance.data.details.size = underscore.reduce(instance.productionSchedules, reduceProperty('allocatedSize'), 0);
+        }
+
+        function addCategory(instance, sectionCode, groupName, categoryQuery, costStage) {
+            var category = instance.getCategory(sectionCode, categoryQuery, costStage);
+
+            if (underscore.isUndefined(category)) {
+                var group = instance.addGroup(sectionCode, instance.findGroupNameByCategory(sectionCode, groupName, categoryQuery.code), costStage);
+
+                category = underscore.extend({
+                    quantity: 0,
+                    value: 0
+                }, EnterpriseBudgetBase.categories[categoryQuery.code]);
+
+                // WA: Modify enterprise budget model to specify input costs as "per ha"
+                if (sectionCode === 'EXP') {
+                    category.unit = 'Total'
+                }
+
+                if (categoryQuery.name) {
+                    category.name = categoryQuery.name;
+                }
+
+                category.per = (instance.assetType === 'livestock' ? 'LSU' : 'ha');
+
+                if (this.assetType === 'livestock') {
+                    var conversionRate = instance.getConversionRate(category.name);
+
+                    if (conversionRate) {
+                        category.conversionRate = conversionRate;
+                    }
+
+                    category.valuePerLSU = 0;
+                }
+
+                group.productCategories = underscore.union(group.productCategories, [category])
+                    .sort(function (categoryA, categoryB) {
+                        return (instance.assetType === 'livestock' && sectionCode === 'INC' ?
+                            naturalSort(EnterpriseBudgetBase.getCategorySortKey(categoryA.name), EnterpriseBudgetBase.getCategorySortKey(categoryB.name)) :
+                            naturalSort(categoryA.name, categoryB.name));
+                    });
+            }
+
+            return category;
         }
 
         function addStock (instance, stock) {
@@ -20088,7 +20116,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
             function getStockAsset (instance, type, stockType, category, priceUnit, quantityUnit) {
                 var stock = AssetFactory.new(findStockAsset(instance, type, stockType, category) || {
                     type: type,
-                    legalEntityId : underscore.chain(instance.data.legalEntities)
+                    legalEntityId: underscore.chain(instance.data.legalEntities)
                         .where({isPrimary: true})
                         .pluck('id')
                         .first()

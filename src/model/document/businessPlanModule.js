@@ -195,7 +195,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
             function getStockAsset (instance, type, stockType, category, priceUnit, quantityUnit) {
                 var stock = AssetFactory.new(findStockAsset(instance, type, stockType, category) || {
                     type: type,
-                    legalEntityId : underscore.chain(instance.data.legalEntities)
+                    legalEntityId: underscore.chain(instance.data.legalEntities)
                         .where({isPrimary: true})
                         .pluck('id')
                         .first()

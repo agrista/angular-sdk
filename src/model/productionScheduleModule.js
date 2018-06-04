@@ -73,41 +73,7 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
             });
 
             privateProperty(this, 'addCategory', function (sectionCode, groupName, categoryQuery, costStage) {
-                var category = this.getCategory(sectionCode, categoryQuery, costStage);
-
-                if (underscore.isUndefined(category)) {
-                    var group = this.addGroup(sectionCode, this.findGroupNameByCategory(sectionCode, groupName, categoryQuery.code), costStage);
-
-                    category = underscore.extend({
-                        quantity: 0,
-                        value: 0
-                    }, EnterpriseBudgetBase.categories[categoryQuery.code]);
-
-                    // WA: Modify enterprise budget model to specify input costs as "per ha"
-                    if (sectionCode === 'EXP') {
-                        category.unit = 'Total'
-                    }
-
-                    if (categoryQuery.name) {
-                        category.name = categoryQuery.name;
-                    }
-
-                    category.per = (this.assetType === 'livestock' ? 'LSU' : 'ha');
-
-                    if (this.assetType === 'livestock') {
-                        var conversionRate = this.getConversionRate(category.name);
-
-                        if (conversionRate) {
-                            category.conversionRate = conversionRate;
-                        }
-
-                        category.valuePerLSU = 0;
-                    }
-
-                    group.productCategories.push(category);
-                }
-
-                return category;
+                return addCategory(this, sectionCode, groupName, categoryQuery, costStage);
             });
 
             privateProperty(this, 'recalculate', function () {
@@ -171,6 +137,49 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                 .sort(naturalSort);
 
             instance.data.details.size = underscore.reduce(instance.productionSchedules, reduceProperty('allocatedSize'), 0);
+        }
+
+        function addCategory(instance, sectionCode, groupName, categoryQuery, costStage) {
+            var category = instance.getCategory(sectionCode, categoryQuery, costStage);
+
+            if (underscore.isUndefined(category)) {
+                var group = instance.addGroup(sectionCode, instance.findGroupNameByCategory(sectionCode, groupName, categoryQuery.code), costStage);
+
+                category = underscore.extend({
+                    quantity: 0,
+                    value: 0
+                }, EnterpriseBudgetBase.categories[categoryQuery.code]);
+
+                // WA: Modify enterprise budget model to specify input costs as "per ha"
+                if (sectionCode === 'EXP') {
+                    category.unit = 'Total'
+                }
+
+                if (categoryQuery.name) {
+                    category.name = categoryQuery.name;
+                }
+
+                category.per = (instance.assetType === 'livestock' ? 'LSU' : 'ha');
+
+                if (this.assetType === 'livestock') {
+                    var conversionRate = instance.getConversionRate(category.name);
+
+                    if (conversionRate) {
+                        category.conversionRate = conversionRate;
+                    }
+
+                    category.valuePerLSU = 0;
+                }
+
+                group.productCategories = underscore.union(group.productCategories, [category])
+                    .sort(function (categoryA, categoryB) {
+                        return (instance.assetType === 'livestock' && sectionCode === 'INC' ?
+                            naturalSort(EnterpriseBudgetBase.getCategorySortKey(categoryA.name), EnterpriseBudgetBase.getCategorySortKey(categoryB.name)) :
+                            naturalSort(categoryA.name, categoryB.name));
+                    });
+            }
+
+            return category;
         }
 
         function addStock (instance, stock) {
