@@ -166,8 +166,6 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                     chain.push(function () {
                         return _postFarms(farmer.id);
                     }, function () {
-                        return _postFinancials(farmer.id);
-                    }, function () {
                         return _postLegalEntities(farmer.id);
                     });
                 });
@@ -211,10 +209,19 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                 }, promiseService.throwError);
             }
 
-            function _postFinancials (farmerId) {
-                financialApi.getFinancials({id: farmerId, options: _options.local}).then(function (financials) {
+            function _postFinancials (localEntityId, remoteEntityId) {
+                financialApi.getFinancials({id: localEntityId, options: _options.local}).then(function (financials) {
                     return promiseService.chain(function (chain) {
                         angular.forEach(financials, function (financial) {
+                            if (localEntityId !== remoteEntityId) {
+                                financial.$uri = 'financials/' + remoteEntityId;
+                                financial.legalEntityId = remoteEntityId;
+
+                                chain.push(function () {
+                                    return financialApi.updateFinancial({data: financial});
+                                });
+                            }
+
                             if (financial.$dirty === true) {
                                 chain.push(function () {
                                     return financialApi.postFinancial({data: financial});
@@ -238,6 +245,10 @@ mobileSdkApiApp.provider('apiSynchronizationService', ['underscore', function (u
                             } else {
                                 chain.push(function () {
                                     return _postAssets(entity.$id, entity.id);
+                                });
+
+                                chain.push(function () {
+                                    return _postFinancials(entity.$id, entity.id);
                                 });
 
                                 chain.push(function () {
@@ -1030,11 +1041,11 @@ mobileSdkApiApp.provider('farmerApi', ['hydrationProvider', function (hydrationP
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['activities', 'farms', 'financials', 'legalEntities', 'primaryContact'];
+        var defaultRelations = ['activities', 'farms', 'legalEntities', 'primaryContact'];
         var farmerApi = api({
             plural: 'farmers',
             singular: 'farmer',
-            strip: ['farms', 'financials', 'legalEntities'],
+            strip: ['farms', 'legalEntities'],
             hydrate: function (obj, options) {
                 options.hydrate = (options.hydrate instanceof Array ? options.hydrate : (options.hydrate === true ? defaultRelations : []));
                 return hydration.hydrate(obj, 'farmer', options);
@@ -1084,7 +1095,7 @@ mobileSdkApiApp.provider('financialApi', ['hydrationProvider', function (hydrati
         var financialApi = api({
             plural: 'financials',
             singular: 'financial',
-            strip: ['organization']
+            strip: ['legalEntity']
         });
 
         return {
@@ -1138,7 +1149,7 @@ mobileSdkApiApp.provider('legalEntityApi', ['hydrationProvider', function (hydra
     }]);
 
     this.$get = ['api', 'hydration', function (api, hydration) {
-        var defaultRelations = ['assets', 'liabilities'];
+        var defaultRelations = ['assets', 'financials', 'liabilities'];
         var entityApi = api({
             plural: 'legalentities',
             singular: 'legalentity',

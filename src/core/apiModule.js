@@ -802,7 +802,7 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'pagingService', 'promiseServ
         },
         createFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer', asJson(data, (includeDependencies ? [] : ['farms', 'financials', 'legalEntities'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer', asJson(data, (includeDependencies ? [] : ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -823,7 +823,7 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'pagingService', 'promiseServ
         },
         updateFarmer: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/' + data.id, asJson(data, (includeDependencies ? [] : ['farms', 'financials', 'legalEntities'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer/' + data.id, asJson(data, (includeDependencies ? [] : ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -904,7 +904,7 @@ sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configu
         },
         createFinancial: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/financial', asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/financial', asJson(data, ['legalEntity']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -918,7 +918,7 @@ sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configu
         },
         updateFinancial: function (data) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/financial/' + data.id, asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/financial/' + data.id, asJson(data, ['legalEntity']), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1046,7 +1046,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
         },
         updateEntity: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity/' + data.id, asJson(data, (includeDependencies ? [] : ['assets'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity/' + data.id, asJson(data, (includeDependencies ? [] : ['assets', 'financials'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1067,7 +1067,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
         },
         createEntity: function (data, includeDependencies) {
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity', asJson(data, (includeDependencies ? [] : ['assets'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity', asJson(data, (includeDependencies ? [] : ['assets', 'financials'])), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

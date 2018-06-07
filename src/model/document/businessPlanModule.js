@@ -692,13 +692,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                     .filter(function(financial) {
                         return Financial.new(financial).validate();
                     })
-                    .sortBy(function (financial) {
-                        return -financial.year;
-                    })
-                    .first(3)
-                    .sortBy(function (financial) {
-                        return financial.year;
-                    })
+                    .sortBy('year')
+                    .last(3)
                     .value();
             });
 
