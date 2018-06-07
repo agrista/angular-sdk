@@ -1,8 +1,8 @@
 var sdkModelFinancial = angular.module('ag.sdk.model.financial', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.utilities']);
 
-sdkModelFinancial.factory('Financial', ['Base', 'inheritModel', 'Model', 'privateProperty', 'safeMath', 'underscore',
+sdkModelFinancial.factory('FinancialBase', ['Base', 'inheritModel', 'Model', 'privateProperty', 'safeMath', 'underscore',
     function (Base, inheritModel, Model, privateProperty, safeMath, underscore) {
-        function Financial (attrs) {
+        function FinancialBase (attrs) {
             Model.Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data) || {};
@@ -18,13 +18,9 @@ sdkModelFinancial.factory('Financial', ['Base', 'inheritModel', 'Model', 'privat
 
             this.id = attrs.id || attrs.$id;
             this.grossProfit = attrs.grossProfit;
-            this.legalEntityId = attrs.legalEntityId;
             this.netProfit = attrs.netProfit;
             this.netWorth = attrs.netWorth;
             this.year = attrs.year;
-
-            // Models
-            this.legalEntity = attrs.legalEntity;
 
             convert(this);
         }
@@ -47,7 +43,7 @@ sdkModelFinancial.factory('Financial', ['Base', 'inheritModel', 'Model', 'privat
             });
         }
 
-        inheritModel(Financial, Model.Base);
+        inheritModel(FinancialBase, Model.Base);
 
         function calculateRatio (numeratorProperties, denominatorProperties) {
             numeratorProperties = (underscore.isArray(numeratorProperties) ? numeratorProperties : [numeratorProperties]);
@@ -104,6 +100,34 @@ sdkModelFinancial.factory('Financial', ['Base', 'inheritModel', 'Model', 'privat
             instance.$dirty = true;
         }
 
+        FinancialBase.validates({
+            year: {
+                numeric: true,
+                range: {
+                    from: 1000,
+                    to: 9999
+                }
+            }
+        });
+
+        return FinancialBase;
+    }]);
+
+sdkModelFinancial.factory('Financial', ['inheritModel', 'FinancialBase', 'underscore',
+    function (inheritModel, FinancialBase, underscore) {
+        function Financial (attrs) {
+            FinancialBase.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.legalEntityId = attrs.legalEntityId;
+
+            // Models
+            this.legalEntity = attrs.legalEntity;
+        }
+
+        inheritModel(Financial, FinancialBase);
+
         Financial.validates({
             legalEntityId: {
                 required: true,
@@ -119,4 +143,83 @@ sdkModelFinancial.factory('Financial', ['Base', 'inheritModel', 'Model', 'privat
         });
 
         return Financial;
+    }]);
+
+
+sdkModelFinancial.factory('FinancialGroup', ['inheritModel', 'Financial', 'FinancialBase', 'privateProperty', 'safeMath', 'underscore',
+    function (inheritModel, Financial, FinancialBase, privateProperty, safeMath, underscore) {
+        function FinancialGroup (attrs) {
+            FinancialBase.apply(this, arguments);
+
+            privateProperty(this, 'addFinancial', function (financial) {
+                addFinancial(this, financial);
+            });
+
+            this.financials = [];
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            underscore.each(attrs.financials, this.addFinancial, this);
+        }
+
+        inheritModel(FinancialGroup, FinancialBase);
+
+        function addFinancial (instance, financial) {
+            financial = (financial instanceof Financial ? financial : Financial.new(financial));
+
+            instance.year = financial.year;
+
+            instance.financials = underscore.chain(instance.financials)
+                .reject(function (item) {
+                    return item.legalEntityId === financial.legalEntityId && item.year === financial.year;
+                })
+                .union([financial])
+                .value();
+
+            instance.data = underscore.chain(instance.financials)
+                .reduce(function (data, financial) {
+                    underscore.each(['assets', 'liabilities'], function (group) {
+                        underscore.each(financial.data[group], function (categories, type) {
+                            data[group][type] = underscore.reduce(categories, function (result, value, category) {
+                                result[category] = safeMath.plus(result[category], value);
+
+                                return result;
+                            }, data[group][type] || {});
+                        });
+                    });
+
+                    return data;
+                }, {
+                    assets: {},
+                    liabilities: {},
+                    ratios: {}
+                })
+                .extend(underscore.chain(['productionIncome', 'productionExpenditure', 'otherIncome', 'otherExpenditure', 'depreciationAmortization', 'interestPaid', 'taxPaid'])
+                    .map(function (key) {
+                        return [key, underscore.chain(instance.financials)
+                            .pluck('data')
+                            .pluck(key)
+                            .reduce(function(total, value) {
+                                return safeMath.plus(total, value);
+                            }, 0)
+                            .value()];
+                    })
+                    .object()
+                    .value())
+                .value();
+
+            instance.recalculate();
+        }
+
+        FinancialGroup.validates({
+            year: {
+                numeric: true,
+                range: {
+                    from: 1000,
+                    to: 9999
+                }
+            }
+        });
+
+        return FinancialGroup;
     }]);

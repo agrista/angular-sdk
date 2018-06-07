@@ -1,8 +1,8 @@
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
-    function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = 13;
+sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
+    function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
+        var _version = 14;
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -688,9 +688,16 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
              * Financials
              */
             privateProperty(this, 'updateFinancials', function (financials) {
-                this.models.financials = underscore.chain(financials)
-                    .filter(function(financial) {
-                        return Financial.new(financial).validate();
+                this.models.financials = underscore.filter(financials, function (financial) {
+                    return Financial.new(financial).validate();
+                });
+
+                this.data.consolidatedFinancials = underscore.chain(this.models.financials)
+                    .groupBy('year')
+                    .map(function (groupedFinancials) {
+                        return asJson(FinancialGroup.new({
+                            financials: groupedFinancials
+                        }), ['financials']);
                     })
                     .sortBy('year')
                     .last(3)
@@ -1942,6 +1949,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
             if (this.data.version !== _version) {
                 this.updateProductionSchedules(this.data.models.productionSchedules);
+                this.updateFinancials(this.data.models.financials);
                 this.data.version = _version;
             }
         }
