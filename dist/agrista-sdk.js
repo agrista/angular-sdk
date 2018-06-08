@@ -15828,6 +15828,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 'Bank Charges',
                 'Crop Insurance',
                 'Fuel',
+                'Electricity',
                 'Government Levy',
                 'Licenses & Membership Fees',
                 'Long term insurance & Policies',
