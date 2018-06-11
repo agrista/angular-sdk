@@ -125,16 +125,18 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 });
 
                 if (oldSchedules.length > 0) {
-                    var livestockAssets = underscore.chain(instance.models.assets)
-                        .where({type: 'livestock'})
+                    var stockAssets = underscore.chain(instance.models.assets)
+                        .filter(function (asset) {
+                            return underscore.contains(['livestock', 'stock'], asset.type);
+                        })
                         .map(AssetFactory.newCopy)
                         .value();
 
                     underscore.each(oldSchedules, function (oldSchedule) {
-                        underscore.each(livestockAssets, function (livestock) {
-                            livestock.removeLedgerEntriesByReference(oldSchedule.scheduleKey);
+                        underscore.each(stockAssets, function (stock) {
+                            stock.removeLedgerEntriesByReference(oldSchedule.scheduleKey);
 
-                            addStockAsset(instance, livestock);
+                            addStockAsset(instance, stock);
                         });
                     });
                 }
