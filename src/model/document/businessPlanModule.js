@@ -2,7 +2,7 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'Stock', 'underscore',
     function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, Stock, underscore) {
-        var _version = 14;
+        var _version = 15;
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -451,6 +451,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                             if (underscore.isUndefined(ledgerEntry)) {
                                                 birthLivestock.addLedgerEntry({
                                                     action: action,
+                                                    commodity: productionSchedule.commodityType,
                                                     date: formattedDate,
                                                     price: birthLivestock.data.pricePerUnit,
                                                     priceUnit: birthLivestock.data.quantityUnit,
@@ -461,6 +462,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                 });
                                             } else if (!ledgerEntry.edited) {
                                                 underscore.extend(ledgerEntry, {
+                                                    commodity: productionSchedule.commodityType,
                                                     price: birthLivestock.data.pricePerUnit,
                                                     priceUnit: birthLivestock.data.quantityUnit,
                                                     quantity: quantity,
@@ -491,6 +493,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                         if (underscore.isUndefined(retainLedgerEntry)) {
                                                             retainLivestock.addLedgerEntry({
                                                                 action: retainAction + ':' + birthAnimal,
+                                                                commodity: productionSchedule.commodityType,
                                                                 date: formattedDate,
                                                                 price: retainLivestock.data.pricePerUnit,
                                                                 priceUnit: retainLivestock.data.quantityUnit,
@@ -501,6 +504,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                             });
                                                         } else if (!retainLedgerEntry.edited) {
                                                             underscore.extend(retainLedgerEntry, {
+                                                                commodity: productionSchedule.commodityType,
                                                                 price: retainLivestock.data.pricePerUnit,
                                                                 priceUnit: retainLivestock.data.quantityUnit,
                                                                 quantity: inventory.closing.quantity,
@@ -1039,26 +1043,28 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                     instance.data.assetStockValue['Stock On Hand'][index] = safeMath.plus(instance.data.assetStockValue['Stock On Hand'][index], monthly.closing.value);
 
                                     underscore.each(monthly.entries, function (entry) {
+                                        var commodity = entry.commodity || 'Indirect';
+
                                         switch (entry.action) {
                                             case 'Household':
                                                 initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
                                                 instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], entry.value);
                                                 break;
                                             case 'Labour':
-                                                Base.initializeObject(instance.data.enterpriseProductionExpenditure, entry.commodity, {});
-                                                instance.data.enterpriseProductionExpenditure[entry.commodity]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[entry.commodity]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
-                                                instance.data.enterpriseProductionExpenditure[entry.commodity]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[entry.commodity]['Farm Products Consumed'][index], entry.value);
+                                                Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
+                                                instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
+                                                instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index], entry.value);
                                                 break;
                                             case 'Purchase':
-                                                Base.initializeObject(instance.data.enterpriseProductionExpenditure, entry.commodity, {});
-                                                instance.data.enterpriseProductionExpenditure[entry.commodity][asset.data.category] = instance.data.enterpriseProductionExpenditure[entry.commodity][asset.data.category] || Base.initializeArray(numberOfMonths);
-                                                instance.data.enterpriseProductionExpenditure[entry.commodity][asset.data.category][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[entry.commodity][asset.data.category][index], entry.value);
+                                                Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
+                                                instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] = instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] || Base.initializeArray(numberOfMonths);
+                                                instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index], entry.value);
                                                 break;
                                             case 'Sale':
                                                 // Stock Production Income
-                                                Base.initializeObject(instance.data.enterpriseProductionIncome, entry.commodity, {});
-                                                instance.data.enterpriseProductionIncome[entry.commodity]['Crop Sales'] = instance.data.enterpriseProductionIncome[entry.commodity]['Crop Sales'] || Base.initializeArray(numberOfMonths);
-                                                instance.data.enterpriseProductionIncome[entry.commodity]['Crop Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[entry.commodity]['Crop Sales'][index], entry.value);
+                                                Base.initializeObject(instance.data.enterpriseProductionIncome, commodity, {});
+                                                instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] = instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] || Base.initializeArray(numberOfMonths);
+                                                instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index], entry.value);
 
                                                 // Composition
                                                 instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {

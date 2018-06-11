@@ -358,7 +358,19 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                 var productionCategory = instance.addCategory(section.code, group.name, underscore.pick(category, ['code', 'name']), instance.defaultCostStage),
                                     stock = underscore.find(instance.stock, function (stock) {
                                         return stock.data.category === category.name && (underscore.isUndefined(stock.data.type) || stock.data.type === productionSchedule.data.details.commodity);
-                                    });
+                                    }),
+                                    size = safeMath.chain(productionSchedule.type === 'livestock' ? productionSchedule.data.details.herdSize : productionSchedule.data.details.size)
+                                        .dividedBy(productionSchedule.numberOfMonths)
+                                        .times(safeMath.minus(productionSchedule.numberOfMonths, Math.abs(startOffset)))
+                                        .toNumber();
+
+                                productionCategory.per = category.per;
+                                productionCategory.categories = productionCategory.categories || [];
+                                productionCategory.categories.push(underscore.extend({
+                                    commodity: productionSchedule.commodityType,
+                                    offset: startOffset,
+                                    size: size
+                                }, category));
 
                                 if (stock) {
                                     if (underscore.isUndefined(productionCategory.stock)) {
@@ -390,18 +402,6 @@ sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty
                                             .value());
                                     }
                                 } else {
-                                    var size = safeMath.chain(productionSchedule.type === 'livestock' ? productionSchedule.data.details.herdSize : productionSchedule.data.details.size)
-                                        .dividedBy(productionSchedule.numberOfMonths)
-                                        .times(safeMath.minus(productionSchedule.numberOfMonths, Math.abs(startOffset)))
-                                        .toNumber();
-
-                                    productionCategory.per = category.per;
-                                    productionCategory.categories = productionCategory.categories || [];
-                                    productionCategory.categories.push(underscore.extend({
-                                        offset: startOffset,
-                                        size: size
-                                    }, category));
-
                                     // Value
                                     productionCategory.valuePerMonth = underscore.reduce(category.valuePerMonth, reduceArrayInRange(startOffset), productionCategory.valuePerMonth || initializeArray(instance.numberOfMonths));
                                     productionCategory.value = safeMath.round(underscore.reduce(productionCategory.valuePerMonth, reduceValue, 0), 2);
