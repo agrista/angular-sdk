@@ -378,3 +378,26 @@ sdkUtilitiesApp.factory('safeMath', ['bigNumber', function (bigNumber) {
         }
     };
 }]);
+
+sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (safeMath, underscore) {
+    function sortArrays (arrayA, arrayB) {
+        arrayA = arrayA || [];
+        arrayB = arrayB || [];
+
+        return {
+            short: (arrayA.length <= arrayB.length ? arrayA : arrayB),
+            long: (arrayA.length > arrayB.length ? arrayA : arrayB)
+        }
+    }
+
+    return {
+        plus: function (arrayA, arrayB) {
+            var arrays = sortArrays(arrayA, arrayB);
+
+            return underscore.reduce(arrays.short, function (totals, value, index) {
+                totals[index] = safeMath.plus(totals[index], value);
+                return totals;
+            }, angular.copy(arrays.long));
+        }
+    };
+}]);

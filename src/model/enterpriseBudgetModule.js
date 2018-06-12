@@ -9,6 +9,29 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return underscore.last(EnterpriseBudgetBase.costStages);
             });
 
+            // Cache
+            privateProperty(this, 'cache', {});
+
+            privateProperty(this, 'getCache', function (props) {
+                return this.cache[typeof props === 'string' ? props : props.join('/')];
+            });
+
+            privateProperty(this, 'setCache', function (props, value) {
+                var cacheKey = (typeof props === 'string' ? props : props.join('/'));
+                this.cache[cacheKey] = value;
+                return this.cache[cacheKey];
+            });
+
+            privateProperty(this, 'resetCache', function (props) {
+                delete this.cache[typeof props === 'string' ? props : props.join('/')];
+            });
+
+            privateProperty(this, 'clearCache', function () {
+                underscore.each(underscore.keys(this.cache), function (cacheKey) {
+                    delete this.cache[cacheKey];
+                }, this);
+            });
+
             // Sections
             privateProperty(this, 'getSections', function (sectionCode, costStage) {
                 var sections = underscore.where(this.data.sections, {code: sectionCode, costStage: costStage || this.defaultCostStage});
@@ -57,6 +80,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     this.data.sections.push(section);
+                    this.setCache([sectionCode, costStage], section);
                     this.sortSections();
                 }
 
@@ -65,11 +89,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
             // Groups
             privateProperty(this, 'getGroup', function (sectionCode, groupName, costStage) {
-                return underscore.chain(this.getSections(sectionCode, costStage))
+                var cacheKey = [groupName, costStage].join('/');
+
+                return this.getCache(cacheKey) || this.setCache(cacheKey, underscore.chain(this.getSections(sectionCode, costStage))
                     .pluck('productCategoryGroups')
                     .flatten()
                     .findWhere({name: groupName})
-                    .value();
+                    .value());
             });
 
             privateProperty(this, 'findGroupNameByCategory', function (sectionCode, groupName, categoryCode) {
@@ -100,6 +126,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     section.productCategoryGroups.push(group);
+                    this.setCache([groupName, costStage], group);
                 }
 
                 return group;
@@ -112,6 +139,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     section.productCategoryGroups = underscore.reject(section.productCategoryGroups, function (group) {
                         return group.name === groupName;
                     });
+
+                    this.resetCache([groupName, costStage]);
                 }
 
                 this.recalculate();
@@ -134,13 +163,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             interfaceProperty(this, 'getCategory', function (sectionCode, categoryCode, costStage) {
-                return underscore.chain(this.getSections(sectionCode, costStage))
+                var cacheKey = [categoryCode, costStage].join('/');
+
+                return this.getCache(cacheKey) || this.setCache(cacheKey, underscore.chain(this.getSections(sectionCode, costStage))
                     .pluck('productCategoryGroups')
                     .flatten()
                     .pluck('productCategories')
                     .flatten()
                     .findWhere({code: categoryCode})
-                    .value();
+                    .value());
             });
 
             interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
@@ -197,6 +228,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     group.productCategories.push(category);
+                    this.setCache([categoryCode, costStage], category);
                 }
 
                 return category;
@@ -212,12 +244,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                         })
                         .union([category])
                         .value();
+                    this.setCache([categoryCode, costStage], category);
                 }
 
                 return category;
             });
 
-            privateProperty(this, 'removeCategory', function (sectionCode, groupName, categoryCode, costStage) {
+            interfaceProperty(this, 'removeCategory', function (sectionCode, groupName, categoryCode, costStage) {
                 groupName = this.findGroupNameByCategory(sectionCode, groupName, categoryCode);
 
                 var group = this.getGroup(sectionCode, groupName, costStage);
@@ -230,6 +263,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     if (group.productCategories.length === 0) {
                         this.removeGroup(sectionCode, groupName, costStage);
                     }
+
+                    this.resetCache([categoryCode, costStage]);
                 }
 
                 this.recalculate();
@@ -1130,8 +1165,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeArrayMath, safeMath, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -1227,6 +1262,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             privateProperty(this, 'recalculate', function () {
                 return recalculateEnterpriseBudget(this);
+            });
+
+            privateProperty(this, 'recalculateCategory', function (categoryCode) {
+                return recalculateEnterpriseBudgetCategory(this, categoryCode);
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -1552,90 +1591,16 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 instance.data.details.calculatedLSU = safeMath.times(instance.data.details.herdSize, instance.getConversionRate());
             }
 
-            angular.forEach(instance.data.sections, function(section) {
-                section.total = {
-                    value: 0
-                };
-
-                if (instance.assetType === 'livestock') {
-                    section.total.valuePerLSU = 0;
-                }
-
-                angular.forEach(section.productCategoryGroups, function(group) {
-                    group.total = {
-                        value: 0
-                    };
-
-                    if (instance.assetType === 'livestock') {
-                        group.total.valuePerLSU = 0;
-                    }
-
-                    angular.forEach(group.productCategories, function(category) {
-                        if (category.unit === '%') {
-                            // Convert percentage to total
-                            category.unit = 'Total';
-                            category.pricePerUnit = category.quantity;
-                            category.quantity = 1;
-                        } else {
-                            category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
-                        }
-
-                        category.name = (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code) ?
-                            instance.commodityType :
-                            EnterpriseBudgetBase.categories[category.code].name);
-
-                        var schedule = (underscore.isArray(category.schedule) ? category.schedule : instance.getSchedule(category.schedule)),
-                            scheduleTotalAllocation = underscore.reduce(schedule, function (total, value) {
-                                return safeMath.plus(total, value);
-                            }, 0);
-
-                        category.value = safeMath.chain(underscore.isUndefined(category.supply) ? 1 : category.supply)
-                            .times(category.quantity || 0)
-                            .times(category.pricePerUnit || 0)
-                            .times(scheduleTotalAllocation)
-                            .dividedBy(100)
-                            .toNumber();
-
-                        if (instance.assetType === 'livestock' && instance.getConversionRate(category.name)) {
-                            category.quantityPerLSU = safeMath.times(category.quantity, instance.getConversionRate(category.name));
-                            category.valuePerLSU = safeMath.times(category.value, instance.getConversionRate(category.name));
-
-                            group.total.quantityPerLSU = safeMath.plus(group.total.quantityPerLSU, category.quantityPerLSU);
-                            group.total.valuePerLSU = safeMath.plus(group.total.valuePerLSU, category.valuePerLSU);
-                        }
-
-                        category.valuePerMonth = underscore.map(schedule, function (allocation) {
-                            return safeMath.chain(category.value)
-                                .times(allocation)
-                                .dividedBy(100)
-                                .toNumber();
-                        });
-
-                        category.quantityPerMonth = underscore.map(schedule, function (allocation) {
-                            return safeMath.chain(category.quantity)
-                                .times(allocation)
-                                .dividedBy(100)
-                                .toNumber();
-                        });
-
-                        group.total.value = safeMath.plus(group.total.value, category.value);
-                        group.total.valuePerMonth = (group.total.valuePerMonth ?
-                            underscore.map(group.total.valuePerMonth, function (value, index) {
-                                return safeMath.plus(value, category.valuePerMonth[index]);
-                            }) : angular.copy(category.valuePerMonth));
+            underscore.each(instance.data.sections, function (section) {
+                underscore.each(section.productCategoryGroups, function (group) {
+                    underscore.each(group.productCategories, function (category) {
+                        recalculateCategory(instance, category);
                     });
 
-                    section.total.value = safeMath.plus(section.total.value, group.total.value);
-                    section.total.valuePerMonth = (section.total.valuePerMonth ?
-                        underscore.map(section.total.valuePerMonth, function (value, index) {
-                            return safeMath.plus(value, group.total.valuePerMonth[index]);
-                        }) : angular.copy(group.total.valuePerMonth));
-
-                    if (instance.assetType === 'livestock') {
-                        section.total.quantityPerLSU = safeMath.plus(section.total.quantityPerLSU, group.total.quantityPerLSU);
-                        section.total.valuePerLSU = safeMath.plus(section.total.valuePerLSU, group.total.valuePerLSU);
-                    }
+                    recalculateGroup(instance, group);
                 });
+
+                recalculateSection(instance, section);
             });
 
             instance.data.details.grossProfitByStage = underscore.object(EnterpriseBudget.costStages,
@@ -1655,6 +1620,102 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             if (instance.assetType === 'livestock') {
                 instance.data.details.grossProfitPerLSU = safeMath.dividedBy(instance.data.details.grossProfit, instance.data.details.calculatedLSU);
             }
+        }
+
+        function recalculateEnterpriseBudgetCategory (instance, categoryCode) {
+            underscore.each(instance.data.sections, function (section) {
+                underscore.each(section.productCategoryGroups, function (group) {
+                    underscore.each(group.productCategories, function (category) {
+                        if (category.code === categoryCode) {
+                            recalculateCategory(instance, category);
+                            recalculateGroup(instance, group);
+                            recalculateSection(instance, section);
+                        }
+                    });
+                });
+            });
+        }
+
+        function recalculateSection (instance, section) {
+            section.total = underscore.extend({
+                value: underscore.reduce(section.productCategoryGroups, function (total, group) {
+                    return safeMath.plus(total, group.total.value)
+                }, 0),
+                valuePerMonth: underscore.reduce(section.productCategoryGroups, function (totals, group) {
+                    return safeArrayMath.plus(totals, group.total.valuePerMonth);
+                }, Base.initializeArray(instance.numberOfMonths))
+            }, (instance.assetType !== 'livestock' ? {} : {
+                quantityPerLSU: underscore.reduce(section.productCategoryGroups, function (total, group) {
+                    return safeMath.plus(total, group.total.quantityPerLSU)
+                }, 0),
+                valuePerLSU: underscore.reduce(section.productCategoryGroups, function (total, group) {
+                    return safeMath.plus(total, group.total.valuePerLSU)
+                }, 0)
+            }));
+        }
+
+        function recalculateGroup (instance, group) {
+            group.total = underscore.extend({
+                value: underscore.reduce(group.productCategories, function (total, category) {
+                    return safeMath.plus(total, category.value)
+                }, 0),
+                valuePerMonth: underscore.reduce(group.productCategories, function (totals, category) {
+                    return safeArrayMath.plus(totals, category.valuePerMonth);
+                }, Base.initializeArray(instance.numberOfMonths))
+            }, (instance.assetType !== 'livestock' ? {} : {
+                quantityPerLSU: underscore.reduce(group.productCategories, function (total, category) {
+                    return safeMath.plus(total, category.quantityPerLSU)
+                }, 0),
+                valuePerLSU: underscore.reduce(group.productCategories, function (total, category) {
+                    return safeMath.plus(total, category.valuePerLSU)
+                }, 0)
+            }));
+        }
+
+        function recalculateCategory (instance, category) {
+            if (category.unit === '%') {
+                // Convert percentage to total
+                category.unit = 'Total';
+                category.pricePerUnit = category.quantity;
+                category.quantity = 1;
+            } else {
+                category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
+            }
+
+            category.name = (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code) ?
+                instance.commodityType :
+                EnterpriseBudgetBase.categories[category.code].name);
+
+            var schedule = (underscore.isArray(category.schedule) ? category.schedule : instance.getSchedule(category.schedule)),
+                scheduleTotalAllocation = underscore.reduce(schedule, function (total, value) {
+                    return safeMath.plus(total, value);
+                }, 0);
+
+            category.value = safeMath.chain(underscore.isUndefined(category.supply) ? 1 : category.supply)
+                .times(category.quantity || 0)
+                .times(category.pricePerUnit || 0)
+                .times(scheduleTotalAllocation)
+                .dividedBy(100)
+                .toNumber();
+
+            if (instance.assetType === 'livestock' && instance.getConversionRate(category.name)) {
+                category.quantityPerLSU = safeMath.times(category.quantity, instance.getConversionRate(category.name));
+                category.valuePerLSU = safeMath.times(category.value, instance.getConversionRate(category.name));
+            }
+
+            category.valuePerMonth = underscore.map(schedule, function (allocation) {
+                return safeMath.chain(category.value)
+                    .times(allocation)
+                    .dividedBy(100)
+                    .toNumber();
+            });
+
+            category.quantityPerMonth = underscore.map(schedule, function (allocation) {
+                return safeMath.chain(category.quantity)
+                    .times(allocation)
+                    .dividedBy(100)
+                    .toNumber();
+            });
         }
 
         // Validation
