@@ -390,14 +390,67 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         }
     }
 
-    return {
-        plus: function (arrayA, arrayB) {
-            var arrays = sortArrays(arrayA, arrayB);
+    function performOperation (arrayA, arrayB, operatorFn) {
+        var paddedArrayB = arrayB.concat(arrayB.length >= arrayA.length ? [] :
+            underscore.range(arrayA.length - arrayB.length).map(function () {
+                return 0;
+            }));
 
-            return underscore.reduce(arrays.short, function (totals, value, index) {
-                totals[index] = safeMath.plus(totals[index], value);
-                return totals;
-            }, angular.copy(arrays.long));
+        return underscore.reduce(paddedArrayB, function (totals, value, index) {
+            totals[index] = operatorFn(totals[index], value);
+            return totals;
+        }, angular.copy(arrayA));
+    }
+
+    function performSortedOperation (arrayA, arrayB, operatorFn) {
+        var arrays = sortArrays(arrayA, arrayB);
+
+        return underscore.reduce(arrays.short, function (totals, value, index) {
+            totals[index] = operatorFn(totals[index], value);
+            return totals;
+        }, angular.copy(arrays.long));
+    }
+
+    return {
+        count: function (array) {
+            return underscore.reduce(array, function (total, value) {
+                return safeMath.plus(total, (underscore.isNumber(value) && !underscore.isNaN(value) && value > 0 ? 1 : 0));
+            }, 0);
+        },
+        plus: function (arrayA, arrayB) {
+            return performSortedOperation(arrayA, arrayB, safeMath.plus);
+        },
+        minus: function (arrayA, arrayB) {
+            return performOperation(arrayA, arrayB, safeMath.minus);
+        },
+        dividedBy: function (arrayA, arrayB) {
+            return performOperation(arrayA, arrayB, safeMath.dividedBy);
+        },
+        times: function (arrayA, arrayB) {
+            return performSortedOperation(arrayA, arrayB, safeMath.times);
+        },
+        reduce: function (array, initialValue) {
+            return underscore.reduce(array || [], function (total, value) {
+                return safeMath.plus(total, value);
+            }, initialValue || 0)
+        },
+        reduceProperty: function (array, property, initialValue) {
+            return underscore.chain(array || [])
+                .pluck(property)
+                .reduce(function(total, value) {
+                    return safeMath.plus(total, value);
+                }, initialValue || 0)
+                .value();
+        },
+        negate: function (array) {
+            return underscore.map(array, function (value) {
+                return safeMath.times(value, -1);
+            });
+        },
+        round: function (array, precision) {
+            return underscore.map(array, function (value) {
+                return safeMath.round(value, precision);
+            });
         }
     };
 }]);
