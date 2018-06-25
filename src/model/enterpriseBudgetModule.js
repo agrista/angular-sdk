@@ -32,12 +32,31 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 }, this);
             });
 
+            // Stock
+            privateProperty(this, 'stock', []);
+
+            interfaceProperty(this, 'addStock', function (stock) {
+                addStock(this, stock);
+            });
+
+            privateProperty(this, 'findStock', function (categoryName, commodityType) {
+                return findStock(this, categoryName, commodityType);
+            });
+
+            interfaceProperty(this, 'replaceAllStock', function (stock) {
+                replaceAllStock(this, stock);
+            });
+
+            interfaceProperty(this, 'removeStock', function (stock) {
+                removeStock(this, stock);
+            });
+
             // Sections
             privateProperty(this, 'getSections', function (sectionCode, costStage) {
                 var sections = underscore.where(this.data.sections, {code: sectionCode, costStage: costStage || this.defaultCostStage});
 
                 return (sections.length > 0 ? sections : underscore.filter(this.data.sections, function (section) {
-                    return section.code === sectionCode && underscore.isUndefined(section.costStage);
+                    return (underscore.isUndefined(sectionCode) || section.code === sectionCode) && underscore.isUndefined(section.costStage);
                 }));
             });
 
@@ -999,6 +1018,39 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         });
 
+        // Stock
+        function addStock (instance, stock) {
+            if (stock && underscore.isArray(stock.data.ledger)) {
+                instance.stock = underscore.chain(instance.stock)
+                    .reject(function (item) {
+                        return item.assetKey === stock.assetKey;
+                    })
+                    .union([stock])
+                    .value();
+            }
+        }
+
+        function findStock (instance, categoryName, commodityType) {
+            return underscore.find(instance.stock, function (stock) {
+                return stock.data.category === categoryName && (underscore.isUndefined(stock.data.type) || stock.data.type === commodityType);
+            });
+        }
+
+        function replaceAllStock (instance, stock) {
+            instance.stock = underscore.filter(stock, function (item) {
+                return item && underscore.isArray(item.data.ledger);
+            });
+        }
+
+        function removeStock (instance, stock) {
+            instance.stock = underscore.chain(instance.stock)
+                .reject(function (item) {
+                    return item.assetKey === stock.assetKey;
+                })
+                .value();
+        }
+
+        // Categories
         privateProperty(EnterpriseBudgetBase, 'getBaseCategory', function (query) {
             return underscore.findWhere(EnterpriseBudgetBase.categories, query);
         });
@@ -1627,11 +1679,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                                 safeMath.minus(category.value, safeArrayMath.reduce(totals)) :
                                 (valueMod === 0 ?
                                     safeMath.dividedBy(category.value, instance.numberOfMonths) :
-                                    safeMath.chain(category.value)
-                                        .times(value)
-                                        .dividedBy(100)
-                                        .round(2)
-                                        .toNumber()));
+                                    safeMath.round(safeMath.dividedBy(safeMath.times(value, category.value), 100), 2)));
                             return totals;
                         }, Base.initializeArray(instance.numberOfMonths));
                     } else {
@@ -1642,11 +1690,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                             if (value > 0) {
                                 totals[index] = (index === totals.length - 1 || countFilled === totalFilled - 1 ?
                                     safeMath.minus(category.value, safeArrayMath.reduce(totals)) :
-                                    safeMath.chain(value)
-                                        .times(category.value)
-                                        .dividedBy(oldValue)
-                                        .round(2)
-                                        .toNumber());
+                                    safeMath.round(safeMath.dividedBy(safeMath.times(value, category.value), oldValue), 2));
                                 countFilled++;
                             }
                             return totals;
@@ -1794,24 +1838,20 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 category.valuePerLSU = safeMath.times(category.value, instance.getConversionRate(category.name));
             }
 
+            category.valuePerMonth = category.valuePerMonth || Base.initializeArray(instance.numberOfMonths);
+
             category.quantityPerMonth = underscore.reduce(category.valuePerMonth, function (totals, value, index) {
                 totals[index] = (index === totals.length - 1 ?
                     safeMath.minus(category.quantity, safeArrayMath.reduce(totals)) :
-                    safeMath.chain(category.quantity)
-                        .times(value)
-                        .dividedBy(category.value)
-                        .toNumber());
+                    safeMath.dividedBy(safeMath.times(category.quantity, value), category.value));
                 return totals;
             }, Base.initializeArray(instance.numberOfMonths));
 
-            if (category.supply) {
+            if (!underscore.isUndefined(category.supplyUnit)) {
                 category.supplyPerMonth = underscore.reduce(category.valuePerMonth, function (totals, value, index) {
                     totals[index] = (index === totals.length - 1 ?
                         safeMath.minus(category.supply, safeArrayMath.reduce(totals)) :
-                        safeMath.chain(category.supply)
-                            .times(value)
-                            .dividedBy(category.value)
-                            .toNumber());
+                        safeMath.dividedBy(safeMath.times(category.supply, value), category.value));
                     totals[index] = (category.supplyUnit === 'hd' ? Math.round(totals[index]) : totals[index]);
                     return totals;
                 }, Base.initializeArray(instance.numberOfMonths));

@@ -2,7 +2,7 @@ var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', 
 
 sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
     function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
-        var _version = 15;
+        var _version = 16;
 
         function BusinessPlan (attrs) {
             Document.apply(this, arguments);
@@ -193,10 +193,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         underscore.each(group.productCategories, function (category) {
                             if (underscore.contains(EnterpriseBudget.stockableCategoryCodes, category.code)) {
                                 var assetType = (group.code === 'INC-LSS' ? 'livestock' : 'stock'),
-                                    inputAction = (section.code === 'INC' ? 'Production' : 'Purchase'),
-                                    outputAction = (section.code === 'INC' ? 'Sale' : 'Consumption'),
                                     priceUnit = (category.unit === 'Total' ? undefined : category.unit),
-                                    inputMade = false,
                                     stockType = (section.code === 'INC' ? productionSchedule.commodityType : undefined),
                                     stock = getStockAsset(instance, assetType, stockType, category.name, priceUnit, category.supplyUnit);
 
@@ -204,158 +201,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                     Base.initializeObject(stock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
                                 }
 
-                                underscore.each(category.valuePerMonth, function (value, index) {
-                                    if (value > 0) {
-                                        var formattedDate = moment(startDate).add(index, 'M').format('YYYY-MM-DD');
-
-                                        if (assetType !== 'livestock' && inputMade === false) {
-                                            var inputReference = [productionSchedule.scheduleKey, inputAction, formattedDate].join('/'),
-                                                inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: productionSchedule.scheduleKey});
-
-                                            if (section.code === 'INC') {
-                                                // With income we produce as we sell
-                                                if (underscore.isUndefined(inputLedgerEntry)) {
-                                                    stock.addLedgerEntry(underscore.extend({
-                                                        action: inputAction,
-                                                        date: formattedDate,
-                                                        commodity: productionSchedule.commodityType,
-                                                        reference: inputReference,
-                                                        value: value
-                                                    }, (category.unit === 'Total' ? {} :
-                                                        underscore.extend({
-                                                            price: category.pricePerUnit,
-                                                            priceUnit: category.unit
-                                                        }, (underscore.isUndefined(category.supplyUnit) ? {
-                                                            quantity: category.quantityPerMonth[index],
-                                                            quantityUnit: category.unit
-                                                        } : {
-                                                            quantity: safeMath.chain(category.supply || 1)
-                                                                .dividedBy(category.value)
-                                                                .times(value)
-                                                                .toNumber(),
-                                                            quantityUnit: category.supplyUnit,
-                                                            rate: category.quantity
-                                                        })))));
-                                                } else if (!inputLedgerEntry.edited) {
-                                                    underscore.extend(inputLedgerEntry, underscore.extend({
-                                                        commodity: productionSchedule.commodityType,
-                                                        reference: inputReference,
-                                                        value: value
-                                                    }, (category.unit === 'Total' ? {} :
-                                                        underscore.extend({
-                                                            price: category.pricePerUnit,
-                                                            priceUnit: category.unit
-                                                        }, (underscore.isUndefined(category.supplyUnit) ? {
-                                                            quantity: category.quantityPerMonth[index],
-                                                            quantityUnit: category.unit
-                                                        } : {
-                                                            quantity: safeMath.chain(category.supply || 1)
-                                                                .dividedBy(category.value)
-                                                                .times(value)
-                                                                .toNumber(),
-                                                            quantityUnit: category.supplyUnit,
-                                                            rate: category.quantity
-                                                        })))));
-
-                                                    stock.recalculateLedger();
-                                                }
-                                            } else {
-                                                // With expenses we purchase when we first need it
-                                                if (underscore.isUndefined(inputLedgerEntry)) {
-                                                    stock.addLedgerEntry(underscore.extend({
-                                                        action: inputAction,
-                                                        date: formattedDate,
-                                                        commodity: productionSchedule.commodityType,
-                                                        reference: inputReference,
-                                                        value: category.value
-                                                    }, (category.unit === 'Total' ? {} :
-                                                        underscore.extend({
-                                                            price: category.pricePerUnit,
-                                                            priceUnit: category.unit
-                                                        }, (underscore.isUndefined(category.supplyUnit) ? {
-                                                            quantity: category.quantity,
-                                                            quantityUnit: category.unit
-                                                        } : {
-                                                            quantity: category.supply || 1,
-                                                            quantityUnit: category.supplyUnit,
-                                                            rate: category.quantity
-                                                        })))));
-                                                } else if (!inputLedgerEntry.edited) {
-                                                    underscore.extend(inputLedgerEntry, underscore.extend({
-                                                        commodity: productionSchedule.commodityType,
-                                                        reference: inputReference,
-                                                        value: category.value
-                                                    }, (category.unit === 'Total' ? {} :
-                                                        underscore.extend({
-                                                            price: category.pricePerUnit,
-                                                            priceUnit: category.unit
-                                                        }, (underscore.isUndefined(category.supplyUnit) ? {
-                                                            quantity: category.quantity,
-                                                            quantityUnit: category.unit
-                                                        } : {
-                                                            quantity: category.supply || 1,
-                                                            quantityUnit: category.supplyUnit,
-                                                            rate: category.quantity
-                                                        })))));
-
-                                                    stock.recalculateLedger();
-                                                }
-
-
-                                                inputMade = true;
-                                            }
-                                        }
-
-                                        var outputReference = [productionSchedule.scheduleKey, outputAction, formattedDate].join('/'),
-                                            outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: productionSchedule.scheduleKey});
-
-                                        if (underscore.isUndefined(outputLedgerEntry)) {
-                                            stock.addLedgerEntry(underscore.extend({
-                                                action: outputAction,
-                                                date: formattedDate,
-                                                commodity: productionSchedule.commodityType,
-                                                reference: outputReference,
-                                                value: value
-                                            }, (category.unit === 'Total' ? {} :
-                                                underscore.extend({
-                                                    price: category.pricePerUnit,
-                                                    priceUnit: category.unit
-                                                }, (underscore.isUndefined(category.supplyUnit) ? {
-                                                    quantity: category.quantityPerMonth[index],
-                                                    quantityUnit: category.unit
-                                                } : {
-                                                    quantity: safeMath.chain(category.supply || 1)
-                                                        .dividedBy(category.value)
-                                                        .times(value)
-                                                        .toNumber(),
-                                                    quantityUnit: category.supplyUnit,
-                                                    rate: category.quantity
-                                                })))));
-                                        } else if (!outputLedgerEntry.edited) {
-                                            underscore.extend(outputLedgerEntry, underscore.extend({
-                                                commodity: productionSchedule.commodityType,
-                                                reference: outputReference,
-                                                value: value
-                                            }, (category.unit === 'Total' ? {} :
-                                                underscore.extend({
-                                                    price: category.pricePerUnit,
-                                                    priceUnit: category.unit
-                                                }, (underscore.isUndefined(category.supplyUnit) ? {
-                                                    quantity: category.quantityPerMonth[index],
-                                                    quantityUnit: category.unit
-                                                } : {
-                                                    quantity: safeMath.chain(category.supply || 1)
-                                                        .dividedBy(category.value)
-                                                        .times(value)
-                                                        .toNumber(),
-                                                    quantityUnit: category.supplyUnit,
-                                                    rate: category.quantity
-                                                })))));
-
-                                            stock.recalculateLedger();
-                                        }
-                                    }
-                                });
+                                productionSchedule.updateCategoryStock(section.code, category.code, stock);
 
                                 addStockAsset(instance, stock, true);
                             }
@@ -404,8 +250,8 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                                                 ledgerEntry = birthLivestock.findLedgerEntry({date: formattedDate, action: action, reference: productionSchedule.scheduleKey}),
                                                 actionReference = [productionSchedule.scheduleKey, action, formattedDate].join('/'),
                                                 quantity = Math.floor(safeMath.chain(rate)
-                                                    .dividedBy(100)
                                                     .times(representativeLivestockInventory.closing.quantity)
+                                                    .dividedBy(100)
                                                     .toNumber()),
                                                 value = safeMath.times(quantity, birthLivestock.data.pricePerUnit);
 
