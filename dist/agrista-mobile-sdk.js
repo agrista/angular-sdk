@@ -20535,22 +20535,27 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
                 instance.models.productionSchedules = [];
 
-                underscore.each(schedules, function (schedule) {
-                    var productionSchedule = (schedule instanceof ProductionSchedule ? schedule : ProductionSchedule.newCopy(schedule));
+                underscore.chain(schedules)
+                    .map(function (schedule) {
+                        return (schedule instanceof ProductionSchedule ? schedule : ProductionSchedule.newCopy(schedule));
+                    })
+                    .sortBy(function (schedule) {
+                        return moment(schedule.startDate).valueOf();
+                    })
+                    .each(function (schedule) {
+                        // Add valid production schedule if between business plan dates
+                        if (schedule.validate() && (startMonth.isBetween(schedule.startDate, schedule.endDate) || (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
+                            if (options.extractStockAssets) {
+                                extractProductionScheduleStockAssets(instance, schedule);
+                            }
 
-                    // Add valid production schedule if between business plan dates
-                    if (productionSchedule.validate() && (startMonth.isBetween(schedule.startDate, schedule.endDate) || (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
-                        if (options.extractStockAssets) {
-                            extractProductionScheduleStockAssets(instance, productionSchedule);
+                            instance.models.productionSchedules.push(asJson(schedule, ['asset']));
+
+                            oldSchedules = underscore.reject(oldSchedules, function (oldSchedule) {
+                                return oldSchedule.scheduleKey === schedule.scheduleKey;
+                            });
                         }
-
-                        instance.models.productionSchedules.push(asJson(productionSchedule, ['asset']));
-
-                        oldSchedules = underscore.reject(oldSchedules, function (oldSchedule) {
-                            return oldSchedule.scheduleKey === schedule.scheduleKey;
-                        });
-                    }
-                });
+                    });
 
                 if (oldSchedules.length > 0) {
                     var stockAssets = underscore.chain(instance.models.assets)
