@@ -904,7 +904,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 recalculateProductionScheduleCategory(instance, categoryCode);
 
                 if (property !== 'stock') {
-                    updateCategoryStock(instance, sectionCode, categoryCode, undefined, true);
+                    updateCategoryStock(instance, sectionCode, categoryCode);
                 }
 
                 instance.$dirty = true;
@@ -955,10 +955,12 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             }
         }
 
-        function updateCategoryStock (instance, sectionCode, categoryCode, stock, forceUpdate) {
+        function updateCategoryStock (instance, sectionCode, categoryCode, stock) {
             var category = instance.getCategory(sectionCode, categoryCode, instance.costStage);
 
             if (category) {
+                var forceInput = !underscore.isUndefined(stock);
+
                 stock = stock || instance.findStock(category.name, instance.commodityType);
 
                 if (stock) {
@@ -971,11 +973,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                             outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
 
                         if (value > 0) {
-                            if (instance.assetType !== 'livestock') {
-                                updateStockLedgerEntry(instance, stock, inputLedgerEntry, formattedDate, inputAction, category, index, forceUpdate);
+                            if (sectionCode === 'EXP' || instance.assetType !== 'livestock') {
+                                updateStockLedgerEntry(instance, stock, inputLedgerEntry, formattedDate, inputAction, category, index, forceInput);
                             }
 
-                            updateStockLedgerEntry(instance, stock, outputLedgerEntry, formattedDate, outputAction, category, index, forceUpdate);
+                            updateStockLedgerEntry(instance, stock, outputLedgerEntry, formattedDate, outputAction, category, index, true);
                         } else {
                             // Remove any previously added ledger entry for this date
                             stock.removeLedgerEntry(inputLedgerEntry);
