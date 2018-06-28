@@ -11600,8 +11600,8 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
 
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Base, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, safeMath, underscore) {
         function AssetBase (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -11617,7 +11617,7 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilities, function (total, liability) {
-                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
+                    return safeMath.plus(total, liability.totalLiabilityInRange(rangeStart, rangeEnd));
                 }, 0);
             });
 
@@ -11820,13 +11820,13 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
-                totals.assetValue = safeMath.plus(totals.assetValue, asset.data.assetValue);
-                totals.assetValuePerHa = asset.data.assetValuePerHa || (asset.data.assetValue ? safeMath.dividedBy(asset.data.assetValue, asset.data.size) : totals.assetValuePerHa);
+                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.assetValuePerHa, asset.data.size)));
+                totals.assetValuePerHa = safeMath.dividedBy(totals.assetValue, totals.size);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa?
+            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa ?
                 safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
                 instance.data.assetValue);
         }
@@ -11926,7 +11926,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
             privateProperty(this, 'totalIncomeInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.incomeInRange(rangeStart, rangeEnd), function (total, value) {
-                    return total + (value || 0);
+                    return safeMath.plus(total, value);
                 }, 0);
             });
 
@@ -11939,7 +11939,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             });
 
             if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
-                this.data.assetValuePerHa = (this.data.assetValue / this.size);
+                this.data.assetValuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
                 this.$dirty = true;
             }
         }
