@@ -12752,7 +12752,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                         map.size = instance.data.size;
                         break;
                     case 'improvement':
-                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
+                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '') + (instance.data.size !== undefined ? ' (' + safeMath.round(instance.data.size, 2) + 'm²)' : '');
                         map.summary = (instance.data.description || '');
                         break;
                     case 'livestock':
