@@ -686,18 +686,15 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 {category: 'Preharvest', subCategory: 'Pesticides', unit: 'l'}
             ],
             vme: [
-                {category: 'Vehicles'},
                 {category: 'Vehicles', subCategory: 'Bakkie'},
                 {category: 'Vehicles', subCategory: 'Car'},
                 {category: 'Vehicles', subCategory: 'Truck'},
                 {category: 'Vehicles', subCategory: 'Tractor'},
-                {category: 'Machinery'},
                 {category: 'Machinery', subCategory: 'Mower'},
                 {category: 'Machinery', subCategory: 'Mower Conditioner'},
                 {category: 'Machinery', subCategory: 'Hay Rake'},
                 {category: 'Machinery', subCategory: 'Hay Baler'},
                 {category: 'Machinery', subCategory: 'Harvester'},
-                {category: 'Equipment'},
                 {category: 'Equipment', subCategory: 'Plough'},
                 {category: 'Equipment', subCategory: 'Harrow'},
                 {category: 'Equipment', subCategory: 'Ridgers'},
