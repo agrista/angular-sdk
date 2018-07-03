@@ -518,15 +518,25 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
              *   Assets & Liabilities Handling
              */
             privateProperty(this, 'addAsset', function (asset) {
-                var instance = this;
+                var instance = this,
+                    oldAsset = underscore.findWhere(instance.models.assets, {assetKey: asset.assetKey});
 
                 asset = AssetFactory.new(asset);
 
                 if (asset.validate()) {
+                    // Remove the old asset's liabilities if we are updating an existing asset
+                    if (!underscore.isUndefined(oldAsset)) {
+                        instance.models.liabilities = underscore.reject(instance.models.liabilities, function (liability) {
+                            return underscore.findWhere(oldAsset.liabilities, {uuid: liability.uuid});
+                        });
+                    }
+
+                    // Remove the asset
                     instance.models.assets = underscore.reject(instance.models.assets, function (item) {
                         return item.assetKey === asset.assetKey;
                     });
 
+                    // Add the new asset's liabilities
                     asset.liabilities = underscore.chain(asset.liabilities)
                         .map(function (liability) {
                             if (liability.validate()) {
@@ -541,6 +551,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                         })
                         .value();
 
+                    // Add the new asset
                     instance.models.assets.push(asJson(asset));
 
                     reEvaluateBusinessPlan(instance);
@@ -561,7 +572,6 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
                 });
 
                 reEvaluateBusinessPlan(instance);
-
             });
 
             privateProperty(this, 'addLiability', function (liability) {
@@ -651,7 +661,7 @@ sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'c
 
             function updateLiabilityStatementCategory(instance, liability) {
                 var category = (liability.type === 'production-credit' ? 'medium-term' : (liability.type === 'rent' ? 'short-term' : liability.type)),
-                    name = (liability.type === 'production-credit' ? 'Production Credit' : (liability.type === 'rent' ? 'Rent overdue' : liability.name)),
+                    name = (liability.type === 'production-credit' ? 'Production Credit' : (liability.type === 'rent' ? 'Rent overdue' : liability.category || liability.name)),
                     numberOfYears = instance.numberOfYears,
                     liabilityCategory = underscore.findWhere(instance.data.liabilityStatement[category], {name: name}) || {
                         name: name,

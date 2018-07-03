@@ -917,7 +917,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             var reference = [instance.scheduleKey, action, formattedDate].join('/');
 
             if (underscore.isUndefined(ledgerEntry)) {
-                stock.addLedgerEntry(underscore.extend({
+                ledgerEntry = underscore.extend({
                     action: action,
                     date: formattedDate,
                     commodity: instance.commodityType,
@@ -934,7 +934,9 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                         quantity: category.supplyPerMonth[index],
                         quantityUnit: category.supplyUnit,
                         rate: category.quantity
-                    })))));
+                    }))));
+
+                stock.addLedgerEntry(ledgerEntry);
             } else if (!ledgerEntry.edited || forceUpdate) {
                 underscore.extend(ledgerEntry, underscore.extend({
                     commodity: instance.commodityType,
@@ -952,7 +954,15 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                         quantityUnit: category.supplyUnit,
                         rate: category.quantity
                     })))));
+
+                if (ledgerEntry.liabilityUuid) {
+                    var liability = underscore.findWhere(stock.liabilities, {uuid: ledgerEntry.liabilityUuid});
+
+                    updateLedgerEntryLiability(liability, category.name, formattedDate, action, category.valuePerMonth[index]);
+                }
             }
+
+            return ledgerEntry;
         }
 
         function updateCategoryStock (instance, sectionCode, categoryCode, stock) {
@@ -967,26 +977,64 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                     var inputAction = (sectionCode === 'INC' ? 'Production' : 'Purchase'),
                         outputAction = (sectionCode === 'INC' ? 'Sale' : 'Consumption');
 
-                    underscore.each(category.valuePerMonth, function (value, index) {
-                        var formattedDate = moment(instance.startDate).add(index, 'M').format('YYYY-MM-DD'),
-                            inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: instance.scheduleKey}),
-                            outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
+                    // Remove entries
+                    var unassignedLiabilities = underscore.chain(category.valuePerMonth)
+                        .reduce(function (results, value, index) {
+                            if (value === 0) {
+                                var formattedDate = moment(instance.startDate).add(index, 'M').format('YYYY-MM-DD'),
+                                    inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: instance.scheduleKey}),
+                                    outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
 
+                                if (inputLedgerEntry && inputLedgerEntry.liabilityUuid) {
+                                    results.push(underscore.findWhere(stock.liabilities, {uuid: inputLedgerEntry.liabilityUuid}));
+                                }
+
+                                stock.removeLedgerEntry(inputLedgerEntry);
+                                stock.removeLedgerEntry(outputLedgerEntry);
+                            }
+
+                            return results;
+                        }, [])
+                        .compact()
+                        .value();
+
+                    // Add entries
+                    underscore.each(category.valuePerMonth, function (value, index) {
                         if (value > 0) {
+                            var formattedDate = moment(instance.startDate).add(index, 'M').format('YYYY-MM-DD'),
+                                inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: instance.scheduleKey}),
+                                outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
+
                             if (sectionCode === 'EXP' || instance.assetType !== 'livestock') {
-                                updateStockLedgerEntry(instance, stock, inputLedgerEntry, formattedDate, inputAction, category, index, forceInput);
+                                inputLedgerEntry = updateStockLedgerEntry(instance, stock, inputLedgerEntry, formattedDate, inputAction, category, index, true);
+
+                                if (underscore.size(unassignedLiabilities) > 0 && underscore.isUndefined(inputLedgerEntry.liabilityUuid) && inputAction === 'Purchase') {
+                                    var liability = unassignedLiabilities.shift();
+
+                                    updateLedgerEntryLiability(liability, category.name, formattedDate, inputAction, value);
+
+                                    inputLedgerEntry.liabilityUuid = liability.uuid;
+                                }
                             }
 
                             updateStockLedgerEntry(instance, stock, outputLedgerEntry, formattedDate, outputAction, category, index, true);
-                        } else {
-                            // Remove any previously added ledger entry for this date
-                            stock.removeLedgerEntry(inputLedgerEntry);
-                            stock.removeLedgerEntry(outputLedgerEntry);
                         }
                     });
 
                     stock.recalculateLedger();
                 }
+            }
+        }
+
+        function updateLedgerEntryLiability (liability, name, formattedDate, inputAction, value) {
+            if (liability) {
+                liability.name = name + ' ' + inputAction + ' ' + formattedDate;
+                liability.creditLimit = value;
+                liability.openingDate = formattedDate;
+                liability.startDate = formattedDate;
+
+                liability.resetWithdrawals();
+                liability.setWithdrawalInMonth(value, formattedDate);
             }
         }
 
