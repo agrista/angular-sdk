@@ -213,22 +213,23 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 }
 
                 if (_tokens && _tokens.refresh_token && _preReauthenticate(_expiry)) {
-                    if (_requestQueue.length == 0) {
+                    if (_requestQueue.length === 0) {
                         var $auth = $injector.get('$auth'),
                             authorizationApi = $injector.get('authorizationApi');
 
                         authorizationApi.refresh(_tokens.refresh_token).then(function (res) {
                             if (res) {
-                                if (res.expires_at) {
-                                    _expiry.expiresIn = moment(res.expires_at).diff(moment(), 'm');
+                                if (res.expires_in) {
+                                    _expiry.expiresIn = res.expires_in;
+                                    _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
                                 }
 
-                                $auth.setToken(res.token);
+                                $auth.setToken(res.access_token);
                                 localStore.setItem('tokens', res);
                                 _tokens = res;
                             }
 
-                            resolveQueue(res && res.token);
+                            resolveQueue(res && res.access_token);
                         }, function () {
                             resolveQueue();
                         });
@@ -277,21 +278,14 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
         $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService', 'underscore',
             function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService, underscore) {
-                var _user = _getUser();
+                var _user = _getUser(),
+                    _authenticationPromise;
 
                 _tokens = localStore.getItem('tokens');
 
                 if (_preAuthenticate instanceof Array) {
                     _preAuthenticate = $injector.invoke(_preAuthenticate);
                 }
-
-                authorizationApi.getUser().then(function (res) {
-                    _user = _setUser(res);
-
-                    $rootScope.$broadcast('authorization::login', _user);
-                }, function () {
-                    $rootScope.$broadcast('authorization::unauthorized');
-                });
 
                 $rootScope.$on('authorization::unauthorized', function () {
                     localStore.removeItem('user');
@@ -318,11 +312,12 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 function _postAuthenticateSuccess (res) {
                     if (res && res.data) {
-                        if (res.data.expires_at) {
-                            _expiry.expiresIn = moment(res.data.expires_at).diff(moment(), 'm');
+                        if (res.data.expires_in) {
+                            _expiry.expiresIn = res.data.expires_in;
+                            _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
                         }
 
-                        $auth.setToken(res.data.token);
+                        $auth.setToken(res.data.access_token);
                         localStore.setItem('tokens', res.data);
                         _tokens = res.data;
                     }
@@ -357,6 +352,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     }
                 }
 
+                function isLoggedIn () {
+                    return (_accessLevels.user & _user.role) !== 0;
+                }
+
                 return {
                     userRole: _userRoles,
                     accessLevel: _accessLevels,
@@ -366,10 +365,34 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     currentUser: function () {
                         return _user;
                     },
+                    setAuthentication: function (auth) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
+                            return _postAuthenticateSuccess({data: auth})
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+
+                        return _authenticationPromise;
+                    },
+                    waitForAuthentication: function () {
+                        return promiseService.wrap(function (promise) {
+                            if (_authenticationPromise) {
+                                _authenticationPromise.then(function () {
+                                    if (isLoggedIn()) {
+                                        promise.resolve(_user);
+                                    } else {
+                                        promise.reject();
+                                    }
+                                }, promise.reject);
+                            } else if (isLoggedIn()) {
+                                promise.resolve(_user);
+                            } else {
+                                promise.reject();
+                            }
+                        });
+                    },
                     getAuthenticationResponse: function () {
                         return _tokens;
                     },
-
                     hasApp: function (appName) {
                         return _user && _user.userRole &&
                             underscore.some(_user.userRole.apps, function (app) {
@@ -380,18 +403,16 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _user && (_user.accessLevel === 'admin' || (_user.userRole && _user.userRole.name === 'Admin'));
                     },
                     isAllowed: function (level) {
-                        return (level & _user.role) != 0;
+                        return (level & _user.role) !== 0;
                     },
-                    isLoggedIn: function () {
-                        return (_accessLevels.user & _user.role) != 0;
-                    },
+                    isLoggedIn: isLoggedIn,
                     login: function (email, password) {
                         var credentials = {
                             email: email,
                             password: password
                         };
 
-                        return promiseService.wrap(function (promise) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
                             return _preAuthenticate(credentials)
                                 .then(function () {
                                     return $auth.login(credentials);
@@ -399,9 +420,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 .then(_postAuthenticateSuccess, promiseService.throwError)
                                 .then(_postGetUserSuccess(promise), _postError(promise));
                         });
+
+                        return _authenticationPromise;
                     },
                     authenticate: function (name, data) {
-                        return promiseService.wrap(function (promise) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
                             return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.authenticate(name, data);
@@ -409,6 +432,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 .then(_postAuthenticateSuccess, promiseService.throwError)
                                 .then(_postGetUserSuccess(promise), _postError(promise));
                         });
+
+                        return _authenticationPromise;
                     },
                     requestReset: authorizationApi.requestReset,
                     confirmReset: function (data) {
@@ -436,7 +461,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         });
                     },
                     register: function (data) {
-                        return promiseService.wrap(function (promise) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
                             return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.signup(data);
@@ -444,6 +469,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 .then(_postAuthenticateSuccess, promiseService.throwError)
                                 .then(_postGetUserSuccess(promise), _postError(promise));
                         });
+
+                        return _authenticationPromise;
                     },
                     logout: function () {
                         return authorizationApi.logout().then(function () {
