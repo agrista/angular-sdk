@@ -39,7 +39,8 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore'
 
             if (item.referenceType === 'document' && !underscore.isUndefined(item[item.referenceType])) {
                 map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
-                map.referenceState = 'document.details';
+
+                map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
             } else if (item.referenceType === 'farmer' && !underscore.isUndefined(item.organization)) {
                 if (item.action === 'invite') {
                     map.subtitle += item.organization.name + ' to create an Agrista account';

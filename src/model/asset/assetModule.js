@@ -1,7 +1,7 @@
 var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
-sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Base, computedProperty, inheritModel, Liability, Model, privateProperty, readOnlyProperty, safeMath, underscore) {
         function AssetBase (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -17,7 +17,7 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilities, function (total, liability) {
-                    return total + liability.totalLiabilityInRange(rangeStart, rangeEnd);
+                    return safeMath.plus(total, liability.totalLiabilityInRange(rangeStart, rangeEnd));
                 }, 0);
             });
 
@@ -220,13 +220,13 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
-                totals.assetValue = safeMath.plus(totals.assetValue, asset.data.assetValue);
-                totals.assetValuePerHa = asset.data.assetValuePerHa || (asset.data.assetValue ? safeMath.dividedBy(asset.data.assetValue, asset.data.size) : totals.assetValuePerHa);
+                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.assetValuePerHa, asset.data.size)));
+                totals.assetValuePerHa = safeMath.dividedBy(totals.assetValue, totals.size);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa?
+            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa ?
                 safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
                 instance.data.assetValue);
         }
@@ -243,12 +243,12 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 this.data.name = generateUniqueName(this, categoryLabel, assets);
             });
 
-            privateProperty(this, 'getCategories', function () {
-                return Asset.categories[this.type] || [];
+            privateProperty(this, 'getAge', function (asOfDate) {
+                return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
             });
 
-            privateProperty(this, 'getPhoto', function () {
-                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+            privateProperty(this, 'getCategories', function () {
+                return Asset.categories[this.type] || [];
             });
 
             privateProperty(this, 'getCustomTitle', function (props, options) {
@@ -272,8 +272,12 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 }
             });
 
-            computedProperty(this, 'age', function (asOfDate) {
-                return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
+            computedProperty(this, 'thumbnailUrl', function () {
+                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+            });
+
+            computedProperty(this, 'age', function () {
+                return (this.data.establishedDate ? moment().diff(this.data.establishedDate, 'years', true) : 0);
             });
 
             computedProperty(this, 'title', function () {
@@ -322,7 +326,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
             privateProperty(this, 'totalIncomeInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.incomeInRange(rangeStart, rangeEnd), function (total, value) {
-                    return total + (value || 0);
+                    return safeMath.plus(total, value);
                 }, 0);
             });
 
@@ -335,7 +339,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             });
 
             if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
-                this.data.assetValuePerHa = (this.data.assetValue / this.size);
+                this.data.assetValuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
                 this.$dirty = true;
             }
         }
@@ -682,25 +686,115 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 {category: 'Preharvest', subCategory: 'Pesticides', unit: 'l'}
             ],
             vme: [
-                {category: 'Vehicles', subCategory: 'Bakkie'},
-                {category: 'Vehicles', subCategory: 'Car'},
+                {category: 'Vehicles', subCategory: 'LDV'},
+                {category: 'Vehicles', subCategory: 'LDV (Double Cab)'},
+                {category: 'Vehicles', subCategory: 'LDV (4-Wheel)'},
+                {category: 'Vehicles', subCategory: 'LDV (Double Cab 4-Wheel)'},
                 {category: 'Vehicles', subCategory: 'Truck'},
-                {category: 'Vehicles', subCategory: 'Tractor'},
-                {category: 'Machinery', subCategory: 'Mower'},
-                {category: 'Machinery', subCategory: 'Mower Conditioner'},
-                {category: 'Machinery', subCategory: 'Hay Rake'},
-                {category: 'Machinery', subCategory: 'Hay Baler'},
-                {category: 'Machinery', subCategory: 'Harvester'},
+                {category: 'Vehicles', subCategory: 'Truck (Double Differential)'},
+                {category: 'Vehicles', subCategory: 'Truck (Horse)'},
+                {category: 'Vehicles', subCategory: 'Truck (Semi-trailer)'},
+                {category: 'Vehicles', subCategory: 'Truck (Timber Trailer)'},
+                {category: 'Vehicles', subCategory: 'Truck (Cane Trailer)'},
+                {category: 'Machinery', subCategory: 'Tractor'},
+                {category: 'Machinery', subCategory: 'Tractor (4-Wheel)'},
+                {category: 'Machinery', subCategory: 'Tractor (Orchard)'},
+                {category: 'Machinery', subCategory: 'Tractor (Orchard, 4-Wheel)'},
+                {category: 'Machinery', subCategory: 'Road Grader'},
+                {category: 'Machinery', subCategory: 'Front-end Loader'},
+                {category: 'Machinery', subCategory: 'Bulldozer'},
+                {category: 'Machinery', subCategory: 'Forklift'},
+                {category: 'Machinery', subCategory: 'Borehole Machine'},
+                {category: 'Machinery', subCategory: 'Loader (Cane)'},
+                {category: 'Machinery', subCategory: 'Loader (Timber)'},
+                {category: 'Machinery', subCategory: 'Harvester (Maize Combine)'},
+                {category: 'Machinery', subCategory: 'Harvester (Wheat Combine)'},
+                {category: 'Machinery', subCategory: 'Electric Motor'},
+                {category: 'Machinery', subCategory: 'Internal Combustion Engine'},
+                {category: 'Machinery', subCategory: 'Irrigation Pump'},
+                {category: 'Machinery', subCategory: 'Irrigation Pump (Electrical)'},
+                {category: 'Machinery', subCategory: 'Irrigation Pump (Internal Combustion Engine) '},
+                {category: 'Equipment', subCategory: 'Ripper'},
+                {category: 'Equipment', subCategory: 'Ripper (Sugar Cane)'},
+                {category: 'Equipment', subCategory: 'Ripper (Heavy Duty)'},
+                {category: 'Equipment', subCategory: 'Ripper (Auto Reset)'},
                 {category: 'Equipment', subCategory: 'Plough'},
+                {category: 'Equipment', subCategory: 'Plough (Moldboard)'},
+                {category: 'Equipment', subCategory: 'Plough (Disc)'},
+                {category: 'Equipment', subCategory: 'Plough (Chisel)'},
+                {category: 'Equipment', subCategory: 'Plough (Bulldog)'},
                 {category: 'Equipment', subCategory: 'Harrow'},
-                {category: 'Equipment', subCategory: 'Ridgers'},
-                {category: 'Equipment', subCategory: 'Rotovator'},
+                {category: 'Equipment', subCategory: 'Harrow (Offset Disc)'},
+                {category: 'Equipment', subCategory: 'Harrow (Hydraulic Offset)'},
+                {category: 'Equipment', subCategory: 'Harrow (Offset Trailer)'},
+                {category: 'Equipment', subCategory: 'Harrow (Tandem Disc)'},
+                {category: 'Equipment', subCategory: 'Harrow (Rotary)'},
+                {category: 'Equipment', subCategory: 'Harrow (Power)'},
+                {category: 'Equipment', subCategory: 'Ridger'},
+                {category: 'Equipment', subCategory: 'Ridger (Disc)'},
+                {category: 'Equipment', subCategory: 'Ridger (Shear)'},
+                {category: 'Equipment', subCategory: 'Tiller'},
+                {category: 'Equipment', subCategory: 'Tiller (S-Shank)'},
+                {category: 'Equipment', subCategory: 'Tiller (C-Shank)'},
+                {category: 'Equipment', subCategory: 'Tiller (Vibro-flex)'},
+                {category: 'Equipment', subCategory: 'Tiller (Otma)'},
                 {category: 'Equipment', subCategory: 'Cultivator'},
+                {category: 'Equipment', subCategory: 'Cultivator (Shank Tiller)'},
+                {category: 'Equipment', subCategory: 'Cultivator (Vibro Tiller)'},
                 {category: 'Equipment', subCategory: 'Planter'},
-                {category: 'Equipment', subCategory: 'Combine'},
-                {category: 'Equipment', subCategory: 'Spreader'},
-                {category: 'Equipment', subCategory: 'Sprayer'},
-                {category: 'Equipment', subCategory: 'Mixer'},
+                {category: 'Equipment', subCategory: 'Planter (Single Kernel)'},
+                {category: 'Equipment', subCategory: 'Planter (Seed Drill)'},
+                {category: 'Equipment', subCategory: 'Planter (Wheat)'},
+                {category: 'Equipment', subCategory: 'Planter (Potato)'},
+                {category: 'Equipment', subCategory: 'Vegetable Transplanter'},
+                {category: 'Equipment', subCategory: 'Fine Seed Seeder'},
+                {category: 'Equipment', subCategory: 'Land Roller'},
+                {category: 'Equipment', subCategory: 'Spreader (Fertiliser)'},
+                {category: 'Equipment', subCategory: 'Spreader (Manure)'},
+                {category: 'Equipment', subCategory: 'Spreader (Lime)'},
+                {category: 'Equipment', subCategory: 'Mist Blower'},
+                {category: 'Equipment', subCategory: 'Boom Sprayer'},
+                {category: 'Equipment', subCategory: 'Boom Sprayer (Mounted)'},
+                {category: 'Equipment', subCategory: 'Boom Sprayer (Trailer)'},
+                {category: 'Equipment', subCategory: 'Mower'},
+                {category: 'Equipment', subCategory: 'Mower (Conditioner)'},
+                {category: 'Equipment', subCategory: 'Slasher'},
+                {category: 'Equipment', subCategory: 'Haymaker'},
+                {category: 'Equipment', subCategory: 'Hay Rake'},
+                {category: 'Equipment', subCategory: 'Hay Baler'},
+                {category: 'Equipment', subCategory: 'Hay Baler (Square)'},
+                {category: 'Equipment', subCategory: 'Hay Baler (Round)'},
+                {category: 'Equipment', subCategory: 'Bale Handler'},
+                {category: 'Equipment', subCategory: 'Bale Handler (Round)'},
+                {category: 'Equipment', subCategory: 'Bale Handler (Wrapper)'},
+                {category: 'Equipment', subCategory: 'Bale Handler (Shredder)'},
+                {category: 'Equipment', subCategory: 'Harvester (Combine Trailer)'},
+                {category: 'Equipment', subCategory: 'Harvester (Forage)'},
+                {category: 'Equipment', subCategory: 'Harvester (Forage Chop)'},
+                {category: 'Equipment', subCategory: 'Harvester (Forage Flail)'},
+                {category: 'Equipment', subCategory: 'Harvester (Thresher)'},
+                {category: 'Equipment', subCategory: 'Harvester (Potato Lifter)'},
+                {category: 'Equipment', subCategory: 'Harvester (Potato Sorter)'},
+                {category: 'Equipment', subCategory: 'Harvester (Groundnut Picker)'},
+                {category: 'Equipment', subCategory: 'Harvester (Groundnut Sheller)'},
+                {category: 'Equipment', subCategory: 'Harvester (Groundnut Lifter)'},
+                {category: 'Equipment', subCategory: 'Hammer Mill'},
+                {category: 'Equipment', subCategory: 'Feed Mixer'},
+                {category: 'Equipment', subCategory: 'Roller Mill'},
+                {category: 'Equipment', subCategory: 'Grain Pump'},
+                {category: 'Equipment', subCategory: 'Grain Grader'},
+                {category: 'Equipment', subCategory: 'Grain Drier'},
+                {category: 'Equipment', subCategory: 'Grader (Rear Mounted)'},
+                {category: 'Equipment', subCategory: 'Dam Scoop'},
+                {category: 'Equipment', subCategory: 'Post Digger'},
+                {category: 'Equipment', subCategory: 'Trailer'},
+                {category: 'Equipment', subCategory: 'Trailer (Tip)'},
+                {category: 'Equipment', subCategory: 'Trailer (4-Wheel)'},
+                {category: 'Equipment', subCategory: 'Trailer (Water Cart)'},
+                {category: 'Equipment', subCategory: 'Trailer (Cane)'},
+                {category: 'Equipment', subCategory: 'Trailer (Cane Truck)'},
+                {category: 'Equipment', subCategory: 'Trailer (Timber)'},
+                {category: 'Equipment', subCategory: 'Trailer (Timber Truck)'}
             ]
         });
 
@@ -1075,6 +1169,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                                 return options.withFarm && options.field && options.field[prop];
                             case 'fieldName':
                                 return options.withField && instance.data[prop];
+                            case 'croppingPotential':
+                                return options.field && options.field[prop] && options.field[prop] + ' Potential';
                             case 'landUse':
                                 return options.field && options.field[prop];
                             case 'area':
@@ -1146,7 +1242,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                         map.size = instance.data.size;
                         break;
                     case 'improvement':
-                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '');
+                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '') + (instance.data.size !== undefined ? ' (' + safeMath.round(instance.data.size, 2) + 'm²)' : '');
                         map.summary = (instance.data.description || '');
                         break;
                     case 'livestock':

@@ -23,8 +23,8 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 return _constructor.new(JSON.parse(JSON.stringify(attrs)), options);
             };
 
-            _constructor.asJSON = function () {
-                return underscore.omit(JSON.parse(JSON.stringify(this)), ['$complete', '$dirty', '$id', '$local', '$saved', '$uri']);
+            _constructor.asJSON = function (omit) {
+                return underscore.omit(JSON.parse(JSON.stringify(this)), underscore.union(['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'], omit || []));
             };
 
             _constructor.copy = function () {

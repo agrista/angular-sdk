@@ -9,12 +9,54 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return underscore.last(EnterpriseBudgetBase.costStages);
             });
 
+            // Cache
+            privateProperty(this, 'cache', {});
+
+            privateProperty(this, 'getCache', function (props) {
+                return this.cache[typeof props === 'string' ? props : props.join('/')];
+            });
+
+            privateProperty(this, 'setCache', function (props, value) {
+                var cacheKey = (typeof props === 'string' ? props : props.join('/'));
+                this.cache[cacheKey] = value;
+                return this.cache[cacheKey];
+            });
+
+            privateProperty(this, 'resetCache', function (props) {
+                delete this.cache[typeof props === 'string' ? props : props.join('/')];
+            });
+
+            privateProperty(this, 'clearCache', function () {
+                underscore.each(underscore.keys(this.cache), function (cacheKey) {
+                    delete this.cache[cacheKey];
+                }, this);
+            });
+
+            // Stock
+            privateProperty(this, 'stock', []);
+
+            interfaceProperty(this, 'addStock', function (stock) {
+                addStock(this, stock);
+            });
+
+            privateProperty(this, 'findStock', function (categoryName, commodityType) {
+                return findStock(this, categoryName, commodityType);
+            });
+
+            interfaceProperty(this, 'replaceAllStock', function (stock) {
+                replaceAllStock(this, stock);
+            });
+
+            interfaceProperty(this, 'removeStock', function (stock) {
+                removeStock(this, stock);
+            });
+
             // Sections
             privateProperty(this, 'getSections', function (sectionCode, costStage) {
                 var sections = underscore.where(this.data.sections, {code: sectionCode, costStage: costStage || this.defaultCostStage});
 
                 return (sections.length > 0 ? sections : underscore.filter(this.data.sections, function (section) {
-                    return section.code === sectionCode && underscore.isUndefined(section.costStage);
+                    return (underscore.isUndefined(sectionCode) || section.code === sectionCode) && underscore.isUndefined(section.costStage);
                 }));
             });
 
@@ -57,6 +99,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     this.data.sections.push(section);
+                    this.setCache([sectionCode, costStage], section);
                     this.sortSections();
                 }
 
@@ -65,11 +108,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
             // Groups
             privateProperty(this, 'getGroup', function (sectionCode, groupName, costStage) {
-                return underscore.chain(this.getSections(sectionCode, costStage))
+                var cacheKey = [groupName, costStage].join('/');
+
+                return this.getCache(cacheKey) || this.setCache(cacheKey, underscore.chain(this.getSections(sectionCode, costStage))
                     .pluck('productCategoryGroups')
                     .flatten()
                     .findWhere({name: groupName})
-                    .value();
+                    .value());
             });
 
             privateProperty(this, 'findGroupNameByCategory', function (sectionCode, groupName, categoryCode) {
@@ -100,6 +145,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     section.productCategoryGroups.push(group);
+                    this.setCache([groupName, costStage], group);
                 }
 
                 return group;
@@ -112,12 +158,23 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     section.productCategoryGroups = underscore.reject(section.productCategoryGroups, function (group) {
                         return group.name === groupName;
                     });
+
+                    this.resetCache([groupName, costStage]);
                 }
 
                 this.recalculate();
             });
 
             // Categories
+            privateProperty(this, 'categoryAllowed', function (sectionCode, categoryQuery) {
+                return underscore.chain(getCategoryOptions(sectionCode, this.assetType, this.baseAnimal))
+                    .values()
+                    .flatten()
+                    .findWhere(categoryQuery)
+                    .isObject()
+                    .value();
+            });
+
             privateProperty(this, 'groupAndCategoryAllowed', function (sectionCode, groupName, categoryCode) {
                 var categoryOptions = getCategoryOptions(sectionCode, this.assetType, this.baseAnimal);
 
@@ -125,13 +182,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             interfaceProperty(this, 'getCategory', function (sectionCode, categoryCode, costStage) {
-                return underscore.chain(this.getSections(sectionCode, costStage))
+                var cacheKey = [categoryCode, costStage].join('/');
+
+                return this.getCache(cacheKey) || this.setCache(cacheKey, underscore.chain(this.getSections(sectionCode, costStage))
                     .pluck('productCategoryGroups')
                     .flatten()
                     .pluck('productCategories')
                     .flatten()
                     .findWhere({code: categoryCode})
-                    .value();
+                    .value());
             });
 
             interfaceProperty(this, 'getCategoryOptions', function (sectionCode) {
@@ -188,10 +247,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     group.productCategories.push(category);
+                    this.setCache([categoryCode, costStage], category);
                 }
 
                 return category;
             });
+
+            interfaceProperty(this, 'adjustCategory', function (sectionCode, categoryQuery, costStage, property) {});
 
             privateProperty(this, 'setCategory', function (sectionCode, groupName, category, costStage) {
                 var group = this.addGroup(sectionCode, this.findGroupNameByCategory(sectionCode, groupName, category.code), costStage);
@@ -203,12 +265,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                         })
                         .union([category])
                         .value();
+                    this.setCache([categoryCode, costStage], category);
                 }
 
                 return category;
             });
 
-            privateProperty(this, 'removeCategory', function (sectionCode, groupName, categoryCode, costStage) {
+            interfaceProperty(this, 'removeCategory', function (sectionCode, groupName, categoryCode, costStage) {
                 groupName = this.findGroupNameByCategory(sectionCode, groupName, categoryCode);
 
                 var group = this.getGroup(sectionCode, groupName, costStage);
@@ -221,6 +284,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     if (group.productCategories.length === 0) {
                         this.removeGroup(sectionCode, groupName, costStage);
                     }
+
+                    this.resetCache([categoryCode, costStage]);
                 }
 
                 this.recalculate();
@@ -238,19 +303,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             computedProperty(this, 'birthAnimal', function () {
-                return birthAnimal[this.baseAnimal];
+                return EnterpriseBudgetBase.birthAnimals[this.baseAnimal];
             });
 
             privateProperty(this, 'getBaseAnimal', function () {
                 return this.baseAnimal;
             });
 
-            privateProperty(this, 'getRepresentativeAnimal', function() {
-                return representativeAnimal[this.baseAnimal];
+            privateProperty(this, 'getRepresentativeAnimal', function () {
+                return EnterpriseBudgetBase.representativeAnimals[this.baseAnimal];
             });
 
             privateProperty(this, 'getConversionRate', function(animal) {
-                return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][animal] || conversionRate[this.baseAnimal][representativeAnimal[this.baseAnimal]]);
+                return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][animal] || conversionRate[this.baseAnimal][EnterpriseBudgetBase.representativeAnimals[this.baseAnimal]]);
             });
 
             privateProperty(this, 'getConversionRates', function() {
@@ -262,6 +327,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             // Properties
+            this.assetType = attrs && attrs.assetType;
             this.data = (attrs && attrs.data ? attrs.data : {});
             Base.initializeObject(this.data, 'sections', []);
 
@@ -331,7 +397,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SWEAN',
-                name: 'Weaner lamb',
+                name: 'Weaner Lamb',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -341,12 +407,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SWTH',
-                name: 'Wether (2-tooth plus)',
+                name: 'Wether',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-SRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -359,7 +425,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CWEN',
-                name: 'Weaner calf',
+                name: 'Weaner Calf',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -374,17 +440,17 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CST18',
-                name: 'Steer (18 months plus)',
+                name: 'Steer',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CST36',
-                name: 'Steer (3 years plus)',
+                name: 'Ox',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-CBULL',
-                name: 'Bull (3 years plus)',
+                name: 'Bull',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -397,22 +463,22 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GWEAN',
-                name: 'Weaner kid',
+                name: 'Weaner Kid',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GEWE',
-                name: 'Ewe (2-tooth plus)',
+                name: 'Ewe',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GCAST',
-                name: 'Castrate (2-tooth plus)',
+                name: 'Castrate',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-GRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 supplyUnit: 'hd',
                 unit: 'kg'
             },
@@ -425,7 +491,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'kg'
             }, {
                 code: 'INC-LSS-RWEN',
-                name: 'Weaner kit',
+                name: 'Weaner Kit',
                 supplyUnit: 'hd',
                 unit: 'kg'
             }, {
@@ -600,7 +666,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'each'
             }, {
                 code: 'EXP-HVT-DYCL',
-                name: 'Drying and cleaning',
+                name: 'Drying & cleaning',
                 unit: 't'
             }, {
                 code: 'EXP-HVT-PAKC',
@@ -615,6 +681,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }, {
                 code: 'EXP-IDR-FUEL',
                 name: 'Fuel',
+                unit: 'l'
+            }, {
+                code: 'EXP-IDR-LUBR',
+                name: 'Lubrication',
                 unit: 'l'
             }, {
                 code: 'EXP-IDR-REPP',
@@ -661,7 +731,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SWEAN',
-                name: 'Weaner lamb',
+                name: 'Weaner Lamb',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SEWE',
@@ -669,11 +739,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SWTH',
-                name: 'Wether (2-tooth plus)',
+                name: 'Wether',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-SRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 unit: 'head'
             },
 
@@ -684,7 +754,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CWEN',
-                name: 'Weaner calf',
+                name: 'Weaner Calf',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CCOW',
@@ -696,15 +766,15 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST18',
-                name: 'Steer (18 months plus)',
+                name: 'Steer',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CST36',
-                name: 'Steer (3 years plus)',
+                name: 'Ox',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-CBULL',
-                name: 'Bull (3 years plus)',
+                name: 'Bull',
                 unit: 'head'
             },
 
@@ -715,19 +785,19 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GWEAN',
-                name: 'Weaner kid',
+                name: 'Weaner Kid',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GEWE',
-                name: 'Ewe (2-tooth plus)',
+                name: 'Ewe',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GCAST',
-                name: 'Castrate (2-tooth plus)',
+                name: 'Castrate',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-GRAM',
-                name: 'Ram (2-tooth plus)',
+                name: 'Ram',
                 unit: 'head'
             },
             //Rabbits
@@ -737,7 +807,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RWEN',
-                name: 'Weaner kit',
+                name: 'Weaner Kit',
                 unit: 'head'
             }, {
                 code: 'EXP-RPM-RDOE',
@@ -754,9 +824,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             //Animal feed
             {
+                code: 'EXP-AMF-CROP',
+                name: 'Crop',
+                unit: 'kg'
+            },
+            {
                 code: 'EXP-AMF-LICK',
                 name: 'Lick',
-                unit: 'kg'
+                unit: 't'
             },
             //Husbandry
             {
@@ -810,6 +885,52 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         ], 'code'));
 
+
+        readOnlyProperty(EnterpriseBudgetBase, 'stockableCategoryCodes', [
+            'INC-LSS-SLAMB',
+            'INC-LSS-SWEAN',
+            'INC-LSS-SEWE',
+            'INC-LSS-SWTH',
+            'INC-LSS-SRAM',
+            'INC-LSS-CCALV',
+            'INC-LSS-CWEN',
+            'INC-LSS-CCOW',
+            'INC-LSS-CHEI',
+            'INC-LSS-CST18',
+            'INC-LSS-CST36',
+            'INC-LSS-CBULL',
+            'INC-LSS-GKID',
+            'INC-LSS-GWEAN',
+            'INC-LSS-GEWE',
+            'INC-LSS-GCAST',
+            'INC-LSS-GRAM',
+            'INC-LSS-RKIT',
+            'INC-LSS-RWEN',
+            'INC-LSS-RDOE',
+            'INC-LSS-RLAP',
+            'INC-LSS-RBUC',
+            'INC-LSP-MILK',
+            'INC-LSP-WOOL',
+            'INC-LSP-LFUR',
+            'INC-HVT-CROP',
+            'INC-HVT-FRUT',
+            'EXP-HVP-SEED',
+            'EXP-HVP-PLTM',
+            'EXP-HVP-FERT',
+            'EXP-HVP-FUEL',
+            'EXP-HVP-FUNG',
+            'EXP-HVP-LIME',
+            'EXP-HVP-HERB',
+            'EXP-HVP-PEST',
+            'EXP-HVP-PGRG',
+            'EXP-HVT-FUEL',
+            'EXP-IDR-FUEL',
+            'EXP-IDR-LUBR',
+            'EXP-IDR-WATR',
+            'EXP-AMF-CROP',
+            'EXP-AMF-LICK'
+        ]);
+
         readOnlyProperty(EnterpriseBudgetBase, 'categoryOptions', {
             crop: {
                 INC: {
@@ -819,7 +940,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     'Preharvest': getCategoryArray(['EXP-HVP-FERT', 'EXP-HVP-FUNG', 'EXP-HVP-HEDG', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-LIME', 'EXP-HVP-PEST', 'EXP-HVP-SEED', 'EXP-HVP-SPYA']),
                     'Harvest': getCategoryArray(['EXP-HVT-LABC', 'EXP-HVT-HVTC']),
                     'Marketing': getCategoryArray(['EXP-MRK-CRPF', 'EXP-MRK-CRPT']),
-                    'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-OTHER'])
+                    'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-LUBR', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-OTHER'])
                 }
             },
             horticulture: {
@@ -831,7 +952,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     'Preharvest': getCategoryArray(['EXP-HVP-CONS', 'EXP-HVP-ELEC', 'EXP-HVP-FERT', 'EXP-HVP-FUEL', 'EXP-HVP-FUNG', 'EXP-HVP-GENL', 'EXP-HVP-LIME', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-PEST', 'EXP-HVP-PGRG', 'EXP-HVP-PLTM', 'EXP-HVP-POLL', 'EXP-HVP-REPP', 'EXP-HVP-SLAB', 'EXP-HVP-SPYA']),
                     'Harvest': getCategoryArray(['EXP-HVT-FUEL', 'EXP-HVT-DYCL', 'EXP-HVT-LABC', 'EXP-HVT-HVTT', 'EXP-HVT-PAKC', 'EXP-HVT-PAKM', 'EXP-HVT-REPP', 'EXP-HVT-STOR']),
                     'Marketing': getCategoryArray(['EXP-MRK-HOTF', 'EXP-MRK-HOTT']),
-                    'Indirect Costs': getCategoryArray(['EXP-IDR-ODEP', 'EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
+                    'Indirect Costs': getCategoryArray(['EXP-IDR-ODEP', 'EXP-IDR-FUEL', 'EXP-IDR-LUBR', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-SCHED', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
                 }
             },
             livestock: {
@@ -842,7 +963,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -855,7 +976,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-CCALV', 'EXP-RPM-CWEN', 'EXP-RPM-CCOW', 'EXP-RPM-CHEI', 'EXP-RPM-CST18', 'EXP-RPM-CST36', 'EXP-RPM-CBULL']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -868,7 +989,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-GKID', 'EXP-RPM-GWEAN', 'EXP-RPM-GEWE', 'EXP-RPM-GCAST', 'EXP-RPM-GRAM']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
@@ -893,13 +1014,50 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     },
                     EXP: {
                         'Replacements': getCategoryArray(['EXP-RPM-SLAMB', 'EXP-RPM-SWEAN', 'EXP-RPM-SEWE', 'EXP-RPM-SWTH', 'EXP-RPM-SRAM']),
-                        'Animal Feed': getCategoryArray(['EXP-AMF-LICK']),
+                        'Animal Feed': getCategoryArray(['EXP-AMF-CROP', 'EXP-AMF-LICK']),
                         'Husbandry': getCategoryArray(['EXP-HBD-VACC', 'EXP-HBD-DIPP', 'EXP-HBD-VETY', 'EXP-HBD-SHER', 'EXP-HBD-CRCH']),
                         'Marketing': getCategoryArray(['EXP-MRK-LSSF', 'EXP-MRK-LSPF', 'EXP-MRK-LSTP']),
                         'Indirect Costs': getCategoryArray(['EXP-IDR-FUEL', 'EXP-IDR-REPP', 'EXP-IDR-ELEC', 'EXP-IDR-WATR', 'EXP-IDR-LABP', 'EXP-IDR-LICS', 'EXP-IDR-INSA', 'EXP-IDR-OTHER'])
                     }
                 }
             }
+        });
+
+        // Stock
+        function addStock (instance, stock) {
+            if (stock && underscore.isArray(stock.data.ledger)) {
+                instance.stock = underscore.chain(instance.stock)
+                    .reject(function (item) {
+                        return item.assetKey === stock.assetKey;
+                    })
+                    .union([stock])
+                    .value();
+            }
+        }
+
+        function findStock (instance, categoryName, commodityType) {
+            return underscore.find(instance.stock, function (stock) {
+                return stock.data.category === categoryName && (underscore.isUndefined(stock.data.type) || stock.data.type === commodityType);
+            });
+        }
+
+        function replaceAllStock (instance, stock) {
+            instance.stock = underscore.filter(stock, function (item) {
+                return item && underscore.isArray(item.data.ledger);
+            });
+        }
+
+        function removeStock (instance, stock) {
+            instance.stock = underscore.chain(instance.stock)
+                .reject(function (item) {
+                    return item.assetKey === stock.assetKey;
+                })
+                .value();
+        }
+
+        // Categories
+        privateProperty(EnterpriseBudgetBase, 'getBaseCategory', function (query) {
+            return underscore.findWhere(EnterpriseBudgetBase.categories, query);
         });
 
         privateProperty(EnterpriseBudgetBase, 'getGroupCategories', function (assetType, commodityType, sectionCode, groupName) {
@@ -958,13 +1116,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         };
 
         // Livestock
-        var representativeAnimal = {
+        readOnlyProperty(EnterpriseBudgetBase, 'representativeAnimals', {
             Cattle: 'Cow',
             Game: 'Cow',
-            Goats: 'Ewe (2-tooth plus)',
+            Goats: 'Ewe',
             Rabbits: 'Doe',
             Sheep: 'Ewe'
-        };
+        });
 
         var baseAnimal = {
             'Cattle (Extensive)': 'Cattle',
@@ -975,63 +1133,85 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             'Sheep (Stud)': 'Sheep'
         };
 
-        var birthAnimal = {
+        readOnlyProperty(EnterpriseBudgetBase, 'birthAnimals', {
             Cattle: 'Calf',
             Game: 'Calf',
             Goats: 'Kid',
             Rabbits: 'Kit',
             Sheep: 'Lamb'
-        };
+        });
+
+        readOnlyProperty(EnterpriseBudgetBase, 'weanedAnimals', {
+            Cattle: 'Weaner Calf',
+            Game: 'Weaner Calf',
+            Goats: 'Weaner Kid',
+            Rabbits: 'Weaner Kit',
+            Sheep: 'Weaner Lamb'
+        });
 
         var conversionRate = {
             Cattle: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Game: {
                 'Calf': 0.32,
-                'Weaner calf': 0.44,
+                'Weaner Calf': 0.44,
                 'Cow': 1.1,
                 'Heifer': 1.1,
-                'Steer (18 months plus)': 0.75,
-                'Steer (3 years plus)': 1.1,
-                'Bull (3 years plus)': 1.36
+                'Steer': 0.75,
+                'Ox': 1.1,
+                'Bull': 1.36
             },
             Goats: {
                 'Kid': 0.08,
-                'Weaner kid': 0.12,
-                'Ewe (2-tooth plus)': 0.17,
-                'Castrate (2-tooth plus)': 0.17,
-                'Ram (2-tooth plus)': 0.22
+                'Weaner Kid': 0.12,
+                'Ewe': 0.17,
+                'Castrate': 0.17,
+                'Ram': 0.22
             },
             Rabbits: {
                 'Kit': 0.08,
-                'Weaner kit': 0.12,
+                'Weaner Kit': 0.12,
                 'Doe': 0.17,
                 'Lapin': 0.17,
                 'Buck': 0.22
             },
             Sheep: {
                 'Lamb': 0.08,
-                'Weaner lamb': 0.11,
+                'Weaner Lamb': 0.11,
                 'Ewe': 0.16,
-                'Wether (2-tooth plus)': 0.16,
-                'Ram (2-tooth plus)': 0.23
+                'Wether': 0.16,
+                'Ram': 0.23
             }
         };
 
         privateProperty(EnterpriseBudgetBase, 'getBirthingAnimal', function (commodityType) {
-            return baseAnimal[commodityType] && birthAnimal[baseAnimal[commodityType]] || commodityType;
+            var base = baseAnimal[commodityType] || commodityType;
+
+            return base && EnterpriseBudgetBase.birthAnimals[base];
         });
 
         interfaceProperty(EnterpriseBudgetBase, 'getAssetTypeForLandUse', function (landUse) {
             return (s.include(landUse, 'Cropland') ? 'crop' :
                 (s.include(landUse, 'Cropland') ? 'horticulture' : 'livestock'));
+        });
+
+        privateProperty(EnterpriseBudgetBase, 'getCategorySortKey', function (categoryName) {
+            if (underscore.contains(underscore.values(EnterpriseBudgetBase.representativeAnimals), categoryName)) {
+                return 0 + categoryName;
+            } else if (underscore.contains(underscore.values(EnterpriseBudgetBase.birthAnimals), categoryName)) {
+                return 1 + categoryName;
+            } else if (underscore.contains(underscore.values(EnterpriseBudgetBase.weanedAnimals), categoryName)) {
+                return 2 + categoryName;
+            }
+
+            return 3 + categoryName;
         });
 
         EnterpriseBudgetBase.validates({
@@ -1044,8 +1224,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         return EnterpriseBudgetBase;
     }]);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
+    function ($filter, Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeArrayMath, safeMath, underscore) {
         function EnterpriseBudget(attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -1053,10 +1233,27 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             Base.initializeObject(this.data, 'events', {});
             Base.initializeObject(this.data, 'schedules', {});
             Base.initializeObject(this.data.details, 'cycleStart', 0);
+            Base.initializeObject(this.data.details, 'numberOfMonths', 12);
             Base.initializeObject(this.data.details, 'productionArea', '1 Hectare');
 
             computedProperty(this, 'commodityTitle', function () {
                 return getCommodityTitle(this.assetType);
+            });
+
+            computedProperty(this, 'numberOfMonths', function () {
+                return this.data.details.numberOfMonths;
+            });
+
+            computedProperty(this, 'defaultMonthlyPercent', function () {
+                return monthlyPercents[this.data.details.numberOfMonths] || underscore.reduce(underscore.range(this.numberOfMonths), function (totals, value, index) {
+                    totals[index] = (index === totals.length - 1 ?
+                        safeMath.minus(100, safeArrayMath.reduce(totals)) :
+                        safeMath.chain(100)
+                            .dividedBy(totals.length)
+                            .round(4)
+                            .toNumber());
+                    return totals;
+                }, Base.initializeArray(this.numberOfMonths));
             });
 
             privateProperty(this, 'getCommodities', function () {
@@ -1082,7 +1279,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             privateProperty(this, 'getSchedule', function (scheduleName, defaultValue) {
                 return (scheduleName && this.data.schedules[scheduleName] ?
                     this.data.schedules[scheduleName] :
-                    (underscore.isUndefined(defaultValue) ? angular.copy(monthlyPercent) : underscore.range(12).map(function () {
+                    (underscore.isUndefined(defaultValue) ? angular.copy(this.defaultMonthlyPercent) : underscore.range(this.numberOfMonths).map(function () {
                         return 0;
                     })));
             });
@@ -1132,20 +1329,27 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                         return value !== 0;
                     }) : -1);
 
-                return (monthIndex !== -1 ? monthIndex + 1 : 12);
+                return (monthIndex !== -1 ? monthIndex + 1 : this.numberOfMonths);
             });
 
             computedProperty(this, 'numberOfAllocatedMonths', function () {
                 return this.getLastAllocationIndex('INC') - this.getAllocationIndex('EXP');
             });
 
+            privateProperty(this, 'adjustCategory', function (sectionCode, categoryQuery, costStage, property) {
+                return adjustCategory(this, sectionCode, categoryQuery, costStage, property);
+            });
+
             privateProperty(this, 'recalculate', function () {
                 return recalculateEnterpriseBudget(this);
             });
 
+            privateProperty(this, 'recalculateCategory', function (categoryCode) {
+                return recalculateEnterpriseBudgetCategory(this, categoryCode);
+            });
+
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
-            this.assetType = attrs.assetType;
             this.averaged = attrs.averaged || false;
             this.cloneCount = attrs.cloneCount || 0;
             this.createdAt = attrs.createdAt;
@@ -1176,7 +1380,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 this.data.details.budgetUnit = 'LSU';
 
                 underscore.each(this.getEventTypes(), function (event) {
-                    Base.initializeObject(this.data.events, event, Base.initializeArray(12));
+                    Base.initializeObject(this.data.events, event, Base.initializeArray(this.numberOfMonths));
                 }, this);
             } else if (this.assetType === 'horticulture') {
                 if (this.data.details.maturityFactor instanceof Array) {
@@ -1371,7 +1575,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             });
         }
 
-        var monthlyPercent = [8.33, 8.33, 8.34, 8.33, 8.33, 8.34, 8.33, 8.33, 8.34, 8.33, 8.33, 8.34];
+        var monthlyPercents = {
+            3: [33.33, 33.34, 33.33],
+            6: [16.67, 16.67, 16.66, 16.66, 16.67, 16.67],
+            7: [14.29, 14.28, 14.29, 14.28, 14.29, 14.28, 14.29],
+            9: [11.11, 11.11, 11.11, 11.11, 11.12, 11.11, 11.11, 11.11, 11.11],
+            11: [9.09, 9.09, 9.09, 9.09, 9.09, 9.10, 9.09, 9.09, 9.09, 9.09, 9.09],
+            12: [8.33, 8.33, 8.34, 8.33, 8.33, 8.34, 8.33, 8.33, 8.34, 8.33, 8.33, 8.34]
+        };
 
         // Horticulture
         var yearsToMaturity = {
@@ -1428,6 +1639,74 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
             })
         }
 
+        function adjustCategory (instance, sectionCode, categoryQuery, costStage, property) {
+            var categoryCode = (underscore.isObject(categoryQuery) ? categoryQuery.code : categoryQuery),
+                category = instance.getCategory(sectionCode, categoryCode, costStage);
+
+            if (category) {
+                category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
+
+                if (underscore.has(category, 'schedule')) {
+                    category.scheduled = true;
+                    delete category.schedule;
+                }
+
+                if (property === 'valuePerMonth') {
+                    category.scheduled = true;
+                    category.value = safeArrayMath.reduce(category.valuePerMonth);
+                }
+
+                if (underscore.contains(['value', 'valuePerLSU', 'valuePerMonth'], property)) {
+                    if (property === 'valuePerLSU') {
+                        category.value = safeMath.round(safeMath.dividedBy(category.value, instance.getConversionRate(category.name)), 2);
+                    }
+
+                    category.pricePerUnit = safeMath.round(safeMath.dividedBy(safeMath.dividedBy(category.value, category.supply || 1), category.quantity), 4);
+                }
+
+                if (underscore.contains(['pricePerUnit', 'quantity', 'quantityPerLSU', 'supply'], property)) {
+                    if (property === 'quantityPerLSU') {
+                        category.quantity = safeMath.round(safeMath.dividedBy(category.quantity, instance.getConversionRate(category.name)), 2);
+                    }
+
+                    category.value = safeMath.times(safeMath.times(category.supply || 1, category.quantity), category.pricePerUnit);
+                }
+
+                if (property !== 'valuePerMonth') {
+                    // Need to convert valuePerMonth using a ratio of the value change
+                    // If the previous value is 0, we need to reset the valuePerMonth to a monthly average
+                    var oldValue = safeArrayMath.reduce(category.valuePerMonth),
+                        valueMod = category.value % instance.numberOfMonths;
+
+                    if (oldValue === 0 || !category.scheduled) {
+                        category.valuePerMonth = underscore.reduce(instance.defaultMonthlyPercent, function (totals, value, index) {
+                            totals[index] = (index === totals.length - 1 ?
+                                safeMath.minus(category.value, safeArrayMath.reduce(totals)) :
+                                (valueMod === 0 ?
+                                    safeMath.dividedBy(category.value, instance.numberOfMonths) :
+                                    safeMath.round(safeMath.dividedBy(safeMath.times(value, category.value), 100), 2)));
+                            return totals;
+                        }, Base.initializeArray(instance.numberOfMonths));
+                    } else {
+                        var totalFilled = safeArrayMath.count(category.valuePerMonth),
+                            countFilled = 0;
+
+                        category.valuePerMonth = underscore.reduce(category.valuePerMonth, function (totals, value, index) {
+                            if (value > 0) {
+                                totals[index] = (index === totals.length - 1 || countFilled === totalFilled - 1 ?
+                                    safeMath.minus(category.value, safeArrayMath.reduce(totals)) :
+                                    safeMath.round(safeMath.dividedBy(safeMath.times(value, category.value), oldValue), 2));
+                                countFilled++;
+                            }
+                            return totals;
+                        }, Base.initializeArray(instance.numberOfMonths));
+                    }
+                }
+
+                recalculateEnterpriseBudgetCategory(instance, categoryCode);
+            }
+        }
+
         // Calculation
         function validateEnterpriseBudget (instance) {
             // Validate sections
@@ -1467,92 +1746,38 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
                 instance.data.details.calculatedLSU = safeMath.times(instance.data.details.herdSize, instance.getConversionRate());
             }
 
-            angular.forEach(instance.data.sections, function(section) {
-                section.total = {
-                    value: 0
-                };
-
-                if (instance.assetType === 'livestock') {
-                    section.total.valuePerLSU = 0;
-                }
-
-                angular.forEach(section.productCategoryGroups, function(group) {
-                    group.total = {
-                        value: 0
-                    };
-
-                    if (instance.assetType === 'livestock') {
-                        group.total.valuePerLSU = 0;
-                    }
-
-                    angular.forEach(group.productCategories, function(category) {
-                        if (category.unit === '%') {
-                            // Convert percentage to total
-                            category.unit = 'Total';
-                            category.pricePerUnit = category.quantity;
-                            category.quantity = 1;
-                        } else {
-                            category.quantity = (category.unit === 'Total' ? 1 : category.quantity);
-                        }
-
-                        if (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code)) {
-                            category.name = instance.commodityType;
-                        }
-
-                        var schedule = (underscore.isArray(category.schedule) ? category.schedule : instance.getSchedule(category.schedule)),
-                            scheduleTotalAllocation = underscore.reduce(schedule, function (total, value) {
-                                return safeMath.plus(total, value);
-                            }, 0);
-
-                        category.value = safeMath.chain(underscore.isUndefined(category.supply) ? 1 : category.supply)
-                            .times(category.quantity || 0)
-                            .times(category.pricePerUnit || 0)
-                            .times(scheduleTotalAllocation)
-                            .dividedBy(100)
-                            .toNumber();
-
-                        if (instance.assetType === 'livestock' && instance.getConversionRate(category.name)) {
-                            category.quantityPerLSU = safeMath.times(category.quantity, instance.getConversionRate(category.name));
-                            category.valuePerLSU = safeMath.times(category.value, instance.getConversionRate(category.name));
-
-                            group.total.quantityPerLSU = safeMath.plus(group.total.quantityPerLSU, category.quantityPerLSU);
-                            group.total.valuePerLSU = safeMath.plus(group.total.valuePerLSU, category.valuePerLSU);
-                        }
-
-                        category.valuePerMonth = underscore.map(schedule, function (allocation) {
-                            return safeMath.chain(category.value)
-                                .times(allocation)
-                                .dividedBy(100)
-                                .toNumber();
-                        });
-
-                        category.quantityPerMonth = underscore.map(schedule, function (allocation) {
-                            return safeMath.chain(category.quantity)
-                                .times(allocation)
-                                .dividedBy(100)
-                                .toNumber();
-                        });
-
-                        group.total.value = safeMath.plus(group.total.value, category.value);
-                        group.total.valuePerMonth = (group.total.valuePerMonth ?
-                            underscore.map(group.total.valuePerMonth, function (value, index) {
-                                return safeMath.plus(value, category.valuePerMonth[index]);
-                            }) : angular.copy(category.valuePerMonth));
+            underscore.each(instance.data.sections, function (section) {
+                underscore.each(section.productCategoryGroups, function (group) {
+                    underscore.each(group.productCategories, function (category) {
+                        recalculateCategory(instance, category);
                     });
 
-                    section.total.value = safeMath.plus(section.total.value, group.total.value);
-                    section.total.valuePerMonth = (section.total.valuePerMonth ?
-                        underscore.map(section.total.valuePerMonth, function (value, index) {
-                            return safeMath.plus(value, group.total.valuePerMonth[index]);
-                        }) : angular.copy(group.total.valuePerMonth));
+                    recalculateGroup(instance, group);
+                });
 
-                    if (instance.assetType === 'livestock') {
-                        section.total.quantityPerLSU = safeMath.plus(section.total.quantityPerLSU, group.total.quantityPerLSU);
-                        section.total.valuePerLSU = safeMath.plus(section.total.valuePerLSU, group.total.valuePerLSU);
-                    }
+                recalculateSection(instance, section);
+            });
+
+            recalculateGrossProfit(instance);
+        }
+
+        function recalculateEnterpriseBudgetCategory (instance, categoryCode) {
+            underscore.each(instance.data.sections, function (section) {
+                underscore.each(section.productCategoryGroups, function (group) {
+                    underscore.each(group.productCategories, function (category) {
+                        if (category.code === categoryCode) {
+                            recalculateCategory(instance, category);
+                            recalculateGroup(instance, group);
+                            recalculateSection(instance, section);
+                        }
+                    });
                 });
             });
 
+            recalculateGrossProfit(instance);
+        }
+
+        function recalculateGrossProfit (instance) {
             instance.data.details.grossProfitByStage = underscore.object(EnterpriseBudget.costStages,
                 underscore.map(EnterpriseBudget.costStages, function (stage) {
                     return underscore
@@ -1569,6 +1794,72 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
 
             if (instance.assetType === 'livestock') {
                 instance.data.details.grossProfitPerLSU = safeMath.dividedBy(instance.data.details.grossProfit, instance.data.details.calculatedLSU);
+            }
+        }
+
+        function recalculateSection (instance, section) {
+            section.total = underscore.extend({
+                value: underscore.reduce(section.productCategoryGroups, function (total, group) {
+                    return safeMath.plus(total, group.total.value)
+                }, 0),
+                valuePerMonth: underscore.reduce(section.productCategoryGroups, function (totals, group) {
+                    return safeArrayMath.plus(totals, group.total.valuePerMonth);
+                }, Base.initializeArray(instance.numberOfMonths))
+            }, (instance.assetType !== 'livestock' ? {} : {
+                quantityPerLSU: underscore.reduce(section.productCategoryGroups, function (total, group) {
+                    return safeMath.plus(total, group.total.quantityPerLSU)
+                }, 0),
+                valuePerLSU: underscore.reduce(section.productCategoryGroups, function (total, group) {
+                    return safeMath.plus(total, group.total.valuePerLSU)
+                }, 0)
+            }));
+        }
+
+        function recalculateGroup (instance, group) {
+            group.total = underscore.extend({
+                value: underscore.reduce(group.productCategories, function (total, category) {
+                    return safeMath.plus(total, category.value)
+                }, 0),
+                valuePerMonth: underscore.reduce(group.productCategories, function (totals, category) {
+                    return safeArrayMath.plus(totals, category.valuePerMonth);
+                }, Base.initializeArray(instance.numberOfMonths))
+            }, (instance.assetType !== 'livestock' ? {} : {
+                quantityPerLSU: underscore.reduce(group.productCategories, function (total, category) {
+                    return safeMath.plus(total, category.quantityPerLSU)
+                }, 0),
+                valuePerLSU: underscore.reduce(group.productCategories, function (total, category) {
+                    return safeMath.plus(total, category.valuePerLSU)
+                }, 0)
+            }));
+        }
+
+        function recalculateCategory (instance, category) {
+            category.name = (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code) ?
+                instance.commodityType :
+                EnterpriseBudgetBase.categories[category.code].name);
+
+            if (instance.assetType === 'livestock' && instance.getConversionRate(category.name)) {
+                category.quantityPerLSU = safeMath.times(category.quantity, instance.getConversionRate(category.name));
+                category.valuePerLSU = safeMath.times(category.value, instance.getConversionRate(category.name));
+            }
+
+            category.valuePerMonth = category.valuePerMonth || Base.initializeArray(instance.numberOfMonths);
+
+            category.quantityPerMonth = underscore.reduce(category.valuePerMonth, function (totals, value, index) {
+                totals[index] = (index === totals.length - 1 ?
+                    safeMath.minus(category.quantity, safeArrayMath.reduce(totals)) :
+                    safeMath.dividedBy(safeMath.times(category.quantity, value), category.value));
+                return totals;
+            }, Base.initializeArray(instance.numberOfMonths));
+
+            if (!underscore.isUndefined(category.supplyUnit)) {
+                category.supplyPerMonth = underscore.reduce(category.valuePerMonth, function (totals, value, index) {
+                    totals[index] = (index === totals.length - 1 ?
+                        safeMath.minus(category.supply, safeArrayMath.reduce(totals)) :
+                        safeMath.dividedBy(safeMath.times(category.supply, value), category.value));
+                    totals[index] = (category.supplyUnit === 'hd' ? Math.round(totals[index]) : totals[index]);
+                    return totals;
+                }, Base.initializeArray(instance.numberOfMonths));
             }
         }
 

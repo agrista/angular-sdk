@@ -350,7 +350,9 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
                 return dataStoreUtilities
                     .transactionPromise(_localDatabase)
                     .then(function (tx) {
-                        return dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name + ' WHERE uri = ?', [uri]);
+                        return (underscore.isEmpty(uri) ?
+                            dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name) :
+                            dataStoreUtilities.executeSqlPromise(tx, 'SELECT * FROM ' + name + ' WHERE uri = ?', [uri]));
                     }, promiseService.throwError)
                     .then(function (res) {
                         return promiseService.wrapAll(function (promises) {

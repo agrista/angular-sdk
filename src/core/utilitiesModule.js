@@ -186,6 +186,25 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
     };
 }]);
 
+sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function (pagingService, promiseService) {
+    return function (initializeFn, params) {
+        return promiseService.wrap(function (promise) {
+            var results = [];
+            var paging = pagingService.initialize(initializeFn, function (items) {
+                results = results.concat(items);
+
+                if (paging.complete) {
+                    promise.resolve(results);
+                } else {
+                    paging.request().catch(promise.reject);
+                }
+            }, params);
+
+            paging.request().catch(promise.reject);
+        });
+    }
+}]);
+
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
     return function (url, params) {
         params = params || {};
@@ -206,7 +225,7 @@ sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http
     }
 }]);
 
-sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safeApply) {
+sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', function ($timeout, $q, safeApply) {
     var _defer = function() {
         var deferred = $q.defer();
 
@@ -264,16 +283,18 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
     };
 
     return {
-        all: function (promises) {
-            return $q.all(promises);
-        },
+        all: $q.all,
+        reject: $q.reject,
+        resolve: $q.resolve,
         chain: function (action) {
             return _chainAll(action, []);
         },
         wrap: function(action) {
             var deferred = _defer();
 
-            action(deferred);
+            $timeout(function () {
+                action(deferred);
+            }, 0);
 
             return deferred.promise;
         },
@@ -285,9 +306,6 @@ sdkUtilitiesApp.factory('promiseService', ['$q', 'safeApply', function ($q, safe
         },
         objectWrap: function (action) {
             return _wrapAll(action, {});
-        },
-        reject: function (obj) {
-            return $q.reject(obj);
         },
         throwError: function (err) {
             throw err;
@@ -330,6 +348,12 @@ sdkUtilitiesApp.filter('round', [function () {
     };
 }]);
 
+sdkUtilitiesApp.factory('asJson', ['underscore', function (underscore) {
+    return function (object, omit) {
+        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : object, omit || []);
+    }
+}]);
+
 sdkUtilitiesApp.factory('safeMath', ['bigNumber', function (bigNumber) {
     bigNumber.config({ERRORS: false});
 
@@ -351,6 +375,82 @@ sdkUtilitiesApp.factory('safeMath', ['bigNumber', function (bigNumber) {
         },
         round: function (value, precision) {
             return new bigNumber(value || 0).round(precision).toNumber();
+        }
+    };
+}]);
+
+sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (safeMath, underscore) {
+    function sortArrays (arrayA, arrayB) {
+        arrayA = arrayA || [];
+        arrayB = arrayB || [];
+
+        return {
+            short: (arrayA.length <= arrayB.length ? arrayA : arrayB),
+            long: (arrayA.length > arrayB.length ? arrayA : arrayB)
+        }
+    }
+
+    function performOperation (arrayA, arrayB, operatorFn) {
+        var paddedArrayB = arrayB.concat(arrayB.length >= arrayA.length ? [] :
+            underscore.range(arrayA.length - arrayB.length).map(function () {
+                return 0;
+            }));
+
+        return underscore.reduce(paddedArrayB, function (totals, value, index) {
+            totals[index] = operatorFn(totals[index], value);
+            return totals;
+        }, angular.copy(arrayA));
+    }
+
+    function performSortedOperation (arrayA, arrayB, operatorFn) {
+        var arrays = sortArrays(arrayA, arrayB);
+
+        return underscore.reduce(arrays.short, function (totals, value, index) {
+            totals[index] = operatorFn(totals[index], value);
+            return totals;
+        }, angular.copy(arrays.long));
+    }
+
+    return {
+        count: function (array) {
+            return underscore.reduce(array, function (total, value) {
+                return safeMath.plus(total, (underscore.isNumber(value) && !underscore.isNaN(value) && value > 0 ? 1 : 0));
+            }, 0);
+        },
+        plus: function (arrayA, arrayB) {
+            return performSortedOperation(arrayA, arrayB, safeMath.plus);
+        },
+        minus: function (arrayA, arrayB) {
+            return performOperation(arrayA, arrayB, safeMath.minus);
+        },
+        dividedBy: function (arrayA, arrayB) {
+            return performOperation(arrayA, arrayB, safeMath.dividedBy);
+        },
+        times: function (arrayA, arrayB) {
+            return performSortedOperation(arrayA, arrayB, safeMath.times);
+        },
+        reduce: function (array, initialValue) {
+            return underscore.reduce(array || [], function (total, value) {
+                return safeMath.plus(total, value);
+            }, initialValue || 0)
+        },
+        reduceProperty: function (array, property, initialValue) {
+            return underscore.chain(array || [])
+                .pluck(property)
+                .reduce(function(total, value) {
+                    return safeMath.plus(total, value);
+                }, initialValue || 0)
+                .value();
+        },
+        negate: function (array) {
+            return underscore.map(array, function (value) {
+                return safeMath.times(value, -1);
+            });
+        },
+        round: function (array, precision) {
+            return underscore.map(array, function (value) {
+                return safeMath.round(value, precision);
+            });
         }
     };
 }]);
