@@ -1,7 +1,7 @@
 var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
-sdkModelLegalEntity.factory('LegalEntity', ['Base', 'Asset', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
-    function (Base, Asset, inheritModel, Liability, Model, readOnlyProperty, underscore) {
+sdkModelLegalEntity.factory('LegalEntity', ['Base', 'Asset', 'Financial', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
+    function (Base, Asset, Financial, inheritModel, Liability, Model, readOnlyProperty, underscore) {
         function LegalEntity (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -29,13 +29,11 @@ sdkModelLegalEntity.factory('LegalEntity', ['Base', 'Asset', 'inheritModel', 'Li
             this.type = attrs.type;
             this.uuid = attrs.uuid;
 
-            this.assets = underscore.map(attrs.assets, function (asset) {
-                return Asset.newCopy(asset);
-            });
+            this.assets = underscore.map(attrs.assets, Asset.newCopy);
 
-            this.liabilities = underscore.map(attrs.liabilities, function (liability) {
-                return Liability.newCopy(liability);
-            });
+            this.financials = underscore.map(attrs.financials, Financial.newCopy);
+
+            this.liabilities = underscore.map(attrs.liabilities, Liability.newCopy);
         }
 
         inheritModel(LegalEntity, Model.Base);

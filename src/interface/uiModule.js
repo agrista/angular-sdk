@@ -1,5 +1,57 @@
 var sdkInterfaceUiApp = angular.module('ag.sdk.interface.ui', []);
 
+sdkInterfaceUiApp.directive('busy', [function() {
+    return {
+        restrict: 'A',
+        template: '<button ng-click="onClick($event)" ng-disabled="disabled() || isBusy" ng-class="getBusyClass()">\n    <span ng-if="isBusy">\n        <span class="spinner"><i ng-show="icon" ng-class="icon"></i></span> {{ text }}\n    </span>\n    <span ng-if="!isBusy" ng-transclude></span>\n</button>',
+        replace: true,
+        transclude: true,
+        scope: {
+            busy: '&',
+            busyIcon: '@',
+            busyText: '@',
+            busyClass: '@',
+            busyDisabled: '&'
+        },
+        link: function(scope, element, attrs) {
+            scope.isBusy = false;
+            scope.icon = scope.busyIcon || 'glyphicon glyphicon-refresh';
+            scope.text = (attrs.busyText !== undefined ? scope.busyText : 'Saving');
+            scope.disabled = scope.busyDisabled || function () {
+                return false;
+            };
+
+            scope.getBusyClass = function () {
+                return (scope.isBusy && scope.icon ? 'has-spinner active' : '') + (scope.isBusy && scope.busyClass ? ' ' + scope.busyClass : '');
+            };
+
+            scope.onClick = function (event) {
+                var pendingRequests = 0;
+                var promise = scope.busy();
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                scope.isBusy = true;
+
+                if (typeof promise === 'object' && typeof promise.finally === 'function') {
+                    promise.finally(function () {
+                        scope.isBusy = false;
+                    });
+                } else {
+                    var deregister = scope.$on('http-intercepted', function (event, args) {
+                        pendingRequests = (args == 'request' ? pendingRequests + 1 : pendingRequests - 1);
+                        if (scope.isBusy && pendingRequests == 0) {
+                            deregister();
+                            scope.isBusy = false;
+                        }
+                    });
+                }
+            };
+        }
+    }
+}]);
+
 sdkInterfaceUiApp.directive('dynamicName', function() {
     return {
         restrict: 'A',

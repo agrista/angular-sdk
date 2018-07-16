@@ -114,11 +114,11 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
 
             privateProperty(this, 'withinOrCovers', function (geometry) {
                 return (geometryRelation(this, 'within', geometry) ||
-                    (geometryRelation(this, 'intersects', geometry) && geometryArea(geometryManipluation(this, 'difference', geometry)) < 0.001));
+                    (geometryRelation(this, 'intersects', geometry) && geometryArea(geometryManipulation(this, 'difference', geometry)) < 0.001));
             });
 
             privateProperty(this, 'subtract', function (geometry) {
-                var geom = saveGeometryManipluation(this, 'difference', geometry);
+                var geom = saveGeometryManipulation(this, 'difference', geometry);
 
                 if (geometryArea(geom) == 0) {
                     this.geometry = undefined;
@@ -126,7 +126,7 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             });
 
             privateProperty(this, 'add', function (geometry) {
-                saveGeometryManipluation(this, 'union', geometry);
+                saveGeometryManipulation(this, 'union', geometry);
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -173,14 +173,14 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             return (geom && geometry && geom[relation] ? geom[relation](geometry) : false);
         }
 
-        function geometryManipluation (instance, manipluation, geometry) {
+        function geometryManipulation (instance, manipulation, geometry) {
             var geom = instance.geom;
 
-            return (geom && geometry && geom[manipluation] ? geom[manipluation](geometry) : geom);
+            return (geom && geometry && geom[manipulation] ? geom[manipulation](geometry) : geom);
         }
 
-        function saveGeometryManipluation (instance, manipluation, geometry) {
-            var geom = geometryManipluation(instance, manipluation, geometry);
+        function saveGeometryManipulation (instance, manipulation, geometry) {
+            var geom = geometryManipulation(instance, manipulation, geometry);
 
             if (geom) {
                 instance.$dirty = true;

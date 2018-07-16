@@ -38,6 +38,8 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.livestock',
+    'ag.sdk.model.map-theme',
+    'ag.sdk.model.organization',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',
@@ -48,6 +50,15 @@ angular.module('ag.sdk.model', [
 
 angular.module('ag.sdk.test', [
     'ag.sdk.test.data'
+]);
+
+angular.module('ag.mobile-sdk.cordova', [
+    'ag.mobile-sdk.cordova.camera',
+    'ag.mobile-sdk.cordova.connection',
+    'ag.mobile-sdk.cordova.geolocation',
+    'ag.mobile-sdk.cordova.map',
+    'ag.mobile-sdk.cordova.storage',
+    'ag.mobile-sdk.cordova.toaster'
 ]);
 
 angular.module('ag.mobile-sdk', [
@@ -61,6 +72,7 @@ angular.module('ag.mobile-sdk', [
     'ag.sdk.helper',
     'ag.sdk.library',
     'ag.sdk.test',
+    'ag.mobile-sdk.cordova',
     'ag.mobile-sdk.helper',
     'ag.mobile-sdk.api',
     'ag.mobile-sdk.data',

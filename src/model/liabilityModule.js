@@ -1,7 +1,7 @@
 var sdkModelLiability = angular.module('ag.sdk.model.liability', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function ($filter, computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, underscore) {
+sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
+    function (computedProperty, inheritModel, Model, moment, privateProperty, readOnlyProperty, safeArrayMath, safeMath, underscore) {
         var _frequency = {
             'monthly': 12,
             'bi-monthly': 24,
@@ -32,8 +32,6 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 closing: 0
             }
         }
-        
-        var roundValue = $filter('round');
 
         function initializeMonthlyTotals (instance, monthlyData, upToIndex) {
             while (monthlyData.length <= upToIndex) {
@@ -54,7 +52,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 month.opening = (index === 0 ? instance.getLiabilityOpening() : monthlyData[index - 1].closing);
 
                 if ((this.frequency === 'once' && index === 0) || (instance.installmentPayment > 0 && underscore.contains(paymentMonths, currentMonth))) {
-                    var installmentPayment = (this.frequency === 'once' ? month.opening : instance.installmentPayment * paymentsPerMonth);
+                    var installmentPayment = (this.frequency === 'once' ? month.opening : safeMath.times(instance.installmentPayment, paymentsPerMonth));
 
                     if (instance.type === 'rent') {
                         month.repayment.bank = installmentPayment;
@@ -63,13 +61,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     }
                 }
 
-                var totalRepayment = underscore.reduce(month.repayment, function (total, amount, source) {
-                    return total + (amount || 0);
-                }, 0);
-
-                month.balance = roundValue(month.opening - totalRepayment + month.withdrawal <= 0 ? 0 : month.opening - totalRepayment + month.withdrawal);
-                month.interest = roundValue(((instance.interestRate / 12) * month.balance) / 100);
-                month.closing = roundValue(month.balance === 0 ? 0 : month.balance + month.interest);
+                month.balance = safeMath.round(Math.max(0, safeMath.minus(safeMath.plus(month.opening, month.withdrawal), safeArrayMath.reduce(month.repayment))), 2);
+                month.interest = safeMath.round(safeMath.dividedBy(safeMath.times(safeMath.dividedBy(instance.interestRate, 12), month.balance), 100), 2);
+                month.closing = safeMath.round((month.balance === 0 ? 0 : safeMath.plus(month.balance, month.interest)), 2);
             });
         }
 
@@ -142,8 +136,16 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             });
 
             privateProperty(this, 'resetRepayments', function () {
-                underscore.each(this.data.monthly, function (month, index) {
+                underscore.each(this.data.monthly, function (month) {
                     month.repayment = {};
+                });
+
+                recalculateMonthlyTotals(this, this.data.monthly);
+            });
+
+            privateProperty(this, 'resetWithdrawals', function () {
+                underscore.each(this.data.monthly, function (month) {
+                    month.withdrawal = 0;
                 });
 
                 recalculateMonthlyTotals(this, this.data.monthly);
@@ -181,15 +183,12 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                     var monthLiability = this.data.monthly[appliedMonth],
-                        summedRepayment = underscore.reduce(monthLiability.repayment, function (total, amount) {
-                            return total + (amount || 0);
-                        }, 0),
-                        openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - summedRepayment,
+                        summedRepayment = safeArrayMath.reduce(monthLiability.repayment),
+                        openingPlusBalance = safeMath.minus(safeMath.plus(monthLiability.opening, monthLiability.withdrawal), summedRepayment),
                         limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment);
 
-                    repaymentRemainder = roundValue(repayment - limitedRepayment);
-                    monthLiability.repayment[source] = monthLiability.repayment[source] || 0;
-                    monthLiability.repayment[source] += limitedRepayment;
+                    repaymentRemainder = safeMath.round(safeMath.minus(repayment, limitedRepayment), 2);
+                    monthLiability.repayment[source] = safeMath.plus(monthLiability.repayment[source], limitedRepayment);
 
                     recalculateMonthlyTotals(this, this.data.monthly);
                 }
@@ -213,13 +212,13 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                     var monthLiability = this.data.monthly[appliedMonth],
-                        repaymentWithoutSource = underscore.reduce(monthLiability.repayment, function (total, amount, src) {
-                            return total + (src === source ? 0 : amount || 0)
+                        repaymentWithoutSource = underscore.reduce(monthLiability.repayment, function (total, amount, repaymentSource) {
+                            return total + (repaymentSource === source ? 0 : amount || 0)
                         }, 0),
-                        openingPlusBalance = monthLiability.opening + monthLiability.withdrawal - repaymentWithoutSource,
+                        openingPlusBalance = safeMath.minus(safeMath.plus(monthLiability.opening, monthLiability.withdrawal), repaymentWithoutSource),
                         limitedRepayment = (openingPlusBalance <= repayment ? openingPlusBalance : repayment);
 
-                    repaymentRemainder = roundValue(repayment - limitedRepayment)
+                    repaymentRemainder = safeMath.round(safeMath.minus(repayment, limitedRepayment), 2);
                     monthLiability.repayment[source] = limitedRepayment;
 
                     recalculateMonthlyTotals(this, this.data.monthly);
@@ -227,6 +226,18 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                 // applied month is before the offsetDate, do nothing
 
                 return repaymentRemainder;
+            });
+
+            privateProperty(this, 'removeRepaymentInMonth', function (month, source) {
+                source = source || 'bank';
+
+                underscore.each(this.data.monthly, function (item, key) {
+                    if (month === key) {
+                        delete item.repayment[source];
+                    }
+                });
+
+                recalculateMonthlyTotals(this, this.data.monthly);
             });
 
             privateProperty(this, 'addWithdrawalInMonth', function (withdrawal, month) {
@@ -240,12 +251,10 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                     var monthLiability = this.data.monthly[appliedMonth],
-                        summedWithdrawal = withdrawal + monthLiability.withdrawal,
-                        openingMinusRepayment = monthLiability.opening - underscore.reduce(monthLiability.repayment, function (total, amount) {
-                                return total + (amount || 0);
-                            }, 0),
-                        limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), summedWithdrawal) : summedWithdrawal),
-                        withdrawalRemainder = roundValue(summedWithdrawal - limitedWithdrawal);
+                        summedWithdrawal = safeMath.plus(withdrawal, monthLiability.withdrawal),
+                        openingMinusRepayment = safeMath.minus(monthLiability.opening, safeArrayMath.reduce(monthLiability.repayment)),
+                        limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, safeMath.minus(this.creditLimit, openingMinusRepayment)), summedWithdrawal) : summedWithdrawal),
+                        withdrawalRemainder = safeMath.round(safeMath.minus(summedWithdrawal, limitedWithdrawal), 2);
 
                     monthLiability.withdrawal = limitedWithdrawal;
 
@@ -267,11 +276,9 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
                     initializeMonthlyTotals(this, this.data.monthly, appliedMonth);
 
                     var monthLiability = this.data.monthly[appliedMonth],
-                        openingMinusRepayment = monthLiability.opening - underscore.reduce(monthLiability.repayment, function (total, amount) {
-                                return total + (amount || 0);
-                            }, 0),
-                        limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, this.creditLimit - openingMinusRepayment), withdrawal) : withdrawal),
-                        withdrawalRemainder = roundValue(withdrawal - limitedWithdrawal);
+                        openingMinusRepayment = safeMath.minus(monthLiability.opening, safeArrayMath.reduce(monthLiability.repayment)),
+                        limitedWithdrawal = (this.creditLimit > 0 ? Math.min(Math.max(0, safeMath.minus(this.creditLimit, openingMinusRepayment)), withdrawal) : withdrawal),
+                        withdrawalRemainder = safeMath.round(safeMath.minus(withdrawal, limitedWithdrawal), 2);
 
                     monthLiability.withdrawal = limitedWithdrawal;
 
@@ -303,14 +310,12 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
 
             privateProperty(this, 'totalLiabilityInRange', function (rangeStart, rangeEnd) {
                 return underscore.reduce(this.liabilityInRange(rangeStart, rangeEnd), function (total, liability) {
-                    return total + (typeof liability.repayment == 'number' ? liability.repayment : underscore.reduce(liability.repayment, function (subtotal, value) {
-                        return subtotal + (value || 0);
-                    }, 0));
+                    return safeMath.plus(total, (typeof liability.repayment == 'number' ? liability.repayment : safeArrayMath.reduce(liability.repayment)));
                 }, 0);
             });
 
             privateProperty(this, 'getLiabilityOpening', function () {
-                return (moment(this.startDate).isBefore(this.openingDate) && !underscore.isUndefined(this.openingBalance) ? this.openingBalance : this.amount);
+                return (moment(this.startDate).isBefore(this.openingDate) && !underscore.isUndefined(this.openingBalance) ? this.openingBalance : this.amount) || 0;
             });
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -321,7 +326,7 @@ sdkModelLiability.factory('Liability', ['$filter', 'computedProperty', 'inheritM
             this.name = attrs.name;
             this.type = attrs.type;
             this.category = attrs.category;
-            this.openingBalance = attrs.openingBalance || 0;
+            this.openingBalance = attrs.openingBalance;
             this.installmentPayment = attrs.installmentPayment;
             this.interestRate = attrs.interestRate || 0;
             this.creditLimit = attrs.creditLimit;

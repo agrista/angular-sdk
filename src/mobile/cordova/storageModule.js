@@ -77,6 +77,7 @@ cordovaStorageApp.factory('fileStorageService', ['$log', 'promiseService', funct
         getBaseDirectory: function (directory) {
             return (cordova.file && cordova.file[directory] ? cordova.file[directory] : '');
         },
+        getFileEntry: _getFileEntry,
         /**
          * Check if a file exists
          * @param {string} fileURI The file to check
