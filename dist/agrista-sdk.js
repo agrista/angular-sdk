@@ -104,7 +104,7 @@ var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities
 /**
  * Active Flag API
  */
-sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('activeFlagApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -118,9 +118,11 @@ sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 
         getActiveFlagsByPage: function (params) {
             return pagingService.page(_host + 'api/active-flags', params);
         },
-        updateActiveFlag: function(activeFlag) {
+        updateActiveFlag: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/active-flag/' + activeFlag.id, activeFlag, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/active-flag/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -131,7 +133,7 @@ sdkApiApp.factory('activeFlagApi', ['$http', 'pagingService', 'promiseService', 
 /**
  * Activity API
  */
-sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('activityApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -149,8 +151,10 @@ sdkApiApp.factory('activityApi', ['$http', 'pagingService', 'promiseService', 'c
             return pagingService.page(_host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), params);
         },
         createActivity: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/activity', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/activity', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -345,8 +349,10 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
             return pagingService.page(_host + 'api/assets' + (id ? '/' + id : ''), params);
         },
         createAsset: function (data, includeDependencies) {
+            var dataCopy = asJson(data, (includeDependencies ? [] : ['liabilities', 'productionSchedules']));
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset', asJson(data, (includeDependencies ? [] : ['liabilities', 'productionSchedules'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -359,15 +365,19 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
             });
         },
         updateAsset: function (data, includeDependencies) {
+            var dataCopy = asJson(data, (includeDependencies ? [] : ['liabilities', 'productionSchedules']));
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset/' + data.id, asJson(data, (includeDependencies ? [] : ['liabilities', 'productionSchedules'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         attachLiability: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset/' + id + '/liability', asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset/' + id + '/liability', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -387,8 +397,10 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
             });
         },
         uploadAssetAttachments: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/asset/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/asset/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
@@ -410,7 +422,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
                 }, promise.reject);
             });
         },
-        getPDFPreviewImage: function(key) {
+        getPDFPreviewImage: function (key) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/attachment/pdf/preview-image/' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
@@ -423,7 +435,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
 /**
  * Benefit API
  */
-sdkApiApp.factory('benefitApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('benefitApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -435,36 +447,46 @@ sdkApiApp.factory('benefitApi', ['$http', 'pagingService', 'promiseService', 'co
             });
         },
         linkCustomerNumber: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/benefit/link', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/benefit/link', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         unlinkCustomerNumber: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/benefit/unlink', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/benefit/unlink', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         authoriseCustomerNumber: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/benefit/authorise', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/benefit/authorise', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         modifyAuthorisedCustomerNumber: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/benefit/modify', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/benefit/modify', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         deauthoriseCustomerNumber: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/benefit/deauthorise', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/benefit/deauthorise', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -497,9 +519,11 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
     }
 
     return {
-        createComparable: function (comparable) {
+        createComparable: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable', asJson(comparable), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -530,15 +554,19 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
             });
         },
         updateComparable: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/'+ data.uuid, asJson(comparable), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/'+ dataCopy.uuid, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         uploadComparableAttachments: function (uuid, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/comparable/' + uuid + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/comparable/' + uuid + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
@@ -563,7 +591,7 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
 /**
  * Data API
  */
-sdkApiApp.factory('dataApi', ['$http', 'configuration', 'promiseService', 'underscore', function ($http, configuration, promiseService, underscore) {
+sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', function ($http, asJsonconfiguration, promiseService, underscore) {
     var _host = configuration.getServer();
 
     function uriEncodeQuery (query) {
@@ -583,22 +611,28 @@ sdkApiApp.factory('dataApi', ['$http', 'configuration', 'promiseService', 'under
             });
         },
         exportFile: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/data/export-file', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/data/export-file', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         importFile: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/data/import-file', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/data/import-file', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         validateFile: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/data/validate-file', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/data/validate-file', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -622,8 +656,10 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
             return pagingService.page(_host + 'api/documents' + (id ? '/' + id : ''), params);
         },
         createDocument: function (data) {
+            var dataCopy = asJson(data, ['organization', 'origin', 'tasks']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document', asJson(data, ['organization', 'origin', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -636,22 +672,28 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
             });
         },
         sendDocument: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + id + '/send', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + id + '/send', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         relateDocuments: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + id + '/relate', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + id + '/relate', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateDocument: function (data) {
+            var dataCopy = asJson(data, ['organization', 'origin', 'tasks']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + data.id, asJson(data, ['organization', 'origin', 'tasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -664,29 +706,37 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
             });
         },
         uploadDocumentAttachments: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
         },
         getDocumentPdf: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/pdf/get', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/pdf/get', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         saveDocumentPdf: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/pdf/save', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/pdf/save', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         mergeDocumentPdfs: function (key, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/document/pdf/merge?key=' + key, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/document/pdf/merge?key=' + key, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -729,8 +779,10 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
             return httpRequestor(_host + 'api/budgets/search', query);
         },
         createEnterpriseBudget: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/budget', asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -757,14 +809,17 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
             });
         },
         updateEnterpriseBudget: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/budget/' + data.id, asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         publishEnterpriseBudget: function (id, publishSettings) {
             publishSettings = publishSettings || {remote: 'agrista'};
+
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/budget/' + id + '/publish', publishSettings, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
@@ -779,13 +834,15 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
             });
         },
         uploadEnterpriseBudgetAttachments: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/budget/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/budget/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
         },
-        favoriteEnterpriseBudget: function(id) {
+        favoriteEnterpriseBudget: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/budget/' + id + '/favorite', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
@@ -799,7 +856,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
 /**
  * Expense API
  */
-sdkApiApp.factory('expenseApi', ['$http', 'pagingService', 'promiseService', 'configuration', function($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('expenseApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function($http, asJson, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -815,8 +872,10 @@ sdkApiApp.factory('expenseApi', ['$http', 'pagingService', 'promiseService', 'co
             return pagingService.page(_host + url, params);
         },
         updateExpense: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/expense/' + data.id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/expense/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -840,8 +899,10 @@ sdkApiApp.factory('farmApi', ['$http', 'asJson', 'pagingService', 'promiseServic
             return pagingService.page(_host + 'api/farms' + (id ? '/' + id : ''), params);
         },
         createFarm: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farm', asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farm', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -854,8 +915,10 @@ sdkApiApp.factory('farmApi', ['$http', 'asJson', 'pagingService', 'promiseServic
             });
         },
         updateFarm: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farm/' + data.id, asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farm/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -902,8 +965,10 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'pagingService', 'promiseServ
             });
         },
         createFarmer: function (data, includeDependencies) {
+            var dataCopy = asJson(data, (includeDependencies ? [] : ['farms', 'legalEntities']));
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer', asJson(data, (includeDependencies ? [] : ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -923,8 +988,10 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'pagingService', 'promiseServ
             });
         },
         updateFarmer: function (data, includeDependencies) {
+            var dataCopy = asJson(data, (includeDependencies ? [] : ['farms', 'legalEntities']));
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/farmer/' + data.id, asJson(data, (includeDependencies ? [] : ['farms', 'legalEntities'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/farmer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -936,14 +1003,14 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'pagingService', 'promiseServ
                 }, promise.reject);
             });
         },
-        hasOutstandingRequest: function(ids) {
+        hasOutstandingRequest: function (ids) {
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/farmers/with-open-request?ids=' + ids, {withCredentials: true}).then(function(res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getAssignedMerchant: function(id) {
+        getAssignedMerchant: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/farmer/' + id + '/assigned-merchant', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
@@ -960,7 +1027,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
     var _host = configuration.getServer();
 
     return {
-        getFarmlandValue: function(id, query) {
+        getFarmlandValue: function (id, query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
@@ -971,7 +1038,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
                 }, promise.reject);
             });
         },
-        getFarmlandValues: function(query) {
+        getFarmlandValues: function (query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
@@ -1004,8 +1071,10 @@ sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configu
             });
         },
         createFinancial: function (data) {
+            var dataCopy = asJson(data, ['legalEntity']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/financial', asJson(data, ['legalEntity']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/financial', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1018,8 +1087,10 @@ sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configu
             });
         },
         updateFinancial: function (data) {
+            var dataCopy = asJson(data, ['legalEntity']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/financial/' + data.id, asJson(data, ['legalEntity']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/financial/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1037,7 +1108,7 @@ sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configu
 /**
  * Invite API
  */
-sdkApiApp.factory('inviteApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('inviteApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -1075,16 +1146,20 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        createLayer: function (layer) {
+        createLayer: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/layer', asJson(layer), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/layer', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateLayer: function(layer) {
+        updateLayer: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/layer/' + layer.id, asJson(layer), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/layer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1106,16 +1181,20 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        createSublayer: function (sublayer) {
+        createSublayer: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/sublayer', asJson(sublayer), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/sublayer', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateSublayer: function(sublayer) {
+        updateSublayer: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/sublayer/' + sublayer.id, asJson(sublayer), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/sublayer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1146,15 +1225,19 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
             return pagingService.page(_host + 'api/legalentities' + (id ? '/' + id : ''), params);
         },
         updateEntity: function (data, includeDependencies) {
+            var dataCopy = asJson(data, (includeDependencies ? [] : ['assets', 'financials']));
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity/' + data.id, asJson(data, (includeDependencies ? [] : ['assets', 'financials'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         uploadEntityAttachments: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
@@ -1167,8 +1250,10 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
             });
         },
         createEntity: function (data, includeDependencies) {
+            var dataCopy = asJson(data, (includeDependencies ? [] : ['assets', 'financials']));
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity', asJson(data, (includeDependencies ? [] : ['assets', 'financials'])), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1188,8 +1273,10 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
             });
         },
         attachLiability: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/legalentity/' + id + '/liability', asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/legalentity/' + id + '/liability', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1212,8 +1299,10 @@ sdkApiApp.factory('liabilityApi', ['$http', 'asJson', 'promiseService', 'configu
 
     return {
         updateLiability: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/liability/' + data.id, asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/liability/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1240,15 +1329,19 @@ sdkApiApp.factory('mapThemeApi', ['$http', 'asJson', 'promiseService', 'configur
             });
         },
         createMapTheme: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/map-theme', asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/map-theme', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateMapTheme: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/map-theme/' + data.id, asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/map-theme/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1281,8 +1374,10 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'pagingService', 'promiseSe
             });
         },
         createMerchant: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/merchant', asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/merchant', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1302,8 +1397,10 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'pagingService', 'promiseSe
             });
         },
         registerMerchant: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/register/merchant', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/register/merchant', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1323,15 +1420,19 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'pagingService', 'promiseSe
             });
         },
         updateMerchant: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/merchant/' + data.id, asJson(data), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/merchant/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         uploadMerchantAttachments: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/merchant/' + id + '/attach', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/merchant/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
@@ -1349,16 +1450,18 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'pagingService', 'promiseSe
 /**
  * Notification API
  */
-sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('notificationApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
         getNotifications: function (params) {
             return pagingService.page(_host + 'api/notifications', params);
         },
-        createNotification: function (notificationData) {
+        createNotification: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/notification', notificationData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/notification', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1371,8 +1474,10 @@ sdkApiApp.factory('notificationApi', ['$http', 'pagingService', 'promiseService'
             });
         },
         rejectNotification: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/notification/' + id + '/reject', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/notification/' + id + '/reject', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1420,16 +1525,18 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'asJson', 'pagingService', 
         getOrganizationalUnitRegions: function (params) {
             return pagingService.page(_host + 'api/organizational-units/regions', params);
         },
-        getOrganizationalUnit: function(id) {
+        getOrganizationalUnit: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/organizational-unit/' + id, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateOrganizationalUnit: function(data) {
+        updateOrganizationalUnit: function (data) {
+            var dataCopy = asJson(data, ['organization', 'users']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/organizational-unit/' + data.id, asJson(data, ['organization', 'users']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/organizational-unit/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1447,46 +1554,51 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'asJson', 'pagingService', 
 /**
  * Market Assumptions API
  */
-sdkApiApp.factory('productDemandApi', ['$http', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('productDemandApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
     return {
-        getProductDemandAssumptions: function(query) {
+        getProductDemandAssumptions: function (query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function(promise) {
+            return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getMapData: function(options) {
+        getMapData: function (options) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'api/demand-assumptions/map-data', options, {withCredentials: true}).then(function(res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        addAssumptionGroup: function(data) {
+        addAssumptionGroup: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/demand-assumption', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/demand-assumption', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateProductDemandAssumption: function(id, data) {
+        updateProductDemandAssumption: function (id, data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/demand-assumption/' + id, data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/demand-assumption/' + id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        deleteProductDemandAssumption: function(data) {
-            // data takes the form { id: 5, year: "2014"}, where either an id OR a year is given to specify which records to delete
+        deleteProductDemandAssumption: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/demand-assumption/delete', data, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/demand-assumption/delete', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1505,8 +1617,10 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
             return pagingService.page(_host + 'api/production-schedules' + (id ? '/' + id : ''));
         },
         createProductionSchedule: function (data) {
+            var dataCopy = asJson(data, ['asset', 'budget', 'organization']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/production-schedule', asJson(data, ['asset', 'budget', 'organization']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/production-schedule', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1519,8 +1633,10 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
             });
         },
         updateProductionSchedule: function (data) {
+            var dataCopy = asJson(data, ['asset', 'budget', 'organization']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/production-schedule/' + data.id, asJson(data, ['asset', 'budget', 'organization']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/production-schedule/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1538,7 +1654,7 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
 /**
  * Role API
  */
-sdkApiApp.factory('roleApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('roleApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -1550,9 +1666,11 @@ sdkApiApp.factory('roleApi', ['$http', 'promiseService', 'configuration', functi
                 }, promise.reject);
             });
         },
-        updateRoleApps: function (roleList) {
+        updateRoleApps: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/role-apps', roleList, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/role-apps', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1636,8 +1754,10 @@ sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseServic
             return pagingService.page(_host + 'api/tasks/manager', params);
         },
         createTask: function (data) {
+            var dataCopy = asJson(data, ['document', 'organization', 'subtasks']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task', asJson(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1650,8 +1770,10 @@ sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseServic
             });
         },
         updateTask: function (data) {
+            var dataCopy = asJson(data, ['document', 'organization', 'subtasks']);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/task/' + data.id, asJson(data, ['document', 'organization', 'subtasks']), {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/task/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1669,7 +1791,7 @@ sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseServic
 /**
  * Team API
  */
-sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('teamApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -1680,9 +1802,11 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
                 }, promise.reject);
             });
         },
-        createTeam: function (teamData) {
+        createTeam: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/team', teamData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/team', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1701,9 +1825,11 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
                 }, promise.reject);
             });
         },
-        updateTeam: function (teamData) {
+        updateTeam: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/team/' + teamData.id, teamData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/team/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1721,7 +1847,7 @@ sdkApiApp.factory('teamApi', ['$http', 'promiseService', 'configuration', functi
 /**
  * User API
  */
-sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('userApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
@@ -1742,9 +1868,11 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
                 }, promise.reject);
             });
         },
-        createUser: function (userData) {
+        createUser: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/user', userData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/user', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1766,16 +1894,20 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
                 }, promise.reject);
             });
         },
-        updateUser: function (userData) {
+        updateUser: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/user/' + userData.id, userData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/user/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        updateUserGroups: function (userData) {
+        updateUserGroups: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/user/' + userData.id + '/groups', userData, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/user/' + dataCopy.id + '/groups', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1793,13 +1925,15 @@ sdkApiApp.factory('userApi', ['$http', 'pagingService', 'promiseService', 'confi
 /**
  * Workload API
  */
-sdkApiApp.factory('workloadApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('workloadApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var _host = configuration.getServer();
 
     return {
-        updateWorkload: function (workload) {
+        updateWorkload: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/workload/' + workload.id, workload, {withCredentials: true}).then(function (res) {
+                $http.post(_host + 'api/workload/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -3189,9 +3323,15 @@ sdkUtilitiesApp.filter('round', [function () {
     };
 }]);
 
-sdkUtilitiesApp.factory('asJson', ['underscore', function (underscore) {
+sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy, underscore) {
     return function (object, omit) {
-        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : object, omit || []);
+        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : deepCopy(object), omit || []);
+    }
+}]);
+
+sdkUtilitiesApp.factory('deepCopy', [function () {
+    return function (object) {
+        return JSON.parse(JSON.stringify(object));
     }
 }]);
 
@@ -13634,7 +13774,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (Errorable, privateProperty, Storable, underscore, Validatable) {
+    .factory('Base', ['deepCopy', 'Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (deepCopy, Errorable, privateProperty, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
@@ -13650,11 +13790,11 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.newCopy = function (attrs, options) {
-                return _constructor.new(JSON.parse(JSON.stringify(attrs)), options);
+                return _constructor.new(deepCopy(attrs), options);
             };
 
             _constructor.asJSON = function (omit) {
-                return underscore.omit(JSON.parse(JSON.stringify(this)), underscore.union(['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'], omit || []));
+                return underscore.omit(deepCopy(this), underscore.union(['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'], omit || []));
             };
 
             _constructor.copy = function () {
