@@ -348,9 +348,15 @@ sdkUtilitiesApp.filter('round', [function () {
     };
 }]);
 
-sdkUtilitiesApp.factory('asJson', ['underscore', function (underscore) {
+sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy, underscore) {
     return function (object, omit) {
-        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : object, omit || []);
+        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : deepCopy(object), omit || []);
+    }
+}]);
+
+sdkUtilitiesApp.factory('deepCopy', [function () {
+    return function (object) {
+        return JSON.parse(JSON.stringify(object));
     }
 }]);
 
