@@ -1454,9 +1454,15 @@ sdkUtilitiesApp.filter('round', [function () {
     };
 }]);
 
-sdkUtilitiesApp.factory('asJson', ['underscore', function (underscore) {
+sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy, underscore) {
     return function (object, omit) {
-        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : object, omit || []);
+        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : deepCopy(object), omit || []);
+    }
+}]);
+
+sdkUtilitiesApp.factory('deepCopy', [function () {
+    return function (object) {
+        return JSON.parse(JSON.stringify(object));
     }
 }]);
 
@@ -10159,7 +10165,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
         Model.Base = Base;
         return Model;
     }])
-    .factory('Base', ['Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (Errorable, privateProperty, Storable, underscore, Validatable) {
+    .factory('Base', ['deepCopy', 'Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (deepCopy, Errorable, privateProperty, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
             var _prototype = _constructor.prototype;
@@ -10175,11 +10181,11 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.newCopy = function (attrs, options) {
-                return _constructor.new(JSON.parse(JSON.stringify(attrs)), options);
+                return _constructor.new(deepCopy(attrs), options);
             };
 
             _constructor.asJSON = function (omit) {
-                return underscore.omit(JSON.parse(JSON.stringify(this)), underscore.union(['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'], omit || []));
+                return underscore.omit(deepCopy(this), underscore.union(['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'], omit || []));
             };
 
             _constructor.copy = function () {
