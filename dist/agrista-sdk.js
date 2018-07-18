@@ -591,7 +591,7 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
 /**
  * Data API
  */
-sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', function ($http, asJsonconfiguration, promiseService, underscore) {
+sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', function ($http, asJson, configuration, promiseService, underscore) {
     var _host = configuration.getServer();
 
     function uriEncodeQuery (query) {
