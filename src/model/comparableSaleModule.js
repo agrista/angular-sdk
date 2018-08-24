@@ -42,9 +42,14 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
 
 
             computedProperty(this, 'totalLandComponentArea', function () {
-                return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return safeMath.plus(total, landComponent.area);
-                }, 0);
+                return underscore.chain(this.landComponents)
+                    .reject(function (component) {
+                        return component.type === 'Water Rights';
+                    })
+                    .reduce(function(total, landComponent) {
+                        return safeMath.plus(total, landComponent.area);
+                    }, 0)
+                    .value();
             });
 
             computedProperty(this, 'totalLandComponentValue', function () {
@@ -203,7 +208,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
 
         inheritModel(ComparableSale, Model.Base);
 
-        readOnlyProperty(ComparableSale, 'landComponentTypes', Field.landClasses);
+        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
 
         readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
             'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
