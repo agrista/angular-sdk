@@ -12513,8 +12513,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Fields
+            privateProperty(this, 'addFields', function (fields) {
+                addItems(this, 'fields', fields, 'fieldName');
+            });
+
             privateProperty(this, 'addField', function (field) {
                 addItem(this, 'fields', field, 'fieldName');
+            });
+
+            privateProperty(this, 'getField', function (fieldName) {
+                return getItem(this, 'fields', fieldName, 'fieldName');
             });
 
             privateProperty(this, 'removeField', function (field) {
@@ -12522,8 +12530,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Gates
+            privateProperty(this, 'addGates', function (gates) {
+                addItems(this, 'gates', gates, 'name');
+            });
+
             privateProperty(this, 'addGate', function (gate) {
                 addItem(this, 'gates', gate, 'name');
+            });
+
+            privateProperty(this, 'getGate', function (name) {
+                return getItem(this, 'gates', name, 'name');
             });
 
             privateProperty(this, 'removeGate', function (gate) {
@@ -12569,6 +12585,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
         inheritModel(Farm, Model.Base);
 
+        function addItems (instance, dataStore, items, compareProp) {
+            underscore.each(items, function (item) {
+                addItem(instance, dataStore, item, compareProp);
+            })
+        }
+
         function addItem (instance, dataStore, item, compareProp) {
             if (item) {
                 instance.data[dataStore] = underscore.chain(instance.data[dataStore])
@@ -12583,6 +12605,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
                 instance.$dirty = true;
             }
+        }
+
+        function getItem (instance, dataStore, value, compareProp) {
+            return underscore.find(instance.data[dataStore], function (dsItem) {
+                return dsItem[compareProp] === value;
+            });
         }
 
         function removeItem (instance, dataStore, item, compareProp) {
@@ -18940,6 +18968,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 return (this.type !== 'farmland' ? this.data.size : this.data.area);
             });
 
+            computedProperty(this, 'farmRequired', function () {
+                return farmRequired(this);
+            });
+
             // Crop
             privateProperty(this, 'availableCrops', function (field) {
                 return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
@@ -19740,6 +19772,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
         readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
 
+        privateProperty(Asset, 'farmRequired', function (type) {
+            return farmRequired(type)
+        });
+
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
         });
@@ -19941,6 +19977,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
         }
 
+        function farmRequired (type) {
+            return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
+        }
+
         Asset.validates({
             crop: {
                 requiredIf: function (value, instance) {
@@ -19962,7 +20002,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             },
             farmId: {
                 requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                    return farmRequired(instance.type);
                 },
                 numeric: true
             },
