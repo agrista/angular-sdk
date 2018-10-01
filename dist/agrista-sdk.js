@@ -8491,11 +8491,13 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         return null;
     };
 
-    $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-        if(toParams.id) {
-            _setActiveItem(toParams.id);
+    $rootScope.$on('$onTransitionSuccess', function (event, transition) {
+        var params = transition.params() || {};
+
+        if (params.id) {
+            _setActiveItem(params.id);
         } else {
-            _setActiveItem(toParams.type);
+            _setActiveItem(params.type);
         }
     });
 
@@ -11260,7 +11262,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
         });
     };
 
-    this.$get = ['$rootScope', '$state', 'authorization', function($rootScope, $state, authorization) {
+    this.$get = ['$rootScope', '$state', 'authorization', function ($rootScope, $state, authorization) {
         var _slim = false;
         var _footerText = '';
 
@@ -11349,7 +11351,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
         };
 
         // Event handlers
-        $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+        $rootScope.$on('$onTransitionSuccess', function () {
             angular.forEach(_groupedApps, function (app) {
                 angular.forEach(app.items, function (item) {
                     item.active = $state.includes(item.state);
