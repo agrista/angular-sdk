@@ -225,18 +225,12 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
         },
-        listValuationStatus: function(params) {
-            return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
-        },
         listBenefitAuthorisation: function() {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/report-benefit-authorisation', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
-        },
-        listFinancialResourcePlanStatus: function(params) {
-            return pagingService.page(_host + 'api/aggregation/report-frp-summary', params);
         },
         listCrossSelling: function(params) {
             return pagingService.page(_host + 'api/aggregation/report-cross-selling', params);
