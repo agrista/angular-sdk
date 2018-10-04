@@ -2099,12 +2099,14 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
     var _processExpiry = ['moment', function (moment) {
         return function (data) {
-            if (data.expires_at) {
-                _expiry.expiresAt = data.expires_at;
-                _expiry.expiresIn = moment(_expiry.expiresAt).diff(moment(), 's');
-            } else if (data.expires_in) {
-                _expiry.expiresIn = data.expires_in;
-                _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
+            if (data) {
+                if (data.expires_at) {
+                    _expiry.expiresAt = data.expires_at;
+                    _expiry.expiresIn = moment(_expiry.expiresAt).diff(moment(), 's');
+                } else if (data.expires_in) {
+                    _expiry.expiresIn = data.expires_in;
+                    _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
+                }
             }
         }
     }];
