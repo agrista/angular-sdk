@@ -219,10 +219,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                         authorizationApi.refresh(_tokens.refresh_token).then(function (res) {
                             if (res) {
-                                if (res.expires_in) {
-                                    _expiry.expiresIn = res.expires_in;
-                                    _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
-                                }
+                                _processExpiry(res);
 
                                 $auth.setToken(res.access_token);
                                 localStore.setItem('tokens', res);
@@ -264,6 +261,18 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return true;
     };
 
+    var _processExpiry = ['moment', function (moment) {
+        return function (data) {
+            if (data.expires_at) {
+                _expiry.expiresAt = data.expires_at;
+                _expiry.expiresIn = moment(_expiry.expiresAt).diff(moment(), 's');
+            } else if (data.expires_in) {
+                _expiry.expiresIn = data.expires_in;
+                _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
+            }
+        }
+    }];
+
     return {
         userRole: _userRoles,
         accessLevel: _accessLevels,
@@ -283,9 +292,15 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 _tokens = localStore.getItem('tokens');
 
+                if (_processExpiry instanceof Array) {
+                    _processExpiry = $injector.invoke(_processExpiry);
+                }
+
                 if (_preAuthenticate instanceof Array) {
                     _preAuthenticate = $injector.invoke(_preAuthenticate);
                 }
+
+                _processExpiry(_tokens);
 
                 $rootScope.$on('authorization::unauthorized', function () {
                     localStore.removeItem('user');
@@ -312,10 +327,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 function _postAuthenticateSuccess (res) {
                     if (res && res.data) {
-                        if (res.data.expires_in) {
-                            _expiry.expiresIn = res.data.expires_in;
-                            _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
-                        }
+                        _processExpiry(res.data);
 
                         $auth.setToken(res.data.access_token);
                         localStore.setItem('tokens', res.data);
