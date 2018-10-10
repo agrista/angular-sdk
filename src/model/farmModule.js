@@ -18,8 +18,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Fields
+            privateProperty(this, 'addFields', function (fields) {
+                addItems(this, 'fields', fields, 'fieldName');
+            });
+
             privateProperty(this, 'addField', function (field) {
                 addItem(this, 'fields', field, 'fieldName');
+            });
+
+            privateProperty(this, 'getField', function (fieldName) {
+                return getItem(this, 'fields', fieldName, 'fieldName');
             });
 
             privateProperty(this, 'removeField', function (field) {
@@ -27,8 +35,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Gates
+            privateProperty(this, 'addGates', function (gates) {
+                addItems(this, 'gates', gates, 'name');
+            });
+
             privateProperty(this, 'addGate', function (gate) {
                 addItem(this, 'gates', gate, 'name');
+            });
+
+            privateProperty(this, 'getGate', function (name) {
+                return getItem(this, 'gates', name, 'name');
             });
 
             privateProperty(this, 'removeGate', function (gate) {
@@ -74,6 +90,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
         inheritModel(Farm, Model.Base);
 
+        function addItems (instance, dataStore, items, compareProp) {
+            underscore.each(items, function (item) {
+                addItem(instance, dataStore, item, compareProp);
+            })
+        }
+
         function addItem (instance, dataStore, item, compareProp) {
             if (item) {
                 instance.data[dataStore] = underscore.chain(instance.data[dataStore])
@@ -88,6 +110,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
                 instance.$dirty = true;
             }
+        }
+
+        function getItem (instance, dataStore, value, compareProp) {
+            return underscore.find(instance.data[dataStore], function (dsItem) {
+                return dsItem[compareProp] === value;
+            });
         }
 
         function removeItem (instance, dataStore, item, compareProp) {

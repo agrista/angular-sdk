@@ -213,22 +213,20 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                 }
 
                 if (_tokens && _tokens.refresh_token && _preReauthenticate(_expiry)) {
-                    if (_requestQueue.length == 0) {
+                    if (_requestQueue.length === 0) {
                         var $auth = $injector.get('$auth'),
                             authorizationApi = $injector.get('authorizationApi');
 
                         authorizationApi.refresh(_tokens.refresh_token).then(function (res) {
                             if (res) {
-                                if (res.expires_at) {
-                                    _expiry.expiresIn = moment(res.expires_at).diff(moment(), 'm');
-                                }
+                                _processExpiry(res);
 
-                                $auth.setToken(res.token);
+                                $auth.setToken(res.access_token);
                                 localStore.setItem('tokens', res);
                                 _tokens = res;
                             }
 
-                            resolveQueue(res && res.token);
+                            resolveQueue(res && res.access_token);
                         }, function () {
                             resolveQueue();
                         });
@@ -263,6 +261,20 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return true;
     };
 
+    var _processExpiry = ['moment', function (moment) {
+        return function (data) {
+            if (data) {
+                if (data.expires_at) {
+                    _expiry.expiresAt = data.expires_at;
+                    _expiry.expiresIn = moment(_expiry.expiresAt).diff(moment(), 's');
+                } else if (data.expires_in) {
+                    _expiry.expiresIn = data.expires_in;
+                    _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
+                }
+            }
+        }
+    }];
+
     return {
         userRole: _userRoles,
         accessLevel: _accessLevels,
@@ -277,21 +289,20 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
         $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService', 'underscore',
             function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService, underscore) {
-                var _user = _getUser();
+                var _user = _getUser(),
+                    _authenticationPromise;
 
                 _tokens = localStore.getItem('tokens');
+
+                if (_processExpiry instanceof Array) {
+                    _processExpiry = $injector.invoke(_processExpiry);
+                }
 
                 if (_preAuthenticate instanceof Array) {
                     _preAuthenticate = $injector.invoke(_preAuthenticate);
                 }
 
-                authorizationApi.getUser().then(function (res) {
-                    _user = _setUser(res);
-
-                    $rootScope.$broadcast('authorization::login', _user);
-                }, function () {
-                    $rootScope.$broadcast('authorization::unauthorized');
-                });
+                _processExpiry(_tokens);
 
                 $rootScope.$on('authorization::unauthorized', function () {
                     localStore.removeItem('user');
@@ -318,11 +329,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 function _postAuthenticateSuccess (res) {
                     if (res && res.data) {
-                        if (res.data.expires_at) {
-                            _expiry.expiresIn = moment(res.data.expires_at).diff(moment(), 'm');
-                        }
+                        _processExpiry(res.data);
 
-                        $auth.setToken(res.data.token);
+                        $auth.setToken(res.data.access_token);
                         localStore.setItem('tokens', res.data);
                         _tokens = res.data;
                     }
@@ -357,6 +366,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     }
                 }
 
+                function isLoggedIn () {
+                    return (_accessLevels.user & _user.role) !== 0;
+                }
+
                 return {
                     userRole: _userRoles,
                     accessLevel: _accessLevels,
@@ -366,10 +379,34 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     currentUser: function () {
                         return _user;
                     },
+                    setAuthentication: function (auth) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
+                            return _postAuthenticateSuccess({data: auth})
+                                .then(_postGetUserSuccess(promise), _postError(promise));
+                        });
+
+                        return _authenticationPromise;
+                    },
+                    waitForAuthentication: function () {
+                        return promiseService.wrap(function (promise) {
+                            if (_authenticationPromise) {
+                                _authenticationPromise.then(function () {
+                                    if (isLoggedIn()) {
+                                        promise.resolve(_user);
+                                    } else {
+                                        promise.reject();
+                                    }
+                                }, promise.reject);
+                            } else if (isLoggedIn()) {
+                                promise.resolve(_user);
+                            } else {
+                                promise.reject();
+                            }
+                        });
+                    },
                     getAuthenticationResponse: function () {
                         return _tokens;
                     },
-
                     hasApp: function (appName) {
                         return _user && _user.userRole &&
                             underscore.some(_user.userRole.apps, function (app) {
@@ -380,18 +417,16 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         return _user && (_user.accessLevel === 'admin' || (_user.userRole && _user.userRole.name === 'Admin'));
                     },
                     isAllowed: function (level) {
-                        return (level & _user.role) != 0;
+                        return (level & _user.role) !== 0;
                     },
-                    isLoggedIn: function () {
-                        return (_accessLevels.user & _user.role) != 0;
-                    },
+                    isLoggedIn: isLoggedIn,
                     login: function (email, password) {
                         var credentials = {
                             email: email,
                             password: password
                         };
 
-                        return promiseService.wrap(function (promise) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
                             return _preAuthenticate(credentials)
                                 .then(function () {
                                     return $auth.login(credentials);
@@ -399,9 +434,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 .then(_postAuthenticateSuccess, promiseService.throwError)
                                 .then(_postGetUserSuccess(promise), _postError(promise));
                         });
+
+                        return _authenticationPromise;
                     },
                     authenticate: function (name, data) {
-                        return promiseService.wrap(function (promise) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
                             return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.authenticate(name, data);
@@ -409,6 +446,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 .then(_postAuthenticateSuccess, promiseService.throwError)
                                 .then(_postGetUserSuccess(promise), _postError(promise));
                         });
+
+                        return _authenticationPromise;
                     },
                     requestReset: authorizationApi.requestReset,
                     confirmReset: function (data) {
@@ -436,7 +475,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         });
                     },
                     register: function (data) {
-                        return promiseService.wrap(function (promise) {
+                        _authenticationPromise = promiseService.wrap(function (promise) {
                             return _preAuthenticate(data)
                                 .then(function () {
                                     return $auth.signup(data);
@@ -444,6 +483,8 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                                 .then(_postAuthenticateSuccess, promiseService.throwError)
                                 .then(_postGetUserSuccess(promise), _postError(promise));
                         });
+
+                        return _authenticationPromise;
                     },
                     logout: function () {
                         return authorizationApi.logout().then(function () {
@@ -6622,11 +6663,13 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         return null;
     };
 
-    $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-        if(toParams.id) {
-            _setActiveItem(toParams.id);
+    $rootScope.$on('$onTransitionSuccess', function (event, transition) {
+        var params = transition.params() || {};
+
+        if (params.id) {
+            _setActiveItem(params.id);
         } else {
-            _setActiveItem(toParams.type);
+            _setActiveItem(params.type);
         }
     });
 
@@ -9391,7 +9434,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
         });
     };
 
-    this.$get = ['$rootScope', '$state', 'authorization', function($rootScope, $state, authorization) {
+    this.$get = ['$rootScope', '$state', 'authorization', function ($rootScope, $state, authorization) {
         var _slim = false;
         var _footerText = '';
 
@@ -9480,7 +9523,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
         };
 
         // Event handlers
-        $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+        $rootScope.$on('$onTransitionSuccess', function () {
             angular.forEach(_groupedApps, function (app) {
                 angular.forEach(app.items, function (item) {
                     item.active = $state.includes(item.state);
@@ -12486,8 +12529,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Fields
+            privateProperty(this, 'addFields', function (fields) {
+                addItems(this, 'fields', fields, 'fieldName');
+            });
+
             privateProperty(this, 'addField', function (field) {
                 addItem(this, 'fields', field, 'fieldName');
+            });
+
+            privateProperty(this, 'getField', function (fieldName) {
+                return getItem(this, 'fields', fieldName, 'fieldName');
             });
 
             privateProperty(this, 'removeField', function (field) {
@@ -12495,8 +12546,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Gates
+            privateProperty(this, 'addGates', function (gates) {
+                addItems(this, 'gates', gates, 'name');
+            });
+
             privateProperty(this, 'addGate', function (gate) {
                 addItem(this, 'gates', gate, 'name');
+            });
+
+            privateProperty(this, 'getGate', function (name) {
+                return getItem(this, 'gates', name, 'name');
             });
 
             privateProperty(this, 'removeGate', function (gate) {
@@ -12542,6 +12601,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
         inheritModel(Farm, Model.Base);
 
+        function addItems (instance, dataStore, items, compareProp) {
+            underscore.each(items, function (item) {
+                addItem(instance, dataStore, item, compareProp);
+            })
+        }
+
         function addItem (instance, dataStore, item, compareProp) {
             if (item) {
                 instance.data[dataStore] = underscore.chain(instance.data[dataStore])
@@ -12556,6 +12621,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
                 instance.$dirty = true;
             }
+        }
+
+        function getItem (instance, dataStore, value, compareProp) {
+            return underscore.find(instance.data[dataStore], function (dsItem) {
+                return dsItem[compareProp] === value;
+            });
         }
 
         function removeItem (instance, dataStore, item, compareProp) {
@@ -18913,6 +18984,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 return (this.type !== 'farmland' ? this.data.size : this.data.area);
             });
 
+            computedProperty(this, 'farmRequired', function () {
+                return farmRequired(this);
+            });
+
             // Crop
             privateProperty(this, 'availableCrops', function (field) {
                 return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
@@ -19713,6 +19788,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
         readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
 
+        privateProperty(Asset, 'farmRequired', function (type) {
+            return farmRequired(type)
+        });
+
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
         });
@@ -19914,6 +19993,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
         }
 
+        function farmRequired (type) {
+            return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
+        }
+
         Asset.validates({
             crop: {
                 requiredIf: function (value, instance) {
@@ -19935,7 +20018,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             },
             farmId: {
                 requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                    return farmRequired(instance.type);
                 },
                 numeric: true
             },
