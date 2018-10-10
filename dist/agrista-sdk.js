@@ -225,18 +225,12 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
         getGuidelineExceptions: function (page) {
             return pagingService.page(_host + 'api/aggregation/guideline-exceptions', page);
         },
-        listValuationStatus: function(params) {
-            return pagingService.page(_host + 'api/aggregation/report-valuation-summary', params);
-        },
         listBenefitAuthorisation: function() {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/aggregation/report-benefit-authorisation', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
-        },
-        listFinancialResourcePlanStatus: function(params) {
-            return pagingService.page(_host + 'api/aggregation/report-frp-summary', params);
         },
         listCrossSelling: function(params) {
             return pagingService.page(_host + 'api/aggregation/report-cross-selling', params);
@@ -2061,10 +2055,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                         authorizationApi.refresh(_tokens.refresh_token).then(function (res) {
                             if (res) {
-                                if (res.expires_in) {
-                                    _expiry.expiresIn = res.expires_in;
-                                    _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
-                                }
+                                _processExpiry(res);
 
                                 $auth.setToken(res.access_token);
                                 localStore.setItem('tokens', res);
@@ -2106,6 +2097,20 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         return true;
     };
 
+    var _processExpiry = ['moment', function (moment) {
+        return function (data) {
+            if (data) {
+                if (data.expires_at) {
+                    _expiry.expiresAt = data.expires_at;
+                    _expiry.expiresIn = moment(_expiry.expiresAt).diff(moment(), 's');
+                } else if (data.expires_in) {
+                    _expiry.expiresIn = data.expires_in;
+                    _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
+                }
+            }
+        }
+    }];
+
     return {
         userRole: _userRoles,
         accessLevel: _accessLevels,
@@ -2125,9 +2130,15 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 _tokens = localStore.getItem('tokens');
 
+                if (_processExpiry instanceof Array) {
+                    _processExpiry = $injector.invoke(_processExpiry);
+                }
+
                 if (_preAuthenticate instanceof Array) {
                     _preAuthenticate = $injector.invoke(_preAuthenticate);
                 }
+
+                _processExpiry(_tokens);
 
                 $rootScope.$on('authorization::unauthorized', function () {
                     localStore.removeItem('user');
@@ -2154,10 +2165,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 function _postAuthenticateSuccess (res) {
                     if (res && res.data) {
-                        if (res.data.expires_in) {
-                            _expiry.expiresIn = res.data.expires_in;
-                            _expiry.expiresAt = moment().add(_expiry.expiresIn, 's').unix();
-                        }
+                        _processExpiry(res.data);
 
                         $auth.setToken(res.data.access_token);
                         localStore.setItem('tokens', res.data);
@@ -8491,11 +8499,13 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         return null;
     };
 
-    $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-        if(toParams.id) {
-            _setActiveItem(toParams.id);
+    $rootScope.$on('$onTransitionSuccess', function (event, transition) {
+        var params = transition.params() || {};
+
+        if (params.id) {
+            _setActiveItem(params.id);
         } else {
-            _setActiveItem(toParams.type);
+            _setActiveItem(params.type);
         }
     });
 
@@ -11260,7 +11270,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
         });
     };
 
-    this.$get = ['$rootScope', '$state', 'authorization', function($rootScope, $state, authorization) {
+    this.$get = ['$rootScope', '$state', 'authorization', function ($rootScope, $state, authorization) {
         var _slim = false;
         var _footerText = '';
 
@@ -11349,7 +11359,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
         };
 
         // Event handlers
-        $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
+        $rootScope.$on('$onTransitionSuccess', function () {
             angular.forEach(_groupedApps, function (app) {
                 angular.forEach(app.items, function (item) {
                     item.active = $state.includes(item.state);
@@ -12062,6 +12072,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
             computedProperty(this, 'size', function () {
                 return (this.type !== 'farmland' ? this.data.size : this.data.area);
+            });
+
+            computedProperty(this, 'farmRequired', function () {
+                return farmRequired(this);
             });
 
             // Crop
@@ -12864,6 +12878,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
         readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
 
+        privateProperty(Asset, 'farmRequired', function (type) {
+            return farmRequired(type)
+        });
+
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
         });
@@ -13065,6 +13083,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
         }
 
+        function farmRequired (type) {
+            return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
+        }
+
         Asset.validates({
             crop: {
                 requiredIf: function (value, instance) {
@@ -13086,7 +13108,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             },
             farmId: {
                 requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                    return farmRequired(instance.type);
                 },
                 numeric: true
             },
@@ -18254,8 +18276,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Fields
+            privateProperty(this, 'addFields', function (fields) {
+                addItems(this, 'fields', fields, 'fieldName');
+            });
+
             privateProperty(this, 'addField', function (field) {
                 addItem(this, 'fields', field, 'fieldName');
+            });
+
+            privateProperty(this, 'getField', function (fieldName) {
+                return getItem(this, 'fields', fieldName, 'fieldName');
             });
 
             privateProperty(this, 'removeField', function (field) {
@@ -18263,8 +18293,16 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             });
 
             // Gates
+            privateProperty(this, 'addGates', function (gates) {
+                addItems(this, 'gates', gates, 'name');
+            });
+
             privateProperty(this, 'addGate', function (gate) {
                 addItem(this, 'gates', gate, 'name');
+            });
+
+            privateProperty(this, 'getGate', function (name) {
+                return getItem(this, 'gates', name, 'name');
             });
 
             privateProperty(this, 'removeGate', function (gate) {
@@ -18310,6 +18348,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
         inheritModel(Farm, Model.Base);
 
+        function addItems (instance, dataStore, items, compareProp) {
+            underscore.each(items, function (item) {
+                addItem(instance, dataStore, item, compareProp);
+            })
+        }
+
         function addItem (instance, dataStore, item, compareProp) {
             if (item) {
                 instance.data[dataStore] = underscore.chain(instance.data[dataStore])
@@ -18324,6 +18368,12 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
 
                 instance.$dirty = true;
             }
+        }
+
+        function getItem (instance, dataStore, value, compareProp) {
+            return underscore.find(instance.data[dataStore], function (dsItem) {
+                return dsItem[compareProp] === value;
+            });
         }
 
         function removeItem (instance, dataStore, item, compareProp) {

@@ -296,6 +296,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 return (this.type !== 'farmland' ? this.data.size : this.data.area);
             });
 
+            computedProperty(this, 'farmRequired', function () {
+                return farmRequired(this);
+            });
+
             // Crop
             privateProperty(this, 'availableCrops', function (field) {
                 return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
@@ -1096,6 +1100,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
         readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
 
+        privateProperty(Asset, 'farmRequired', function (type) {
+            return farmRequired(type)
+        });
+
         privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
             return Asset.cropsByLandClass[landClass] || [];
         });
@@ -1297,6 +1305,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
         }
 
+        function farmRequired (type) {
+            return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
+        }
+
         Asset.validates({
             crop: {
                 requiredIf: function (value, instance) {
@@ -1318,7 +1330,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             },
             farmId: {
                 requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                    return farmRequired(instance.type);
                 },
                 numeric: true
             },

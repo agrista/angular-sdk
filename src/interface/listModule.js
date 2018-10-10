@@ -115,11 +115,13 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         return null;
     };
 
-    $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
-        if(toParams.id) {
-            _setActiveItem(toParams.id);
+    $rootScope.$on('$onTransitionSuccess', function (event, transition) {
+        var params = transition.params() || {};
+
+        if (params.id) {
+            _setActiveItem(params.id);
         } else {
-            _setActiveItem(toParams.type);
+            _setActiveItem(params.type);
         }
     });
 
