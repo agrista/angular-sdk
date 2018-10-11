@@ -1,110 +1,104 @@
-﻿Country and Currency;Currency Code;Graphic Image ;Font: Code2000;Font: Arial Unicode MS;Unicode: Decimal;Unicode: Hex;
-Albania Lek;ALL;;Lek;Lek;76, 101, 107;4c, 65, 6b;
-Afghanistan Afghani;AFN;;؋;؋;1547;60b;
-Argentina Peso;ARS;;$;$;36;24;info
-Aruba Guilder;AWG;;ƒ;ƒ;402;192;
-Australia Dollar;AUD;;$;$;36;24;
-Azerbaijan Manat;AZN;;₼;₼;8380;20bc;
-Bahamas Dollar;BSD;;$;$;36;24;
-Barbados Dollar;BBD;;$;$;36;24;
-Belarus Ruble;BYN;;Br;Br;66, 114;42, 72;
-Belize Dollar;BZD;;BZ$;BZ$;66, 90, 36;42, 5a, 24;
-Bermuda Dollar;BMD;;$;$;36;24;
-Bolivia Bolíviano;BOB;;$b;$b;36, 98;24, 62;
-Bosnia and Herzegovina Convertible Marka;BAM;;KM;KM;75, 77;4b, 4d;
-Botswana Pula;BWP;;P;P;80;50;
-Bulgaria Lev;BGN;;лв;лв;1083, 1074;43b, 432;
-Brazil Real;BRL;;R$;R$;82, 36;52, 24;info
-Brunei Darussalam Dollar;BND;;$;$;36;24;
-Cambodia Riel;KHR;;៛;៛;6107;17db;
-Canada Dollar;CAD;;$;$;36;24;
-Cayman Islands Dollar;KYD;;$;$;36;24;
-Chile Peso;CLP;;$;$;36;24;info
-China Yuan Renminbi;CNY;;¥;¥;165;a5;info
-Colombia Peso;COP;;$;$;36;24;
-Costa Rica Colon;CRC;;₡;₡;8353;20a1;
-Croatia Kuna;HRK;;kn;kn;107, 110;6b, 6e;
-Cuba Peso;CUP;;₱;₱;8369;20b1;
-Czech Republic Koruna;CZK;;Kč;Kč;75, 269;4b, 10d;
-Denmark Krone;DKK;;kr;kr;107, 114;6b, 72;info
-Dominican Republic Peso;DOP;;RD$;RD$;82, 68, 36;52, 44, 24;
-East Caribbean Dollar;XCD;;$;$;36;24;
-Egypt Pound;EGP;;£;£;163;a3;
-El Salvador Colon;SVC;;$;$;36;24;
-Euro Member Countries;EUR;;€;€;8364;20ac;
-Falkland Islands (Malvinas) Pound;FKP;;£;£;163;a3;
-Fiji Dollar;FJD;;$;$;36;24;
-Ghana Cedi;GHS;;¢;¢;162;a2;
-Gibraltar Pound;GIP;;£;£;163;a3;
-Guatemala Quetzal;GTQ;;Q;Q;81;51;
-Guernsey Pound;GGP;;£;£;163;a3;
-Guyana Dollar;GYD;;$;$;36;24;
-Honduras Lempira;HNL;;L;L;76;4c;
-Hong Kong Dollar;HKD;;$;$;36;24;info
-Hungary Forint;HUF;;Ft;Ft;70, 116;46, 74;
-Iceland Krona;ISK;;kr;kr;107, 114;6b, 72;
-India Rupee;INR;;;;;;info
-Indonesia Rupiah;IDR;;Rp;Rp;82, 112;52, 70;
-Iran Rial;IRR;;﷼;﷼;65020;fdfc;
-Isle of Man Pound;IMP;;£;£;163;a3;
-Israel Shekel;ILS;;₪;₪;8362;20aa;
-Jamaica Dollar;JMD;;J$;J$;74, 36;4a, 24;
-Japan Yen;JPY;;¥;¥;165;a5;info
-Jersey Pound;JEP;;£;£;163;a3;
-Kazakhstan Tenge;KZT;;лв;лв;1083, 1074;43b, 432;
-Korea (North) Won;KPW;;₩;₩;8361;20a9;
-Korea (South) Won;KRW;;₩;₩;8361;20a9;
-Kyrgyzstan Som;KGS;;лв;лв;1083, 1074;43b, 432;
-Laos Kip;LAK;;₭;₭;8365;20ad;
-Lebanon Pound;LBP;;£;£;163;a3;
-Liberia Dollar;LRD;;$;$;36;24;
-Macedonia Denar;MKD;;ден;ден;1076, 1077, 1085;434, 435, 43d;
-Malaysia Ringgit;MYR;;RM;RM;82, 77;52, 4d;
-Mauritius Rupee;MUR;;₨;₨;8360;20a8;
-Mexico Peso;MXN;;$;$;36;24;info
-Mongolia Tughrik;MNT;;₮;₮;8366;20ae;
-Mozambique Metical;MZN;;MT;MT;77, 84;4d, 54;
-Namibia Dollar;NAD;;$;$;36;24;
-Nepal Rupee;NPR;;₨;₨;8360;20a8;
-Netherlands Antilles Guilder;ANG;;ƒ;ƒ;402;192;
-New Zealand Dollar;NZD;;$;$;36;24;
-Nicaragua Cordoba;NIO;;C$;C$;67, 36;43, 24;
-Nigeria Naira;NGN;;₦;₦;8358;20a6;
-Norway Krone;NOK;;kr;kr;107, 114;6b, 72;
-Oman Rial;OMR;;﷼;﷼;65020;fdfc;
-Pakistan Rupee;PKR;;₨;₨;8360;20a8;
-Panama Balboa;PAB;;B/.;B/.;66, 47, 46;42, 2f, 2e;
-Paraguay Guarani;PYG;;Gs;Gs;71, 115;47, 73;
-Peru Sol;PEN;;S/.;S/.;83, 47, 46;53, 2f, 2e;info
-Philippines Piso;PHP;;₱;₱;8369;20b1;
-Poland Zloty;PLN;;zł;zł;122, 322;7a, 142;
-Qatar Riyal;QAR;;﷼;﷼;65020;fdfc;
-Romania Leu;RON;;lei;lei;108, 101, 105;6c, 65, 69;
-Russia Ruble;RUB;;₽;₽;8381;20bd;
-Saint Helena Pound;SHP;;£;£;163;a3;
-Saudi Arabia Riyal;SAR;;﷼;﷼;65020;fdfc;
-Serbia Dinar;RSD;;Дин.;Дин.;1044, 1080, 1085, 46;414, 438, 43d, 2e;
-Seychelles Rupee;SCR;;₨;₨;8360;20a8;
-Singapore Dollar;SGD;;$;$;36;24;
-Solomon Islands Dollar;SBD;;$;$;36;24;
-Somalia Shilling;SOS;;S;S;83;53;
-South Africa Rand;ZAR;;R;R;82;52;
-Sri Lanka Rupee;LKR;;₨;₨;8360;20a8;
-Sweden Krona;SEK;;kr;kr;107, 114;6b, 72;info
-Switzerland Franc;CHF;;CHF;CHF;67, 72, 70;43, 48, 46;
-Suriname Dollar;SRD;;$;$;36;24;
-Syria Pound;SYP;;£;£;163;a3;
-Taiwan New Dollar;TWD;;NT$;NT$;78, 84, 36;4e, 54, 24;info
-Thailand Baht;THB;;฿;฿;3647;e3f;
-Trinidad and Tobago Dollar;TTD;;TT$;TT$;84, 84, 36;54, 54, 24;
-Turkey Lira;TRY;;;;;;info
-Tuvalu Dollar;TVD;;$;$;36;24;
-Ukraine Hryvnia;UAH;;₴;₴;8372;20b4;
-United Kingdom Pound;GBP;;£;£;163;a3;
-United States Dollar;USD;;$;$;36;24;
-Uruguay Peso;UYU;;$U;$U;36, 85;24, 55;
-Uzbekistan Som;UZS;;лв;лв;1083, 1074;43b, 432;
-Venezuela Bolívar;VEF;;Bs;Bs;66, 115;42, 73;
-Viet Nam Dong;VND;;₫;₫;8363;20ab;
-Yemen Rial;YER;;﷼;﷼;65020;fdfc;
-Zimbabwe Dollar;ZWD;;Z$;Z$;90, 36;5a, 24;
+country,size_km2,default_zoom_scale,location,currency,currency_code,font_code2000,font_arial_unicode_ms,unicode_decimal,unicode_hex
+Albania,28748,6,POINT (20.0498339611 41.1424498947),Lek,ALL,Lek,Lek,"76, 101, 107","4c, 65, 6b"
+Afghanistan,647500,6,POINT (66.0047336558 33.8352307278),Afghani,AFN,؋,؋,1547,60b
+Argentina,2780400,6,POINT (-65.179806925 -35.3813487953),Peso,ARS,$,$,36,24
+Australia,7692024,6,POINT (134.491000082 -25.7328870417),Dollar,AUD,$,$,36,24
+Azerbaijan,86600,6,POINT (47.5459987892 40.2882723471),Manat,AZN,₼,₼,8380,20bc
+Bahamas,13940,6,POINT (-76.6284303802 24.2903670223),Dollar,BSD,$,$,36,24
+Barbados,430,6,POINT (-59.5597970021 13.1814542822),Dollar,BBD,$,$,36,24
+Belarus,207600,6,POINT (28.0320930703 53.5313137685),Ruble,BYN,Br,Br,"66, 114","42, 72"
+Belize,22966,6,POINT (-88.7101048564 17.2002750902),Dollar,BZD,BZ$,BZ$,"66, 90, 36","42, 5a, 24"
+Bermuda,,6,POINT (-64.7545588982 32.3136780208),Dollar,BMD,$,$,36,24
+Bolivia,1098580,6,POINT (-64.6853864515 -16.7081478725),Bolíviano,BOB,$b,$b,"36, 98","24, 62"
+Bosnia and Herzegovina,51129,6,POINT (17.7687673323 44.1745012472),Convertible Marka,BAM,KM,KM,"75, 77","4b, 4d"
+Botswana,600370,6,POINT (23.7985336773 -22.1840321328),Pula,BWP,P,P,80,50
+Bulgaria,110910,6,POINT (25.2155290863 42.7689031797),Lev,BGN,лв,лв,"1083, 1074","43b, 432"
+Brazil,8515767,6,POINT (-53.0978311267 -10.7877770246),Real,BRL,R$,R$,"82, 36","52, 24"
+Brunei Darussalam,5770,6,POINT (114.722030354 4.51968957503),Dollar,BND,$,$,36,24
+Cambodia,181035,6,POINT (104.906943249 12.7200478567),Riel,KHR,៛,៛,6107,17db
+Canada,9984670,6,POINT (-98.3077702819 61.3620632437),Dollar,CAD,$,$,36,24
+Cayman Islands,,6,POINT (-80.9121332147 19.4289649722),Dollar,KYD,$,$,36,24
+Chile,756950,6,POINT (-71.3825621318 -37.730709893),Peso,CLP,$,$,36,24
+China,9572900,6,POINT (103.81907349 36.5617654559),Yuan Renminbi,CNY,¥,¥,165,a5
+Colombia,1197411,6,POINT (-73.0811458241 3.91383430725),Peso,COP,$,$,36,24
+Costa Rica,51100,6,POINT (-84.1920876775 9.9763446384),Colon,CRC,₡,₡,8353,20a1
+Croatia,56542,6,POINT (16.404128994 45.0804763057),Kuna,HRK,kn,kn,"107, 110","6b, 6e"
+Cuba,109886,6,POINT (-79.0160538445 21.6228952793),Peso,CUP,₱,₱,8369,20b1
+Czech Republic,78867,6,POINT (15.3124016281 49.7334123295),Koruna,CZK,Kč,Kč,"75, 269","4b, 10d"
+Denmark,2210583,6,POINT (10.0280099191 55.9812529593),Krone,DKK,kr,kr,"107, 114","6b, 72"
+Dominican Republic,48730,6,POINT (-70.5056889612 18.8943308233),Peso,DOP,RD$,RD$,"82, 68, 36","52, 44, 24"
+Egypt,1001450,6,POINT (29.8619009908 26.4959331064),Pound,EGP,£,£,163,a3
+El Salvador,21040,6,POINT (-88.8716446906 13.7394374383),Colon,SVC,$,$,36,24
+Falkland Islands (Malvinas),,6,POINT (-59.35238956 -51.7448395441),Pound,FKP,£,£,163,a3
+Fiji,18270,6,POINT (165.451954318 -17.4285803175),Dollar,FJD,$,$,36,24
+Ghana,238540,6,POINT (-1.21676565807 7.95345643541),Cedi,GHS,¢,¢,162,a2
+Guatemala,108890,6,POINT (-90.3648200858 15.694036635),Quetzal,GTQ,Q,Q,81,51
+Guernsey,,6,POINT (-2.57239063555 49.4680976128),Pound,GGP,£,£,163,a3
+Guyana,214970,6,POINT (-58.9820245893 4.79378034012),Dollar,GYD,$,$,36,24
+Honduras,112090,6,POINT (-86.6151660963 14.8268816519),Lempira,HNL,L,L,76,4c
+Hong Kong,,6,POINT (114.113804542 22.3982773723),Dollar,HKD,$,$,36,24
+Hungary,93030,6,POINT (19.3955911607 47.1627750614),Forint,HUF,Ft,Ft,"70, 116","46, 74"
+Iceland,103000,6,POINT (-18.5739616708 64.9957538607),Krona,ISK,kr,kr,"107, 114","6b, 72"
+India,3287263,6,POINT (79.6119761026 22.8857821183),Rupee,INR,,,,
+Indonesia,1904556,6,POINT (117.240113662 -2.21505456346),Rupiah,IDR,Rp,Rp,"82, 112","52, 70"
+Iran,1648000,6,POINT (54.2740700448 32.575032915),Rial,IRR,﷼,﷼,65020,fdfc
+Isle of Man,,6,POINT (-4.53873952326 54.2241891077),Pound,IMP,£,£,163,a3
+Israel,26990,6,POINT (35.0044469277 31.4611010118),Shekel,ILS,₪,₪,8362,20aa
+Jamaica,10990,6,POINT (-77.3148259327 18.1569487765),Dollar,JMD,J$,J$,"74, 36","4a, 24"
+Japan,377835,6,POINT (138.030895577 37.592301353),Yen,JPY,¥,¥,165,a5
+Jersey,,6,POINT (-2.12689937944 49.2183737668),Pound,JEP,£,£,163,a3
+Kazakhstan,2724900,6,POINT (67.2914935687 48.1568806661),Tenge,KZT,лв,лв,"1083, 1074","43b, 432"
+Korea (North),120540,6,POINT (127.192479732 40.1535031093),Won,KPW,₩,₩,8361,20a9
+Korea (South),98480,6,POINT (127.839160864 36.3852398347),Won,KRW,₩,₩,8361,20a9
+Kyrgyzstan,198500,6,POINT (74.5416551329 41.4622194346),Som,KGS,лв,лв,"1083, 1074","43b, 432"
+Laos,236800,6,POINT (103.73772412 18.5021743316),Kip,LAK,₭,₭,8365,20ad
+Lebanon,10452,6,POINT (35.880160715 33.9230663057),Pound,LBP,£,£,163,a3
+Liberia,111370,6,POINT (-9.3220757269 6.45278491657),Dollar,LRD,$,$,36,24
+Macedonia,25333,6,POINT (21.6821134607 41.5953089336),Denar,MKD,ден,ден,"1076, 1077, 1085","434, 435, 43d"
+Malaysia,329750,6,POINT (109.697622843 3.78986845571),Ringgit,MYR,RM,RM,"82, 77","52, 4d"
+Mauritius,1860,6,POINT (57.5712055061 -20.2776870433),Rupee,MUR,₨,₨,8360,20a8
+Mexico,1964375,6,POINT (-102.523451692 23.9475372406),Peso,MXN,$,$,36,24
+Mongolia,1565000,6,POINT (103.052997649 46.8268154394),Tughrik,MNT,₮,₮,8366,20ae
+Mozambique,801590,6,POINT (35.5336754259 -17.2738164259),Metical,MZN,MT,MT,"77, 84","4d, 54"
+Namibia,825418,6,POINT (17.209635667 -22.1303256842),Dollar,NAD,$,$,36,24
+Nepal,147181,6,POINT (83.9158264002 28.2489136496),Rupee,NPR,₨,₨,8360,20a8
+New Zealand,269190,6,POINT (171.484923466 -41.811135569),Dollar,NZD,$,$,36,24
+Nicaragua,129494,6,POINT (-85.0305296951 12.8470942896),Cordoba,NIO,C$,C$,"67, 36","43, 24"
+Nigeria,923768,6,POINT (8.08943894771 9.59411452233),Naira,NGN,₦,₦,8358,20a6
+Norway,324220,6,POINT (15.3483465622 68.7501557205),Krone,NOK,kr,kr,"107, 114","6b, 72"
+Oman,309500,6,POINT (56.0916615483 20.6051533257),Rial,OMR,﷼,﷼,65020,fdfc
+Pakistan,803940,6,POINT (69.3395793748 29.9497515031),Rupee,PKR,₨,₨,8360,20a8
+Panama,78201,6,POINT (-80.1191515612 8.51750797491),Balboa,PAB,B/.,B/.,"66, 47, 46","42, 2f, 2e"
+Paraguay,406750,6,POINT (-58.400137032 -23.228239132),Guarani,PYG,Gs,Gs,"71, 115","47, 73"
+Peru,1285220,6,POINT (-74.382426851 -9.15280381329),Sol,PEN,S/.,S/.,"83, 47, 46","53, 2f, 2e"
+Philippines,300000,6,POINT (122.883932529 11.7753677809),Piso,PHP,₱,₱,8369,20b1
+Poland,312685,6,POINT (19.3901283493 52.1275956442),Zloty,PLN,zł,zł,"122, 322","7a, 142"
+Qatar,11437,6,POINT (51.1847963212 25.3060118763),Riyal,QAR,﷼,﷼,65020,fdfc
+Romania,238391,6,POINT (24.9729303933 45.8524312742),Leu,RON,lei,lei,"108, 101, 105","6c, 65, 69"
+Russia,17098246,6,POINT (96.6865611231 61.9805220919),Ruble,RUB,₽,₽,8381,20bd
+Saint Helena,,6,POINT (-9.5477941587 -12.4035595078),Pound,SHP,£,£,163,a3
+Saudi Arabia,2149690,6,POINT (44.5368627114 24.1224584073),Riyal,SAR,﷼,﷼,65020,fdfc
+Serbia,88361,6,POINT (20.7895833363 44.2215031993),Dinar,RSD,Дин.,Дин.,"1044, 1080, 1085, 46","414, 438, 43d, 2e"
+Seychelles,455,6,POINT (55.4760327912 -4.66099093522),Rupee,SCR,₨,₨,8360,20a8
+Singapore,692.7,6,POINT (103.81725592 1.35876087075),Dollar,SGD,$,$,36,24
+Solomon Islands,28450,6,POINT (159.632876678 -8.92178021692),Dollar,SBD,$,$,36,24
+Somalia,637657,6,POINT (45.7071448699 4.75062876055),Shilling,SOS,S,S,83,53
+South Africa,1219912,5.1,POINT (25.0839009251 -29.0003409534),Rand,ZAR,R,R,82,52
+Sri Lanka,65611,6,POINT (80.7010823782 7.61266509224),Rupee,LKR,₨,₨,8360,20a8
+Sweden,449964,6,POINT (16.7455804869 62.7796651931),Krona,SEK,kr,kr,"107, 114","6b, 72"
+Switzerland,41210,6,POINT (8.20867470615 46.7978587836),Franc,CHF,CHF,CHF,"67, 72, 70","43, 48, 46"
+Suriname,163270,6,POINT (-55.9123456951 4.1305541299),Dollar,SRD,$,$,36,24
+Syria,185180,6,POINT (38.5078820425 35.025473894),Pound,SYP,£,£,163,a3
+Taiwan,,6,POINT (120.954272814 23.753992795),New Dollar,TWD,NT$,NT$,"78, 84, 36","4e, 54, 24"
+Thailand,514000,6,POINT (101.002881304 15.1181579418),Baht,THB,฿,฿,3647,e3f
+Trinidad and Tobago,5128,6,POINT (-61.2656792335 10.457334081),Dollar,TTD,TT$,TT$,"84, 84, 36","54, 54, 24"
+Turkey,780580,6,POINT (35.1689534649 39.0616029013),Lira,TRY,,,,
+Ukraine,603628,6,POINT (31.3832646865 48.9965667265),Hryvnia,UAH,₴,₴,8372,20b4
+United Kingdom,243610,6,POINT (-2.86563164084 54.1238715577),Pound,GBP,£,£,163,a3
+United States,9525067,6,POINT (-112.4616737 45.6795472026),Dollar,USD,$,$,36,24
+Uruguay,176220,6,POINT (-56.0180705315 -32.7995153444),Peso,UYU,$U,$U,"36, 85","24, 55"
+Uzbekistan,447400,6,POINT (63.1400152805 41.7555422527),Som,UZS,лв,лв,"1083, 1074","43b, 432"
+Venezuela,912050,6,POINT (-66.1818412311 7.12422421273),Bolívar,VEF,Bs,Bs,"66, 115","42, 73"
+Viet Nam,329560,6,POINT (106.299146978 16.6460167019),Dong,VND,₫,₫,8363,20ab
+Yemen,527970,6,POINT (47.5867618877 15.9092800505),Rial,YER,﷼,﷼,65020,fdfc
+Zimbabwe,390580,6,POINT (29.8514412019 -19.0042041882),Dollar,ZWD,Z$,Z$,"90, 36","5a, 24"
