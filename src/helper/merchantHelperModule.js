@@ -1,33 +1,13 @@
-var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.library']);
+var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.model.merchant', 'ag.sdk.library']);
 
-sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (underscore) {
+sdkHelperMerchantApp.factory('merchantHelper', ['Merchant', 'underscore', function (Merchant, underscore) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.$id,
             title: item.name,
-            subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
+            subtitle: (item.subscriptionPlan ? Merchant.getSubscriptionPlanTitle(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? Merchant.getPartnerTitle(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
         }
-    };
-
-    var _partnerTypes = {
-        benefit: 'Benefit',
-        standard: 'Standard'
-    };
-
-    var _subscriptionPlans = {
-        small: 'Small',
-        medium: 'Medium',
-        large: 'Large',
-        association: 'Association'
-    };
-
-    var getPartnerType = function (type) {
-        return _partnerTypes[type] || '';
-    };
-
-    var getSubscriptionPlan = function (plan) {
-        return _subscriptionPlans[plan] || '';
     };
 
     /**
@@ -40,35 +20,35 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
         availableServices = availableServices || [];
 
         this.services = underscore.map(services || [], function (item) {
-            return (item.name ? item.name : item);
+            return (item.serviceType ? item.serviceType : item);
         });
 
         this.selection = {
             list: availableServices,
-            mode: (availableServices.length == 0 ? 'add' : 'select'),
-            text: ''
+            mode: (availableServices.length === 0 ? 'add' : 'select'),
+            text: undefined
         };
     }
 
     ServiceEditor.prototype.toggleMode = function() {
         if (this.selection.list.length > 0) {
             // Allow toggle
-            this.selection.mode = (this.selection.mode == 'select' ? 'add' : 'select');
-            this.selection.text = '';
+            this.selection.mode = (this.selection.mode === 'select' ? 'add' : 'select');
+            this.selection.text = undefined;
         }
     };
 
     ServiceEditor.prototype.addService = function (service) {
         service = service || this.selection.text;
 
-        if (this.services.indexOf(service) == -1) {
+        if (!underscore.isUndefined(service) && this.services.indexOf(service) === -1) {
             this.services.push(service);
-            this.selection.text = '';
+            this.selection.text = undefined;
         }
     };
 
     ServiceEditor.prototype.removeService = function (indexOrService) {
-        if (typeof indexOrService == 'string') {
+        if (underscore.isString(indexOrService)) {
             indexOrService = this.services.indexOf(indexOrService);
         }
 
@@ -81,15 +61,6 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
         listServiceMap: function() {
             return _listServiceMap;
         },
-
-        partnerTypes: function() {
-            return _partnerTypes;
-        },
-        getPartnerType: getPartnerType,
-        subscriptionPlans: function() {
-            return _subscriptionPlans;
-        },
-        getSubscriptionPlan: getSubscriptionPlan,
 
         serviceEditor: function (/**Array=*/availableServices, /**Array=*/services) {
             return new ServiceEditor(availableServices, services);

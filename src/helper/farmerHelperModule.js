@@ -346,14 +346,14 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
     EnterpriseEditor.prototype.addEnterprise = function (enterprise) {
         enterprise = enterprise || this.selection.item;
 
-        if (this.enterprises.indexOf(enterprise) == -1) {
+        if (!underscore.isUndefined(enterprise) && this.enterprises.indexOf(enterprise) === -1) {
             this.enterprises.push(enterprise);
             this.selection.item = undefined;
         }
     };
 
     EnterpriseEditor.prototype.removeEnterprise = function (item) {
-        if (typeof item == 'string') {
+        if (underscore.isString(item)) {
             item = this.enterprises.indexOf(item);
         }
 

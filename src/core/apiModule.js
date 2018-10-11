@@ -1581,13 +1581,6 @@ sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'co
         getServices: function (params) {
             return pagingService.page(_host + 'api/services', params);
         },
-        getServiceTypes: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/service/types', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
         getService: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/service/' + id, {withCredentials: true}).then(function (res) {
