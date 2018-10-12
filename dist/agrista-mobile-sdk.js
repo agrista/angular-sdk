@@ -5488,23 +5488,9 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
         }
     };
 
-    var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
-    var _businessEntityDescriptions = {
-        Commercial: 'Large scale agricultural production',
-        Recreational: 'Leisure or hobby farming',
-        Smallholder: 'Small farm, limited production'
-    };
-
     return {
         listServiceMap: function() {
             return _listServiceMap;
-        },
-        businessEntityTypes: function() {
-            return _businessEntityTypes;
-        },
-
-        getBusinessEntityDescription: function (businessEntity) {
-            return _businessEntityDescriptions[businessEntity] || '';
         },
         getFarmerLocation: function(farmer) {
             if (farmer) {
@@ -5526,9 +5512,6 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             }
 
             return null;
-        },
-        isFarmerActive: function(farmer) {
-            return (farmer && farmer.status == 'active');
         }
     }
 }]);
@@ -7132,8 +7115,49 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
 /**
  * Maps
  */
-sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore) {
-    var _defaultConfig = {
+sdkInterfaceMapApp.provider('mapboxServiceCache', [function () {
+    var _store = {
+        config: {},
+        instances: {}
+    };
+
+    function getConfig () {
+        return _store.config;
+    }
+
+    function setConfig (config) {
+        _store.config = config;
+    }
+
+    function getInstance (id) {
+        return _store.instances[id];
+    }
+
+    function setInstance (id, instance) {
+        _store.instances[id] = instance;
+    }
+
+    function resetInstances () {
+        _store.instances = {};
+    }
+
+    this.getConfig = getConfig;
+    this.setConfig = setConfig;
+
+    this.$get = [function() {
+        return {
+            getConfig: getConfig,
+            setConfig: setConfig,
+
+            getInstance: getInstance,
+            setInstance: setInstance,
+            resetInstances: resetInstances
+        }
+    }];
+}]);
+
+sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'underscore', function (mapboxServiceCacheProvider, underscore) {
+    mapboxServiceCacheProvider.setConfig({
         init: {
             delay: 200
         },
@@ -7172,22 +7196,20 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         controls: {},
         events: {},
         view: {
-            coordinates: [-28.691, 24.714],
-            zoom: 6
+            coordinates: [-29.0003409534,25.0839009251],
+            zoom: 5.1
         },
         bounds: {},
         leafletLayers: {},
         layers: {},
         geojson: {}
-    };
-
-    var _instances = {};
+    });
     
     this.config = function (options) {
-        _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
+        mapboxServiceCacheProvider.setConfig(underscore.defaults(options || {}, mapboxServiceCacheProvider.getConfig()));
     };
 
-    this.$get = ['$rootScope', '$timeout', 'objectId', 'safeApply', function ($rootScope, $timeout, objectId, safeApply) {
+    this.$get = ['$rootScope', '$timeout', 'mapboxServiceCache', 'objectId', 'safeApply', function ($rootScope, $timeout, mapboxServiceCache, objectId, safeApply) {
         /**
         * @name MapboxServiceInstance
         * @param id
@@ -7201,7 +7223,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             _this._options = options;
             _this._show = _this._options.show || false;
 
-            _this._config = angular.copy(_defaultConfig);
+            _this._config = angular.copy(mapboxServiceCache.getConfig());
             _this._requestQueue = [];
 
             $rootScope.$on('mapbox-' + _this._id + '::init', function () {
@@ -7215,7 +7237,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 _this._ready = false;
 
                 if (_this._options.persist !== true) {
-                    _this._config = angular.copy(_defaultConfig);
+                    _this._config = angular.copy(mapboxServiceCache.getConfig());
                 }
             });
         }
@@ -7232,7 +7254,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
              * Reset
              */
             reset: function () {
-                this._config = angular.copy(_defaultConfig);
+                this._config = angular.copy(mapboxServiceCache.getConfig());
 
                 $rootScope.$broadcast('mapbox-' + this._id + '::reset');
             },
@@ -7807,15 +7829,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         return function (id, options) {
             options = options || {};
 
-            if (_instances[id] === undefined) {
-                _instances[id] = new MapboxServiceInstance(id, options);
+            var instance = mapboxServiceCache.getInstance(id);
+
+            if (instance === undefined) {
+                instance = new MapboxServiceInstance(id, options);
+                mapboxServiceCache.setInstance(id, instance);
             }
 
             if (options.clean === true) {
-                _instances[id].reset();
+                instance.reset();
             }
 
-            return _instances[id];
+            return instance;
         };
     }];
 }]);
@@ -10337,10 +10362,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
     }]);
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['Locale', 'computedProperty', 'Field', 'inheritModel', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Locale, computedProperty, Field, inheritModel, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function ComparableSale (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             computedProperty(this, 'distanceInKm', function () {
                 return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
@@ -10543,7 +10568,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
             }, 0), 4);
         }
 
-        inheritModel(ComparableSale, Model.Base);
+        inheritModel(ComparableSale, Locale);
 
         readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
 
@@ -10557,6 +10582,13 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
             area: {
                 required: true,
                 numeric: true
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
             },
             landComponents: {
                 required: true,
@@ -10581,10 +10613,10 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
 
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Locale', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, interfaceProperty, Locale, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudgetBase(attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             computedProperty(this, 'defaultCostStage', function () {
                 return underscore.last(EnterpriseBudgetBase.costStages);
@@ -10915,7 +10947,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             this.sortSections();
         }
 
-        inheritModel(EnterpriseBudgetBase, Model.Base);
+        inheritModel(EnterpriseBudgetBase, Locale);
 
         readOnlyProperty(EnterpriseBudgetBase, 'sections', underscore.indexBy([
             {
@@ -13140,10 +13172,10 @@ sdkModelFinancial.factory('FinancialGroup', ['inheritModel', 'Financial', 'Finan
     }]);
 var sdkModelLayer= angular.module('ag.sdk.model.layer', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.geospatial']);
 
-sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelLayer.factory('Layer', ['inheritModel', 'Locale', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Locale, privateProperty, readOnlyProperty, underscore) {
         function Layer (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -13163,7 +13195,7 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
             this.sublayers = attrs.sublayers;
         }
 
-        inheritModel(Layer, Model.Base);
+        inheritModel(Layer, Locale);
 
         privateProperty(Layer, 'listMap', function (item) {
             return {
@@ -13178,6 +13210,13 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
                 length: {
                     min: 0,
                     max: 255
+                }
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
                 }
             },
             geometry: {
@@ -13215,10 +13254,10 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
     }]);
 
 
-sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
-    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, topologyHelper, underscore) {
+sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Locale', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (computedProperty, inheritModel, Locale, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Sublayer (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             computedProperty(this, 'geom', function () {
                 return topologyHelper.readGeoJSON(this.geometry);
@@ -13289,7 +13328,7 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             this.layer = attrs.layer;
         }
 
-        inheritModel(Sublayer, Model.Base);
+        inheritModel(Sublayer, Locale);
 
         privateProperty(Sublayer, 'listMap', function (item) {
             return {
@@ -13331,10 +13370,6 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
         }
 
         Sublayer.validates({
-            data: {
-                required: false,
-                object: true
-            },
             code: {
                 required: false,
                 length: {
@@ -13348,6 +13383,17 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
                     min: 0,
                     max: 255
                 }
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
+            data: {
+                required: false,
+                object: true
             },
             geometry: {
                 required: true,
@@ -14011,6 +14057,157 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
 
         return Liability;
     }]);
+
+var sdkModelLocale  = angular.module('ag.sdk.model.locale', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelLocale.factory('Locale', ['computedProperty', 'Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Locale (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'countryLocale', function () {
+                return countryLocale(this);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.country = attrs.country;
+        }
+
+        inheritModel(Locale, Model.Base);
+
+        function countryLocale (instance) {
+            return underscore.findWhere(Locale.countryLocales, {
+                country: instance.country || 'South Africa'
+            });
+        }
+
+        privateProperty(Locale, 'countryLocale', function (instance) {
+            return countryLocale(instance);
+        });
+
+        readOnlyProperty(Locale, 'countryLocales', underscore.map([
+            [[41.1424498947,20.0498339611], 'Albania',6, 'Lek', 'ALL', 'Lek'],
+            [[33.8352307278,66.0047336558], 'Afghanistan',6, 'Afghani', 'AFN', '؋'],
+            [[-35.3813487953,-65.179806925], 'Argentina',6, 'Peso', 'ARS', '$'],
+            [[-25.7328870417,134.491000082], 'Australia',6, 'Dollar', 'AUD', '$'],
+            [[40.2882723471,47.5459987892], 'Azerbaijan',6, 'Manat', 'AZN', '₼'],
+            [[24.2903670223,-76.6284303802], 'Bahamas',6, 'Dollar', 'BSD', '$'],
+            [[13.1814542822,-59.5597970021], 'Barbados',6, 'Dollar', 'BBD', '$'],
+            [[53.5313137685,28.0320930703], 'Belarus',6, 'Ruble', 'BYN', 'Br'],
+            [[17.2002750902,-88.7101048564], 'Belize',6, 'Dollar', 'BZD', 'BZ$'],
+            [[32.3136780208,-64.7545588982], 'Bermuda',6, 'Dollar', 'BMD', '$'],
+            [[-16.7081478725,-64.6853864515], 'Bolivia',6, 'Bolíviano', 'BOB', '$b'],
+            [[44.1745012472,17.7687673323], 'Bosnia and Herzegovina',6, 'Convertible Marka', 'BAM', 'KM'],
+            [[-22.1840321328,23.7985336773], 'Botswana',6, 'Pula', 'BWP', 'P'],
+            [[42.7689031797,25.2155290863], 'Bulgaria',6, 'Lev', 'BGN', 'лв'],
+            [[-10.7877770246,-53.0978311267], 'Brazil',6, 'Real', 'BRL', 'R$'],
+            [[4.51968957503,114.722030354], 'Brunei Darussalam',6, 'Dollar', 'BND', '$'],
+            [[12.7200478567,104.906943249], 'Cambodia',6, 'Riel', 'KHR', '៛'],
+            [[61.3620632437,-98.3077702819], 'Canada',6, 'Dollar', 'CAD', '$'],
+            [[19.4289649722,-80.9121332147], 'Cayman Islands',6, 'Dollar', 'KYD', '$'],
+            [[-37.730709893,-71.3825621318], 'Chile',6, 'Peso', 'CLP', '$'],
+            [[36.5617654559,103.81907349], 'China',6, 'Yuan Renminbi', 'CNY', '¥'],
+            [[3.91383430725,-73.0811458241], 'Colombia',6, 'Peso', 'COP', '$'],
+            [[9.9763446384,-84.1920876775], 'Costa Rica',6, 'Colon', 'CRC', '₡'],
+            [[45.0804763057,16.404128994], 'Croatia',6, 'Kuna', 'HRK', 'kn'],
+            [[21.6228952793,-79.0160538445], 'Cuba',6, 'Peso', 'CUP', '₱'],
+            [[49.7334123295,15.3124016281], 'Czech Republic',6, 'Koruna', 'CZK', 'Kč'],
+            [[55.9812529593,10.0280099191], 'Denmark',6, 'Krone', 'DKK', 'kr'],
+            [[18.8943308233,-70.5056889612], 'Dominican Republic',6, 'Peso', 'DOP', 'RD$'],
+            [[26.4959331064,29.8619009908], 'Egypt',6, 'Pound', 'EGP', '£'],
+            [[13.7394374383,-88.8716446906], 'El Salvador',6, 'Colon', 'SVC', '$'],
+            [[-51.7448395441,-59.35238956], 'Falkland Islands (Malvinas)',6, 'Pound', 'FKP', '£'],
+            [[-17.4285803175,165.451954318], 'Fiji',6, 'Dollar', 'FJD', '$'],
+            [[7.95345643541,-1.21676565807], 'Ghana',6, 'Cedi', 'GHS', '¢'],
+            [[15.694036635,-90.3648200858], 'Guatemala',6, 'Quetzal', 'GTQ', 'Q'],
+            [[49.4680976128,-2.57239063555], 'Guernsey',6, 'Pound', 'GGP', '£'],
+            [[4.79378034012,-58.9820245893], 'Guyana',6, 'Dollar', 'GYD', '$'],
+            [[14.8268816519,-86.6151660963], 'Honduras',6, 'Lempira', 'HNL', 'L'],
+            [[22.3982773723,114.113804542], 'Hong Kong',6, 'Dollar', 'HKD', '$'],
+            [[47.1627750614,19.3955911607], 'Hungary',6, 'Forint', 'HUF', 'Ft'],
+            [[64.9957538607,-18.5739616708], 'Iceland',6, 'Krona', 'ISK', 'kr'],
+            [[22.8857821183,79.6119761026], 'India',6, 'Rupee', 'INR', '₹'],
+            [[-2.21505456346,117.240113662], 'Indonesia',6, 'Rupiah', 'IDR', 'Rp'],
+            [[32.575032915,54.2740700448], 'Iran',6, 'Rial', 'IRR', '﷼'],
+            [[54.2241891077,-4.53873952326], 'Isle of Man',6, 'Pound', 'IMP', '£'],
+            [[31.4611010118,35.0044469277], 'Israel',6, 'Shekel', 'ILS', '₪'],
+            [[18.1569487765,-77.3148259327], 'Jamaica',6, 'Dollar', 'JMD', 'J$'],
+            [[37.592301353,138.030895577], 'Japan',6, 'Yen', 'JPY', '¥'],
+            [[49.2183737668,-2.12689937944], 'Jersey',6, 'Pound', 'JEP', '£'],
+            [[48.1568806661,67.2914935687], 'Kazakhstan',6, 'Tenge', 'KZT', 'лв'],
+            [[40.1535031093,127.192479732], 'Korea (North)',6, 'Won', 'KPW', '₩'],
+            [[36.3852398347,127.839160864], 'Korea (South)',6, 'Won', 'KRW', '₩'],
+            [[41.4622194346,74.5416551329], 'Kyrgyzstan',6, 'Som', 'KGS', 'лв'],
+            [[18.5021743316,103.73772412], 'Laos',6, 'Kip', 'LAK', '₭'],
+            [[33.9230663057,35.880160715], 'Lebanon',6, 'Pound', 'LBP', '£'],
+            [[6.45278491657,-9.3220757269], 'Liberia',6, 'Dollar', 'LRD', '$'],
+            [[41.5953089336,21.6821134607], 'Macedonia',6, 'Denar', 'MKD', 'ден'],
+            [[3.78986845571,109.697622843], 'Malaysia',6, 'Ringgit', 'MYR', 'RM'],
+            [[-20.2776870433,57.5712055061], 'Mauritius',6, 'Rupee', 'MUR', '₨'],
+            [[23.9475372406,-102.523451692], 'Mexico',6, 'Peso', 'MXN', '$'],
+            [[46.8268154394,103.052997649], 'Mongolia',6, 'Tughrik', 'MNT', '₮'],
+            [[-17.2738164259,35.5336754259], 'Mozambique',6, 'Metical', 'MZN', 'MT'],
+            [[-22.1303256842,17.209635667], 'Namibia',6, 'Dollar', 'NAD', '$'],
+            [[28.2489136496,83.9158264002], 'Nepal',6, 'Rupee', 'NPR', '₨'],
+            [[-41.811135569,171.484923466], 'New Zealand',6, 'Dollar', 'NZD', '$'],
+            [[12.8470942896,-85.0305296951], 'Nicaragua',6, 'Cordoba', 'NIO', 'C$'],
+            [[9.59411452233,8.08943894771], 'Nigeria',6, 'Naira', 'NGN', '₦'],
+            [[68.7501557205,15.3483465622], 'Norway',6, 'Krone', 'NOK', 'kr'],
+            [[20.6051533257,56.0916615483], 'Oman',6, 'Rial', 'OMR', '﷼'],
+            [[29.9497515031,69.3395793748], 'Pakistan',6, 'Rupee', 'PKR', '₨'],
+            [[8.51750797491,-80.1191515612], 'Panama',6, 'Balboa', 'PAB', 'B/.'],
+            [[-23.228239132,-58.400137032], 'Paraguay',6, 'Guarani', 'PYG', 'Gs'],
+            [[-9.15280381329,-74.382426851], 'Peru',6, 'Sol', 'PEN', 'S/.'],
+            [[11.7753677809,122.883932529], 'Philippines',6, 'Piso', 'PHP', '₱'],
+            [[52.1275956442,19.3901283493], 'Poland',6, 'Zloty', 'PLN', 'zł'],
+            [[25.3060118763,51.1847963212], 'Qatar',6, 'Riyal', 'QAR', '﷼'],
+            [[45.8524312742,24.9729303933], 'Romania',6, 'Leu', 'RON', 'lei'],
+            [[61.9805220919,96.6865611231], 'Russia',6, 'Ruble', 'RUB', '₽'],
+            [[-12.4035595078,-9.5477941587], 'Saint Helena',6, 'Pound', 'SHP', '£'],
+            [[24.1224584073,44.5368627114], 'Saudi Arabia',6, 'Riyal', 'SAR', '﷼'],
+            [[44.2215031993,20.7895833363], 'Serbia',6, 'Dinar', 'RSD', 'Дин.'],
+            [[-4.66099093522,55.4760327912], 'Seychelles',6, 'Rupee', 'SCR', '₨'],
+            [[1.35876087075,103.81725592], 'Singapore',6, 'Dollar', 'SGD', '$'],
+            [[-8.92178021692,159.632876678], 'Solomon Islands',6, 'Dollar', 'SBD', '$'],
+            [[4.75062876055,45.7071448699], 'Somalia',6, 'Shilling', 'SOS', 'S'],
+            [[-29.0003409534,25.0839009251], 'South Africa',5.1, 'Rand', 'ZAR', 'R'],
+            [[7.61266509224,80.7010823782], 'Sri Lanka',6, 'Rupee', 'LKR', '₨'],
+            [[62.7796651931,16.7455804869], 'Sweden',6, 'Krona', 'SEK', 'kr'],
+            [[46.7978587836,8.20867470615], 'Switzerland',6, 'Franc', 'CHF', 'CHF'],
+            [[4.1305541299,-55.9123456951], 'Suriname',6, 'Dollar', 'SRD', '$'],
+            [[35.025473894,38.5078820425], 'Syria',6, 'Pound', 'SYP', '£'],
+            [[23.753992795,120.954272814], 'Taiwan',6, 'New Dollar', 'TWD', 'NT$'],
+            [[15.1181579418,101.002881304], 'Thailand',6, 'Baht', 'THB', '฿'],
+            [[10.457334081,-61.2656792335], 'Trinidad and Tobago',6, 'Dollar', 'TTD', 'TT$'],
+            [[39.0616029013,35.1689534649], 'Turkey',6, 'Lira', 'TRY', '₺'],
+            [[48.9965667265,31.3832646865], 'Ukraine',6, 'Hryvnia', 'UAH', '₴'],
+            [[54.1238715577,-2.86563164084], 'United Kingdom',6, 'Pound', 'GBP', '£'],
+            [[45.6795472026,-112.4616737], 'United States',6, 'Dollar', 'USD', '$'],
+            [[-32.7995153444,-56.0180705315], 'Uruguay',6, 'Peso', 'UYU', '$U'],
+            [[41.7555422527,63.1400152805], 'Uzbekistan',6, 'Som', 'UZS', 'лв'],
+            [[7.12422421273,-66.1818412311], 'Venezuela',6, 'Bolívar', 'VEF', 'Bs'],
+            [[16.6460167019,106.299146978], 'Viet Nam',6, 'Dong', 'VND', '₫'],
+            [[15.9092800505,47.5867618877], 'Yemen',6, 'Rial', 'YER', '﷼'],
+            [[-19.0042041882,29.8514412019], 'Zimbabwe',6, 'Dollar', 'ZWD', 'Z$']
+        ], function (countryLocale) {
+            return underscore.object(['coordinates', 'country', 'zoom', 'currency', 'code', 'symbol'], countryLocale);
+        }));
+
+        Locale.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            }
+        });
+
+        return Locale;
+    }]);
+
+
 
 var sdkModelMapTheme = angular.module('ag.sdk.model.map-theme', ['ag.sdk.library', 'ag.sdk.model.base']);
 
@@ -22830,10 +23027,86 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
+var sdkModelFarmer = angular.module('ag.sdk.model.farmer', ['ag.sdk.model.organization']);
+
+sdkModelFarmer.factory('Farmer', ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Organization, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
+        function Farmer (attrs) {
+            Organization.apply(this, arguments);
+
+            computedProperty(this, 'isActive', function () {
+                return this.status === 'active';
+            });
+
+            Base.initializeObject(this.data, 'enterprises', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.activeFlags = attrs.activeFlags;
+            this.customerId = attrs.customerId;
+            this.customerNumber = attrs.customerNumber;
+            this.farms = attrs.farms || [];
+            this.legalEntities = attrs.legalEntities || [];
+            this.operationType = attrs.operationType;
+            this.productionRegion = attrs.productionRegion;
+            this.subscriptionPlan = attrs.subscriptionPlan;
+            this.tags = attrs.tags || [];
+        }
+
+        inheritModel(Farmer, Organization);
+
+        readOnlyProperty(Farmer, 'operationTypes', [
+            'Unknown',
+            'Commercial',
+            'Recreational',
+            'Smallholder'
+        ]);
+
+        readOnlyProperty(Farmer, 'operationTypeDescriptions', {
+            Unknown: 'No farming production information available',
+            Commercial: 'Large scale agricultural production',
+            Recreational: 'Leisure or hobby farming',
+            Smallholder: 'Small farm, limited production'
+        });
+
+        privateProperty(Farmer, 'getOperationTypeDescription', function (type) {
+            return Farmer.operationTypeDescriptions[type] || '';
+        });
+
+        Farmer.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return Farmer;
+    }]);
+
 var sdkModelMerchant = angular.module('ag.sdk.model.merchant', ['ag.sdk.model.organization']);
 
-sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (Organization, Base, computedProperty, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Organization, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
         function Merchant (attrs) {
             Organization.apply(this, arguments);
 
@@ -22883,6 +23156,13 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
         });
 
         Merchant.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
             email: {
                 required: true,
                 format: {
@@ -22925,10 +23205,10 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
 
 var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelOrganization.factory('Organization', ['computedProperty', 'Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
-    function (computedProperty, Base, inheritModel, Model, privateProperty, readOnlyProperty, topologyHelper, underscore) {
+sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (Locale, Base, inheritModel, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Organization (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             // Geom
             privateProperty(this, 'contains', function (geojson) {
@@ -22939,10 +23219,6 @@ sdkModelOrganization.factory('Organization', ['computedProperty', 'Base', 'inher
                 return centroid(this);
             });
 
-            computedProperty(this, 'countryLocale', function () {
-                return countryLocale(this);
-            });
-
             this.data = (attrs && attrs.data) || {};
             Base.initializeObject(this.data, 'attachments', []);
             Base.initializeObject(this.data, 'baseStyles', {});
@@ -22950,18 +23226,23 @@ sdkModelOrganization.factory('Organization', ['computedProperty', 'Base', 'inher
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
-            this.country = attrs.country;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
             this.email = attrs.email;
             this.hostUrl = attrs.hostUrl;
             this.name = attrs.name;
+            this.originHost = attrs.originHost;
+            this.originPort = attrs.originPort;
             this.primaryContact = attrs.primaryContact;
             this.registered = attrs.registered;
             this.status = attrs.status;
             this.teams = attrs.teams || [];
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
             this.uuid = attrs.uuid;
         }
 
-        inheritModel(Organization, Model.Base);
+        inheritModel(Organization, Locale);
 
         function getAssetsGeom (instance) {
             return underscore.chain(instance.legalEntities)
@@ -22986,15 +23267,10 @@ sdkModelOrganization.factory('Organization', ['computedProperty', 'Base', 'inher
         }
 
         function centroid (instance) {
-            var geom = getAssetsGeom(instance);
+            var geom = getAssetsGeom(instance),
+                coord = (geom ? geom.getCentroid().getCoordinate() : geom);
 
-            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
-        }
-
-        function countryLocale (instance) {
-            return underscore.findWhere(Organization.countryLocales, {
-                country: instance.country || 'South Africa'
-            });
+            return (coord ? [coord.x, coord.y] : coord);
         }
 
         privateProperty(Organization, 'contains', function (instance, geojson) {
@@ -23005,736 +23281,14 @@ sdkModelOrganization.factory('Organization', ['computedProperty', 'Base', 'inher
             return centroid(instance);
         });
 
-        privateProperty(Organization, 'countryLocale', function (instance) {
-            return countryLocale(instance);
-        });
-
-        readOnlyProperty(Organization, 'countryLocales', [
-            {
-                country: 'Albania',
-                zoom: 6,
-                center: [20.0498339611, 41.1424498947],
-                currency: 'Lek',
-                code: 'ALL',
-                sym: 'Lek'
-            }, {
-                country: 'Afghanistan',
-                zoom: 6,
-                center: [66.0047336558, 33.8352307278],
-                currency: 'Afghani',
-                code: 'AFN',
-                sym: '؋'
-            }, {
-                country: 'Argentina',
-                zoom: 6,
-                center: [-65.179806925, -35.3813487953],
-                currency: 'Peso',
-                code: 'ARS',
-                sym: '$'
-            }, {
-                country: 'Australia',
-                zoom: 6,
-                center: [134.491000082, -25.7328870417],
-                currency: 'Dollar',
-                code: 'AUD',
-                sym: '$'
-            }, {
-                country: 'Azerbaijan',
-                zoom: 6,
-                center: [47.5459987892, 40.2882723471],
-                currency: 'Manat',
-                code: 'AZN',
-                sym: '₼'
-            }, {
-                country: 'Bahamas',
-                zoom: 6,
-                center: [-76.6284303802, 24.2903670223],
-                currency: 'Dollar',
-                code: 'BSD',
-                sym: '$'
-            }, {
-                country: 'Barbados',
-                zoom: 6,
-                center: [-59.5597970021, 13.1814542822],
-                currency: 'Dollar',
-                code: 'BBD',
-                sym: '$'
-            }, {
-                country: 'Belarus',
-                zoom: 6,
-                center: [28.0320930703, 53.5313137685],
-                currency: 'Ruble',
-                code: 'BYN',
-                sym: 'Br'
-            }, {
-                country: 'Belize',
-                zoom: 6,
-                center: [-88.7101048564, 17.2002750902],
-                currency: 'Dollar',
-                code: 'BZD',
-                sym: 'BZ$'
-            }, {
-                country: 'Bermuda',
-                zoom: 6,
-                center: [-64.7545588982, 32.3136780208],
-                currency: 'Dollar',
-                code: 'BMD',
-                sym: '$'
-            }, {
-                country: 'Bolivia',
-                zoom: 6,
-                center: [-64.6853864515, -16.7081478725],
-                currency: 'Bolíviano',
-                code: 'BOB',
-                sym: '$b'
-            }, {
-                country: 'Bosnia and Herzegovina',
-                zoom: 6,
-                center: [17.7687673323, 44.1745012472],
-                currency: 'Convertible Marka',
-                code: 'BAM',
-                sym: 'KM'
-            }, {
-                country: 'Botswana',
-                zoom: 6,
-                center: [23.7985336773, -22.1840321328],
-                currency: 'Pula',
-                code: 'BWP',
-                sym: 'P'
-            }, {
-                country: 'Bulgaria',
-                zoom: 6,
-                center: [25.2155290863, 42.7689031797],
-                currency: 'Lev',
-                code: 'BGN',
-                sym: 'лв'
-            }, {
-                country: 'Brazil',
-                zoom: 6,
-                center: [-53.0978311267, -10.7877770246],
-                currency: 'Real',
-                code: 'BRL',
-                sym: 'R$'
-            }, {
-                country: 'Brunei Darussalam',
-                zoom: 6,
-                center: [114.722030354, 4.51968957503],
-                currency: 'Dollar',
-                code: 'BND',
-                sym: '$'
-            }, {
-                country: 'Cambodia',
-                zoom: 6,
-                center: [104.906943249, 12.7200478567],
-                currency: 'Riel',
-                code: 'KHR',
-                sym: '៛'
-            }, {
-                country: 'Canada',
-                zoom: 6,
-                center: [-98.3077702819, 61.3620632437],
-                currency: 'Dollar',
-                code: 'CAD',
-                sym: '$'
-            }, {
-                country: 'Cayman Islands',
-                zoom: 6,
-                center: [-80.9121332147, 19.4289649722],
-                currency: 'Dollar',
-                code: 'KYD',
-                sym: '$'
-            }, {
-                country: 'Chile',
-                zoom: 6,
-                center: [-71.3825621318, -37.730709893],
-                currency: 'Peso',
-                code: 'CLP',
-                sym: '$'
-            }, {
-                country: 'China',
-                zoom: 6,
-                center: [103.81907349, 36.5617654559],
-                currency: 'Yuan Renminbi',
-                code: 'CNY',
-                sym: '¥'
-            }, {
-                country: 'Colombia',
-                zoom: 6,
-                center: [-73.0811458241, 3.91383430725],
-                currency: 'Peso',
-                code: 'COP',
-                sym: '$'
-            }, {
-                country: 'Costa Rica',
-                zoom: 6,
-                center: [-84.1920876775, 9.9763446384],
-                currency: 'Colon',
-                code: 'CRC',
-                sym: '₡'
-            }, {
-                country: 'Croatia',
-                zoom: 6,
-                center: [16.404128994, 45.0804763057],
-                currency: 'Kuna',
-                code: 'HRK',
-                sym: 'kn'
-            }, {
-                country: 'Cuba',
-                zoom: 6,
-                center: [-79.0160538445, 21.6228952793],
-                currency: 'Peso',
-                code: 'CUP',
-                sym: '₱'
-            }, {
-                country: 'Czech Republic',
-                zoom: 6,
-                center: [15.3124016281, 49.7334123295],
-                currency: 'Koruna',
-                code: 'CZK',
-                sym: 'Kč'
-            }, {
-                country: 'Denmark',
-                zoom: 6,
-                center: [10.0280099191, 55.9812529593],
-                currency: 'Krone',
-                code: 'DKK',
-                sym: 'kr'
-            }, {
-                country: 'Dominican Republic',
-                zoom: 6,
-                center: [-70.5056889612, 18.8943308233],
-                currency: 'Peso',
-                code: 'DOP',
-                sym: 'RD$'
-            }, {
-                country: 'Egypt',
-                zoom: 6,
-                center: [29.8619009908, 26.4959331064],
-                currency: 'Pound',
-                code: 'EGP',
-                sym: '£'
-            }, {
-                country: 'El Salvador',
-                zoom: 6,
-                center: [-88.8716446906, 13.7394374383],
-                currency: 'Colon',
-                code: 'SVC',
-                sym: '$'
-            }, {
-                country: 'Falkland Islands (Malvinas)',
-                zoom: 6,
-                center: [-59.35238956, -51.7448395441],
-                currency: 'Pound',
-                code: 'FKP',
-                sym: '£'
-            }, {
-                country: 'Fiji',
-                zoom: 6,
-                center: [165.451954318, -17.4285803175],
-                currency: 'Dollar',
-                code: 'FJD',
-                sym: '$'
-            }, {
-                country: 'Ghana',
-                zoom: 6,
-                center: [-1.21676565807, 7.95345643541],
-                currency: 'Cedi',
-                code: 'GHS',
-                sym: '¢'
-            }, {
-                country: 'Guatemala',
-                zoom: 6,
-                center: [-90.3648200858, 15.694036635],
-                currency: 'Quetzal',
-                code: 'GTQ',
-                sym: 'Q'
-            }, {
-                country: 'Guernsey',
-                zoom: 6,
-                center: [-2.57239063555, 49.4680976128],
-                currency: 'Pound',
-                code: 'GGP',
-                sym: '£'
-            }, {
-                country: 'Guyana',
-                zoom: 6,
-                center: [-58.9820245893, 4.79378034012],
-                currency: 'Dollar',
-                code: 'GYD',
-                sym: '$'
-            }, {
-                country: 'Honduras',
-                zoom: 6,
-                center: [-86.6151660963, 14.8268816519],
-                currency: 'Lempira',
-                code: 'HNL',
-                sym: 'L'
-            }, {
-                country: 'Hong Kong',
-                zoom: 6,
-                center: [114.113804542, 22.3982773723],
-                currency: 'Dollar',
-                code: 'HKD',
-                sym: '$'
-            }, {
-                country: 'Hungary',
-                zoom: 6,
-                center: [19.3955911607, 47.1627750614],
-                currency: 'Forint',
-                code: 'HUF',
-                sym: 'Ft'
-            }, {
-                country: 'Iceland',
-                zoom: 6,
-                center: [-18.5739616708, 64.9957538607],
-                currency: 'Krona',
-                code: 'ISK',
-                sym: 'kr'
-            }, {
-                country: 'India',
-                zoom: 6,
-                center: [79.6119761026, 22.8857821183],
-                currency: 'Rupee',
-                code: 'INR',
-                sym: '₹'
-            }, {
-                country: 'Indonesia',
-                zoom: 6,
-                center: [117.240113662, -2.21505456346],
-                currency: 'Rupiah',
-                code: 'IDR',
-                sym: 'Rp'
-            }, {
-                country: 'Iran',
-                zoom: 6,
-                center: [54.2740700448, 32.575032915],
-                currency: 'Rial',
-                code: 'IRR',
-                sym: '﷼'
-            }, {
-                country: 'Isle of Man',
-                zoom: 6,
-                center: [-4.53873952326, 54.2241891077],
-                currency: 'Pound',
-                code: 'IMP',
-                sym: '£'
-            }, {
-                country: 'Israel',
-                zoom: 6,
-                center: [35.0044469277, 31.4611010118],
-                currency: 'Shekel',
-                code: 'ILS',
-                sym: '₪'
-            }, {
-                country: 'Jamaica',
-                zoom: 6,
-                center: [-77.3148259327, 18.1569487765],
-                currency: 'Dollar',
-                code: 'JMD',
-                sym: 'J$'
-            }, {
-                country: 'Japan',
-                zoom: 6,
-                center: [138.030895577, 37.592301353],
-                currency: 'Yen',
-                code: 'JPY',
-                sym: '¥'
-            }, {
-                country: 'Jersey',
-                zoom: 6,
-                center: [-2.12689937944, 49.2183737668],
-                currency: 'Pound',
-                code: 'JEP',
-                sym: '£'
-            }, {
-                country: 'Kazakhstan',
-                zoom: 6,
-                center: [67.2914935687, 48.1568806661],
-                currency: 'Tenge',
-                code: 'KZT',
-                sym: 'лв'
-            }, {
-                country: 'Korea (North)',
-                zoom: 6,
-                center: [127.192479732, 40.1535031093],
-                currency: 'Won',
-                code: 'KPW',
-                sym: '₩'
-            }, {
-                country: 'Korea (South)',
-                zoom: 6,
-                center: [127.839160864, 36.3852398347],
-                currency: 'Won',
-                code: 'KRW',
-                sym: '₩'
-            }, {
-                country: 'Kyrgyzstan',
-                zoom: 6,
-                center: [74.5416551329, 41.4622194346],
-                currency: 'Som',
-                code: 'KGS',
-                sym: 'лв'
-            }, {
-                country: 'Laos',
-                zoom: 6,
-                center: [103.73772412, 18.5021743316],
-                currency: 'Kip',
-                code: 'LAK',
-                sym: '₭'
-            }, {
-                country: 'Lebanon',
-                zoom: 6,
-                center: [35.880160715, 33.9230663057],
-                currency: 'Pound',
-                code: 'LBP',
-                sym: '£'
-            }, {
-                country: 'Liberia',
-                zoom: 6,
-                center: [-9.3220757269, 6.45278491657],
-                currency: 'Dollar',
-                code: 'LRD',
-                sym: '$'
-            }, {
-                country: 'Macedonia',
-                zoom: 6,
-                center: [21.6821134607, 41.5953089336],
-                currency: 'Denar',
-                code: 'MKD',
-                sym: 'ден'
-            }, {
-                country: 'Malaysia',
-                zoom: 6,
-                center: [109.697622843, 3.78986845571],
-                currency: 'Ringgit',
-                code: 'MYR',
-                sym: 'RM'
-            }, {
-                country: 'Mauritius',
-                zoom: 6,
-                center: [57.5712055061, -20.2776870433],
-                currency: 'Rupee',
-                code: 'MUR',
-                sym: '₨'
-            }, {
-                country: 'Mexico',
-                zoom: 6,
-                center: [-102.523451692, 23.9475372406],
-                currency: 'Peso',
-                code: 'MXN',
-                sym: '$'
-            }, {
-                country: 'Mongolia',
-                zoom: 6,
-                center: [103.052997649, 46.8268154394],
-                currency: 'Tughrik',
-                code: 'MNT',
-                sym: '₮'
-            }, {
-                country: 'Mozambique',
-                zoom: 6,
-                center: [35.5336754259, -17.2738164259],
-                currency: 'Metical',
-                code: 'MZN',
-                sym: 'MT'
-            }, {
-                country: 'Namibia',
-                zoom: 6,
-                center: [17.209635667, -22.1303256842],
-                currency: 'Dollar',
-                code: 'NAD',
-                sym: '$'
-            }, {
-                country: 'Nepal',
-                zoom: 6,
-                center: [83.9158264002, 28.2489136496],
-                currency: 'Rupee',
-                code: 'NPR',
-                sym: '₨'
-            }, {
-                country: 'New Zealand',
-                zoom: 6,
-                center: [171.484923466, -41.811135569],
-                currency: 'Dollar',
-                code: 'NZD',
-                sym: '$'
-            }, {
-                country: 'Nicaragua',
-                zoom: 6,
-                center: [-85.0305296951, 12.8470942896],
-                currency: 'Cordoba',
-                code: 'NIO',
-                sym: 'C$'
-            }, {
-                country: 'Nigeria',
-                zoom: 6,
-                center: [8.08943894771, 9.59411452233],
-                currency: 'Naira',
-                code: 'NGN',
-                sym: '₦'
-            }, {
-                country: 'Norway',
-                zoom: 6,
-                center: [15.3483465622, 68.7501557205],
-                currency: 'Krone',
-                code: 'NOK',
-                sym: 'kr'
-            }, {
-                country: 'Oman',
-                zoom: 6,
-                center: [56.0916615483, 20.6051533257],
-                currency: 'Rial',
-                code: 'OMR',
-                sym: '﷼'
-            }, {
-                country: 'Pakistan',
-                zoom: 6,
-                center: [69.3395793748, 29.9497515031],
-                currency: 'Rupee',
-                code: 'PKR',
-                sym: '₨'
-            }, {
-                country: 'Panama',
-                zoom: 6,
-                center: [-80.1191515612, 8.51750797491],
-                currency: 'Balboa',
-                code: 'PAB',
-                sym: 'B/.'
-            }, {
-                country: 'Paraguay',
-                zoom: 6,
-                center: [-58.400137032, -23.228239132],
-                currency: 'Guarani',
-                code: 'PYG',
-                sym: 'Gs'
-            }, {
-                country: 'Peru',
-                zoom: 6,
-                center: [-74.382426851, -9.15280381329],
-                currency: 'Sol',
-                code: 'PEN',
-                sym: 'S/.'
-            }, {
-                country: 'Philippines',
-                zoom: 6,
-                center: [122.883932529, 11.7753677809],
-                currency: 'Piso',
-                code: 'PHP',
-                sym: '₱'
-            }, {
-                country: 'Poland',
-                zoom: 6,
-                center: [19.3901283493, 52.1275956442],
-                currency: 'Zloty',
-                code: 'PLN',
-                sym: 'zł'
-            }, {
-                country: 'Qatar',
-                zoom: 6,
-                center: [51.1847963212, 25.3060118763],
-                currency: 'Riyal',
-                code: 'QAR',
-                sym: '﷼'
-            }, {
-                country: 'Romania',
-                zoom: 6,
-                center: [24.9729303933, 45.8524312742],
-                currency: 'Leu',
-                code: 'RON',
-                sym: 'lei'
-            }, {
-                country: 'Russia',
-                zoom: 6,
-                center: [96.6865611231, 61.9805220919],
-                currency: 'Ruble',
-                code: 'RUB',
-                sym: '₽'
-            }, {
-                country: 'Saint Helena',
-                zoom: 6,
-                center: [-9.5477941587, -12.4035595078],
-                currency: 'Pound',
-                code: 'SHP',
-                sym: '£'
-            }, {
-                country: 'Saudi Arabia',
-                zoom: 6,
-                center: [44.5368627114, 24.1224584073],
-                currency: 'Riyal',
-                code: 'SAR',
-                sym: '﷼'
-            }, {
-                country: 'Serbia',
-                zoom: 6,
-                center: [20.7895833363, 44.2215031993],
-                currency: 'Dinar',
-                code: 'RSD',
-                sym: 'Дин.'
-            }, {
-                country: 'Seychelles',
-                zoom: 6,
-                center: [55.4760327912, -4.66099093522],
-                currency: 'Rupee',
-                code: 'SCR',
-                sym: '₨'
-            }, {
-                country: 'Singapore',
-                zoom: 6,
-                center: [103.81725592, 1.35876087075],
-                currency: 'Dollar',
-                code: 'SGD',
-                sym: '$'
-            }, {
-                country: 'Solomon Islands',
-                zoom: 6,
-                center: [159.632876678, -8.92178021692],
-                currency: 'Dollar',
-                code: 'SBD',
-                sym: '$'
-            }, {
-                country: 'Somalia',
-                zoom: 6,
-                center: [45.7071448699, 4.75062876055],
-                currency: 'Shilling',
-                code: 'SOS',
-                sym: 'S'
-            }, {
-                country: 'South Africa',
-                zoom: 5.1,
-                center: [25.0839009251, -29.0003409534],
-                currency: 'Rand',
-                code: 'ZAR',
-                sym: 'R'
-            }, {
-                country: 'Sri Lanka',
-                zoom: 6,
-                center: [80.7010823782, 7.61266509224],
-                currency: 'Rupee',
-                code: 'LKR',
-                sym: '₨'
-            }, {
-                country: 'Sweden',
-                zoom: 6,
-                center: [16.7455804869, 62.7796651931],
-                currency: 'Krona',
-                code: 'SEK',
-                sym: 'kr'
-            }, {
-                country: 'Switzerland',
-                zoom: 6,
-                center: [8.20867470615, 46.7978587836],
-                currency: 'Franc',
-                code: 'CHF',
-                sym: 'CHF'
-            }, {
-                country: 'Suriname',
-                zoom: 6,
-                center: [-55.9123456951, 4.1305541299],
-                currency: 'Dollar',
-                code: 'SRD',
-                sym: '$'
-            }, {
-                country: 'Syria',
-                zoom: 6,
-                center: [38.5078820425, 35.025473894],
-                currency: 'Pound',
-                code: 'SYP',
-                sym: '£'
-            }, {
-                country: 'Taiwan',
-                zoom: 6,
-                center: [120.954272814, 23.753992795],
-                currency: 'New Dollar',
-                code: 'TWD',
-                sym: 'NT$'
-            }, {
-                country: 'Thailand',
-                zoom: 6,
-                center: [101.002881304, 15.1181579418],
-                currency: 'Baht',
-                code: 'THB',
-                sym: '฿'
-            }, {
-                country: 'Trinidad and Tobago',
-                zoom: 6,
-                center: [-61.2656792335, 10.457334081],
-                currency: 'Dollar',
-                code: 'TTD',
-                sym: 'TT$'
-            }, {
-                country: 'Turkey',
-                zoom: 6,
-                center: [35.1689534649, 39.0616029013],
-                currency: 'Lira',
-                code: 'TRY',
-                sym: '₺'
-            }, {
-                country: 'Ukraine',
-                zoom: 6,
-                center: [31.3832646865, 48.9965667265],
-                currency: 'Hryvnia',
-                code: 'UAH',
-                sym: '₴'
-            }, {
-                country: 'United Kingdom',
-                zoom: 6,
-                center: [-2.86563164084, 54.1238715577],
-                currency: 'Pound',
-                code: 'GBP',
-                sym: '£'
-            }, {
-                country: 'United States',
-                zoom: 6,
-                center: [-112.4616737, 45.6795472026],
-                currency: 'Dollar',
-                code: 'USD',
-                sym: '$'
-            }, {
-                country: 'Uruguay',
-                zoom: 6,
-                center: [-56.0180705315, -32.7995153444],
-                currency: 'Peso',
-                code: 'UYU',
-                sym: '$U'
-            }, {
-                country: 'Uzbekistan',
-                zoom: 6,
-                center: [63.1400152805, 41.7555422527],
-                currency: 'Som',
-                code: 'UZS',
-                sym: 'лв'
-            }, {
-                country: 'Venezuela',
-                zoom: 6,
-                center: [-66.1818412311, 7.12422421273],
-                currency: 'Bolívar',
-                code: 'VEF',
-                sym: 'Bs'
-            }, {
-                country: 'Viet Nam',
-                zoom: 6,
-                center: [106.299146978, 16.6460167019],
-                currency: 'Dong',
-                code: 'VND',
-                sym: '₫'
-            }, {
-                country: 'Yemen',
-                zoom: 6,
-                center: [47.5867618877, 15.9092800505],
-                currency: 'Rial',
-                code: 'YER',
-                sym: '﷼'
-            }, {
-                country: 'Zimbabwe',
-                zoom: 6,
-                center: [29.8514412019, -19.0042041882],
-                currency: 'Dollar',
-                code: 'ZWD',
-                sym: 'Z$'
-            }
-        ]);
-
         Organization.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
             email: {
                 required: true,
                 format: {
@@ -24565,12 +24119,14 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
+    'ag.sdk.model.farmer',
     'ag.sdk.model.field',
     'ag.sdk.model.financial',
     'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.livestock',
+    'ag.sdk.model.locale',
     'ag.sdk.model.map-theme',
     'ag.sdk.model.merchant',
     'ag.sdk.model.organization',

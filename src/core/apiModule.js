@@ -643,6 +643,15 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
 sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration, underscore) {
     var _host = configuration.getServer();
 
+    function uriEncodeQuery (query, defaults) {
+        return underscore.chain(query)
+            .defaults(defaults || {})
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+
     return {
         getEnterpriseBudgets: function (id, page) {
             if (typeof id === 'object') {
@@ -653,14 +662,9 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
             return pagingService.page(_host + 'api/budgets' + (id ? '?sublayer=' + id : ''), page);
         },
         getAveragedBudgets: function(query) {
-            query = underscore.chain(query)
-                .defaults({
-                    resulttype: 'simple'
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
+            query = uriEncodeQuery(query, {
+                resulttype: 'simple'
+            });
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/budgets/averaged' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -687,16 +691,20 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
                 }, promise.reject);
             });
         },
-        getEnterpriseBudgetPublishers: function () {
+        getEnterpriseBudgetPublishers: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budget/publishers', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budget/publishers' + (query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getEnterpriseBudgetRegions: function () {
+        getEnterpriseBudgetRegions: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budget/regions', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budget/regions' + (query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

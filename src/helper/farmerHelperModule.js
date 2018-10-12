@@ -42,23 +42,9 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
         }
     };
 
-    var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
-    var _businessEntityDescriptions = {
-        Commercial: 'Large scale agricultural production',
-        Recreational: 'Leisure or hobby farming',
-        Smallholder: 'Small farm, limited production'
-    };
-
     return {
         listServiceMap: function() {
             return _listServiceMap;
-        },
-        businessEntityTypes: function() {
-            return _businessEntityTypes;
-        },
-
-        getBusinessEntityDescription: function (businessEntity) {
-            return _businessEntityDescriptions[businessEntity] || '';
         },
         getFarmerLocation: function(farmer) {
             if (farmer) {
@@ -80,9 +66,6 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             }
 
             return null;
-        },
-        isFarmerActive: function(farmer) {
-            return (farmer && farmer.status == 'active');
         }
     }
 }]);

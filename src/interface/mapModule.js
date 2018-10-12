@@ -310,8 +310,49 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
 /**
  * Maps
  */
-sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore) {
-    var _defaultConfig = {
+sdkInterfaceMapApp.provider('mapboxServiceCache', [function () {
+    var _store = {
+        config: {},
+        instances: {}
+    };
+
+    function getConfig () {
+        return _store.config;
+    }
+
+    function setConfig (config) {
+        _store.config = config;
+    }
+
+    function getInstance (id) {
+        return _store.instances[id];
+    }
+
+    function setInstance (id, instance) {
+        _store.instances[id] = instance;
+    }
+
+    function resetInstances () {
+        _store.instances = {};
+    }
+
+    this.getConfig = getConfig;
+    this.setConfig = setConfig;
+
+    this.$get = [function() {
+        return {
+            getConfig: getConfig,
+            setConfig: setConfig,
+
+            getInstance: getInstance,
+            setInstance: setInstance,
+            resetInstances: resetInstances
+        }
+    }];
+}]);
+
+sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'underscore', function (mapboxServiceCacheProvider, underscore) {
+    mapboxServiceCacheProvider.setConfig({
         init: {
             delay: 200
         },
@@ -350,22 +391,20 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         controls: {},
         events: {},
         view: {
-            coordinates: [-28.691, 24.714],
-            zoom: 6
+            coordinates: [-29.0003409534,25.0839009251],
+            zoom: 5.1
         },
         bounds: {},
         leafletLayers: {},
         layers: {},
         geojson: {}
-    };
-
-    var _instances = {};
+    });
     
     this.config = function (options) {
-        _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
+        mapboxServiceCacheProvider.setConfig(underscore.defaults(options || {}, mapboxServiceCacheProvider.getConfig()));
     };
 
-    this.$get = ['$rootScope', '$timeout', 'objectId', 'safeApply', function ($rootScope, $timeout, objectId, safeApply) {
+    this.$get = ['$rootScope', '$timeout', 'mapboxServiceCache', 'objectId', 'safeApply', function ($rootScope, $timeout, mapboxServiceCache, objectId, safeApply) {
         /**
         * @name MapboxServiceInstance
         * @param id
@@ -379,7 +418,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             _this._options = options;
             _this._show = _this._options.show || false;
 
-            _this._config = angular.copy(_defaultConfig);
+            _this._config = angular.copy(mapboxServiceCache.getConfig());
             _this._requestQueue = [];
 
             $rootScope.$on('mapbox-' + _this._id + '::init', function () {
@@ -393,7 +432,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 _this._ready = false;
 
                 if (_this._options.persist !== true) {
-                    _this._config = angular.copy(_defaultConfig);
+                    _this._config = angular.copy(mapboxServiceCache.getConfig());
                 }
             });
         }
@@ -410,7 +449,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
              * Reset
              */
             reset: function () {
-                this._config = angular.copy(_defaultConfig);
+                this._config = angular.copy(mapboxServiceCache.getConfig());
 
                 $rootScope.$broadcast('mapbox-' + this._id + '::reset');
             },
@@ -985,15 +1024,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         return function (id, options) {
             options = options || {};
 
-            if (_instances[id] === undefined) {
-                _instances[id] = new MapboxServiceInstance(id, options);
+            var instance = mapboxServiceCache.getInstance(id);
+
+            if (instance === undefined) {
+                instance = new MapboxServiceInstance(id, options);
+                mapboxServiceCache.setInstance(id, instance);
             }
 
             if (options.clean === true) {
-                _instances[id].reset();
+                instance.reset();
             }
 
-            return _instances[id];
+            return instance;
         };
     }];
 }]);

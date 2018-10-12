@@ -1,7 +1,7 @@
 var sdkModelMerchant = angular.module('ag.sdk.model.merchant', ['ag.sdk.model.organization']);
 
-sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (Organization, Base, computedProperty, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Organization, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
         function Merchant (attrs) {
             Organization.apply(this, arguments);
 
@@ -55,7 +55,7 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
                 required: true,
                 length: {
                     min: 1,
-                    max: 255
+                    max: 64
                 }
             },
             email: {
