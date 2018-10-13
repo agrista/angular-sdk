@@ -14078,7 +14078,7 @@ sdkModelLocale.factory('Locale', ['computedProperty', 'Base', 'inheritModel', 'M
 
         function countryLocale (instance) {
             return underscore.findWhere(Locale.countryLocales, {
-                country: instance.country || 'South Africa'
+                country: (instance && instance.country || 'South Africa')
             });
         }
 
