@@ -18,6 +18,13 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
                 }, promise.reject);
             });
         },
+        authorize: function (provider, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'auth/' + provider, data, {skipAuthorization: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         refresh: function (refreshToken) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'auth/refresh-token', {refresh_token: refreshToken}, {skipAuthorization: true}).then(function (res) {
@@ -278,11 +285,23 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     currentUser: function () {
                         return _user;
                     },
-                    setAuthentication: function (auth) {
-                        _authenticationPromise = promiseService.wrap(function (promise) {
-                            return _postAuthenticateSuccess({data: auth})
-                                .then(_postGetUserSuccess(promise), _postError(promise));
-                        });
+                    setAuthentication: function (authentication) {
+                        _authenticationPromise = promiseService
+                            .wrap(function (promise) {
+                                if (underscore.has(authentication, 'code')) {
+                                    _preAuthenticate(authentication)
+                                        .then(function () {
+                                            return authorizationApi.authorize(authentication.provider, authentication)
+                                        }, promiseService.throwError)
+                                        .then(function (response) {
+                                            return _postAuthenticateSuccess({data: response});
+                                        }, promiseService.throwError)
+                                        .then(_postGetUserSuccess(promise), _postError(promise));
+                                } else {
+                                    _postAuthenticateSuccess({data: authentication})
+                                        .then(_postGetUserSuccess(promise), _postError(promise));
+                                }
+                            });
 
                         return _authenticationPromise;
                     },

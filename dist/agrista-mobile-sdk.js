@@ -4,7 +4,7 @@ var sdkApiGeoApp = angular.module('ag.sdk.api.geo', ['ag.sdk.config', 'ag.sdk.ut
 /**
  * PIP Geo API
  */
-sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', function ($http, configuration, pagingService, promiseService, underscore) {
+sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, configuration, pagingService, promiseService, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
 
     function trimQuery (query) {
@@ -13,19 +13,13 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
         });
     }
 
-    function uriEncodeQuery (query) {
-        return underscore.map(trimQuery(query), function (value, key) {
-            return key + '=' + encodeURIComponent(value);
-        });
-    }
-
-    function uriEncodeQueryJoin (query) {
-        return uriEncodeQuery(query).join('&');
+    function uriEncodeTrimmedQuery (query) {
+        return uriEncodeQuery(trimQuery(query));
     }
 
     return {
         getAdminRegion: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -37,7 +31,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
         },
         getDistrict: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -46,7 +40,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getFarm: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -58,7 +52,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/farms', trimQuery(params));
         },
         getField: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -67,7 +61,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getPortion: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -79,7 +73,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/portions', trimQuery(params));
         },
         getProvince: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -88,7 +82,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getSublayer: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -115,6 +109,13 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
         confirmReset: function (data) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'auth/confirm-reset', data).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        authorize: function (provider, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'auth/' + provider, data, {skipAuthorization: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -379,11 +380,23 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     currentUser: function () {
                         return _user;
                     },
-                    setAuthentication: function (auth) {
-                        _authenticationPromise = promiseService.wrap(function (promise) {
-                            return _postAuthenticateSuccess({data: auth})
-                                .then(_postGetUserSuccess(promise), _postError(promise));
-                        });
+                    setAuthentication: function (authentication) {
+                        _authenticationPromise = promiseService
+                            .wrap(function (promise) {
+                                if (underscore.has(authentication, 'code')) {
+                                    _preAuthenticate(authentication)
+                                        .then(function () {
+                                            return authorizationApi.authorize(authentication.provider, authentication)
+                                        }, promiseService.throwError)
+                                        .then(function (response) {
+                                            return _postAuthenticateSuccess({data: response});
+                                        }, promiseService.throwError)
+                                        .then(_postGetUserSuccess(promise), _postError(promise));
+                                } else {
+                                    _postAuthenticateSuccess({data: authentication})
+                                        .then(_postGetUserSuccess(promise), _postError(promise));
+                                }
+                            });
 
                         return _authenticationPromise;
                     },
@@ -1608,6 +1621,16 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
     };
 }]);
 
+sdkUtilitiesApp.factory('uriEncodeQuery', ['underscore', function (underscore) {
+    return function (query, defaults) {
+        return underscore.chain(query || {})
+            .defaults(defaults || {})
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+}]);
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {

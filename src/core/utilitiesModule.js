@@ -460,3 +460,14 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         }
     };
 }]);
+
+sdkUtilitiesApp.factory('uriEncodeQuery', ['underscore', function (underscore) {
+    return function (query, defaults) {
+        return underscore.chain(query || {})
+            .defaults(defaults || {})
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+}]);

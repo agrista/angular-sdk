@@ -397,19 +397,8 @@ sdkApiApp.factory('benefitApi', ['$http', 'asJson', 'pagingService', 'promiseSer
 /**
  * Comparable API
  */
-sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', 'underscore', 'uriEncodeQuery', function ($http, asJson, pagingService, promiseService, configuration, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
-
-    function uriEncodeQuery (query) {
-        return underscore.chain(query)
-            .defaults({
-                resulttype: 'simple'
-            })
-            .map(function (value, key) {
-                return key + '=' + encodeURIComponent(value);
-            })
-            .value().join('&');
-    }
 
     return {
         createComparable: function (data) {
@@ -422,7 +411,9 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
             });
         },
         aggregateComparables: function (query) {
-            query = uriEncodeQuery(query);
+            query = uriEncodeQuery(query, {
+                resulttype: 'simple'
+            });
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -431,7 +422,9 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
             });
         },
         searchComparables: function (query) {
-            query = uriEncodeQuery(query);
+            query = uriEncodeQuery(query, {
+                resulttype: 'simple'
+            });
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -484,14 +477,8 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
 /**
  * Data API
  */
-sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', function ($http, asJson, configuration, promiseService, underscore) {
+sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, asJson, configuration, promiseService, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
-
-    function uriEncodeQuery (query) {
-        return underscore.map(query || {}, function (value, key) {
-            return key + '=' + encodeURIComponent(value);
-        }).join('&');
-    }
 
     return {
         aggregateAll: function (params) {
@@ -640,17 +627,8 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
 /**
  * Enterprise Budget API
  */
-sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', 'uriEncodeQuery', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
-
-    function uriEncodeQuery (query, defaults) {
-        return underscore.chain(query)
-            .defaults(defaults || {})
-            .map(function (value, key) {
-                return key + '=' + encodeURIComponent(value);
-            })
-            .value().join('&');
-    }
 
     return {
         getEnterpriseBudgets: function (id, page) {
