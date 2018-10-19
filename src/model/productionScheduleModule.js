@@ -644,10 +644,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                         stockingDensity: 0,
                         multiplicationFactor: 0
                     });
-                } else if (this.type === 'horticulture') {
-                    this.data.details = underscore.extend(this.data.details, {
-                        maturityFactor: this.budget.data.details.maturityFactor
-                    });
+                } else {
+                    this.data.details = underscore.extend(this.data.details, underscore.pick(this.budget.data.details, (this.type === 'horticulture' ?
+                        ['maturityFactor', 'cultivar'] :
+                        ['cultivar'])));
                 }
 
                 if (this.data.details.pastureType && this.budget.data.details.stockingDensity) {
@@ -1247,9 +1247,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             'Water (Seasonal)',
             'Wetland']));
 
-        readOnlyProperty(ProductionSchedule, 'allowedAssets', ['cropland', 'pasture', 'permanent crop']);
+        readOnlyProperty(ProductionSchedule, 'allowedAssets', ['crop', 'cropland', 'pasture', 'permanent crop']);
 
         readOnlyProperty(ProductionSchedule, 'typeByAsset', {
+            'crop': 'crop',
             'cropland': 'crop',
             'pasture': 'livestock',
             'permanent crop': 'horticulture'
