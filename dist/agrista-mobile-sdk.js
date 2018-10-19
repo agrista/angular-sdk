@@ -20765,7 +20765,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
                 switch (instance.type) {
                     case 'crop':
-                        map.subtitle = (instance.data.season ? instance.data.season : '');
+                        map.subtitle = (instance.data.plantedDate ? 'Planted: ' + moment(instance.data.plantedDate).format('YYYY-MM-DD') : '');
                         map.size = instance.data.size;
                         break;
                     case 'cropland':
@@ -20781,7 +20781,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                         break;
                     case 'permanent crop':
                     case 'plantation':
-                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('DD-MM-YYYY') : '');
+                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('YYYY-MM-DD') : '');
                         map.size = instance.data.size;
                         break;
                     case 'improvement':
