@@ -1,9 +1,9 @@
 var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', 'privateProperty', 'topologyHelper', 'underscore',
-    function (Base, inheritModel, Model, privateProperty, topologyHelper, underscore) {
+sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (Locale, Base, inheritModel, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Organization (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             // Geom
             privateProperty(this, 'contains', function (geojson) {
@@ -21,16 +21,23 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
             this.email = attrs.email;
             this.hostUrl = attrs.hostUrl;
             this.name = attrs.name;
+            this.originHost = attrs.originHost;
+            this.originPort = attrs.originPort;
+            this.primaryContact = attrs.primaryContact;
             this.registered = attrs.registered;
-            this.services = attrs.services;
             this.status = attrs.status;
+            this.teams = attrs.teams || [];
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
             this.uuid = attrs.uuid;
         }
 
-        inheritModel(Organization, Model.Base);
+        inheritModel(Organization, Locale);
 
         function getAssetsGeom (instance) {
             return underscore.chain(instance.legalEntities)
@@ -55,9 +62,10 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
         }
 
         function centroid (instance) {
-            var geom = getAssetsGeom(instance);
+            var geom = getAssetsGeom(instance),
+                coord = (geom ? geom.getCentroid().getCoordinate() : geom);
 
-            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
+            return (coord ? [coord.x, coord.y] : coord);
         }
 
         privateProperty(Organization, 'contains', function (instance, geojson) {
@@ -69,6 +77,13 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
         });
 
         Organization.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
             email: {
                 required: true,
                 format: {
@@ -85,6 +100,12 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
             organizationId: {
                 required: true,
                 numeric: true
+            },
+            teams: {
+                required: true,
+                length: {
+                    min: 1
+                }
             }
         });
 

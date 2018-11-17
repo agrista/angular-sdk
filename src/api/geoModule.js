@@ -4,7 +4,7 @@ var sdkApiGeoApp = angular.module('ag.sdk.api.geo', ['ag.sdk.config', 'ag.sdk.ut
 /**
  * PIP Geo API
  */
-sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', function ($http, configuration, pagingService, promiseService, underscore) {
+sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, configuration, pagingService, promiseService, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
 
     function trimQuery (query) {
@@ -13,19 +13,13 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
         });
     }
 
-    function uriEncodeQuery (query) {
-        return underscore.map(trimQuery(query), function (value, key) {
-            return key + '=' + encodeURIComponent(value);
-        });
-    }
-
-    function uriEncodeQueryJoin (query) {
-        return uriEncodeQuery(query).join('&');
+    function uriEncodeTrimmedQuery (query) {
+        return uriEncodeQuery(trimQuery(query));
     }
 
     return {
         getAdminRegion: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -37,7 +31,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
         },
         getDistrict: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -46,7 +40,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getFarm: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -58,7 +52,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/farms', trimQuery(params));
         },
         getField: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -67,7 +61,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getPortion: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -79,7 +73,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/portions', trimQuery(params));
         },
         getProvince: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -88,7 +82,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getSublayer: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {

@@ -397,19 +397,8 @@ sdkApiApp.factory('benefitApi', ['$http', 'asJson', 'pagingService', 'promiseSer
 /**
  * Comparable API
  */
-sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', 'underscore', 'uriEncodeQuery', function ($http, asJson, pagingService, promiseService, configuration, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
-
-    function uriEncodeQuery (query) {
-        return underscore.chain(query)
-            .defaults({
-                resulttype: 'simple'
-            })
-            .map(function (value, key) {
-                return key + '=' + encodeURIComponent(value);
-            })
-            .value().join('&');
-    }
 
     return {
         createComparable: function (data) {
@@ -422,7 +411,9 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
             });
         },
         aggregateComparables: function (query) {
-            query = uriEncodeQuery(query);
+            query = uriEncodeQuery(query, {
+                resulttype: 'simple'
+            });
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -431,7 +422,9 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
             });
         },
         searchComparables: function (query) {
-            query = uriEncodeQuery(query);
+            query = uriEncodeQuery(query, {
+                resulttype: 'simple'
+            });
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -484,14 +477,8 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
 /**
  * Data API
  */
-sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', function ($http, asJson, configuration, promiseService, underscore) {
+sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, asJson, configuration, promiseService, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
-
-    function uriEncodeQuery (query) {
-        return underscore.map(query || {}, function (value, key) {
-            return key + '=' + encodeURIComponent(value);
-        }).join('&');
-    }
 
     return {
         aggregateAll: function (params) {
@@ -640,7 +627,7 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
 /**
  * Enterprise Budget API
  */
-sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', 'uriEncodeQuery', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
 
     return {
@@ -653,14 +640,9 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
             return pagingService.page(_host + 'api/budgets' + (id ? '?sublayer=' + id : ''), page);
         },
         getAveragedBudgets: function(query) {
-            query = underscore.chain(query)
-                .defaults({
-                    resulttype: 'simple'
-                })
-                .map(function (value, key) {
-                    return key + '=' + encodeURIComponent(value);
-                })
-                .value().join('&');
+            query = uriEncodeQuery(query, {
+                resulttype: 'simple'
+            });
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/budgets/averaged' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -687,16 +669,20 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
                 }, promise.reject);
             });
         },
-        getEnterpriseBudgetPublishers: function () {
+        getEnterpriseBudgetPublishers: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budget/publishers', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budget/publishers' + (query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getEnterpriseBudgetRegions: function () {
+        getEnterpriseBudgetRegions: function (query) {
+            query = uriEncodeQuery(query);
+
             return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/budget/regions', {withCredentials: true}).then(function (res) {
+                $http.get(_host + 'api/budget/regions' + (query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1580,13 +1566,6 @@ sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'co
     return {
         getServices: function (params) {
             return pagingService.page(_host + 'api/services', params);
-        },
-        getServiceTypes: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/service/types', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
         },
         getService: function (id) {
             return promiseService.wrap(function (promise) {
