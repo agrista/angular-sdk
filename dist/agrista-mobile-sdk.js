@@ -4,7 +4,7 @@ var sdkApiGeoApp = angular.module('ag.sdk.api.geo', ['ag.sdk.config', 'ag.sdk.ut
 /**
  * PIP Geo API
  */
-sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', function ($http, configuration, pagingService, promiseService, underscore) {
+sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, configuration, pagingService, promiseService, underscore, uriEncodeQuery) {
     var _host = configuration.getServer();
 
     function trimQuery (query) {
@@ -13,19 +13,13 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
         });
     }
 
-    function uriEncodeQuery (query) {
-        return underscore.map(trimQuery(query), function (value, key) {
-            return key + '=' + encodeURIComponent(value);
-        });
-    }
-
-    function uriEncodeQueryJoin (query) {
-        return uriEncodeQuery(query).join('&');
+    function uriEncodeTrimmedQuery (query) {
+        return uriEncodeQuery(trimQuery(query));
     }
 
     return {
         getAdminRegion: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -37,7 +31,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
         },
         getDistrict: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -46,7 +40,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getFarm: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -58,7 +52,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/farms', trimQuery(params));
         },
         getField: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -67,7 +61,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getPortion: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -79,7 +73,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             return pagingService.page(_host + 'api/geo/portions', trimQuery(params));
         },
         getProvince: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function (promise) {
                 $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -88,7 +82,7 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
             });
         },
         getSublayer: function (query) {
-            query = uriEncodeQueryJoin(query);
+            query = uriEncodeTrimmedQuery(query);
 
             return promiseService.wrap(function(promise) {
                 $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
@@ -115,6 +109,13 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
         confirmReset: function (data) {
             return promiseService.wrap(function(promise) {
                 $http.post(_host + 'auth/confirm-reset', data).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        authorize: function (provider, data) {
+            return promiseService.wrap(function(promise) {
+                $http.post(_host + 'auth/' + provider, data, {skipAuthorization: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -379,11 +380,23 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     currentUser: function () {
                         return _user;
                     },
-                    setAuthentication: function (auth) {
-                        _authenticationPromise = promiseService.wrap(function (promise) {
-                            return _postAuthenticateSuccess({data: auth})
-                                .then(_postGetUserSuccess(promise), _postError(promise));
-                        });
+                    setAuthentication: function (authentication) {
+                        _authenticationPromise = promiseService
+                            .wrap(function (promise) {
+                                if (underscore.has(authentication, 'code')) {
+                                    _preAuthenticate(authentication)
+                                        .then(function () {
+                                            return authorizationApi.authorize(authentication.provider, authentication)
+                                        }, promiseService.throwError)
+                                        .then(function (response) {
+                                            return _postAuthenticateSuccess({data: response});
+                                        }, promiseService.throwError)
+                                        .then(_postGetUserSuccess(promise), _postError(promise));
+                                } else {
+                                    _postAuthenticateSuccess({data: authentication})
+                                        .then(_postGetUserSuccess(promise), _postError(promise));
+                                }
+                            });
 
                         return _authenticationPromise;
                     },
@@ -1608,6 +1621,16 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
     };
 }]);
 
+sdkUtilitiesApp.factory('uriEncodeQuery', ['underscore', function (underscore) {
+    return function (query, defaults) {
+        return underscore.chain(query || {})
+            .defaults(defaults || {})
+            .map(function (value, key) {
+                return key + '=' + encodeURIComponent(value);
+            })
+            .value().join('&');
+    }
+}]);
 var sdkHelperAssetApp = angular.module('ag.sdk.helper.asset', ['ag.sdk.helper.farmer', 'ag.sdk.helper.attachment', 'ag.sdk.library']);
 
 sdkHelperAssetApp.factory('assetHelper', ['$filter', 'attachmentHelper', 'landUseHelper', 'underscore', function($filter, attachmentHelper, landUseHelper, underscore) {
@@ -5488,23 +5511,9 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
         }
     };
 
-    var _businessEntityTypes = ['Commercial', 'Recreational', 'Smallholder'];
-    var _businessEntityDescriptions = {
-        Commercial: 'Large scale agricultural production',
-        Recreational: 'Leisure or hobby farming',
-        Smallholder: 'Small farm, limited production'
-    };
-
     return {
         listServiceMap: function() {
             return _listServiceMap;
-        },
-        businessEntityTypes: function() {
-            return _businessEntityTypes;
-        },
-
-        getBusinessEntityDescription: function (businessEntity) {
-            return _businessEntityDescriptions[businessEntity] || '';
         },
         getFarmerLocation: function(farmer) {
             if (farmer) {
@@ -5526,9 +5535,6 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             }
 
             return null;
-        },
-        isFarmerActive: function(farmer) {
-            return (farmer && farmer.status == 'active');
         }
     }
 }]);
@@ -5792,14 +5798,14 @@ sdkHelperFarmerApp.factory('legalEntityHelper', ['attachmentHelper', 'underscore
     EnterpriseEditor.prototype.addEnterprise = function (enterprise) {
         enterprise = enterprise || this.selection.item;
 
-        if (this.enterprises.indexOf(enterprise) == -1) {
+        if (!underscore.isUndefined(enterprise) && this.enterprises.indexOf(enterprise) === -1) {
             this.enterprises.push(enterprise);
             this.selection.item = undefined;
         }
     };
 
     EnterpriseEditor.prototype.removeEnterprise = function (item) {
-        if (typeof item == 'string') {
+        if (underscore.isString(item)) {
             item = this.enterprises.indexOf(item);
         }
 
@@ -6048,36 +6054,16 @@ sdkHelperFavouritesApp.factory('notificationHelper', [function () {
     }
 }]);
 
-var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.library']);
+var sdkHelperMerchantApp = angular.module('ag.sdk.helper.merchant', ['ag.sdk.model.merchant', 'ag.sdk.library']);
 
-sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (underscore) {
+sdkHelperMerchantApp.factory('merchantHelper', ['Merchant', 'underscore', function (Merchant, underscore) {
     var _listServiceMap = function (item) {
         return {
             id: item.id || item.$id,
             title: item.name,
-            subtitle: (item.subscriptionPlan ? getSubscriptionPlan(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? getPartnerType(item.partnerType) + ' partner' : ''),
+            subtitle: (item.subscriptionPlan ? Merchant.getSubscriptionPlanTitle(item.subscriptionPlan) + ' ' : '') + (item.partnerType ? Merchant.getPartnerTitle(item.partnerType) + ' partner' : ''),
             status: (item.registered ? {text: 'registered', label: 'label-success'} : false)
         }
-    };
-
-    var _partnerTypes = {
-        benefit: 'Benefit',
-        standard: 'Standard'
-    };
-
-    var _subscriptionPlans = {
-        small: 'Small',
-        medium: 'Medium',
-        large: 'Large',
-        association: 'Association'
-    };
-
-    var getPartnerType = function (type) {
-        return _partnerTypes[type] || '';
-    };
-
-    var getSubscriptionPlan = function (plan) {
-        return _subscriptionPlans[plan] || '';
     };
 
     /**
@@ -6090,35 +6076,35 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
         availableServices = availableServices || [];
 
         this.services = underscore.map(services || [], function (item) {
-            return (item.name ? item.name : item);
+            return (item.serviceType ? item.serviceType : item);
         });
 
         this.selection = {
             list: availableServices,
-            mode: (availableServices.length == 0 ? 'add' : 'select'),
-            text: ''
+            mode: (availableServices.length === 0 ? 'add' : 'select'),
+            text: undefined
         };
     }
 
     ServiceEditor.prototype.toggleMode = function() {
         if (this.selection.list.length > 0) {
             // Allow toggle
-            this.selection.mode = (this.selection.mode == 'select' ? 'add' : 'select');
-            this.selection.text = '';
+            this.selection.mode = (this.selection.mode === 'select' ? 'add' : 'select');
+            this.selection.text = undefined;
         }
     };
 
     ServiceEditor.prototype.addService = function (service) {
         service = service || this.selection.text;
 
-        if (this.services.indexOf(service) == -1) {
+        if (!underscore.isUndefined(service) && this.services.indexOf(service) === -1) {
             this.services.push(service);
-            this.selection.text = '';
+            this.selection.text = undefined;
         }
     };
 
     ServiceEditor.prototype.removeService = function (indexOrService) {
-        if (typeof indexOrService == 'string') {
+        if (underscore.isString(indexOrService)) {
             indexOrService = this.services.indexOf(indexOrService);
         }
 
@@ -6131,15 +6117,6 @@ sdkHelperMerchantApp.factory('merchantHelper', ['underscore', function (undersco
         listServiceMap: function() {
             return _listServiceMap;
         },
-
-        partnerTypes: function() {
-            return _partnerTypes;
-        },
-        getPartnerType: getPartnerType,
-        subscriptionPlans: function() {
-            return _subscriptionPlans;
-        },
-        getSubscriptionPlan: getSubscriptionPlan,
 
         serviceEditor: function (/**Array=*/availableServices, /**Array=*/services) {
             return new ServiceEditor(availableServices, services);
@@ -6381,8 +6358,8 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
         };
 
         this.selection = {
-            mode: (availableTeams.length == 0 ? 'add' : 'select'),
-            text: ''
+            mode: (availableTeams.length === 0 ? 'add' : 'select'),
+            text: undefined
         };
 
         this.filterList();
@@ -6391,31 +6368,31 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
     TeamEditor.prototype.toggleMode = function() {
         if (this.selection.list.length > 0) {
             // Allow toggle
-            this.selection.mode = (this.selection.mode == 'select' ? 'add' : 'select');
-            this.selection.text = '';
+            this.selection.mode = (this.selection.mode === 'select' ? 'add' : 'select');
+            this.selection.text = undefined;
         }
     };
 
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1) {
+        if (!underscore.isUndefined(team) && this.teams.indexOf(team) === -1) {
             this.teams.push(team);
             this.teamsDetails.push(underscore.findWhere(this.selection.list, {name: team}));
-            this.selection.text = '';
+            this.selection.text = undefined;
             this.filterList();
         }
     };
 
     TeamEditor.prototype.removeTeam = function (indexOrTeam) {
-        if (typeof indexOrTeam == 'string') {
+        if (underscore.isString(indexOrTeam)) {
             indexOrTeam = this.teams.indexOf(indexOrTeam);
         }
 
         if (indexOrTeam !== -1) {
             this.teams.splice(indexOrTeam, 1);
             this.teamsDetails.splice(indexOrTeam, 1);
-            this.selection.text = '';
+            this.selection.text = undefined;
             this.filterList();
         }
     };
@@ -7161,8 +7138,49 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
 /**
  * Maps
  */
-sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore) {
-    var _defaultConfig = {
+sdkInterfaceMapApp.provider('mapboxServiceCache', [function () {
+    var _store = {
+        config: {},
+        instances: {}
+    };
+
+    function getConfig () {
+        return _store.config;
+    }
+
+    function setConfig (config) {
+        _store.config = config;
+    }
+
+    function getInstance (id) {
+        return _store.instances[id];
+    }
+
+    function setInstance (id, instance) {
+        _store.instances[id] = instance;
+    }
+
+    function resetInstances () {
+        _store.instances = {};
+    }
+
+    this.getConfig = getConfig;
+    this.setConfig = setConfig;
+
+    this.$get = [function() {
+        return {
+            getConfig: getConfig,
+            setConfig: setConfig,
+
+            getInstance: getInstance,
+            setInstance: setInstance,
+            resetInstances: resetInstances
+        }
+    }];
+}]);
+
+sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'underscore', function (mapboxServiceCacheProvider, underscore) {
+    mapboxServiceCacheProvider.setConfig({
         init: {
             delay: 200
         },
@@ -7201,22 +7219,20 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         controls: {},
         events: {},
         view: {
-            coordinates: [-28.691, 24.714],
-            zoom: 6
+            coordinates: [-29.0003409534,25.0839009251],
+            zoom: 5.1
         },
         bounds: {},
         leafletLayers: {},
         layers: {},
         geojson: {}
-    };
-
-    var _instances = {};
+    });
     
     this.config = function (options) {
-        _defaultConfig = underscore.defaults(options || {}, _defaultConfig);
+        mapboxServiceCacheProvider.setConfig(underscore.defaults(options || {}, mapboxServiceCacheProvider.getConfig()));
     };
 
-    this.$get = ['$rootScope', '$timeout', 'objectId', 'safeApply', function ($rootScope, $timeout, objectId, safeApply) {
+    this.$get = ['$rootScope', '$timeout', 'mapboxServiceCache', 'objectId', 'safeApply', function ($rootScope, $timeout, mapboxServiceCache, objectId, safeApply) {
         /**
         * @name MapboxServiceInstance
         * @param id
@@ -7230,7 +7246,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
             _this._options = options;
             _this._show = _this._options.show || false;
 
-            _this._config = angular.copy(_defaultConfig);
+            _this._config = angular.copy(mapboxServiceCache.getConfig());
             _this._requestQueue = [];
 
             $rootScope.$on('mapbox-' + _this._id + '::init', function () {
@@ -7244,7 +7260,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
                 _this._ready = false;
 
                 if (_this._options.persist !== true) {
-                    _this._config = angular.copy(_defaultConfig);
+                    _this._config = angular.copy(mapboxServiceCache.getConfig());
                 }
             });
         }
@@ -7261,7 +7277,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
              * Reset
              */
             reset: function () {
-                this._config = angular.copy(_defaultConfig);
+                this._config = angular.copy(mapboxServiceCache.getConfig());
 
                 $rootScope.$broadcast('mapbox-' + this._id + '::reset');
             },
@@ -7836,15 +7852,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['underscore', function (underscore
         return function (id, options) {
             options = options || {};
 
-            if (_instances[id] === undefined) {
-                _instances[id] = new MapboxServiceInstance(id, options);
+            var instance = mapboxServiceCache.getInstance(id);
+
+            if (instance === undefined) {
+                instance = new MapboxServiceInstance(id, options);
+                mapboxServiceCache.setInstance(id, instance);
             }
 
             if (options.clean === true) {
-                _instances[id].reset();
+                instance.reset();
             }
 
-            return _instances[id];
+            return instance;
         };
     }];
 }]);
@@ -10366,10 +10385,10 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
     }]);
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['Locale', 'computedProperty', 'Field', 'inheritModel', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Locale, computedProperty, Field, inheritModel, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function ComparableSale (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             computedProperty(this, 'distanceInKm', function () {
                 return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
@@ -10572,7 +10591,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
             }, 0), 4);
         }
 
-        inheritModel(ComparableSale, Model.Base);
+        inheritModel(ComparableSale, Locale);
 
         readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
 
@@ -10586,6 +10605,13 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
             area: {
                 required: true,
                 numeric: true
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
             },
             landComponents: {
                 required: true,
@@ -10610,10 +10636,10 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
 
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, computedProperty, inheritModel, interfaceProperty, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Locale', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, interfaceProperty, Locale, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudgetBase(attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             computedProperty(this, 'defaultCostStage', function () {
                 return underscore.last(EnterpriseBudgetBase.costStages);
@@ -10944,7 +10970,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             this.sortSections();
         }
 
-        inheritModel(EnterpriseBudgetBase, Model.Base);
+        inheritModel(EnterpriseBudgetBase, Locale);
 
         readOnlyProperty(EnterpriseBudgetBase, 'sections', underscore.indexBy([
             {
@@ -13169,10 +13195,10 @@ sdkModelFinancial.factory('FinancialGroup', ['inheritModel', 'Financial', 'Finan
     }]);
 var sdkModelLayer= angular.module('ag.sdk.model.layer', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.geospatial']);
 
-sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+sdkModelLayer.factory('Layer', ['inheritModel', 'Locale', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Locale, privateProperty, readOnlyProperty, underscore) {
         function Layer (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -13192,7 +13218,7 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
             this.sublayers = attrs.sublayers;
         }
 
-        inheritModel(Layer, Model.Base);
+        inheritModel(Layer, Locale);
 
         privateProperty(Layer, 'listMap', function (item) {
             return {
@@ -13207,6 +13233,13 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
                 length: {
                     min: 0,
                     max: 255
+                }
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
                 }
             },
             geometry: {
@@ -13244,10 +13277,10 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'rea
     }]);
 
 
-sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
-    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, topologyHelper, underscore) {
+sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Locale', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (computedProperty, inheritModel, Locale, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Sublayer (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             computedProperty(this, 'geom', function () {
                 return topologyHelper.readGeoJSON(this.geometry);
@@ -13318,7 +13351,7 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
             this.layer = attrs.layer;
         }
 
-        inheritModel(Sublayer, Model.Base);
+        inheritModel(Sublayer, Locale);
 
         privateProperty(Sublayer, 'listMap', function (item) {
             return {
@@ -13360,10 +13393,6 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
         }
 
         Sublayer.validates({
-            data: {
-                required: false,
-                object: true
-            },
             code: {
                 required: false,
                 length: {
@@ -13377,6 +13406,17 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
                     min: 0,
                     max: 255
                 }
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
+            data: {
+                required: false,
+                object: true
             },
             geometry: {
                 required: true,
@@ -14040,6 +14080,157 @@ sdkModelLiability.factory('Liability', ['computedProperty', 'inheritModel', 'Mod
 
         return Liability;
     }]);
+
+var sdkModelLocale  = angular.module('ag.sdk.model.locale', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelLocale.factory('Locale', ['computedProperty', 'Base', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (computedProperty, Base, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+        function Locale (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'countryLocale', function () {
+                return countryLocale(this);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.country = attrs.country;
+        }
+
+        inheritModel(Locale, Model.Base);
+
+        function countryLocale (instance) {
+            return underscore.findWhere(Locale.countryLocales, {
+                country: (instance && instance.country || 'South Africa')
+            });
+        }
+
+        privateProperty(Locale, 'countryLocale', function (instance) {
+            return countryLocale(instance);
+        });
+
+        readOnlyProperty(Locale, 'countryLocales', underscore.map([
+            [[41.1424498947,20.0498339611], 'Albania',6, 'Lek', 'ALL', 'Lek'],
+            [[33.8352307278,66.0047336558], 'Afghanistan',6, 'Afghani', 'AFN', '؋'],
+            [[-35.3813487953,-65.179806925], 'Argentina',6, 'Peso', 'ARS', '$'],
+            [[-25.7328870417,134.491000082], 'Australia',6, 'Dollar', 'AUD', '$'],
+            [[40.2882723471,47.5459987892], 'Azerbaijan',6, 'Manat', 'AZN', '₼'],
+            [[24.2903670223,-76.6284303802], 'Bahamas',6, 'Dollar', 'BSD', '$'],
+            [[13.1814542822,-59.5597970021], 'Barbados',6, 'Dollar', 'BBD', '$'],
+            [[53.5313137685,28.0320930703], 'Belarus',6, 'Ruble', 'BYN', 'Br'],
+            [[17.2002750902,-88.7101048564], 'Belize',6, 'Dollar', 'BZD', 'BZ$'],
+            [[32.3136780208,-64.7545588982], 'Bermuda',6, 'Dollar', 'BMD', '$'],
+            [[-16.7081478725,-64.6853864515], 'Bolivia',6, 'Bolíviano', 'BOB', '$b'],
+            [[44.1745012472,17.7687673323], 'Bosnia and Herzegovina',6, 'Convertible Marka', 'BAM', 'KM'],
+            [[-22.1840321328,23.7985336773], 'Botswana',6, 'Pula', 'BWP', 'P'],
+            [[42.7689031797,25.2155290863], 'Bulgaria',6, 'Lev', 'BGN', 'лв'],
+            [[-10.7877770246,-53.0978311267], 'Brazil',6, 'Real', 'BRL', 'R$'],
+            [[4.51968957503,114.722030354], 'Brunei Darussalam',6, 'Dollar', 'BND', '$'],
+            [[12.7200478567,104.906943249], 'Cambodia',6, 'Riel', 'KHR', '៛'],
+            [[61.3620632437,-98.3077702819], 'Canada',6, 'Dollar', 'CAD', '$'],
+            [[19.4289649722,-80.9121332147], 'Cayman Islands',6, 'Dollar', 'KYD', '$'],
+            [[-37.730709893,-71.3825621318], 'Chile',6, 'Peso', 'CLP', '$'],
+            [[36.5617654559,103.81907349], 'China',6, 'Yuan Renminbi', 'CNY', '¥'],
+            [[3.91383430725,-73.0811458241], 'Colombia',6, 'Peso', 'COP', '$'],
+            [[9.9763446384,-84.1920876775], 'Costa Rica',6, 'Colon', 'CRC', '₡'],
+            [[45.0804763057,16.404128994], 'Croatia',6, 'Kuna', 'HRK', 'kn'],
+            [[21.6228952793,-79.0160538445], 'Cuba',6, 'Peso', 'CUP', '₱'],
+            [[49.7334123295,15.3124016281], 'Czech Republic',6, 'Koruna', 'CZK', 'Kč'],
+            [[55.9812529593,10.0280099191], 'Denmark',6, 'Krone', 'DKK', 'kr'],
+            [[18.8943308233,-70.5056889612], 'Dominican Republic',6, 'Peso', 'DOP', 'RD$'],
+            [[26.4959331064,29.8619009908], 'Egypt',6, 'Pound', 'EGP', '£'],
+            [[13.7394374383,-88.8716446906], 'El Salvador',6, 'Colon', 'SVC', '$'],
+            [[-51.7448395441,-59.35238956], 'Falkland Islands (Malvinas)',6, 'Pound', 'FKP', '£'],
+            [[-17.4285803175,165.451954318], 'Fiji',6, 'Dollar', 'FJD', '$'],
+            [[7.95345643541,-1.21676565807], 'Ghana',6, 'Cedi', 'GHS', '¢'],
+            [[15.694036635,-90.3648200858], 'Guatemala',6, 'Quetzal', 'GTQ', 'Q'],
+            [[49.4680976128,-2.57239063555], 'Guernsey',6, 'Pound', 'GGP', '£'],
+            [[4.79378034012,-58.9820245893], 'Guyana',6, 'Dollar', 'GYD', '$'],
+            [[14.8268816519,-86.6151660963], 'Honduras',6, 'Lempira', 'HNL', 'L'],
+            [[22.3982773723,114.113804542], 'Hong Kong',6, 'Dollar', 'HKD', '$'],
+            [[47.1627750614,19.3955911607], 'Hungary',6, 'Forint', 'HUF', 'Ft'],
+            [[64.9957538607,-18.5739616708], 'Iceland',6, 'Krona', 'ISK', 'kr'],
+            [[22.8857821183,79.6119761026], 'India',6, 'Rupee', 'INR', '₹'],
+            [[-2.21505456346,117.240113662], 'Indonesia',6, 'Rupiah', 'IDR', 'Rp'],
+            [[32.575032915,54.2740700448], 'Iran',6, 'Rial', 'IRR', '﷼'],
+            [[54.2241891077,-4.53873952326], 'Isle of Man',6, 'Pound', 'IMP', '£'],
+            [[31.4611010118,35.0044469277], 'Israel',6, 'Shekel', 'ILS', '₪'],
+            [[18.1569487765,-77.3148259327], 'Jamaica',6, 'Dollar', 'JMD', 'J$'],
+            [[37.592301353,138.030895577], 'Japan',6, 'Yen', 'JPY', '¥'],
+            [[49.2183737668,-2.12689937944], 'Jersey',6, 'Pound', 'JEP', '£'],
+            [[48.1568806661,67.2914935687], 'Kazakhstan',6, 'Tenge', 'KZT', 'лв'],
+            [[40.1535031093,127.192479732], 'Korea (North)',6, 'Won', 'KPW', '₩'],
+            [[36.3852398347,127.839160864], 'Korea (South)',6, 'Won', 'KRW', '₩'],
+            [[41.4622194346,74.5416551329], 'Kyrgyzstan',6, 'Som', 'KGS', 'лв'],
+            [[18.5021743316,103.73772412], 'Laos',6, 'Kip', 'LAK', '₭'],
+            [[33.9230663057,35.880160715], 'Lebanon',6, 'Pound', 'LBP', '£'],
+            [[6.45278491657,-9.3220757269], 'Liberia',6, 'Dollar', 'LRD', '$'],
+            [[41.5953089336,21.6821134607], 'Macedonia',6, 'Denar', 'MKD', 'ден'],
+            [[3.78986845571,109.697622843], 'Malaysia',6, 'Ringgit', 'MYR', 'RM'],
+            [[-20.2776870433,57.5712055061], 'Mauritius',6, 'Rupee', 'MUR', '₨'],
+            [[23.9475372406,-102.523451692], 'Mexico',6, 'Peso', 'MXN', '$'],
+            [[46.8268154394,103.052997649], 'Mongolia',6, 'Tughrik', 'MNT', '₮'],
+            [[-17.2738164259,35.5336754259], 'Mozambique',6, 'Metical', 'MZN', 'MT'],
+            [[-22.1303256842,17.209635667], 'Namibia',6, 'Dollar', 'NAD', '$'],
+            [[28.2489136496,83.9158264002], 'Nepal',6, 'Rupee', 'NPR', '₨'],
+            [[-41.811135569,171.484923466], 'New Zealand',6, 'Dollar', 'NZD', '$'],
+            [[12.8470942896,-85.0305296951], 'Nicaragua',6, 'Cordoba', 'NIO', 'C$'],
+            [[9.59411452233,8.08943894771], 'Nigeria',6, 'Naira', 'NGN', '₦'],
+            [[68.7501557205,15.3483465622], 'Norway',6, 'Krone', 'NOK', 'kr'],
+            [[20.6051533257,56.0916615483], 'Oman',6, 'Rial', 'OMR', '﷼'],
+            [[29.9497515031,69.3395793748], 'Pakistan',6, 'Rupee', 'PKR', '₨'],
+            [[8.51750797491,-80.1191515612], 'Panama',6, 'Balboa', 'PAB', 'B/.'],
+            [[-23.228239132,-58.400137032], 'Paraguay',6, 'Guarani', 'PYG', 'Gs'],
+            [[-9.15280381329,-74.382426851], 'Peru',6, 'Sol', 'PEN', 'S/.'],
+            [[11.7753677809,122.883932529], 'Philippines',6, 'Piso', 'PHP', '₱'],
+            [[52.1275956442,19.3901283493], 'Poland',6, 'Zloty', 'PLN', 'zł'],
+            [[25.3060118763,51.1847963212], 'Qatar',6, 'Riyal', 'QAR', '﷼'],
+            [[45.8524312742,24.9729303933], 'Romania',6, 'Leu', 'RON', 'lei'],
+            [[61.9805220919,96.6865611231], 'Russia',6, 'Ruble', 'RUB', '₽'],
+            [[-12.4035595078,-9.5477941587], 'Saint Helena',6, 'Pound', 'SHP', '£'],
+            [[24.1224584073,44.5368627114], 'Saudi Arabia',6, 'Riyal', 'SAR', '﷼'],
+            [[44.2215031993,20.7895833363], 'Serbia',6, 'Dinar', 'RSD', 'Дин.'],
+            [[-4.66099093522,55.4760327912], 'Seychelles',6, 'Rupee', 'SCR', '₨'],
+            [[1.35876087075,103.81725592], 'Singapore',6, 'Dollar', 'SGD', '$'],
+            [[-8.92178021692,159.632876678], 'Solomon Islands',6, 'Dollar', 'SBD', '$'],
+            [[4.75062876055,45.7071448699], 'Somalia',6, 'Shilling', 'SOS', 'S'],
+            [[-29.0003409534,25.0839009251], 'South Africa',5.1, 'Rand', 'ZAR', 'R'],
+            [[7.61266509224,80.7010823782], 'Sri Lanka',6, 'Rupee', 'LKR', '₨'],
+            [[62.7796651931,16.7455804869], 'Sweden',6, 'Krona', 'SEK', 'kr'],
+            [[46.7978587836,8.20867470615], 'Switzerland',6, 'Franc', 'CHF', 'CHF'],
+            [[4.1305541299,-55.9123456951], 'Suriname',6, 'Dollar', 'SRD', '$'],
+            [[35.025473894,38.5078820425], 'Syria',6, 'Pound', 'SYP', '£'],
+            [[23.753992795,120.954272814], 'Taiwan',6, 'New Dollar', 'TWD', 'NT$'],
+            [[15.1181579418,101.002881304], 'Thailand',6, 'Baht', 'THB', '฿'],
+            [[10.457334081,-61.2656792335], 'Trinidad and Tobago',6, 'Dollar', 'TTD', 'TT$'],
+            [[39.0616029013,35.1689534649], 'Turkey',6, 'Lira', 'TRY', '₺'],
+            [[48.9965667265,31.3832646865], 'Ukraine',6, 'Hryvnia', 'UAH', '₴'],
+            [[54.1238715577,-2.86563164084], 'United Kingdom',6, 'Pound', 'GBP', '£'],
+            [[45.6795472026,-112.4616737], 'United States',6, 'Dollar', 'USD', '$'],
+            [[-32.7995153444,-56.0180705315], 'Uruguay',6, 'Peso', 'UYU', '$U'],
+            [[41.7555422527,63.1400152805], 'Uzbekistan',6, 'Som', 'UZS', 'лв'],
+            [[7.12422421273,-66.1818412311], 'Venezuela',6, 'Bolívar', 'VEF', 'Bs'],
+            [[16.6460167019,106.299146978], 'Viet Nam',6, 'Dong', 'VND', '₫'],
+            [[15.9092800505,47.5867618877], 'Yemen',6, 'Rial', 'YER', '﷼'],
+            [[-19.0042041882,29.8514412019], 'Zimbabwe',6, 'Dollar', 'ZWD', 'Z$']
+        ], function (countryLocale) {
+            return underscore.object(['coordinates', 'country', 'zoom', 'currency', 'code', 'symbol'], countryLocale);
+        }));
+
+        Locale.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            }
+        });
+
+        return Locale;
+    }]);
+
+
 
 var sdkModelMapTheme = angular.module('ag.sdk.model.map-theme', ['ag.sdk.library', 'ag.sdk.model.base']);
 
@@ -23714,12 +23905,188 @@ sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProper
         return FarmValuation;
     }]);
 
+var sdkModelFarmer = angular.module('ag.sdk.model.farmer', ['ag.sdk.model.organization']);
+
+sdkModelFarmer.factory('Farmer', ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Organization, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
+        function Farmer (attrs) {
+            Organization.apply(this, arguments);
+
+            computedProperty(this, 'isActive', function () {
+                return this.status === 'active';
+            });
+
+            Base.initializeObject(this.data, 'enterprises', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.activeFlags = attrs.activeFlags;
+            this.customerId = attrs.customerId;
+            this.customerNumber = attrs.customerNumber;
+            this.farms = attrs.farms || [];
+            this.legalEntities = attrs.legalEntities || [];
+            this.operationType = attrs.operationType;
+            this.productionRegion = attrs.productionRegion;
+            this.subscriptionPlan = attrs.subscriptionPlan;
+            this.tags = attrs.tags || [];
+        }
+
+        inheritModel(Farmer, Organization);
+
+        readOnlyProperty(Farmer, 'operationTypes', [
+            'Unknown',
+            'Commercial',
+            'Recreational',
+            'Smallholder'
+        ]);
+
+        readOnlyProperty(Farmer, 'operationTypeDescriptions', {
+            Unknown: 'No farming production information available',
+            Commercial: 'Large scale agricultural production',
+            Recreational: 'Leisure or hobby farming',
+            Smallholder: 'Small farm, limited production'
+        });
+
+        privateProperty(Farmer, 'getOperationTypeDescription', function (type) {
+            return Farmer.operationTypeDescriptions[type] || '';
+        });
+
+        Farmer.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return Farmer;
+    }]);
+
+var sdkModelMerchant = angular.module('ag.sdk.model.merchant', ['ag.sdk.model.organization']);
+
+sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Organization, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
+        function Merchant (attrs) {
+            Organization.apply(this, arguments);
+
+            computedProperty(this, 'partnerTitle', function () {
+                return getPartnerTitle(this.partnerType);
+            });
+
+            computedProperty(this, 'subscriptionPlanTitle', function () {
+                return getSubscriptionPlanTitle(this.subscriptionPlan);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.partnerType = attrs.partnerType;
+            this.services = attrs.services || [];
+            this.subscriptionPlan = attrs.subscriptionPlan;
+        }
+
+        function getPartnerTitle (type) {
+            return Merchant.partnerTypes[type] || '';
+        }
+
+        function getSubscriptionPlanTitle (type) {
+            return Merchant.subscriptionPlanTypes[type] || '';
+        }
+
+        inheritModel(Merchant, Organization);
+
+        readOnlyProperty(Merchant, 'partnerTypes', {
+            benefit: 'Benefit',
+            standard: 'Standard'
+        });
+
+        readOnlyProperty(Merchant, 'subscriptionPlanTypes', {
+            small: 'Small',
+            medium: 'Medium',
+            large: 'Large',
+            association: 'Association'
+        });
+
+        privateProperty(Merchant, 'getPartnerTitle' , function (type) {
+            return getPartnerTitle(type);
+        });
+
+        privateProperty(Merchant, 'getSubscriptionPlanTitle' , function (type) {
+            return getSubscriptionPlanTitle(type);
+        });
+
+        Merchant.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            partnerType: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Merchant.partnerTypes)
+                }
+            },
+            services: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            subscriptionPlan: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Merchant.subscriptionPlanTypes)
+                }
+            }
+        });
+
+        return Merchant;
+    }]);
+
 var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', 'privateProperty', 'topologyHelper', 'underscore',
-    function (Base, inheritModel, Model, privateProperty, topologyHelper, underscore) {
+sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (Locale, Base, inheritModel, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Organization (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             // Geom
             privateProperty(this, 'contains', function (geojson) {
@@ -23737,16 +24104,23 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
             this.email = attrs.email;
             this.hostUrl = attrs.hostUrl;
             this.name = attrs.name;
+            this.originHost = attrs.originHost;
+            this.originPort = attrs.originPort;
+            this.primaryContact = attrs.primaryContact;
             this.registered = attrs.registered;
-            this.services = attrs.services;
             this.status = attrs.status;
+            this.teams = attrs.teams || [];
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
             this.uuid = attrs.uuid;
         }
 
-        inheritModel(Organization, Model.Base);
+        inheritModel(Organization, Locale);
 
         function getAssetsGeom (instance) {
             return underscore.chain(instance.legalEntities)
@@ -23771,9 +24145,10 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
         }
 
         function centroid (instance) {
-            var geom = getAssetsGeom(instance);
+            var geom = getAssetsGeom(instance),
+                coord = (geom ? geom.getCentroid().getCoordinate() : geom);
 
-            return (geom ? topologyHelper.writeGeoJSON(geom.getCentroid()) : geom);
+            return (coord ? [coord.x, coord.y] : coord);
         }
 
         privateProperty(Organization, 'contains', function (instance, geojson) {
@@ -23785,6 +24160,13 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
         });
 
         Organization.validates({
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
             email: {
                 required: true,
                 format: {
@@ -23801,6 +24183,12 @@ sdkModelOrganization.factory('Organization', ['Base', 'inheritModel', 'Model', '
             organizationId: {
                 required: true,
                 numeric: true
+            },
+            teams: {
+                required: true,
+                length: {
+                    min: 1
+                }
             }
         });
 
@@ -24609,13 +24997,16 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
+    'ag.sdk.model.farmer',
     'ag.sdk.model.field',
     'ag.sdk.model.financial',
     'ag.sdk.model.layer',
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.livestock',
+    'ag.sdk.model.locale',
     'ag.sdk.model.map-theme',
+    'ag.sdk.model.merchant',
     'ag.sdk.model.organization',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',

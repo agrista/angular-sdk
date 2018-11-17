@@ -1,9 +1,9 @@
 var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelComparableSale.factory('ComparableSale', ['Locale', 'computedProperty', 'Field', 'inheritModel', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Locale, computedProperty, Field, inheritModel, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function ComparableSale (attrs) {
-            Model.Base.apply(this, arguments);
+            Locale.apply(this, arguments);
 
             computedProperty(this, 'distanceInKm', function () {
                 return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
@@ -206,7 +206,7 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
             }, 0), 4);
         }
 
-        inheritModel(ComparableSale, Model.Base);
+        inheritModel(ComparableSale, Locale);
 
         readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
 
@@ -220,6 +220,13 @@ sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', '
             area: {
                 required: true,
                 numeric: true
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
             },
             landComponents: {
                 required: true,

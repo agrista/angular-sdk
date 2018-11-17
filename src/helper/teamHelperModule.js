@@ -26,8 +26,8 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
         };
 
         this.selection = {
-            mode: (availableTeams.length == 0 ? 'add' : 'select'),
-            text: ''
+            mode: (availableTeams.length === 0 ? 'add' : 'select'),
+            text: undefined
         };
 
         this.filterList();
@@ -36,31 +36,31 @@ sdkHelperTeamApp.factory('teamHelper', ['underscore', function (underscore) {
     TeamEditor.prototype.toggleMode = function() {
         if (this.selection.list.length > 0) {
             // Allow toggle
-            this.selection.mode = (this.selection.mode == 'select' ? 'add' : 'select');
-            this.selection.text = '';
+            this.selection.mode = (this.selection.mode === 'select' ? 'add' : 'select');
+            this.selection.text = undefined;
         }
     };
 
     TeamEditor.prototype.addTeam = function (team) {
         team = team || this.selection.text;
 
-        if (this.teams.indexOf(team) == -1) {
+        if (!underscore.isUndefined(team) && this.teams.indexOf(team) === -1) {
             this.teams.push(team);
             this.teamsDetails.push(underscore.findWhere(this.selection.list, {name: team}));
-            this.selection.text = '';
+            this.selection.text = undefined;
             this.filterList();
         }
     };
 
     TeamEditor.prototype.removeTeam = function (indexOrTeam) {
-        if (typeof indexOrTeam == 'string') {
+        if (underscore.isString(indexOrTeam)) {
             indexOrTeam = this.teams.indexOf(indexOrTeam);
         }
 
         if (indexOrTeam !== -1) {
             this.teams.splice(indexOrTeam, 1);
             this.teamsDetails.splice(indexOrTeam, 1);
-            this.selection.text = '';
+            this.selection.text = undefined;
             this.filterList();
         }
     };
