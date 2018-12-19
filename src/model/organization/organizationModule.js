@@ -1,5 +1,37 @@
 var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
 
+sdkModelOrganization.factory('OrganizationFactory', ['Farmer', 'Organization', 'Merchant',
+    function (Farmer, Organization, Merchant) {
+        var instances = {
+            'farmer': Farmer,
+            'merchant': Merchant
+        };
+
+        function apply (attrs, fnName) {
+            if (instances[attrs.type]) {
+                return instances[attrs.type][fnName](attrs);
+            }
+
+            return Organization[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (organization) {
+                return (organization ?
+                    (instances[organization.type] ?
+                        organization instanceof instances[organization.type] :
+                        organization instanceof Organization) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }]);
+
 sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
     function (Locale, Base, inheritModel, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Organization (attrs) {
@@ -32,6 +64,7 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
             this.registered = attrs.registered;
             this.status = attrs.status;
             this.teams = attrs.teams || [];
+            this.type = attrs.type;
             this.updatedAt = attrs.updatedAt;
             this.updatedBy = attrs.updatedBy;
             this.uuid = attrs.uuid;

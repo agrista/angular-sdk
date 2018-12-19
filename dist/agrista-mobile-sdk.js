@@ -1222,7 +1222,7 @@ sdkUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
+sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', 'uriQueryFormatArrays', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore, uriQueryFormatArrays) {
     var _listId = generateUUID();
 
     return {
@@ -1330,12 +1330,12 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                         method: 'POST',
                         url: endPoint,
                         data: params.resulttype,
-                        params: underscore.omit(params, 'resulttype'),
+                        params: uriQueryFormatArrays(underscore.omit(params, 'resulttype')),
                         withCredentials: true
                     } : {
                         method: 'GET',
                         url: endPoint,
-                        params: params,
+                        params: uriQueryFormatArrays(params),
                         withCredentials: true
                     });
 
@@ -1365,17 +1365,17 @@ sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function
     }
 }]);
 
-sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
     return function (url, params) {
         params = params || {};
 
         return $http(underscore.extend(underscore.isObject(params.resulttype) ? {
             method: 'POST',
             data: params.resulttype,
-            params: underscore.omit(params, 'resulttype')
+            params: uriQueryFormatArrays(underscore.omit(params, 'resulttype'))
         } : {
             method: 'GET',
-            params: params
+            params: uriQueryFormatArrays(params)
         }, {
             url: url,
             withCredentials: true
@@ -1619,6 +1619,14 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
             });
         }
     };
+}]);
+
+sdkUtilitiesApp.factory('uriQueryFormatArrays', ['underscore', function (underscore) {
+    return function (query) {
+        return underscore.mapObject(query, function (value) {
+            return (underscore.isArray(value) ? value.join(',') : value);
+        });
+    }
 }]);
 
 sdkUtilitiesApp.factory('uriEncodeQuery', ['underscore', function (underscore) {
@@ -5471,25 +5479,10 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.geospat
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
-        typeColorMap = {
-            'error': 'danger',
-            'information': 'info',
-            'warning': 'warning'
+        var tagMap = {
+            'danger': ['Duplicate Farmland', 'Duplicate Legal Entities'],
+            'warning': ['No CIF', 'No Farmland', 'No Homestead', 'No Segmentation']
         };
-        var flagLabels = underscore.chain(item.activeFlags)
-            .groupBy(function(activeFlag) {
-                return activeFlag.flag.type;
-            })
-            .map(function (group, type) {
-                return {
-                    label: typeColorMap[type],
-                    count: group.length,
-                    hasOpen: underscore.some(group, function (flag) {
-                        return flag.status === 'open';
-                    })
-                }
-            })
-            .value();
 
         return {
             id: item.id || item.$id,
@@ -5497,7 +5490,19 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             subtitle: item.customerId,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item),
-            flags: flagLabels
+            pills: underscore.chain(tagMap)
+                .mapObject(function (values) {
+                    return underscore.chain(item.tags)
+                        .pluck('name')
+                        .filter(function (tag) {
+                            return underscore.contains(values, tag);
+                        })
+                        .value();
+                })
+                .omit(function (values) {
+                    return underscore.isEmpty(values);
+                })
+                .value()
         };
 
         function searchingIndex (item) {
@@ -24083,6 +24088,38 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
 
 var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
 
+sdkModelOrganization.factory('OrganizationFactory', ['Farmer', 'Organization', 'Merchant',
+    function (Farmer, Organization, Merchant) {
+        var instances = {
+            'farmer': Farmer,
+            'merchant': Merchant
+        };
+
+        function apply (attrs, fnName) {
+            if (instances[attrs.type]) {
+                return instances[attrs.type][fnName](attrs);
+            }
+
+            return Organization[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (organization) {
+                return (organization ?
+                    (instances[organization.type] ?
+                        organization instanceof instances[organization.type] :
+                        organization instanceof Organization) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }]);
+
 sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
     function (Locale, Base, inheritModel, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Organization (attrs) {
@@ -24115,6 +24152,7 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
             this.registered = attrs.registered;
             this.status = attrs.status;
             this.teams = attrs.teams || [];
+            this.type = attrs.type;
             this.updatedAt = attrs.updatedAt;
             this.updatedBy = attrs.updatedBy;
             this.uuid = attrs.uuid;

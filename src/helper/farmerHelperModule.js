@@ -2,25 +2,10 @@ var sdkHelperFarmerApp = angular.module('ag.sdk.helper.farmer', ['ag.sdk.geospat
 
 sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper', 'underscore', function(attachmentHelper, geoJSONHelper, underscore) {
     var _listServiceMap = function (item) {
-        typeColorMap = {
-            'error': 'danger',
-            'information': 'info',
-            'warning': 'warning'
+        var tagMap = {
+            'danger': ['Duplicate Farmland', 'Duplicate Legal Entities'],
+            'warning': ['No CIF', 'No Farmland', 'No Homestead', 'No Segmentation']
         };
-        var flagLabels = underscore.chain(item.activeFlags)
-            .groupBy(function(activeFlag) {
-                return activeFlag.flag.type;
-            })
-            .map(function (group, type) {
-                return {
-                    label: typeColorMap[type],
-                    count: group.length,
-                    hasOpen: underscore.some(group, function (flag) {
-                        return flag.status === 'open';
-                    })
-                }
-            })
-            .value();
 
         return {
             id: item.id || item.$id,
@@ -28,7 +13,19 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
             subtitle: item.customerId,
             thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
             searchingIndex: searchingIndex(item),
-            flags: flagLabels
+            pills: underscore.chain(tagMap)
+                .mapObject(function (values) {
+                    return underscore.chain(item.tags)
+                        .pluck('name')
+                        .filter(function (tag) {
+                            return underscore.contains(values, tag);
+                        })
+                        .value();
+                })
+                .omit(function (values) {
+                    return underscore.isEmpty(values);
+                })
+                .value()
         };
 
         function searchingIndex (item) {
