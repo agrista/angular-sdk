@@ -274,7 +274,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             });
 
             computedProperty(this, 'thumbnailUrl', function () {
-                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+                return getThumbnailUrl(this);
             });
 
             computedProperty(this, 'age', function () {
@@ -1962,6 +1962,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             return getCustomTitle(asset, props, options);
         });
 
+        privateProperty(Asset, 'getThumbnailUrl', function (asset) {
+            return getThumbnailUrl(asset);
+        });
+
         privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
             return getTitle(asset, withField, farm);
         });
@@ -2051,6 +2055,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             });
 
             return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
+        }
+
+        function getThumbnailUrl (instance) {
+            return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
         }
         
         function getTitle (instance, withField, farm) {

@@ -636,11 +636,10 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
     }
 
     function getGeometry (instance) {
-        return (instance._json.type === 'Feature' ?
+        return instance._json && (instance._json.type === 'Feature' ?
                 instance._json.geometry :
                 (instance._json.type !== 'FeatureCollection' ?
-                        instance._json :
-                        {
+                        instance._json : {
                             type: 'GeometryCollection',
                             geometries: underscore.pluck(instance._json.features, 'geometry')
                         }
@@ -5530,7 +5529,9 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
                         }
                     });
 
-                    return geojson.getCenter().reverse();
+                    var coord = geojson.getCenter();
+
+                    return (coord ? coord.reverse() : coord);
                 }
             }
 
@@ -19154,7 +19155,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             });
 
             computedProperty(this, 'thumbnailUrl', function () {
-                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+                return getThumbnailUrl(this);
             });
 
             computedProperty(this, 'age', function () {
@@ -20842,10 +20843,14 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             return getCustomTitle(asset, props, options);
         });
 
+        privateProperty(Asset, 'getThumbnailUrl', function (asset) {
+            return getThumbnailUrl(asset);
+        });
+
         privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
             return getTitle(asset, withField, farm);
         });
-
+        
         privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
             return listServiceMap(asset, metadata);
         });
@@ -20931,6 +20936,10 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             });
 
             return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
+        }
+
+        function getThumbnailUrl (instance) {
+            return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
         }
         
         function getTitle (instance, withField, farm) {
