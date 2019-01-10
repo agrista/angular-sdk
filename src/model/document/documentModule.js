@@ -39,25 +39,16 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             this.docType = attrs.docType;
             this.documentId = attrs.documentId;
             this.id = attrs.id || attrs.$id;
-            this.organization = attrs.organization;
             this.organizationId = attrs.organizationId;
             this.originUuid = attrs.originUuid;
             this.origin = attrs.origin;
             this.title = attrs.title;
+
+            this.organization = attrs.organization;
+            this.tasks = attrs.tasks;
         }
 
         inheritModel(Document, Model.Base);
-
-        readOnlyProperty(Document, 'docTypes', {
-            'asset register': 'Asset Register',
-            'desktop valuation': 'Desktop Valuation',
-            'emergence report': 'Emergence Report',
-            'farm valuation': 'Farm Valuation',
-            'financial resource plan': 'Financial Resource Plan',
-            'insurance policy': 'Insurance Policy',
-            'production plan': 'Production Plan',
-            'progress report': 'Progress Report'
-        });
 
         Document.validates({
             author: {
@@ -69,8 +60,9 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             },
             docType: {
                 required: true,
-                inclusion: {
-                    in: underscore.keys(Document.docTypes)
+                length: {
+                    min: 1,
+                    max: 255
                 }
             },
             organizationId: {
@@ -80,4 +72,42 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
         });
 
         return Document;
+    }]);
+
+sdkModelDocument.factory('DocumentFactory', ['BusinessPlan', 'CropInspection', 'DesktopValuation', 'Document', 'FarmValuation',
+    function (BusinessPlan, CropInspection, DesktopValuation, Document, FarmValuation) {
+        var instances = {
+            'desktop valuation': DesktopValuation,
+            'emergence inspection': CropInspection,
+            'farm valuation': FarmValuation,
+            'financial business plan': BusinessPlan,
+            'hail inspection': CropInspection,
+            'harvest inspection': CropInspection,
+            'preharvest inspection': CropInspection,
+            'progress inspection': CropInspection
+        };
+
+        function apply (attrs, fnName) {
+            if (instances[attrs.type]) {
+                return instances[attrs.type][fnName](attrs);
+            }
+
+            return Document[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (asset) {
+                return (asset ?
+                    (instances[asset.type] ?
+                        asset instanceof instances[asset.type] :
+                        asset instanceof Document) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
     }]);

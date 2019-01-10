@@ -21,6 +21,69 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         }
     }
 
+    function geometryArea (area, geojson) {
+        if (geojson.type) {
+            switch (geojson.type) {
+                case 'Polygon':
+                    return polygonArea(0, geojson.coordinates);
+                case 'MultiPolygon':
+                    return underscore.reduce(geojson.coordinates, polygonArea, area);
+                case 'GeometryCollection':
+                    return underscore.reduce(geojson.geometries, geometryArea, area);
+            }
+        }
+
+        return area;
+    }
+
+    function polygonArea (area, coords) {
+        if (coords && coords.length > 0) {
+            area += Math.abs(ringArea(coords[0]));
+            for (var i = 1; i < coords.length; i++) {
+                area -= Math.abs(ringArea(coords[i]));
+            }
+        }
+
+        return area;
+    }
+
+    function ringArea (coords) {
+        var p1, p2, p3, lowerIndex, middleIndex, upperIndex, i,
+            area = 0,
+            coordsLength = coords.length;
+
+        if (coordsLength > 2) {
+            for (i = 0; i < coordsLength; i++) {
+                if (i === coordsLength - 2) {// i = N-2
+                    lowerIndex = coordsLength - 2;
+                    middleIndex = coordsLength -1;
+                    upperIndex = 0;
+                } else if (i === coordsLength - 1) {// i = N-1
+                    lowerIndex = coordsLength - 1;
+                    middleIndex = 0;
+                    upperIndex = 1;
+                } else { // i = 0 to N-3
+                    lowerIndex = i;
+                    middleIndex = i+1;
+                    upperIndex = i+2;
+                }
+                p1 = coords[lowerIndex];
+                p2 = coords[middleIndex];
+                p3 = coords[upperIndex];
+                area += (rad(p3[0]) - rad(p1[0])) * Math.sin(rad(p2[1]));
+            }
+
+            // WGS84 radius
+            area = area * 6378137 * 6378137 / 2;
+        }
+
+        return area;
+    }
+
+    function rad (val) {
+        return val * Math.PI / 180;
+    }
+
     function getGeometry (instance) {
         return instance._json && (instance._json.type === 'Feature' ?
                 instance._json.geometry :
@@ -50,6 +113,18 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         },
         getGeometryType: function () {
             return (this._json.geometry ? this._json.geometry.type : this._json.type);
+        },
+        getArea: function () {
+            var area = (this._json ? geometryArea(0, this._json) : 0),
+                yards = (area * 1.19599);
+
+            return {
+                m_sq: area,
+                ha: (area * 0.0001),
+                mi_sq: (yards / 3097600),
+                acres: (yards / 4840),
+                yd_sq: yards
+            };
         },
         getBounds: function () {
             var bounds = [];
@@ -85,6 +160,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
             });
 
             return [[lat1, lng1], [lat2, lng2]];
+        },
+        /**
+         * Geometry Editing
+         */
+        difference: function (geometry) {
+            var geom = topologyHelper.readGeoJSON(getGeometry(this));
+            this._json = topologyHelper.writeGeoJSON(geom.difference(geometry));
+            return this;
         },
         /**
          * Geometry Relations
