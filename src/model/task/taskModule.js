@@ -16,7 +16,6 @@ sdkModelTask.factory('Task', ['Base', 'inheritModel', 'Model', 'underscore',
             this.completedAt = attrs.completedAt;
             this.createdAt = attrs.createdAt;
             this.createdBy = attrs.createdBy;
-            this.data = attrs.data;
             this.documentId = attrs.documentId;
             this.documentKey = attrs.documentKey;
             this.organizationId = attrs.organizationId;
@@ -87,3 +86,41 @@ sdkModelTask.factory('Task', ['Base', 'inheritModel', 'Model', 'underscore',
 
         return Task;
     }]);
+
+sdkModelTask.provider('TaskFactory', function () {
+    var instances = {};
+
+    this.add = function (todo, modelName) {
+        instances[todo] = modelName;
+    };
+
+    this.$get = ['$injector', 'Task', function ($injector, Task) {
+        function apply (attrs, fnName) {
+            if (instances[attrs.todo]) {
+                if (typeof instances[attrs.todo] === 'string') {
+                    instances[attrs.todo] = $injector.get(instances[attrs.todo]);
+                }
+
+                return instances[attrs.todo][fnName](attrs);
+            }
+
+            return Task[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (task) {
+                return (task ?
+                    (instances[task.todo] ?
+                        task instanceof instances[task.todo] :
+                        task instanceof Task) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }];
+});

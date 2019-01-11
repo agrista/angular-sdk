@@ -1,70 +1,187 @@
 var sdkModelCrop = angular.module('ag.sdk.model.crop', ['ag.sdk.model.asset']);
 
-sdkModelCrop.factory('Crop', ['Base', 'asJson', 'Asset', 'computedProperty', 'inheritModel', 'privateProperty', 'naturalSort', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (Base, asJson, Asset, computedProperty, inheritModel, privateProperty, naturalSort, readOnlyProperty, safeMath, underscore) {
-        function Crop (attrs) {
-            Asset.apply(this, arguments);
+sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryProvider) {
+    this.$get = ['Base', 'asJson', 'Asset', 'computedProperty', 'inheritModel', 'privateProperty', 'naturalSort', 'readOnlyProperty', 'safeMath', 'underscore',
+        function (Base, asJson, Asset, computedProperty, inheritModel, privateProperty, naturalSort, readOnlyProperty, safeMath, underscore) {
+            function Crop (attrs) {
+                Asset.apply(this, arguments);
 
-            Base.initializeObject(this.data, 'problems', []);
-            Base.initializeObject(this.data, 'zones', []);
+                Base.initializeObject(this.data, 'problems', []);
+                Base.initializeObject(this.data, 'zones', []);
 
-            computedProperty(this, 'problems', function () {
-                return this.data.problems;
-            });
+                computedProperty(this, 'problems', function () {
+                    return this.data.problems;
+                });
 
-            computedProperty(this, 'zones', function () {
-                return this.data.zones;
-            });
+                computedProperty(this, 'zones', function () {
+                    return this.data.zones;
+                });
 
-            privateProperty(this, 'addProblem', function (problem) {
-                addItem(this, 'problems', problem);
-            });
+                privateProperty(this, 'addProblem', function (problem) {
+                    addItem(this, 'problems', problem);
+                });
 
-            privateProperty(this, 'addZone', function (zone) {
-                addItem(this, 'zones', zone);
-            });
+                privateProperty(this, 'addZone', function (zone) {
+                    addItem(this, 'zones', zone);
+                });
 
-            privateProperty(this, 'removeProblem', function (problem) {
-                removeItem(this, 'problems', problem);
-            });
+                privateProperty(this, 'removeProblem', function (problem) {
+                    removeItem(this, 'problems', problem);
+                });
 
-            privateProperty(this, 'removeZone', function (zone) {
-                removeItem(this, 'zones', zone);
-            });
+                privateProperty(this, 'removeZone', function (zone) {
+                    removeItem(this, 'zones', zone);
+                });
 
-            this.type = 'crop';
-        }
-
-        inheritModel(Crop, Asset);
-
-        function addItem (instance, dataStore, item) {
-            if (item) {
-                instance.data[dataStore] = underscore.chain(instance.data[dataStore])
-                    .reject(underscore.identity({uuid: item.uuid}))
-                    .union([asJson(item)])
-                    .value()
-                    .sort(function (a, b) {
-                        return naturalSort(a.createdAt, b.createdAt);
-                    });
-
-                updatePlantedArea(instance);
-                instance.$dirty = true;
+                this.type = 'crop';
             }
-        }
 
-        function removeItem (instance, dataStore, item) {
-            if (item) {
-                instance.data[dataStore] = underscore.reject(instance.data[dataStore], underscore.identity({uuid: item.uuid}));
-                updatePlantedArea(instance);
-                instance.$dirty = true;
+            inheritModel(Crop, Asset);
+
+            function addItem (instance, dataStore, item) {
+                if (item) {
+                    instance.data[dataStore] = underscore.chain(instance.data[dataStore])
+                        .reject(underscore.identity({uuid: item.uuid}))
+                        .union([asJson(item)])
+                        .value()
+                        .sort(function (a, b) {
+                            return naturalSort(a.createdAt, b.createdAt);
+                        });
+
+                    updatePlantedArea(instance);
+                    instance.$dirty = true;
+                }
             }
+
+            function removeItem (instance, dataStore, item) {
+                if (item) {
+                    instance.data[dataStore] = underscore.reject(instance.data[dataStore], underscore.identity({uuid: item.uuid}));
+                    updatePlantedArea(instance);
+                    instance.$dirty = true;
+                }
+            }
+
+            function updatePlantedArea (instance) {
+                instance.data.plantedArea = underscore.reduce(instance.zones, function (total, zone) {
+                    return safeMath.plus(total, zone.size);
+                }, 0);
+            }
+
+            Crop.validates(underscore.defaults({
+                type: {
+                    required: true,
+                    equal: {
+                        to: 'crop'
+                    }
+                }
+            }, Asset.validations));
+
+            return Crop;
+        }];
+
+    AssetFactoryProvider.add('crop', 'Crop');
+}]);
+
+sdkModelCrop.factory('CropProblem', ['generateUUID', 'inheritModel', 'Model', 'moment', 'readOnlyProperty', 'underscore',
+    function (generateUUID, inheritModel, Model, moment, readOnlyProperty, underscore) {
+        function CropProblem (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.createdAt = attrs.createdAt || moment().format('YYYY-MM-DD');
+            this.description = attrs.description;
+            this.loc = attrs.loc;
+            this.size = attrs.size;
+            this.type = attrs.type;
+            this.uuid = attrs.uuid || generateUUID();
         }
 
-        function updatePlantedArea (instance) {
-            instance.data.plantedArea = underscore.reduce(instance.zones, function (total, zone) {
-                return safeMath.plus(total, zone.size);
-            }, 0);
+        inheritModel(CropProblem, Model.Base);
+
+        readOnlyProperty(CropProblem, 'problemTypes', [
+            'Disease',
+            'Fading',
+            'Uneven',
+            'Other',
+            'Root',
+            'Shortage',
+            'Weed']);
+
+        CropProblem.validates({
+            description: {
+                requiredIf: function (value, instance) {
+                    return instance.type === 'Other';
+                },
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: CropProblem.problemTypes
+                }
+            },
+            uuid: {
+                format: {
+                    uuid: true
+                }
+            }
+        });
+
+        return CropProblem;
+    }]);
+
+sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritModel', 'Model', 'moment', 'naturalSort', 'readOnlyProperty', 'underscore',
+    function (computedProperty, generateUUID, inheritModel, Model, moment, naturalSort, readOnlyProperty, underscore) {
+        function CropZone (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'cultivars', function () {
+                return CropZone.cultivarsByCrop[this.crop] || [];
+            });
+
+            computedProperty(this, 'growthStages', function () {
+                return cropGrowthStages[this.crop] || growthStages[0];
+            });
+
+            computedProperty(this, 'leavesPerPlant', function () {
+                return cultivarLeaves[this.cultivar] || 22;
+            }, {
+                enumerable: true
+            });
+
+            computedProperty(this, 'flower', function () {
+                return flowerTypes[this.crop] || POD;
+            }, {
+                enumerable: true
+            });
+
+            computedProperty(this, 'typeRequired', function () {
+                return s.include(this.crop, 'Maize');
+            });
+
+            this.samples = (attrs && attrs.samples || []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.createdAt = attrs.createdAt || moment().format('YYYY-MM-DD');
+            this.crop = attrs.crop;
+            this.cultivar = attrs.cultivar;
+            this.emergenceDate = attrs.emergenceDate;
+            this.growthStage = attrs.growthStage;
+            this.loc = attrs.loc;
+            this.plantsHa = attrs.plantsHa;
+            this.rowWidth = attrs.rowWidth;
+            this.seedProvider = attrs.seedProvider;
+            this.size = attrs.size;
+            this.type = attrs.type;
+            this.uuid = attrs.uuid || generateUUID();
         }
+
+        inheritModel(CropZone, Model.Base);
 
         var AFGRI = 'Afgri',
             ARGICOL = 'Agricol',
@@ -414,7 +531,7 @@ sdkModelCrop.factory('Crop', ['Base', 'asJson', 'Asset', 'computedProperty', 'in
             [OTHER,'SC 715'],
             [OTHER,'Scout']];
 
-        readOnlyProperty(Crop, 'cultivarsByCrop', {
+        readOnlyProperty(CropZone, 'cultivarsByCrop', {
             'Barley':[
                 [ARGICOL,'SKG 9'],
                 [ARGICOL,'SVG 13'],
@@ -907,143 +1024,6 @@ sdkModelCrop.factory('Crop', ['Base', 'asJson', 'Asset', 'computedProperty', 'in
             ]
         });
 
-        Crop.validates(underscore.defaults({
-            type: {
-                required: true,
-                equal: {
-                    to: 'crop'
-                }
-            }
-        }, Asset.validations));
-
-        return Crop;
-    }]);
-
-sdkModelCrop.factory('CropProblem', ['generateUUID', 'inheritModel', 'Model', 'moment', 'readOnlyProperty', 'underscore',
-    function (generateUUID, inheritModel, Model, moment, readOnlyProperty, underscore) {
-        function CropProblem (attrs) {
-            Model.Base.apply(this, arguments);
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.createdAt = attrs.createdAt || moment().format('YYYY-MM-DD');
-            this.description = attrs.description;
-            this.loc = attrs.loc;
-            this.size = attrs.size;
-            this.type = attrs.type;
-            this.uuid = attrs.uuid || generateUUID();
-        }
-
-        inheritModel(CropProblem, Model.Base);
-
-        readOnlyProperty(CropProblem, 'problemTypes', [
-            'Disease',
-            'Fading',
-            'Uneven',
-            'Other',
-            'Root',
-            'Shortage',
-            'Weed']);
-
-        CropProblem.validates({
-            description: {
-                requiredIf: function (value, instance) {
-                    return instance.type === 'Other';
-                },
-                length: {
-                    min: 0,
-                    max: 255
-                }
-            },
-            type: {
-                required: true,
-                inclusion: {
-                    in: CropProblem.problemTypes
-                }
-            },
-            uuid: {
-                format: {
-                    uuid: true
-                }
-            }
-        });
-
-        return CropProblem;
-    }]);
-
-sdkModelCrop.factory('CropZone', ['computedProperty', 'Crop', 'generateUUID', 'inheritModel', 'Model', 'moment', 'readOnlyProperty', 'underscore',
-    function (computedProperty, Crop, generateUUID, inheritModel, Model, moment, readOnlyProperty, underscore) {
-        function CropZone (attrs) {
-            Model.Base.apply(this, arguments);
-
-            computedProperty(this, 'cultivars', function () {
-                return Crop.cultivarsByCrop[this.crop] || [];
-            });
-
-            computedProperty(this, 'growthStages', function () {
-                return cropGrowthStages[this.crop] || growthStages[0];
-            });
-
-            computedProperty(this, 'leavesPerPlant', function () {
-                return cultivarLeaves[this.cultivar] || 22;
-            }, {
-                enumerable: true
-            });
-
-            computedProperty(this, 'typeRequired', function () {
-                return s.include(this.crop, 'Maize');
-            });
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.createdAt = attrs.createdAt || moment().format('YYYY-MM-DD');
-            this.crop = attrs.crop;
-            this.cultivar = attrs.cultivar;
-            this.emergenceDate = attrs.emergenceDate;
-            this.growthStage = attrs.growthStage;
-            this.loc = attrs.loc;
-            this.plantsHa = attrs.plantsHa;
-            this.rowWidth = attrs.rowWidth;
-            this.seedProvider = attrs.seedProvider;
-            this.size = attrs.size;
-            this.type = attrs.type;
-            this.uuid = attrs.uuid || generateUUID();
-        }
-
-        inheritModel(CropZone, Model.Base);
-
-        var growthStages = [
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16', 'R17', 'R18'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
-            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6']
-        ];
-
-        var cropGrowthStages = {
-            'Barley': growthStages[1],
-            'Bean': growthStages[5],
-            'Bean (Broad)': growthStages[5],
-            'Bean (Dry)': growthStages[5],
-            'Bean (Sugar)': growthStages[5],
-            'Bean (Green)': growthStages[5],
-            'Bean (Kidney)': growthStages[5],
-            'Canola': growthStages[7],
-            'Cotton': growthStages[6],
-            'Grain Sorghum': growthStages[3],
-            'Maize': growthStages[0],
-            'Maize (White)': growthStages[0],
-            'Maize (Yellow)': growthStages[0],
-            'Soya Bean': growthStages[2],
-            'Sunflower': growthStages[4],
-            'Wheat': growthStages[1],
-            'Wheat (Durum)': growthStages[1]
-        };
-
         var cultivarLeaves = {
             'Phb 30F40': 23,
             'Phb 31G54 BR': 19,
@@ -1281,6 +1261,55 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'Crop', 'generateUUID', 'i
             'SC 533': 21,
             'SC 719': 24,
             'Scout': 20
+        };
+
+        var EAR = 'ear',
+            FLOWER = 'flower',
+            POD = 'pod',
+            PANICLE = 'panicle',
+            SPIKELET = 'spikelet';
+
+        var flowerTypes = {
+            'Dry Bean': POD,
+            'Grain Sorghum': PANICLE,
+            'Maize': EAR,
+            'Maize (White)': EAR,
+            'Maize (Yellow)': EAR,
+            'Sunflower': FLOWER,
+            'Wheat': SPIKELET,
+            'Soya Bean': POD
+        };
+
+        var growthStages = [
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16', 'R17', 'R18'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6']
+        ];
+
+        var cropGrowthStages = {
+            'Barley': growthStages[1],
+            'Bean': growthStages[5],
+            'Bean (Broad)': growthStages[5],
+            'Bean (Dry)': growthStages[5],
+            'Bean (Sugar)': growthStages[5],
+            'Bean (Green)': growthStages[5],
+            'Bean (Kidney)': growthStages[5],
+            'Canola': growthStages[7],
+            'Cotton': growthStages[6],
+            'Grain Sorghum': growthStages[3],
+            'Maize': growthStages[0],
+            'Maize (White)': growthStages[0],
+            'Maize (Yellow)': growthStages[0],
+            'Soya Bean': growthStages[2],
+            'Sunflower': growthStages[4],
+            'Wheat': growthStages[1],
+            'Wheat (Durum)': growthStages[1]
         };
 
         readOnlyProperty(CropZone, 'maizeTypes', [

@@ -116,39 +116,6 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
         return AssetBase;
     }]);
 
-sdkModelAsset.factory('AssetFactory', ['Asset', 'Crop', 'Livestock', 'Stock',
-    function (Asset, Crop, Livestock, Stock) {
-        var instances = {
-            'crop': Crop,
-            'livestock': Livestock,
-            'stock': Stock
-        };
-
-        function apply (attrs, fnName) {
-            if (instances[attrs.type]) {
-                return instances[attrs.type][fnName](attrs);
-            }
-
-            return Asset[fnName](attrs);
-        }
-
-        return {
-            isInstanceOf: function (asset) {
-                return (asset ?
-                    (instances[asset.type] ?
-                        asset instanceof instances[asset.type] :
-                        asset instanceof Asset) :
-                    false);
-            },
-            new: function (attrs) {
-                return apply(attrs, 'new');
-            },
-            newCopy: function (attrs) {
-                return apply(attrs, 'newCopy');
-            }
-        }
-    }]);
-
 sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'safeMath', 'underscore',
     function (Asset, AssetFactory, computedProperty, inheritModel, Model, privateProperty, safeMath, underscore) {
         function AssetGroup (attrs) {
@@ -1388,3 +1355,42 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
         return Asset;
     }]);
+
+sdkModelAsset.provider('AssetFactory', function () {
+    var instances = {};
+
+    this.add = function (type, modelName) {
+        instances[type] = modelName;
+    };
+
+    this.$get = ['$injector', 'Asset', function ($injector, Asset) {
+        function apply (attrs, fnName) {
+            if (instances[attrs.type]) {
+                if (typeof instances[attrs.type] === 'string') {
+                    instances[attrs.type] = $injector.get(instances[attrs.type]);
+                }
+
+                return instances[attrs.type][fnName](attrs);
+            }
+
+            return Asset[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (asset) {
+                return (asset ?
+                    (instances[asset.type] ?
+                        asset instanceof instances[asset.type] :
+                        asset instanceof Asset) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }];
+});
+

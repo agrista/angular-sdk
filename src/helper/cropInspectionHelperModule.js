@@ -170,6 +170,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
 
             return {
                 zones: zoneYields,
+                flower: _flowerTypes[asset.data.crop],
                 yield: underscore.reduce(zoneYields, function (total, item) {
                     return total + (item.coverage * item.yield);
                 }, 0)

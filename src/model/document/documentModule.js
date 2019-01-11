@@ -74,33 +74,32 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
         return Document;
     }]);
 
-sdkModelDocument.factory('DocumentFactory', ['BusinessPlan', 'CropInspection', 'DesktopValuation', 'Document', 'FarmValuation',
-    function (BusinessPlan, CropInspection, DesktopValuation, Document, FarmValuation) {
-        var instances = {
-            'desktop valuation': DesktopValuation,
-            'emergence inspection': CropInspection,
-            'farm valuation': FarmValuation,
-            'financial business plan': BusinessPlan,
-            'hail inspection': CropInspection,
-            'harvest inspection': CropInspection,
-            'preharvest inspection': CropInspection,
-            'progress inspection': CropInspection
-        };
+sdkModelDocument.provider('DocumentFactory', function () {
+    var instances = {};
 
+    this.add = function (docType, modelName) {
+        instances[docType] = modelName;
+    };
+
+    this.$get = ['$injector', 'Document', function ($injector, Document) {
         function apply (attrs, fnName) {
-            if (instances[attrs.type]) {
-                return instances[attrs.type][fnName](attrs);
+            if (instances[attrs.docType]) {
+                if (typeof instances[attrs.docType] === 'string') {
+                    instances[attrs.docType] = $injector.get(instances[attrs.docType]);
+                }
+
+                return instances[attrs.docType][fnName](attrs);
             }
 
             return Document[fnName](attrs);
         }
 
         return {
-            isInstanceOf: function (asset) {
-                return (asset ?
-                    (instances[asset.type] ?
-                        asset instanceof instances[asset.type] :
-                        asset instanceof Document) :
+            isInstanceOf: function (document) {
+                return (document ?
+                    (instances[document.docType] ?
+                        document instanceof instances[document.docType] :
+                        document instanceof Document) :
                     false);
             },
             new: function (attrs) {
@@ -110,4 +109,5 @@ sdkModelDocument.factory('DocumentFactory', ['BusinessPlan', 'CropInspection', '
                 return apply(attrs, 'newCopy');
             }
         }
-    }]);
+    }];
+});
