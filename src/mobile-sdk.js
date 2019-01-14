@@ -51,6 +51,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.stock',
     'ag.sdk.model.store',
     'ag.sdk.model.task',
+    'ag.sdk.model.task.emergence-inspection',
     'ag.sdk.model.task.progress-inspection',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'

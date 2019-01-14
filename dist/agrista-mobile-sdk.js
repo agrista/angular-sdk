@@ -1674,9 +1674,10 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         times: function (arrayA, arrayB) {
             return performSortedOperation(arrayA, arrayB, safeMath.times);
         },
-        reduce: function (array, initialValue) {
+        reduce: function (array, initialValue, fnName) {
+            fnName = fnName || 'plus';
             return underscore.reduce(array || [], function (total, value) {
-                return safeMath.plus(total, value);
+                return safeMath[fnName](total, value);
             }, initialValue || 0)
         },
         reduceProperty: function (array, property, initialValue) {
@@ -2959,7 +2960,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
                 };
 
                 if (_flowerTypes[asset.data.crop] === 'spikelet') {
-                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.plantedInRows ? zone.rowWidth * 3 : 1));
+                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.inRows ? zone.rowWidth * 3 : 1));
                 } else if (_flowerTypes[asset.data.crop] === 'pod') {
                     total.pods = reduceSamples(zoneSamples, 'pods');
                     total.seeds = reduceSamples(zoneSamples, 'seeds');
@@ -20422,8 +20423,13 @@ sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryPro
             function Crop (attrs) {
                 Asset.apply(this, arguments);
 
+                Base.initializeObject(this.data, 'inspections', []);
                 Base.initializeObject(this.data, 'problems', []);
                 Base.initializeObject(this.data, 'zones', []);
+
+                computedProperty(this, 'flower', function () {
+                    return flowerTypes[this.data.crop] || POD;
+                });
 
                 computedProperty(this, 'problems', function () {
                     return this.data.problems;
@@ -20482,6 +20488,23 @@ sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryPro
                     return safeMath.plus(total, zone.size);
                 }, 0);
             }
+
+            var EAR = 'ear',
+                FLOWER = 'flower',
+                POD = 'pod',
+                PANICLE = 'panicle',
+                SPIKELET = 'spikelet';
+
+            var flowerTypes = {
+                'Dry Bean': POD,
+                'Grain Sorghum': PANICLE,
+                'Maize': EAR,
+                'Maize (White)': EAR,
+                'Maize (Yellow)': EAR,
+                'Sunflower': FLOWER,
+                'Wheat': SPIKELET,
+                'Soya Bean': POD
+            };
 
             Crop.validates(underscore.defaults({
                 type: {
@@ -20569,17 +20592,9 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritMo
                 enumerable: true
             });
 
-            computedProperty(this, 'flower', function () {
-                return flowerTypes[this.crop] || POD;
-            }, {
-                enumerable: true
-            });
-
             computedProperty(this, 'typeRequired', function () {
                 return s.include(this.crop, 'Maize');
             });
-
-            this.samples = (attrs && attrs.samples || []);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -20588,6 +20603,7 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritMo
             this.cultivar = attrs.cultivar;
             this.emergenceDate = attrs.emergenceDate;
             this.growthStage = attrs.growthStage;
+            this.inRows = attrs.inRows;
             this.loc = attrs.loc;
             this.plantsHa = attrs.plantsHa;
             this.rowWidth = attrs.rowWidth;
@@ -21677,23 +21693,6 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritMo
             'SC 533': 21,
             'SC 719': 24,
             'Scout': 20
-        };
-
-        var EAR = 'ear',
-            FLOWER = 'flower',
-            POD = 'pod',
-            PANICLE = 'panicle',
-            SPIKELET = 'spikelet';
-
-        var flowerTypes = {
-            'Dry Bean': POD,
-            'Grain Sorghum': PANICLE,
-            'Maize': EAR,
-            'Maize (White)': EAR,
-            'Maize (Yellow)': EAR,
-            'Sunflower': FLOWER,
-            'Wheat': SPIKELET,
-            'Soya Bean': POD
         };
 
         var growthStages = [
@@ -24954,20 +24953,192 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
 
 
 
-var sdkModelTaskProgressInspection = angular.module('ag.sdk.model.task.progress-inspection', ['ag.sdk.model.task']);
+var sdkModelTaskEmergenceInspection = angular.module('ag.sdk.model.task.emergence-inspection', ['ag.sdk.model.crop-inspection', 'ag.sdk.model.task']);
+
+sdkModelTaskEmergenceInspection.provider('EmergenceInspectionTask', ['TaskFactoryProvider', function (TaskFactoryProvider) {
+    this.$get = ['computedProperty', 'CropInspection', 'inheritModel', 'Task', 'underscore',
+        function (computedProperty, CropInspection, inheritModel, Task, underscore) {
+            function EmergenceInspectionTask (attrs) {
+                Task.apply(this, arguments);
+
+                computedProperty(this, 'inspectionDate', function () {
+                    return this.data.inspectionDate;
+                });
+
+                computedProperty(this, 'landRecommendation', function () {
+                    return this.data.landRecommendation;
+                });
+
+                computedProperty(this, 'moistureStatus', function () {
+                    return this.data.moistureStatus;
+                });
+
+                computedProperty(this, 'zones', function () {
+                    return this.data.asset.data.zones;
+                });
+            }
+
+            inheritModel(EmergenceInspectionTask, Task);
+
+            EmergenceInspectionTask.validates(underscore.extend({
+                inspectionDate: {
+                    required: true,
+                    format: {
+                        date: true
+                    }
+                },
+                landRecommendation: {
+                    required: true,
+                    inclusion: {
+                        in: CropInspection.approvalTypes
+                    }
+                },
+                moistureStatus: {
+                    requiredIf: function (value, instance, field) {
+                        return instance.landRecommendation !== 'Not Planted';
+                    },
+                    inclusion: {
+                        in: CropInspection.moistureStatuses
+                    }
+                },
+                zones: {
+                    requiredIf: function (value, instance, field) {
+                        return instance.landRecommendation !== 'Not Planted';
+                    },
+                    length: {
+                        min: 1
+                    }
+                }
+            }, Task.validations));
+
+            return EmergenceInspectionTask;
+        }];
+
+    TaskFactoryProvider.add('emergence inspection', 'EmergenceInspectionTask');
+}]);
+var sdkModelTaskProgressInspection = angular.module('ag.sdk.model.task.progress-inspection', ['ag.sdk.model.crop', 'ag.sdk.model.task']);
 
 sdkModelTaskProgressInspection.provider('ProcessInspectionTask', ['TaskFactoryProvider', function (TaskFactoryProvider) {
-    this.$get = ['Base', 'inheritModel', 'Task',
-        function (Base, inheritModel, Task) {
+    this.$get = ['Base', 'computedProperty', 'Crop', 'CropInspection', 'inheritModel', 'privateProperty', 'safeArrayMath', 'safeMath', 'Task', 'underscore',
+        function (Base, computedProperty, Crop, CropInspection, inheritModel, privateProperty, safeArrayMath, safeMath, Task, underscore) {
             function ProcessInspectionTask (attrs) {
                 Task.apply(this, arguments);
 
                 Base.initializeObject(this.data, 'samples', []);
+
+                privateProperty(this, 'calculateResults', function () {
+                    calculateResults(this);
+                });
+
+                computedProperty(this, 'inspectionDate', function () {
+                    return this.data.inspectionDate;
+                });
+
+                computedProperty(this, 'moistureStatus', function () {
+                    return this.data.moistureStatus;
+                });
+
+                computedProperty(this, 'pitWeight', function () {
+                    return this.data.pitWeight;
+                });
+
+                computedProperty(this, 'realization', function () {
+                    return this.data.realization;
+                });
+
+                computedProperty(this, 'samples', function () {
+                    return this.data.samples;
+                });
             }
 
             inheritModel(ProcessInspectionTask, Task);
 
-            ProcessInspectionTask.validates(Task.validations);
+            function reduceSamples (samples, prop) {
+                return safeMath.dividedBy(underscore.reduce(samples, function (total, sample) {
+                    return safeMath.plus(total, sample[prop]);
+                }, 0), samples.length);
+            }
+
+            function calculateResults (instance) {
+                var asset = Crop.newCopy(instance.data.asset),
+                    pitWeight = instance.data.pitWeight || 0,
+                    realization = instance.data.realization || 100;
+
+                var zoneResults = underscore.map(asset.zones, function (zone) {
+                    var zoneSamples = underscore.where(instance.data.samples, {zoneUuid: zone.uuid}),
+                        result = {
+                            zoneUuid: zone.uuid,
+                            sampleSize: underscore.size(zoneSamples),
+                            coverage: safeMath.dividedBy(zone.size, asset.data.plantedArea),
+                            heads: reduceSamples(zoneSamples, 'heads'),
+                            weight: reduceSamples(zoneSamples, 'weight')
+                        };
+
+                    if (asset.flower === 'spikelet') {
+                        result.yield = safeMath.dividedBy(
+                            safeMath.times(result.weight, result.heads),
+                            safeMath.times((asset.data.irrigated ? 3000 : 3500), (zone.plantedInRows ? safeMath.times(zone.rowWidth, 3) : 1)));
+                    } else if (asset.flower === 'pod') {
+                        result.pods = reduceSamples(zoneSamples, 'pods');
+                        result.seeds = reduceSamples(zoneSamples, 'seeds');
+                        result.yield = safeMath.dividedBy(
+                            safeArrayMath.reduce([pitWeight, result.seeds, result.pods, result.heads], 0, 'times'),
+                            safeMath.times(zone.rowWidth, 300));
+                    } else {
+                        result.yield = safeMath.dividedBy(
+                            safeMath.times(result.weight, result.heads),
+                            safeMath.times(zone.rowWidth, 1000));
+                    }
+
+                    result.yield = safeMath.times(result.yield, safeMath.dividedBy(realization, 100));
+
+                    return result;
+                });
+
+                instance.data.inspection = {
+                    flower: asset.flower,
+                    results: zoneResults,
+                    totalYield: underscore.reduce(zoneResults, function (total, item) {
+                        return total + (item.coverage * item.yield);
+                    }, 0)
+                };
+            }
+
+            ProcessInspectionTask.validates(underscore.extend({
+                inspectionDate: {
+                    required: true,
+                    format: {
+                        date: true
+                    }
+                },
+                moistureStatus: {
+                    required: true,
+                    inclusion: {
+                        in: CropInspection.moistureStatuses
+                    }
+                },
+                pitWeight: {
+                    required: true,
+                    range: {
+                        from: 0
+                    },
+                    numeric: true
+                },
+                realization: {
+                    required: true,
+                    range: {
+                        from: 0,
+                        to: 100
+                    },
+                    numeric: true
+                },
+                samples: {
+                    required: true,
+                    length: {
+                        min: 1
+                    }
+                }
+            }, Task.validations));
 
             return ProcessInspectionTask;
         }];
@@ -25922,6 +26093,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.stock',
     'ag.sdk.model.store',
     'ag.sdk.model.task',
+    'ag.sdk.model.task.emergence-inspection',
     'ag.sdk.model.task.progress-inspection',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'

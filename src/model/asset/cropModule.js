@@ -6,8 +6,13 @@ sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryPro
             function Crop (attrs) {
                 Asset.apply(this, arguments);
 
+                Base.initializeObject(this.data, 'inspections', []);
                 Base.initializeObject(this.data, 'problems', []);
                 Base.initializeObject(this.data, 'zones', []);
+
+                computedProperty(this, 'flower', function () {
+                    return flowerTypes[this.data.crop] || POD;
+                });
 
                 computedProperty(this, 'problems', function () {
                     return this.data.problems;
@@ -66,6 +71,23 @@ sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryPro
                     return safeMath.plus(total, zone.size);
                 }, 0);
             }
+
+            var EAR = 'ear',
+                FLOWER = 'flower',
+                POD = 'pod',
+                PANICLE = 'panicle',
+                SPIKELET = 'spikelet';
+
+            var flowerTypes = {
+                'Dry Bean': POD,
+                'Grain Sorghum': PANICLE,
+                'Maize': EAR,
+                'Maize (White)': EAR,
+                'Maize (Yellow)': EAR,
+                'Sunflower': FLOWER,
+                'Wheat': SPIKELET,
+                'Soya Bean': POD
+            };
 
             Crop.validates(underscore.defaults({
                 type: {
@@ -153,17 +175,9 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritMo
                 enumerable: true
             });
 
-            computedProperty(this, 'flower', function () {
-                return flowerTypes[this.crop] || POD;
-            }, {
-                enumerable: true
-            });
-
             computedProperty(this, 'typeRequired', function () {
                 return s.include(this.crop, 'Maize');
             });
-
-            this.samples = (attrs && attrs.samples || []);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -172,6 +186,7 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritMo
             this.cultivar = attrs.cultivar;
             this.emergenceDate = attrs.emergenceDate;
             this.growthStage = attrs.growthStage;
+            this.inRows = attrs.inRows;
             this.loc = attrs.loc;
             this.plantsHa = attrs.plantsHa;
             this.rowWidth = attrs.rowWidth;
@@ -1261,23 +1276,6 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritMo
             'SC 533': 21,
             'SC 719': 24,
             'Scout': 20
-        };
-
-        var EAR = 'ear',
-            FLOWER = 'flower',
-            POD = 'pod',
-            PANICLE = 'panicle',
-            SPIKELET = 'spikelet';
-
-        var flowerTypes = {
-            'Dry Bean': POD,
-            'Grain Sorghum': PANICLE,
-            'Maize': EAR,
-            'Maize (White)': EAR,
-            'Maize (Yellow)': EAR,
-            'Sunflower': FLOWER,
-            'Wheat': SPIKELET,
-            'Soya Bean': POD
         };
 
         var growthStages = [
