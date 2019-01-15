@@ -61,7 +61,9 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
                         }
                     });
 
-                    return geojson.getCenter().reverse();
+                    var coord = geojson.getCenter();
+
+                    return (coord ? coord.reverse() : coord);
                 }
             }
 
