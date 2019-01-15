@@ -154,7 +154,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
                 };
 
                 if (_flowerTypes[asset.data.crop] === 'spikelet') {
-                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.plantedInRows ? zone.rowWidth * 3 : 1));
+                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.inRows ? zone.rowWidth * 3 : 1));
                 } else if (_flowerTypes[asset.data.crop] === 'pod') {
                     total.pods = reduceSamples(zoneSamples, 'pods');
                     total.seeds = reduceSamples(zoneSamples, 'seeds');
@@ -170,6 +170,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
 
             return {
                 zones: zoneYields,
+                flower: _flowerTypes[asset.data.crop],
                 yield: underscore.reduce(zoneYields, function (total, item) {
                     return total + (item.coverage * item.yield);
                 }, 0)

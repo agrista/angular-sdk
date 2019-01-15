@@ -39,25 +39,16 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             this.docType = attrs.docType;
             this.documentId = attrs.documentId;
             this.id = attrs.id || attrs.$id;
-            this.organization = attrs.organization;
             this.organizationId = attrs.organizationId;
             this.originUuid = attrs.originUuid;
             this.origin = attrs.origin;
             this.title = attrs.title;
+
+            this.organization = attrs.organization;
+            this.tasks = attrs.tasks;
         }
 
         inheritModel(Document, Model.Base);
-
-        readOnlyProperty(Document, 'docTypes', {
-            'asset register': 'Asset Register',
-            'desktop valuation': 'Desktop Valuation',
-            'emergence report': 'Emergence Report',
-            'farm valuation': 'Farm Valuation',
-            'financial resource plan': 'Financial Resource Plan',
-            'insurance policy': 'Insurance Policy',
-            'production plan': 'Production Plan',
-            'progress report': 'Progress Report'
-        });
 
         Document.validates({
             author: {
@@ -69,8 +60,9 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             },
             docType: {
                 required: true,
-                inclusion: {
-                    in: underscore.keys(Document.docTypes)
+                length: {
+                    min: 1,
+                    max: 255
                 }
             },
             organizationId: {
@@ -81,3 +73,41 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
 
         return Document;
     }]);
+
+sdkModelDocument.provider('DocumentFactory', function () {
+    var instances = {};
+
+    this.add = function (docType, modelName) {
+        instances[docType] = modelName;
+    };
+
+    this.$get = ['$injector', 'Document', function ($injector, Document) {
+        function apply (attrs, fnName) {
+            if (instances[attrs.docType]) {
+                if (typeof instances[attrs.docType] === 'string') {
+                    instances[attrs.docType] = $injector.get(instances[attrs.docType]);
+                }
+
+                return instances[attrs.docType][fnName](attrs);
+            }
+
+            return Document[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (document) {
+                return (document ?
+                    (instances[document.docType] ?
+                        document instanceof instances[document.docType] :
+                        document instanceof Document) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }];
+});

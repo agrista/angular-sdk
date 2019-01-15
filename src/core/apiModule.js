@@ -750,11 +750,27 @@ sdkApiApp.factory('expenseApi', ['$http', 'asJson', 'pagingService', 'promiseSer
             }
             return pagingService.page(_host + url, params);
         },
+        createExpense: function (data) {
+            var dataCopy = asJson(data);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/expense', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateExpense: function (data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
                 $http.post(_host + 'api/expense/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteExpense: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/expense/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

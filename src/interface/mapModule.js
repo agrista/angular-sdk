@@ -45,7 +45,7 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (undersco
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {
         asset: mapMarkerHelperProvider.getMarkerStates('asset', ['default', 'success', 'error']),
-        zone: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
+        marker: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
     };
 
     var _mapStyles = {
@@ -138,10 +138,10 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
-            zone: {
-                icon: _markerIcons.zone.success,
+            marker: {
+                icon: _markerIcons.marker.success,
                 style: {
-                    weight: 4,
+                    weight: 2,
                     color: 'white',
                     opacity: 0.8,
                     fillColor: "#ff6666",
@@ -254,10 +254,10 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.4
                 }
             },
-            zone: {
-                icon: _markerIcons.zone.default,
+            marker: {
+                icon: _markerIcons.marker.default,
                 style: {
-                    weight: 2,
+                    weight: 1,
                     color: 'white',
                     opacity: 0.5,
                     fillColor: "#ff6666",
@@ -1844,7 +1844,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             var label = new L.Tooltip(labelData.options);
             label.setContent(labelData.message);
-            label.setLatLng(geojson.getCenter());
+            label.setLatLng(geojson.getCenter().reverse());
 
             if (labelData.options.permanent == true) {
                 label.addTo(_this._map);

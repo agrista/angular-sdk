@@ -635,12 +635,74 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         }
     }
 
+    function geometryArea (area, geojson) {
+        if (geojson.type) {
+            switch (geojson.type) {
+                case 'Polygon':
+                    return polygonArea(0, geojson.coordinates);
+                case 'MultiPolygon':
+                    return underscore.reduce(geojson.coordinates, polygonArea, area);
+                case 'GeometryCollection':
+                    return underscore.reduce(geojson.geometries, geometryArea, area);
+            }
+        }
+
+        return area;
+    }
+
+    function polygonArea (area, coords) {
+        if (coords && coords.length > 0) {
+            area += Math.abs(ringArea(coords[0]));
+            for (var i = 1; i < coords.length; i++) {
+                area -= Math.abs(ringArea(coords[i]));
+            }
+        }
+
+        return area;
+    }
+
+    function ringArea (coords) {
+        var p1, p2, p3, lowerIndex, middleIndex, upperIndex, i,
+            area = 0,
+            coordsLength = coords.length;
+
+        if (coordsLength > 2) {
+            for (i = 0; i < coordsLength; i++) {
+                if (i === coordsLength - 2) {// i = N-2
+                    lowerIndex = coordsLength - 2;
+                    middleIndex = coordsLength -1;
+                    upperIndex = 0;
+                } else if (i === coordsLength - 1) {// i = N-1
+                    lowerIndex = coordsLength - 1;
+                    middleIndex = 0;
+                    upperIndex = 1;
+                } else { // i = 0 to N-3
+                    lowerIndex = i;
+                    middleIndex = i+1;
+                    upperIndex = i+2;
+                }
+                p1 = coords[lowerIndex];
+                p2 = coords[middleIndex];
+                p3 = coords[upperIndex];
+                area += (rad(p3[0]) - rad(p1[0])) * Math.sin(rad(p2[1]));
+            }
+
+            // WGS84 radius
+            area = area * 6378137 * 6378137 / 2;
+        }
+
+        return area;
+    }
+
+    function rad (val) {
+        return val * Math.PI / 180;
+    }
+
     function getGeometry (instance) {
-        return (instance._json.type === 'Feature' ?
+        return instance._json && (instance._json.type === 'Feature' ?
                 instance._json.geometry :
                 (instance._json.type !== 'FeatureCollection' ?
-                        instance._json :
-                        {
+                        instance._json : {
                             type: 'GeometryCollection',
                             geometries: underscore.pluck(instance._json.features, 'geometry')
                         }
@@ -665,6 +727,18 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         },
         getGeometryType: function () {
             return (this._json.geometry ? this._json.geometry.type : this._json.type);
+        },
+        getArea: function () {
+            var area = (this._json ? geometryArea(0, this._json) : 0),
+                yards = (area * 1.19599);
+
+            return {
+                m_sq: area,
+                ha: (area * 0.0001),
+                mi_sq: (yards / 3097600),
+                acres: (yards / 4840),
+                yd_sq: yards
+            };
         },
         getBounds: function () {
             var bounds = [];
@@ -700,6 +774,14 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
             });
 
             return [[lat1, lng1], [lat2, lng2]];
+        },
+        /**
+         * Geometry Editing
+         */
+        difference: function (geometry) {
+            var geom = topologyHelper.readGeoJSON(getGeometry(this));
+            this._json = topologyHelper.writeGeoJSON(geom.difference(geometry));
+            return this;
         },
         /**
          * Geometry Relations
@@ -993,14 +1075,11 @@ sdkIdApp.factory('objectId', ['localStore', function(localStore) {
 
 sdkIdApp.factory('generateUUID', function () {
     function GenerateUUID () {
-        var d = new Date().getTime();
-        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = (d + Math.random()*16)%16 | 0;
-            d = Math.floor(d/16);
-            return (c=='x' ? r : (r&0x7|0x8)).toString(16);
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
         });
-        return uuid;
-    };
+    }
 
     return function() {
         return GenerateUUID();
@@ -1595,9 +1674,10 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         times: function (arrayA, arrayB) {
             return performSortedOperation(arrayA, arrayB, safeMath.times);
         },
-        reduce: function (array, initialValue) {
+        reduce: function (array, initialValue, fnName) {
+            fnName = fnName || 'plus';
             return underscore.reduce(array || [], function (total, value) {
-                return safeMath.plus(total, value);
+                return safeMath[fnName](total, value);
             }, initialValue || 0)
         },
         reduceProperty: function (array, property, initialValue) {
@@ -2880,7 +2960,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
                 };
 
                 if (_flowerTypes[asset.data.crop] === 'spikelet') {
-                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.plantedInRows ? zone.rowWidth * 3 : 1));
+                    total.yield = (total.weight * total.heads) / ((asset.data.irrigated ? 3000 : 3500) * (zone.inRows ? zone.rowWidth * 3 : 1));
                 } else if (_flowerTypes[asset.data.crop] === 'pod') {
                     total.pods = reduceSamples(zoneSamples, 'pods');
                     total.seeds = reduceSamples(zoneSamples, 'seeds');
@@ -2896,6 +2976,7 @@ sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'u
 
             return {
                 zones: zoneYields,
+                flower: _flowerTypes[asset.data.crop],
                 yield: underscore.reduce(zoneYields, function (total, item) {
                     return total + (item.coverage * item.yield);
                 }, 0)
@@ -5530,7 +5611,9 @@ sdkHelperFarmerApp.factory('farmerHelper', ['attachmentHelper', 'geoJSONHelper',
                         }
                     });
 
-                    return geojson.getCenter().reverse();
+                    var coord = geojson.getCenter();
+
+                    return (coord ? coord.reverse() : coord);
                 }
             }
 
@@ -6873,7 +6956,7 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (undersco
 sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
     var _markerIcons = {
         asset: mapMarkerHelperProvider.getMarkerStates('asset', ['default', 'success', 'error']),
-        zone: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
+        marker: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
     };
 
     var _mapStyles = {
@@ -6966,10 +7049,10 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
-            zone: {
-                icon: _markerIcons.zone.success,
+            marker: {
+                icon: _markerIcons.marker.success,
                 style: {
-                    weight: 4,
+                    weight: 2,
                     color: 'white',
                     opacity: 0.8,
                     fillColor: "#ff6666",
@@ -7082,10 +7165,10 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.4
                 }
             },
-            zone: {
-                icon: _markerIcons.zone.default,
+            marker: {
+                icon: _markerIcons.marker.default,
                 style: {
-                    weight: 2,
+                    weight: 1,
                     color: 'white',
                     opacity: 0.5,
                     fillColor: "#ff6666",
@@ -8672,7 +8755,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
             var label = new L.Tooltip(labelData.options);
             label.setContent(labelData.message);
-            label.setLatLng(geojson.getCenter());
+            label.setLatLng(geojson.getCenter().reverse());
 
             if (labelData.options.permanent == true) {
                 label.addTo(_this._map);
@@ -10243,7 +10326,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.newCopy = function (attrs, options) {
-                return _constructor.new(deepCopy(attrs), options);
+                return _constructor.new(deepCopy(attrs || {}), options);
             };
 
             _constructor.asJSON = function (omit) {
@@ -12533,6 +12616,63 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudget', ['$filter', 'Base', 'comput
         });
 
         return EnterpriseBudget;
+    }]);
+
+var sdkModelExpense = angular.module('ag.sdk.model.expense', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelExpense.factory('Expense', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, readOnlyProperty, underscore) {
+        function Expense (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.description = attrs.description;
+            this.documentId = attrs.documentId;
+            this.organizationId = attrs.organizationId;
+            this.quantity = attrs.quantity;
+            this.unit = attrs.unit;
+            this.userId = attrs.userId;
+            this.reconciled = attrs.reconciled;
+            this.reconciledAt = attrs.reconciledAt;
+            this.reconciledBy = attrs.reconciledBy;
+
+            this.document = attrs.document;
+            this.organization = attrs.organization;
+            this.user = attrs.user;
+        }
+
+        inheritModel(Expense, Model.Base);
+
+        readOnlyProperty(Expense, 'units', [
+            'ha',
+            'km',
+            'h']);
+
+        Expense.validates({
+            description: {
+                required: false,
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            quantity: {
+                required: true,
+                numeric: true
+            },
+            unit: {
+                required: true,
+                inclusion: {
+                    in: Expense.units
+                }
+            }
+        });
+
+        return Expense;
     }]);
 
 var sdkModelFarm = angular.module('ag.sdk.model.farm', ['ag.sdk.library', 'ag.sdk.model.base']);
@@ -18996,38 +19136,6 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
         return AssetBase;
     }]);
 
-sdkModelAsset.factory('AssetFactory', ['Asset', 'Livestock', 'Stock',
-    function (Asset, Livestock, Stock) {
-        var instances = {
-            'livestock': Livestock,
-            'stock': Stock
-        };
-
-        function apply (attrs, fnName) {
-            if (instances[attrs.type]) {
-                return instances[attrs.type][fnName](attrs);
-            }
-
-            return Asset[fnName](attrs);
-        }
-
-        return {
-            isInstanceOf: function (asset) {
-                return (asset ?
-                    (instances[asset.type] ?
-                        asset instanceof instances[asset.type] :
-                        asset instanceof Asset) :
-                    false);
-            },
-            new: function (attrs) {
-                return apply(attrs, 'new');
-            },
-            newCopy: function (attrs) {
-                return apply(attrs, 'newCopy');
-            }
-        }
-    }]);
-
 sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'safeMath', 'underscore',
     function (Asset, AssetFactory, computedProperty, inheritModel, Model, privateProperty, safeMath, underscore) {
         function AssetGroup (attrs) {
@@ -19154,7 +19262,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             });
 
             computedProperty(this, 'thumbnailUrl', function () {
-                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+                return getThumbnailUrl(this);
             });
 
             computedProperty(this, 'age', function () {
@@ -19219,7 +19327,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 }, 0);
             });
 
-            Base.initializeObject(this.data, 'zones', []);
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.farmId = attrs.farmId;
 
@@ -19687,6 +19795,826 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             ]
         });
 
+        readOnlyProperty(Asset, 'landClassesByType', {
+            'crop': [
+                'Cropland',
+                'Cropland (Emerging)',
+                'Cropland (Irrigated)',
+                'Cropland (Smallholding)',
+                'Vegetables'],
+            'cropland': [
+                'Cropland',
+                'Cropland (Emerging)',
+                'Cropland (Irrigated)',
+                'Cropland (Smallholding)',
+                'Vegetables'],
+            'farmland': [],
+            'improvement': [],
+            'livestock': [
+                'Grazing',
+                'Grazing (Bush)',
+                'Grazing (Fynbos)',
+                'Grazing (Shrubland)',
+                'Planted Pastures'],
+            'pasture': [
+                'Grazing',
+                'Grazing (Bush)',
+                'Grazing (Fynbos)',
+                'Grazing (Shrubland)',
+                'Planted Pastures'],
+            'permanent crop': [
+                'Greenhouses',
+                'Orchard',
+                'Orchard (Shadenet)',
+                'Vineyard'],
+            'plantation': [
+                'Forest',
+                'Pineapple',
+                'Plantation',
+                'Plantation (Smallholding)',
+                'Sugarcane',
+                'Sugarcane (Emerging)',
+                'Sugarcane (Irrigated)',
+                'Tea'],
+            'vme': [],
+            'wasteland': [
+                'Non-vegetated'],
+            'water right': [
+                'Water',
+                'Water (Seasonal)',
+                'Wetland']
+        });
+
+        var _croplandCrops = [
+            'Barley',
+            'Bean',
+            'Bean (Broad)',
+            'Bean (Dry)',
+            'Bean (Sugar)',
+            'Bean (Green)',
+            'Bean (Kidney)',
+            'Beet',
+            'Broccoli',
+            'Butternut',
+            'Cabbage',
+            'Canola',
+            'Carrot',
+            'Cassava',
+            'Cauliflower',
+            'Cotton',
+            'Cowpea',
+            'Grain Sorghum',
+            'Groundnut',
+            'Leek',
+            'Lucerne',
+            'Maize',
+            'Maize (White)',
+            'Maize (Yellow)',
+            'Oats',
+            'Onion',
+            'Peanut',
+            'Pearl Millet',
+            'Potato',
+            'Pumpkin',
+            'Rapeseed',
+            'Rice',
+            'Rye',
+            'Soya Bean',
+            'Sunflower',
+            'Sweet Corn',
+            'Sweet Potato',
+            'Teff',
+            'Tobacco',
+            'Triticale',
+            'Turnip',
+            'Wheat',
+            'Wheat (Durum)'
+        ];
+        var _croplandIrrigatedCrops = [
+            'Maize (Irrigated)',
+            'Soya Bean (Irrigated)',
+            'Teff (Irrigated)',
+            'Wheat (Irrigated)'
+        ];
+        var _croplandAllCrops = underscore.union(_croplandCrops, _croplandIrrigatedCrops).sort(naturalSort);
+        var _grazingCrops = [
+            'Bahia-Notatum',
+            'Birdsfoot Trefoil',
+            'Bottle Brush',
+            'Buffalo',
+            'Buffalo (Blue)',
+            'Buffalo (White)',
+            'Bush',
+            'Carribean Stylo',
+            'Clover',
+            'Clover (Arrow Leaf)',
+            'Clover (Crimson)',
+            'Clover (Persian)',
+            'Clover (Red)',
+            'Clover (Rose)',
+            'Clover (Strawberry)',
+            'Clover (Subterranean)',
+            'Clover (White)',
+            'Cocksfoot',
+            'Common Setaria',
+            'Dallis',
+            'Kikuyu',
+            'Lucerne',
+            'Lupin',
+            'Lupin (Narrow Leaf)',
+            'Lupin (White)',
+            'Lupin (Yellow)',
+            'Medic',
+            'Medic (Barrel)',
+            'Medic (Burr)',
+            'Medic (Gama)',
+            'Medic (Snail)',
+            'Medic (Strand)',
+            'Multispecies Pasture',
+            'Phalaris',
+            'Rescue',
+            'Rhodes',
+            'Russian Grass',
+            'Ryegrass',
+            'Ryegrass (Hybrid)',
+            'Ryegrass (Italian)',
+            'Ryegrass (Westerwolds)',
+            'Serradella',
+            'Serradella (Yellow)',
+            'Silver Leaf Desmodium',
+            'Smuts Finger',
+            'Soutbos',
+            'Tall Fescue',
+            'Teff',
+            'Veld',
+            'Weeping Lovegrass'
+        ];
+        var _perennialCrops = [
+            'Almond',
+            'Apple',
+            'Apricot',
+            'Avocado',
+            'Banana',
+            'Barberry',
+            'Berry',
+            'Bilberry',
+            'Blackberry',
+            'Blueberry',
+            'Cherry',
+            'Cloudberry',
+            'Coconut',
+            'Coffee',
+            'Date',
+            'Fig',
+            'Gooseberry',
+            'Grapefruit',
+            'Guava',
+            'Hazelnut',
+            'Kiwi Fruit',
+            'Kumquat',
+            'Lemon',
+            'Lime',
+            'Litchi',
+            'Macadamia Nut',
+            'Mandarin',
+            'Mango',
+            'Mulberry',
+            'Nectarine',
+            'Olive',
+            'Orange',
+            'Papaya',
+            'Peach',
+            'Pear',
+            'Prickly Pear',
+            'Pecan Nut',
+            'Persimmon',
+            'Pistachio Nut',
+            'Plum',
+            'Pomegranate',
+            'Protea',
+            'Prune',
+            'Raspberry',
+            'Rooibos',
+            'Roses',
+            'Strawberry',
+            'Walnut',
+            'Wineberry'
+        ];
+        var _plantationCrops = [
+            'Aloe',
+            'Bluegum',
+            'Hops',
+            'Pine',
+            'Pineapple',
+            'Tea',
+            'Sisal',
+            'Sugarcane',
+            'Sugarcane (Irrigated)',
+            'Wattle'
+        ];
+        var _vegetableCrops = [
+            'Chicory',
+            'Chili',
+            'Garlic',
+            'Lentil',
+            'Melon',
+            'Olive',
+            'Onion',
+            'Pea',
+            'Pumpkin',
+            'Quince',
+            'Strawberry',
+            'Tomato',
+            'Watermelon',
+            'Carrot',
+            'Beet',
+            'Cauliflower',
+            'Broccoli',
+            'Leek',
+            'Butternut',
+            'Cabbage',
+            'Rapeseed'
+        ];
+        var _vineyardCrops = [
+            'Grape',
+            'Grape (Bush Vine)',
+            'Grape (Red)',
+            'Grape (Table)',
+            'Grape (White)'
+        ];
+
+        readOnlyProperty(Asset, 'cropsByLandClass', {
+            'Cropland': _croplandCrops,
+            'Cropland (Emerging)': _croplandCrops,
+            'Cropland (Irrigated)': _croplandIrrigatedCrops,
+            'Cropland (Smallholding)': _croplandCrops,
+            'Forest': ['Pine'],
+            'Grazing': _grazingCrops,
+            'Grazing (Bush)': _grazingCrops,
+            'Grazing (Fynbos)': _grazingCrops,
+            'Grazing (Shrubland)': _grazingCrops,
+            'Greenhouses': [],
+            'Orchard': _perennialCrops,
+            'Orchard (Shadenet)': _perennialCrops,
+            'Pineapple': ['Pineapple'],
+            'Plantation': _plantationCrops,
+            'Plantation (Smallholding)': _plantationCrops,
+            'Planted Pastures': _grazingCrops,
+            'Sugarcane': ['Sugarcane'],
+            'Sugarcane (Emerging)': ['Sugarcane'],
+            'Sugarcane (Irrigated)': ['Sugarcane (Irrigated)'],
+            'Tea': ['Tea'],
+            'Vegetables': _vegetableCrops,
+            'Vineyard': _vineyardCrops
+        });
+
+        readOnlyProperty(Asset, 'cropsByType', {
+            'crop': _croplandAllCrops,
+            'cropland': _croplandAllCrops,
+            'livestock': _grazingCrops,
+            'pasture': _grazingCrops,
+            'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
+            'plantation': _plantationCrops
+        });
+
+        readOnlyProperty(Asset, 'liquidityTypes', {
+            'long-term': 'Long-term',
+            'medium-term': 'Movable',
+            'short-term': 'Current'
+        });
+
+        readOnlyProperty(Asset, 'liquidityCategories', {
+            'long-term': ['Fixed Improvements', 'Investments', 'Land', 'Other'],
+            'medium-term': ['Breeding Stock', 'Vehicles, Machinery & Equipment', 'Other'],
+            'short-term': ['Crops & Crop Products', 'Cash on Hand', 'Debtors', 'Short-term Investments', 'Prepaid Expenses', 'Production Inputs', 'Life Insurance', 'Livestock Products', 'Marketable Livestock', 'Negotiable Securities', 'Other']
+        });
+
+        readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
+
+        readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
+
+        privateProperty(Asset, 'farmRequired', function (type) {
+            return farmRequired(type)
+        });
+
+        privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
+            return Asset.cropsByLandClass[landClass] || [];
+        });
+
+        privateProperty(Asset, 'getDefaultCrop', function (landClass) {
+            return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
+        });
+
+        privateProperty(Asset, 'getCustomTitle', function (asset, props, options) {
+            return getCustomTitle(asset, props, options);
+        });
+
+        privateProperty(Asset, 'getThumbnailUrl', function (asset) {
+            return getThumbnailUrl(asset);
+        });
+
+        privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
+            return getTitle(asset, withField, farm);
+        });
+
+        privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
+            return listServiceMap(asset, metadata);
+        });
+
+        function getDefaultProps (instance) {
+            switch (instance.type) {
+                case 'crop':
+                case 'permanent crop':
+                case 'plantation':
+                    return ['plantedArea', 'crop', 'fieldName', 'farmName'];
+                case 'farmland':
+                    return [['label', 'portionLabel', 'portionNumber']];
+                case 'cropland':
+                    return ['typeTitle', function (instance) {
+                        return (instance.data.irrigation ?
+                            instance.data.irrigation + ' irrigated' :
+                            (instance.data.irrigated ?
+                                'Irrigated (' + (instance.data.equipped ? 'equipped' : 'unequipped') + ')':
+                                'Non irrigable'))
+                    }, 'waterSource', 'fieldName', 'farmName'];
+                case 'livestock':
+                    return ['type', 'category'];
+                case 'pasture':
+                    return [function (instance) {
+                        return (instance.data.intensified ?
+                            (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type :
+                            'Natural Grazing');
+                    }, 'fieldName', 'farmName'];
+                case 'vme':
+                    return ['category', 'model'];
+                case 'wasteland':
+                    return ['typeTitle'];
+                case 'water source':
+                case 'water right':
+                    return ['waterSource', 'fieldName', 'farmName'];
+                default:
+                    return [['name', 'category', 'typeTitle']];
+            }
+        }
+
+        function getProps (instance, props, options) {
+            return underscore.chain(props)
+                .map(function (prop) {
+                    if (underscore.isArray(prop)) {
+                        return underscore.first(getProps(instance, prop, options));
+                    } else if (underscore.isFunction(prop)) {
+                        return prop(instance, options);
+                    } else {
+                        switch (prop) {
+                            case 'age':
+                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
+                            case 'defaultTitle':
+                                return getProps(instance, getDefaultProps(instance), options);
+                            case 'farmName':
+                                return options.withFarm && options.field && options.field[prop];
+                            case 'fieldName':
+                                return options.withField && instance.data[prop];
+                            case 'croppingPotential':
+                                return options.field && options.field[prop] && options.field[prop] + ' Potential';
+                            case 'landUse':
+                                return options.field && options.field[prop];
+                            case 'area':
+                            case 'plantedArea':
+                            case 'size':
+                                return instance.data[prop] && safeMath.round(instance.data[prop], 2) + 'ha';
+                            case 'portionNumber':
+                                return (instance.data.portionNumber ? 'Ptn. ' + instance.data.portionNumber : 'Rem. extent of farm');
+                            case 'typeTitle':
+                                return Asset.assetTypes[instance.type];
+                            default:
+                                return instance.data[prop];
+                        }
+                    }
+                })
+                .compact()
+                .uniq()
+                .value();
+        }
+
+        function getCustomTitle (instance, props, options) {
+            options = underscore.defaults(options || {}, {
+                separator: ', '
+            });
+
+            return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
+        }
+
+        function getThumbnailUrl (instance) {
+            return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+        }
+        
+        function getTitle (instance, withField, farm) {
+            return getCustomTitle(instance, getDefaultProps(instance), {
+                farm: farm,
+                withFarm: !underscore.isUndefined(farm),
+                field: farm && underscore.findWhere(farm.data.fields, {fieldName: instance.data.fieldName}),
+                withField: withField
+            });
+        }
+        
+        function listServiceMap (instance, metadata) {
+            var map = {
+                id: instance.id || instance.$id,
+                type: instance.type,
+                updatedAt: instance.updatedAt
+            };
+
+            if (instance.data) {
+                map.title = getTitle(instance, true);
+                map.groupby = instance.farmId;
+                map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
+
+                switch (instance.type) {
+                    case 'crop':
+                        map.subtitle = (instance.data.plantedDate ? 'Planted: ' + moment(instance.data.plantedDate).format('YYYY-MM-DD') : '');
+                        map.size = instance.data.size;
+                        break;
+                    case 'cropland':
+                    case 'pasture':
+                    case 'wasteland':
+                    case 'water right':
+                        map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.size;
+                        break;
+                    case 'farmland':
+                        map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
+                        map.size = instance.data.area;
+                        break;
+                    case 'permanent crop':
+                    case 'plantation':
+                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('YYYY-MM-DD') : '');
+                        map.size = instance.data.size;
+                        break;
+                    case 'improvement':
+                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '') + (instance.data.size !== undefined ? ' (' + safeMath.round(instance.data.size, 2) + 'm²)' : '');
+                        map.summary = (instance.data.description || '');
+                        break;
+                    case 'livestock':
+                        map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
+                        map.summary = (instance.data.description || '');
+                        map.groupby = instance.data.type;
+                        break;
+                    case 'vme':
+                        map.subtitle = 'Quantity: ' + instance.data.quantity;
+                        map.summary = (instance.data.description || '');
+                        map.groupby = instance.data.type;
+                        break;
+                }
+            }
+
+            if (metadata) {
+                map = underscore.extend(map, metadata);
+            }
+
+            return map;
+        }
+
+        function generateUniqueName (instance, categoryLabel, assets) {
+            categoryLabel = categoryLabel || '';
+
+            var assetCount = underscore.chain(assets)
+                .where({type: instance.type})
+                .reduce(function(assetCount, asset) {
+                    if (asset.data.name) {
+                        var index = asset.data.name.search(/\s+[0-9]+$/),
+                            name = asset.data.name,
+                            number;
+
+                        if (index !== -1) {
+                            name = name.substr(0, index);
+                            number = parseInt(asset.data.name.substring(index).trim());
+                        }
+
+                        if (categoryLabel && name === categoryLabel && (!number || number > assetCount)) {
+                            assetCount = number || 1;
+                        }
+                    }
+
+                    return assetCount;
+                }, -1)
+                .value();
+
+            return categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
+        }
+
+        function isFieldApplicable (instance, field) {
+            return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
+        }
+
+        function farmRequired (type) {
+            return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
+        }
+
+        Asset.validates({
+            assetKey: {
+                required: true
+            },
+            crop: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type);
+                },
+                inclusion: {
+                    in: function (value, instance) {
+                        return Asset.cropsByType[instance.type];
+                    }
+                }
+            },
+            establishedDate: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['permanent crop', 'plantation'], instance.type);
+                },
+                format: {
+                    date: true
+                }
+            },
+            farmId: {
+                requiredIf: function (value, instance) {
+                    return farmRequired(instance.type);
+                },
+                numeric: true
+            },
+            fieldName: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation'], instance.type);
+                },
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            legalEntityId: {
+                required: true,
+                numeric: true
+            },
+            plantedDate: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop'], instance.type);
+                },
+                format: {
+                    date: true
+                }
+            },
+            size: {
+                requiredIf: function (value, instance) {
+                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                },
+                numeric: true
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Asset.assetTypesWithOther)
+                }
+            }
+        });
+
+        return Asset;
+    }]);
+
+sdkModelAsset.provider('AssetFactory', function () {
+    var instances = {};
+
+    this.add = function (type, modelName) {
+        instances[type] = modelName;
+    };
+
+    this.$get = ['$injector', 'Asset', function ($injector, Asset) {
+        function apply (attrs, fnName) {
+            if (instances[attrs.type]) {
+                if (typeof instances[attrs.type] === 'string') {
+                    instances[attrs.type] = $injector.get(instances[attrs.type]);
+                }
+
+                return instances[attrs.type][fnName](attrs);
+            }
+
+            return Asset[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (asset) {
+                return (asset ?
+                    (instances[asset.type] ?
+                        asset instanceof instances[asset.type] :
+                        asset instanceof Asset) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }];
+});
+
+
+var sdkModelCrop = angular.module('ag.sdk.model.crop', ['ag.sdk.model.asset']);
+
+sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryProvider) {
+    this.$get = ['Base', 'asJson', 'Asset', 'computedProperty', 'inheritModel', 'privateProperty', 'naturalSort', 'readOnlyProperty', 'safeMath', 'underscore',
+        function (Base, asJson, Asset, computedProperty, inheritModel, privateProperty, naturalSort, readOnlyProperty, safeMath, underscore) {
+            function Crop (attrs) {
+                Asset.apply(this, arguments);
+
+                Base.initializeObject(this.data, 'inspections', []);
+                Base.initializeObject(this.data, 'problems', []);
+                Base.initializeObject(this.data, 'zones', []);
+
+                computedProperty(this, 'flower', function () {
+                    return flowerTypes[this.data.crop] || POD;
+                });
+
+                computedProperty(this, 'problems', function () {
+                    return this.data.problems;
+                });
+
+                computedProperty(this, 'zones', function () {
+                    return this.data.zones;
+                });
+
+                privateProperty(this, 'addProblem', function (problem) {
+                    addItem(this, 'problems', problem);
+                });
+
+                privateProperty(this, 'addZone', function (zone) {
+                    addItem(this, 'zones', zone);
+                });
+
+                privateProperty(this, 'removeProblem', function (problem) {
+                    removeItem(this, 'problems', problem);
+                });
+
+                privateProperty(this, 'removeZone', function (zone) {
+                    removeItem(this, 'zones', zone);
+                });
+
+                this.type = 'crop';
+            }
+
+            inheritModel(Crop, Asset);
+
+            function addItem (instance, dataStore, item) {
+                if (item) {
+                    instance.data[dataStore] = underscore.chain(instance.data[dataStore])
+                        .reject(underscore.identity({uuid: item.uuid}))
+                        .union([asJson(item)])
+                        .value()
+                        .sort(function (a, b) {
+                            return naturalSort(a.createdAt, b.createdAt);
+                        });
+
+                    updatePlantedArea(instance);
+                    instance.$dirty = true;
+                }
+            }
+
+            function removeItem (instance, dataStore, item) {
+                if (item) {
+                    instance.data[dataStore] = underscore.reject(instance.data[dataStore], underscore.identity({uuid: item.uuid}));
+                    updatePlantedArea(instance);
+                    instance.$dirty = true;
+                }
+            }
+
+            function updatePlantedArea (instance) {
+                instance.data.plantedArea = underscore.reduce(instance.zones, function (total, zone) {
+                    return safeMath.plus(total, zone.size);
+                }, 0);
+            }
+
+            var EAR = 'ear',
+                FLOWER = 'flower',
+                POD = 'pod',
+                PANICLE = 'panicle',
+                SPIKELET = 'spikelet';
+
+            var flowerTypes = {
+                'Dry Bean': POD,
+                'Grain Sorghum': PANICLE,
+                'Maize': EAR,
+                'Maize (White)': EAR,
+                'Maize (Yellow)': EAR,
+                'Sunflower': FLOWER,
+                'Wheat': SPIKELET,
+                'Soya Bean': POD
+            };
+
+            Crop.validates(underscore.defaults({
+                type: {
+                    required: true,
+                    equal: {
+                        to: 'crop'
+                    }
+                }
+            }, Asset.validations));
+
+            return Crop;
+        }];
+
+    AssetFactoryProvider.add('crop', 'Crop');
+}]);
+
+sdkModelCrop.factory('CropProblem', ['generateUUID', 'inheritModel', 'Model', 'moment', 'readOnlyProperty', 'underscore',
+    function (generateUUID, inheritModel, Model, moment, readOnlyProperty, underscore) {
+        function CropProblem (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.createdAt = attrs.createdAt || moment().format('YYYY-MM-DD');
+            this.description = attrs.description;
+            this.loc = attrs.loc;
+            this.size = attrs.size;
+            this.type = attrs.type;
+            this.uuid = attrs.uuid || generateUUID();
+        }
+
+        inheritModel(CropProblem, Model.Base);
+
+        readOnlyProperty(CropProblem, 'problemTypes', [
+            'Disease',
+            'Fading',
+            'Uneven',
+            'Other',
+            'Root',
+            'Shortage',
+            'Weed']);
+
+        CropProblem.validates({
+            description: {
+                requiredIf: function (value, instance) {
+                    return instance.type === 'Other';
+                },
+                length: {
+                    min: 0,
+                    max: 255
+                }
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: CropProblem.problemTypes
+                }
+            },
+            uuid: {
+                format: {
+                    uuid: true
+                }
+            }
+        });
+
+        return CropProblem;
+    }]);
+
+sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritModel', 'Model', 'moment', 'naturalSort', 'readOnlyProperty', 'underscore',
+    function (computedProperty, generateUUID, inheritModel, Model, moment, naturalSort, readOnlyProperty, underscore) {
+        function CropZone (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'cultivars', function () {
+                return CropZone.cultivarsByCrop[this.crop] || [];
+            });
+
+            computedProperty(this, 'growthStages', function () {
+                return cropGrowthStages[this.crop] || growthStages[0];
+            });
+
+            computedProperty(this, 'leavesPerPlant', function () {
+                return cultivarLeaves[this.cultivar] || 22;
+            }, {
+                enumerable: true
+            });
+
+            computedProperty(this, 'typeRequired', function () {
+                return s.include(this.crop, 'Maize');
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.createdAt = attrs.createdAt || moment().format('YYYY-MM-DD');
+            this.crop = attrs.crop;
+            this.cultivar = attrs.cultivar;
+            this.emergenceDate = attrs.emergenceDate;
+            this.growthStage = attrs.growthStage;
+            this.inRows = attrs.inRows;
+            this.loc = attrs.loc;
+            this.plantsHa = attrs.plantsHa;
+            this.rowWidth = attrs.rowWidth;
+            this.seedProvider = attrs.seedProvider;
+            this.size = attrs.size;
+            this.type = attrs.type;
+            this.uuid = attrs.uuid || generateUUID();
+        }
+
+        inheritModel(CropZone, Model.Base);
+
         var AFGRI = 'Afgri',
             ARGICOL = 'Agricol',
             AGRIOCARE = 'Agriocare',
@@ -20035,7 +20963,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             [OTHER,'SC 715'],
             [OTHER,'Scout']];
 
-        readOnlyProperty(Asset, 'cultivarsByCrop', {
+        readOnlyProperty(CropZone, 'cultivarsByCrop', {
             'Barley':[
                 [ARGICOL,'SKG 9'],
                 [ARGICOL,'SVG 13'],
@@ -20528,3263 +21456,3068 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             ]
         });
 
-        readOnlyProperty(Asset, 'landClassesByType', {
-            'crop': [
-                'Cropland',
-                'Cropland (Emerging)',
-                'Cropland (Irrigated)',
-                'Cropland (Smallholding)',
-                'Vegetables'],
-            'cropland': [
-                'Cropland',
-                'Cropland (Emerging)',
-                'Cropland (Irrigated)',
-                'Cropland (Smallholding)',
-                'Vegetables'],
-            'farmland': [],
-            'improvement': [],
-            'livestock': [
-                'Grazing',
-                'Grazing (Bush)',
-                'Grazing (Fynbos)',
-                'Grazing (Shrubland)',
-                'Planted Pastures'],
-            'pasture': [
-                'Grazing',
-                'Grazing (Bush)',
-                'Grazing (Fynbos)',
-                'Grazing (Shrubland)',
-                'Planted Pastures'],
-            'permanent crop': [
-                'Greenhouses',
-                'Orchard',
-                'Orchard (Shadenet)',
-                'Vineyard'],
-            'plantation': [
-                'Forest',
-                'Pineapple',
-                'Plantation',
-                'Plantation (Smallholding)',
-                'Sugarcane',
-                'Sugarcane (Emerging)',
-                'Sugarcane (Irrigated)',
-                'Tea'],
-            'vme': [],
-            'wasteland': [
-                'Non-vegetated'],
-            'water right': [
-                'Water',
-                'Water (Seasonal)',
-                'Wetland']
-        });
+        var cultivarLeaves = {
+            'Phb 30F40': 23,
+            'Phb 31G54 BR': 19,
+            'Phb 31G58': 21,
+            'Phb 32D95BR': 18,
+            'Phb 32D96 B': 18,
+            'Phb 32P68 R': 20,
+            'Phb 32T50': 18,
+            'Phb 32W71': 21,
+            'Phb 32W72 B': 20,
+            'Phb 33A14 B': 19,
+            'Phb 33H56': 20,
+            'Phb 33R78 B': 21,
+            'Phb 33Y72B': 17,
+            'Phb 3442': 21,
+            'Phb 30B95 B': 23,
+            'Phb 30B97 BR': 23,
+            'Phb 30D09 BR': 20,
+            'Phb 31M09': 18,
+            'Phb 32A05 B': 19,
+            'Phb 32B10': 18,
+            'Phb 32Y85': 21,
+            'Phb 31D48 BR': 21,
+            'Phb 32D91 R': 20,
+            'Phb 32D99': 20,
+            'Phb 32Y68': 20,
+            'Phb 3394': 19,
+            'Phb 33A13': 19,
+            'Phb 33H52 B': 19,
+            'Phb 33H54 BR': 19,
+            'Phb 33P34': 20,
+            'Phb 33P66': 20,
+            'Phb 33P67': 20,
+            'X 70200 T': 23,
+            'X 7268 TR': 21,
+            'Phb 30N35': 23,
+            'Phb 32A03': 19,
+            'Phb 32Y52': 19,
+            'Phb 32Y53': 20,
+            'Phb 33A03': 19,
+            'Phb 30H22': 21,
+            'Phb 32P75': 20,
+            'Phb 3335': 20,
+            'DKC62-74R': 20,
+            'DKC62-80BR': 18,
+            'DKC64-78BR': 17,
+            'DKC66-32B': 21,
+            'DKC66-36R': 19,
+            'DKC73-70BGEN': 20,
+            'DKC73-74BR': 20,
+            'DKC73-74BRGEN': 20,
+            'DKC73-76R': 20,
+            'DKC80-10': 20,
+            'DKC80-12B': 20,
+            'DKC80-30R': 20,
+            'DKC80-40BR': 19,
+            'DKC80-40BRGEN': 21,
+            'CRN3505': 21,
+            'DKC77-61B': 20,
+            'DKC77-71R': 20,
+            'DKC77-85B': 21,
+            'DKC78-15B': 20,
+            'DKC78-35BR': 21,
+            'DKC78-45BRGEN': 21,
+            'DKC 78-79 BR': 21,
+            'CRN 3604': 21,
+            'CRN 37-60': 20,
+            'CRN 4760 B': 23,
+            'DKC 63-20': 20,
+            'DKC 66-21': 21,
+            'DKC 66-38 B': 21,
+            'DKC 63-28 R': 21,
+            'CRN 3549': 21,
+            'DKC 71-21': 20,
+            'SNK 2472': 23,
+            'SNK 2682': 23,
+            'SNK 2778': 23,
+            'SNK 2900': 20,
+            'SNK 2942': 24,
+            'SNK 2972': 21,
+            'SNK 6326 B': 21,
+            'SNK 8520': 24,
+            'SNK 2911': 21,
+            'SNK 6025': 18,
+            'LS 8504': 20,
+            'LS 8512': 20,
+            'LS 8518': 19,
+            'LS 8522 R': 19,
+            'LS 8511': 19,
+            'LS 8513': 19,
+            'LS 8519': 19,
+            'LS 8521 B': 19,
+            'LS 8523 B': 19,
+            'LS 8527 BR': 19,
+            'LS 8506': 21,
+            'LS 8508': 20,
+            'LS 8524 R': 20,
+            'LEX 800': 23,
+            'LS 8509': 21,
+            'LS 8517': 23,
+            'LS 8525': 21,
+            'LS 8529': 21,
+            'LS 8533 R': 21,
+            'LS 8536 B': 19,
+            'PAN 3D-432Bt ': 18,
+            'PAN 3D-736BR': 18,
+            'PAN 3P-502RR': 19,
+            'PAN 3P-730BR': 18,
+            'PAN 3Q-422B': 18,
+            'PAN 3Q-740BR': 19,
+            'PAN 3R-644R': 18,
+            'PAN 4P-116': 19,
+            'PAN 4P-316Bt': 19,
+            'PAN 4P-516RR': 20,
+            'PAN 4P-716BR': 19,
+            'PAN 6114': 19,
+            'PAN 6126': 18,
+            'PAN 6146': 24,
+            'PAN 6236Bt': 18,
+            'PAN 6238RR': 18,
+            'PAN 6480': 23,
+            'PAN 6616': 23,
+            'PAN 6724Bt': 25,
+            'PAN 6734': 23,
+            'PAN 6P-110': 21,
+            'PAN 6Q-308 B': 21,
+            'PAN 6Q-308 Bt': 21,
+            'PAN 6Q-408 CB': 21,
+            'PAN 6Q-508R': 21,
+            'PAN 6Q-508RR': 20,
+            'PAN 4P-767BR': 19,
+            'PAN 5Q-433Bt *': 20,
+            'PAN 5R-541RR': 19,
+            'PAN 6013Bt': 23,
+            'PAN 6017': 21,
+            'PAN 6043': 23,
+            'PAN 6053': 23,
+            'PAN 6223Bt': 21,
+            'PAN 6479': 23,
+            'PAN 6611': 23,
+            'PAN 6723': 23,
+            'PAN 6777': 25,
+            'PAN 6Q-419B': 20,
+            'PAN 6Q-445Bt': 21,
+            'PAN 6000 Bt': 19,
+            'PAN 6012 Bt': 21,
+            'PAN 6118': 19,
+            'PAN 6124 Bt': 19,
+            'PAN 6128 RR': 19,
+            'PAN 6256': 24,
+            'PAN 6310': 24,
+            'PAN 6316': 25,
+            'PAN 6320': 25,
+            'PAN 6432 B': 23,
+            'PAN 6568': 23,
+            'PAN 6622': 25,
+            'PAN 6710': 21,
+            'PAN 6804': 20,
+            'PAN 6844': 25,
+            'PAN 6994 Bt': 24,
+            'PAN 5Q-749 BR': 23,
+            'PAN 6243': 24,
+            'PAN 6335': 23,
+            'PAN 6573': 23,
+            'PAN 6633': 23,
+            'PAN 6757': 25,
+            'PAN 6839': 23,
+            'PAN 6Q-321 B': 23,
+            'PAN 6Q-345 CB': 21,
+            'AFG 4270B': 18,
+            'AFG 4412B': 19,
+            'AFG 4434R': 20,
+            'AFG 4522B': 20,
+            'AFG 4530': 19,
+            'AFG 4222 B': 19,
+            'AFG 4244': 19,
+            'AFG 4410': 19,
+            'AFG 4414': 20,
+            'AFG 4416 B': 20,
+            'AFG 4448': 20,
+            'AFG 4474 R': 19,
+            'AFG 4476': 20,
+            'AFG 4512': 23,
+            'AFG 4520': 20,
+            'AFG 4540': 20,
+            'DK 618': 21,
+            'EXPG 5002': 20,
+            'EXP Stack': 20,
+            'AFG 4321': 19,
+            'AFG 4331': 20,
+            'AFG 4333': 20,
+            'AFG 4411': 21,
+            'AFG 4445': 21,
+            'AFG 4447': 21,
+            'AFG 4471': 23,
+            'AFG 4475 B': 21,
+            'AFG 4477': 20,
+            'AFG 4479 R': 21,
+            'AFG 4573 B': 21,
+            'AFG 4577 B': 21,
+            'AFG 4611': 23,
+            'KKS 8204B': 15,
+            'KKS 4581 BR': 21,
+            'KKS 8301': 19,
+            'IMP 50 - 90BR': 18,
+            'IMP 51 - 22': 19,
+            'IMP 51-92': 19,
+            'IMP 52-12': 20,
+            'NS 5920': 20,
+            'QS 7646': 20,
+            'BG 5485 B': 23,
+            'BG 8285': 23,
+            'Brasco': 19,
+            'Energy': 18,
+            'Gold Finger': 19,
+            'Helen': 17,
+            'High Flyer': 17,
+            'Maverik': 19,
+            'NK Arma': 18,
+            'QS 7608': 23,
+            'SC 506': 19,
+            'SC 602': 21,
+            'Woodriver': 18,
+            'P 1615 R': 19,
+            'P 1973 Y': 19,
+            'P 2653 WB': 20,
+            'P 2048': 20,
+            'IMP 52-11 B': 18,
+            'Panthera': 21,
+            'QS 7707': 23,
+            'SC 401': 18,
+            'SC 403': 20,
+            'SC 405': 20,
+            'SC 407': 20,
+            'SC 533': 21,
+            'SC 719': 24,
+            'Scout': 20
+        };
 
-        var _croplandCrops = [
-            'Barley',
-            'Bean',
-            'Bean (Broad)',
-            'Bean (Dry)',
-            'Bean (Sugar)',
-            'Bean (Green)',
-            'Bean (Kidney)',
-            'Beet',
-            'Broccoli',
-            'Butternut',
-            'Cabbage',
-            'Canola',
-            'Carrot',
-            'Cassava',
-            'Cauliflower',
-            'Cotton',
-            'Cowpea',
-            'Grain Sorghum',
-            'Groundnut',
-            'Leek',
-            'Lucerne',
-            'Maize',
-            'Maize (White)',
-            'Maize (Yellow)',
-            'Oats',
-            'Onion',
-            'Peanut',
-            'Pearl Millet',
-            'Potato',
-            'Pumpkin',
-            'Rapeseed',
-            'Rice',
-            'Rye',
-            'Soya Bean',
-            'Sunflower',
-            'Sweet Corn',
-            'Sweet Potato',
-            'Teff',
-            'Tobacco',
-            'Triticale',
-            'Turnip',
-            'Wheat',
-            'Wheat (Durum)'
+        var growthStages = [
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16', 'R17', 'R18'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'],
+            ['V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6']
         ];
-        var _croplandIrrigatedCrops = [
-            'Maize (Irrigated)',
-            'Soya Bean (Irrigated)',
-            'Teff (Irrigated)',
-            'Wheat (Irrigated)'
-        ];
-        var _croplandAllCrops = underscore.union(_croplandCrops, _croplandIrrigatedCrops).sort(naturalSort);
-        var _grazingCrops = [
-            'Bahia-Notatum',
-            'Birdsfoot Trefoil',
-            'Bottle Brush',
-            'Buffalo',
-            'Buffalo (Blue)',
-            'Buffalo (White)',
-            'Bush',
-            'Carribean Stylo',
-            'Clover',
-            'Clover (Arrow Leaf)',
-            'Clover (Crimson)',
-            'Clover (Persian)',
-            'Clover (Red)',
-            'Clover (Rose)',
-            'Clover (Strawberry)',
-            'Clover (Subterranean)',
-            'Clover (White)',
-            'Cocksfoot',
-            'Common Setaria',
-            'Dallis',
-            'Kikuyu',
-            'Lucerne',
-            'Lupin',
-            'Lupin (Narrow Leaf)',
-            'Lupin (White)',
-            'Lupin (Yellow)',
-            'Medic',
-            'Medic (Barrel)',
-            'Medic (Burr)',
-            'Medic (Gama)',
-            'Medic (Snail)',
-            'Medic (Strand)',
-            'Multispecies Pasture',
-            'Phalaris',
-            'Rescue',
-            'Rhodes',
-            'Russian Grass',
-            'Ryegrass',
-            'Ryegrass (Hybrid)',
-            'Ryegrass (Italian)',
-            'Ryegrass (Westerwolds)',
-            'Serradella',
-            'Serradella (Yellow)',
-            'Silver Leaf Desmodium',
-            'Smuts Finger',
-            'Soutbos',
-            'Tall Fescue',
-            'Teff',
-            'Veld',
-            'Weeping Lovegrass'
-        ];
-        var _perennialCrops = [
-            'Almond',
-            'Apple',
-            'Apricot',
-            'Avocado',
-            'Banana',
-            'Barberry',
-            'Berry',
-            'Bilberry',
-            'Blackberry',
-            'Blueberry',
-            'Cherry',
-            'Cloudberry',
-            'Coconut',
-            'Coffee',
-            'Date',
-            'Fig',
-            'Gooseberry',
-            'Grapefruit',
-            'Guava',
-            'Hazelnut',
-            'Kiwi Fruit',
-            'Kumquat',
-            'Lemon',
-            'Lime',
-            'Litchi',
-            'Macadamia Nut',
-            'Mandarin',
-            'Mango',
-            'Mulberry',
-            'Nectarine',
-            'Olive',
-            'Orange',
-            'Papaya',
-            'Peach',
-            'Pear',
-            'Prickly Pear',
-            'Pecan Nut',
-            'Persimmon',
-            'Pistachio Nut',
-            'Plum',
-            'Pomegranate',
-            'Protea',
-            'Prune',
-            'Raspberry',
-            'Rooibos',
-            'Roses',
-            'Strawberry',
-            'Walnut',
-            'Wineberry'
-        ];
-        var _plantationCrops = [
-            'Aloe',
-            'Bluegum',
-            'Hops',
-            'Pine',
-            'Pineapple',
-            'Tea',
-            'Sisal',
-            'Sugarcane',
-            'Sugarcane (Irrigated)',
-            'Wattle'
-        ];
-        var _vegetableCrops = [
-            'Chicory',
-            'Chili',
-            'Garlic',
-            'Lentil',
-            'Melon',
-            'Olive',
-            'Onion',
-            'Pea',
-            'Pumpkin',
-            'Quince',
-            'Strawberry',
-            'Tomato',
-            'Watermelon',
-            'Carrot',
-            'Beet',
-            'Cauliflower',
-            'Broccoli',
-            'Leek',
-            'Butternut',
-            'Cabbage',
-            'Rapeseed'
-        ];
-        var _vineyardCrops = [
-            'Grape',
-            'Grape (Bush Vine)',
-            'Grape (Red)',
-            'Grape (Table)',
-            'Grape (White)'
-        ];
 
-        readOnlyProperty(Asset, 'cropsByLandClass', {
-            'Cropland': _croplandCrops,
-            'Cropland (Emerging)': _croplandCrops,
-            'Cropland (Irrigated)': _croplandIrrigatedCrops,
-            'Cropland (Smallholding)': _croplandCrops,
-            'Forest': ['Pine'],
-            'Grazing': _grazingCrops,
-            'Grazing (Bush)': _grazingCrops,
-            'Grazing (Fynbos)': _grazingCrops,
-            'Grazing (Shrubland)': _grazingCrops,
-            'Greenhouses': [],
-            'Orchard': _perennialCrops,
-            'Orchard (Shadenet)': _perennialCrops,
-            'Pineapple': ['Pineapple'],
-            'Plantation': _plantationCrops,
-            'Plantation (Smallholding)': _plantationCrops,
-            'Planted Pastures': _grazingCrops,
-            'Sugarcane': ['Sugarcane'],
-            'Sugarcane (Emerging)': ['Sugarcane'],
-            'Sugarcane (Irrigated)': ['Sugarcane (Irrigated)'],
-            'Tea': ['Tea'],
-            'Vegetables': _vegetableCrops,
-            'Vineyard': _vineyardCrops
-        });
+        var cropGrowthStages = {
+            'Barley': growthStages[1],
+            'Bean': growthStages[5],
+            'Bean (Broad)': growthStages[5],
+            'Bean (Dry)': growthStages[5],
+            'Bean (Sugar)': growthStages[5],
+            'Bean (Green)': growthStages[5],
+            'Bean (Kidney)': growthStages[5],
+            'Canola': growthStages[7],
+            'Cotton': growthStages[6],
+            'Grain Sorghum': growthStages[3],
+            'Maize': growthStages[0],
+            'Maize (White)': growthStages[0],
+            'Maize (Yellow)': growthStages[0],
+            'Soya Bean': growthStages[2],
+            'Sunflower': growthStages[4],
+            'Wheat': growthStages[1],
+            'Wheat (Durum)': growthStages[1]
+        };
 
-        readOnlyProperty(Asset, 'cropsByType', {
-            'crop': _croplandAllCrops,
-            'cropland': _croplandAllCrops,
-            'livestock': _grazingCrops,
-            'pasture': _grazingCrops,
-            'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
-            'plantation': _plantationCrops
-        });
+        readOnlyProperty(CropZone, 'maizeTypes', [
+            'Commodity',
+            'Hybrid',
+            'Silo Fodder']);
 
-        readOnlyProperty(Asset, 'liquidityTypes', {
-            'long-term': 'Long-term',
-            'medium-term': 'Movable',
-            'short-term': 'Current'
-        });
-
-        readOnlyProperty(Asset, 'liquidityCategories', {
-            'long-term': ['Fixed Improvements', 'Investments', 'Land', 'Other'],
-            'medium-term': ['Breeding Stock', 'Vehicles, Machinery & Equipment', 'Other'],
-            'short-term': ['Crops & Crop Products', 'Cash on Hand', 'Debtors', 'Short-term Investments', 'Prepaid Expenses', 'Production Inputs', 'Life Insurance', 'Livestock Products', 'Marketable Livestock', 'Negotiable Securities', 'Other']
-        });
-
-        readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
-
-        readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
-
-        privateProperty(Asset, 'farmRequired', function (type) {
-            return farmRequired(type)
-        });
-
-        privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
-            return Asset.cropsByLandClass[landClass] || [];
-        });
-
-        privateProperty(Asset, 'getDefaultCrop', function (landClass) {
-            return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
-        });
-
-        privateProperty(Asset, 'getCustomTitle', function (asset, props, options) {
-            return getCustomTitle(asset, props, options);
-        });
-
-        privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
-            return getTitle(asset, withField, farm);
-        });
-
-        privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
-            return listServiceMap(asset, metadata);
-        });
-
-        function getDefaultProps (instance) {
-            switch (instance.type) {
-                case 'crop':
-                case 'permanent crop':
-                case 'plantation':
-                    return ['plantedArea', 'crop', 'fieldName', 'farmName'];
-                case 'farmland':
-                    return [['label', 'portionLabel', 'portionNumber']];
-                case 'cropland':
-                    return ['typeTitle', function (instance) {
-                        return (instance.data.irrigation ?
-                            instance.data.irrigation + ' irrigated' :
-                            (instance.data.irrigated ?
-                                'Irrigated (' + (instance.data.equipped ? 'equipped' : 'unequipped') + ')':
-                                'Non irrigable'))
-                    }, 'waterSource', 'fieldName', 'farmName'];
-                case 'livestock':
-                    return ['type', 'category'];
-                case 'pasture':
-                    return [function (instance) {
-                        return (instance.data.intensified ?
-                            (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type :
-                            'Natural Grazing');
-                    }, 'fieldName', 'farmName'];
-                case 'vme':
-                    return ['category', 'model'];
-                case 'wasteland':
-                    return ['typeTitle'];
-                case 'water source':
-                case 'water right':
-                    return ['waterSource', 'fieldName', 'farmName'];
-                default:
-                    return [['name', 'category', 'typeTitle']];
-            }
-        }
-
-        function getProps (instance, props, options) {
-            return underscore.chain(props)
-                .map(function (prop) {
-                    if (underscore.isArray(prop)) {
-                        return underscore.first(getProps(instance, prop, options));
-                    } else if (underscore.isFunction(prop)) {
-                        return prop(instance, options);
-                    } else {
-                        switch (prop) {
-                            case 'age':
-                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
-                            case 'defaultTitle':
-                                return getProps(instance, getDefaultProps(instance), options);
-                            case 'farmName':
-                                return options.withFarm && options.field && options.field[prop];
-                            case 'fieldName':
-                                return options.withField && instance.data[prop];
-                            case 'croppingPotential':
-                                return options.field && options.field[prop] && options.field[prop] + ' Potential';
-                            case 'landUse':
-                                return options.field && options.field[prop];
-                            case 'area':
-                            case 'plantedArea':
-                            case 'size':
-                                return instance.data[prop] && safeMath.round(instance.data[prop], 2) + 'ha';
-                            case 'portionNumber':
-                                return (instance.data.portionNumber ? 'Ptn. ' + instance.data.portionNumber : 'Rem. extent of farm');
-                            case 'typeTitle':
-                                return Asset.assetTypes[instance.type];
-                            default:
-                                return instance.data[prop];
-                        }
-                    }
-                })
-                .compact()
-                .uniq()
-                .value();
-        }
-
-        function getCustomTitle (instance, props, options) {
-            options = underscore.defaults(options || {}, {
-                separator: ', '
-            });
-
-            return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
-        }
-        
-        function getTitle (instance, withField, farm) {
-            return getCustomTitle(instance, getDefaultProps(instance), {
-                farm: farm,
-                withFarm: !underscore.isUndefined(farm),
-                field: farm && underscore.findWhere(farm.data.fields, {fieldName: instance.data.fieldName}),
-                withField: withField
-            });
-        }
-        
-        function listServiceMap (instance, metadata) {
-            var map = {
-                id: instance.id || instance.$id,
-                type: instance.type,
-                updatedAt: instance.updatedAt
-            };
-
-            if (instance.data) {
-                map.title = getTitle(instance, true);
-                map.groupby = instance.farmId;
-                map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
-
-                switch (instance.type) {
-                    case 'crop':
-                        map.subtitle = (instance.data.plantedDate ? 'Planted: ' + moment(instance.data.plantedDate).format('YYYY-MM-DD') : '');
-                        map.size = instance.data.size;
-                        break;
-                    case 'cropland':
-                    case 'pasture':
-                    case 'wasteland':
-                    case 'water right':
-                        map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
-                        map.size = instance.data.size;
-                        break;
-                    case 'farmland':
-                        map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
-                        map.size = instance.data.area;
-                        break;
-                    case 'permanent crop':
-                    case 'plantation':
-                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('YYYY-MM-DD') : '');
-                        map.size = instance.data.size;
-                        break;
-                    case 'improvement':
-                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '') + (instance.data.size !== undefined ? ' (' + safeMath.round(instance.data.size, 2) + 'm²)' : '');
-                        map.summary = (instance.data.description || '');
-                        break;
-                    case 'livestock':
-                        map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
-                        map.summary = (instance.data.description || '');
-                        map.groupby = instance.data.type;
-                        break;
-                    case 'vme':
-                        map.subtitle = 'Quantity: ' + instance.data.quantity;
-                        map.summary = (instance.data.description || '');
-                        map.groupby = instance.data.type;
-                        break;
-                }
-            }
-
-            if (metadata) {
-                map = underscore.extend(map, metadata);
-            }
-
-            return map;
-        }
-
-        function generateUniqueName (instance, categoryLabel, assets) {
-            categoryLabel = categoryLabel || '';
-
-            var assetCount = underscore.chain(assets)
-                .where({type: instance.type})
-                .reduce(function(assetCount, asset) {
-                    if (asset.data.name) {
-                        var index = asset.data.name.search(/\s+[0-9]+$/),
-                            name = asset.data.name,
-                            number;
-
-                        if (index !== -1) {
-                            name = name.substr(0, index);
-                            number = parseInt(asset.data.name.substring(index).trim());
-                        }
-
-                        if (categoryLabel && name === categoryLabel && (!number || number > assetCount)) {
-                            assetCount = number || 1;
-                        }
-                    }
-
-                    return assetCount;
-                }, -1)
-                .value();
-
-            return categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
-        }
-
-        function isFieldApplicable (instance, field) {
-            return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
-        }
-
-        function farmRequired (type) {
-            return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
-        }
-
-        Asset.validates({
-            assetKey: {
-                required: true
-            },
-            crop: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type);
-                },
-                inclusion: {
-                    in: function (value, instance) {
-                        return Asset.cropsByType[instance.type];
-                    }
-                }
-            },
-            establishedDate: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['permanent crop', 'plantation'], instance.type);
-                },
+        CropZone.validates({
+            emergenceDate: {
                 format: {
                     date: true
                 }
             },
-            farmId: {
-                requiredIf: function (value, instance) {
-                    return farmRequired(instance.type);
-                },
-                numeric: true
-            },
-            fieldName: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation'], instance.type);
-                },
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            },
-            legalEntityId: {
+            growthStage: {
                 required: true,
-                numeric: true
-            },
-            plantedDate: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop'], instance.type);
-                },
-                format: {
-                    date: true
+                inclusion: {
+                    in: function (value, instance, field) {
+                        return instance.growthStages;
+                    }
                 }
             },
-            size: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+            plantsHa: {
+                required: true,
+                range: {
+                    from: 0
+                },
+                numeric: true
+            },
+            rowWidth: {
+                requiredIf: function (value, instance, field) {
+                    return instance.inRows;
+                },
+                range: {
+                    from: 0
                 },
                 numeric: true
             },
             type: {
-                required: true,
+                requiredIf: function (value, instance, field) {
+                    return s.include(instance.crop, 'Maize');
+                },
                 inclusion: {
-                    in: underscore.keys(Asset.assetTypesWithOther)
+                    in: CropZone.maizeTypes
+                }
+            },
+            uuid: {
+                format: {
+                    uuid: true
                 }
             }
         });
 
-        return Asset;
+        return CropZone;
     }]);
+
+
 
 var sdkModelLivestock = angular.module('ag.sdk.model.livestock', ['ag.sdk.model.asset', 'ag.sdk.model.stock']);
 
-sdkModelLivestock.factory('Livestock', ['computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'Stock', 'underscore',
-    function (computedProperty, inheritModel, privateProperty, readOnlyProperty, Stock, underscore) {
-        function Livestock (attrs) {
-            Stock.apply(this, arguments);
+sdkModelLivestock.provider('Livestock', ['AssetFactoryProvider', function (AssetFactoryProvider) {
+    this.$get = ['computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'Stock', 'underscore',
+        function (computedProperty, inheritModel, privateProperty, readOnlyProperty, Stock, underscore) {
+            function Livestock (attrs) {
+                Stock.apply(this, arguments);
 
-            readOnlyProperty(this, 'actions', {
-                'credit': [
-                    'Birth',
-                    'Retained',
-                    'Purchase'],
-                'debit': [
-                    'Death',
-                    'Household',
-                    'Labour',
-                    'Retain',
-                    'Sale']
+                readOnlyProperty(this, 'actions', {
+                    'credit': [
+                        'Birth',
+                        'Retained',
+                        'Purchase'],
+                    'debit': [
+                        'Death',
+                        'Household',
+                        'Labour',
+                        'Retain',
+                        'Sale']
+                });
+
+                computedProperty(this, 'actionTitles', function () {
+                    return getActionTitles(this);
+                });
+
+                privateProperty(this, 'getActionTitle', function (action) {
+                    var splitAction = action.split(':', 2);
+
+                    if (splitAction.length === 2) {
+                        switch (splitAction[0]) {
+                            case 'Retain':
+                                return (this.birthAnimal === this.data.category ? 'Wean Livestock' : 'Retain ' + splitAction[1]);
+                            case 'Retained':
+                                return (this.weanedAnimal === this.data.category ? 'Weaned Livestock' : 'Retained ' + splitAction[1]);
+                            default:
+                                return splitAction[0];
+                        }
+                    }
+
+                    return this.actionTitles[action];
+                });
+
+                computedProperty(this, 'baseAnimal', function () {
+                    return baseAnimals[this.data.type] || this.data.type;
+                });
+
+                computedProperty(this, 'birthAnimal', function () {
+                    return getBirthingAnimal(this.data.type);
+                });
+
+                computedProperty(this, 'weanedAnimal', function () {
+                    return getWeanedAnimal(this.data.type);
+                });
+
+                privateProperty(this, 'conversionRate', function () {
+                    return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][this.data.category] || conversionRate[this.baseAnimal][representativeAnimals[this.baseAnimal]]);
+                });
+
+                computedProperty(this, 'representativeAnimal', function () {
+                    return representativeAnimals[this.baseAnimal];
+                });
+
+                this.type = 'livestock';
+            }
+
+            inheritModel(Livestock, Stock);
+
+            function getActionTitles (instance) {
+                return underscore.chain(actionTitles)
+                    .pairs()
+                    .union(underscore.map(animalGrowthStages[instance.baseAnimal][instance.data.category], function (category) {
+                        return ['Retain:' + category, (instance.birthAnimal === instance.data.category ? 'Wean Livestock' : 'Retain ' + category)];
+                    }))
+                    .sortBy(function (pair) {
+                        return pair[0];
+                    })
+                    .object()
+                    .omit(instance.birthAnimal === instance.data.category ? [] : ['Birth', 'Death'])
+                    .value();
+            }
+
+            var actionTitles = {
+                'Birth': 'Register Births',
+                'Death': 'Register Deaths',
+                'Purchase': 'Purchase Livestock',
+                'Household': 'Household Consumption',
+                'Labour': 'Labour Consumption',
+                'Sale': 'Sell Livestock'
+            };
+
+            var baseAnimals = {
+                'Cattle (Extensive)': 'Cattle',
+                'Cattle (Feedlot)': 'Cattle',
+                'Cattle (Stud)': 'Cattle',
+                'Sheep (Extensive)': 'Sheep',
+                'Sheep (Feedlot)': 'Sheep',
+                'Sheep (Stud)': 'Sheep'
+            };
+
+            var birthAnimals = {
+                Cattle: 'Calf',
+                Game: 'Calf',
+                Goats: 'Kid',
+                Rabbits: 'Kit',
+                Sheep: 'Lamb'
+            };
+
+            var representativeAnimals = {
+                Cattle: 'Cow',
+                Game: 'Cow',
+                Goats: 'Ewe',
+                Rabbits: 'Doe',
+                Sheep: 'Ewe'
+            };
+
+            var animalGrowthStages = {
+                Cattle: {
+                    'Calf': ['Weaner Calf'],
+                    'Weaner Calf': ['Bull', 'Heifer', 'Steer'],
+                    'Heifer': ['Cow'],
+                    'Cow': [],
+                    'Steer': ['Ox'],
+                    'Ox': [],
+                    'Bull': []
+                },
+                Game: {
+                    'Calf': ['Weaner Calf'],
+                    'Weaner Calf': ['Heifer', 'Steer', 'Bull'],
+                    'Heifer': ['Cow'],
+                    'Cow': [],
+                    'Steer': ['Ox'],
+                    'Ox': [],
+                    'Bull': []
+                },
+                Goats: {
+                    'Kid': ['Weaner Kid'],
+                    'Weaner Kid': ['Ewe', 'Castrate', 'Ram'],
+                    'Ewe': [],
+                    'Castrate': [],
+                    'Ram': []
+                },
+                Rabbits: {
+                    'Kit': ['Weaner Kit'],
+                    'Weaner Kit': ['Doe', 'Lapin', 'Buck'],
+                    'Doe': [],
+                    'Lapin': [],
+                    'Buck': []
+                },
+                Sheep: {
+                    'Lamb': ['Weaner Lamb'],
+                    'Weaner Lamb': ['Ewe', 'Wether', 'Ram'],
+                    'Ewe': [],
+                    'Wether': [],
+                    'Ram': []
+                }
+            };
+
+            var conversionRate = {
+                Cattle: {
+                    'Calf': 0.32,
+                    'Weaner Calf': 0.44,
+                    'Cow': 1.1,
+                    'Heifer': 1.1,
+                    'Steer': 0.75,
+                    'Ox': 1.1,
+                    'Bull': 1.36
+                },
+                Game: {
+                    'Calf': 0.32,
+                    'Weaner Calf': 0.44,
+                    'Cow': 1.1,
+                    'Heifer': 1.1,
+                    'Steer': 0.75,
+                    'Ox': 1.1,
+                    'Bull': 1.36
+                },
+                Goats: {
+                    'Kid': 0.08,
+                    'Weaner Kid': 0.12,
+                    'Ewe': 0.17,
+                    'Castrate': 0.17,
+                    'Ram': 0.22
+                },
+                Rabbits: {
+                    'Kit': 0.08,
+                    'Weaner Kit': 0.12,
+                    'Doe': 0.17,
+                    'Lapin': 0.17,
+                    'Buck': 0.22
+                },
+                Sheep: {
+                    'Lamb': 0.08,
+                    'Weaner Lamb': 0.11,
+                    'Ewe': 0.16,
+                    'Wether': 0.16,
+                    'Ram': 0.23
+                }
+            };
+
+            privateProperty(Livestock, 'getBaseAnimal', function (type) {
+                return baseAnimals[type] || type;
             });
 
-            computedProperty(this, 'actionTitles', function () {
-                return getActionTitles(this);
+            function getBirthingAnimal (type) {
+                var baseAnimal = baseAnimals[type] || type;
+
+                return baseAnimal && birthAnimals[baseAnimal];
+            }
+
+            privateProperty(Livestock, 'getBirthingAnimal', function (type) {
+                return getBirthingAnimal(type);
             });
 
-            privateProperty(this, 'getActionTitle', function (action) {
-                var splitAction = action.split(':', 2);
+            function getWeanedAnimal (type) {
+                var baseAnimal = baseAnimals[type] || type,
+                    birthAnimal = birthAnimals[baseAnimal];
 
-                if (splitAction.length === 2) {
-                    switch (splitAction[0]) {
-                        case 'Retain':
-                            return (this.birthAnimal === this.data.category ? 'Wean Livestock' : 'Retain ' + splitAction[1]);
-                        case 'Retained':
-                            return (this.weanedAnimal === this.data.category ? 'Weaned Livestock' : 'Retained ' + splitAction[1]);
-                        default:
-                            return splitAction[0];
+                return birthAnimal && animalGrowthStages[baseAnimal] && underscore.first(animalGrowthStages[baseAnimal][birthAnimal]);
+            }
+
+            privateProperty(Livestock, 'getWeanedAnimal', function (type) {
+                return getWeanedAnimal(type);
+            });
+
+            privateProperty(Livestock, 'getAnimalGrowthStages', function (type) {
+                var baseAnimal = baseAnimals[type] || type;
+
+                return baseAnimal && animalGrowthStages[baseAnimal] || [];
+            });
+
+            privateProperty(Livestock, 'getConversionRate', function (type, category) {
+                var baseAnimal = baseAnimals[type] || type;
+
+                return baseAnimal && conversionRate[baseAnimal] && (conversionRate[baseAnimal][category] || conversionRate[baseAnimal][representativeAnimals[baseAnimal]]);
+            });
+
+            privateProperty(Livestock, 'getConversionRates', function (type) {
+                var baseAnimal = baseAnimals[type] || type;
+
+                return baseAnimal && conversionRate[baseAnimal] || {};
+            });
+
+            privateProperty(Livestock, 'getRepresentativeAnimal', function (type) {
+                var baseAnimal = baseAnimals[type] || type;
+
+                return baseAnimal && representativeAnimals[baseAnimal];
+            });
+
+            Livestock.validates({
+                assetKey: {
+                    required: true
+                },
+                data: {
+                    required: true,
+                    object: true
+                },
+                legalEntityId: {
+                    required: true,
+                    numeric: true
+                },
+                type: {
+                    required: true,
+                    equal: {
+                        to: 'livestock'
                     }
                 }
-
-                return this.actionTitles[action];
             });
 
-            computedProperty(this, 'baseAnimal', function () {
-                return baseAnimals[this.data.type] || this.data.type;
-            });
+            return Livestock;
+        }];
 
-            computedProperty(this, 'birthAnimal', function () {
-                return getBirthingAnimal(this.data.type);
-            });
-
-            computedProperty(this, 'weanedAnimal', function () {
-                return getWeanedAnimal(this.data.type);
-            });
-
-            privateProperty(this, 'conversionRate', function () {
-                return conversionRate[this.baseAnimal] && (conversionRate[this.baseAnimal][this.data.category] || conversionRate[this.baseAnimal][representativeAnimals[this.baseAnimal]]);
-            });
-
-            computedProperty(this, 'representativeAnimal', function () {
-                return representativeAnimals[this.baseAnimal];
-            });
-
-            this.type = 'livestock';
-        }
-
-        inheritModel(Livestock, Stock);
-
-        function getActionTitles (instance) {
-            return underscore.chain(actionTitles)
-                .pairs()
-                .union(underscore.map(animalGrowthStages[instance.baseAnimal][instance.data.category], function (category) {
-                    return ['Retain:' + category, (instance.birthAnimal === instance.data.category ? 'Wean Livestock' : 'Retain ' + category)];
-                }))
-                .sortBy(function (pair) {
-                    return pair[0];
-                })
-                .object()
-                .omit(instance.birthAnimal === instance.data.category ? [] : ['Birth', 'Death'])
-                .value();
-        }
-
-        var actionTitles = {
-            'Birth': 'Register Births',
-            'Death': 'Register Deaths',
-            'Purchase': 'Purchase Livestock',
-            'Household': 'Household Consumption',
-            'Labour': 'Labour Consumption',
-            'Sale': 'Sell Livestock'
-        };
-
-        var baseAnimals = {
-            'Cattle (Extensive)': 'Cattle',
-            'Cattle (Feedlot)': 'Cattle',
-            'Cattle (Stud)': 'Cattle',
-            'Sheep (Extensive)': 'Sheep',
-            'Sheep (Feedlot)': 'Sheep',
-            'Sheep (Stud)': 'Sheep'
-        };
-
-        var birthAnimals = {
-            Cattle: 'Calf',
-            Game: 'Calf',
-            Goats: 'Kid',
-            Rabbits: 'Kit',
-            Sheep: 'Lamb'
-        };
-
-        var representativeAnimals = {
-            Cattle: 'Cow',
-            Game: 'Cow',
-            Goats: 'Ewe',
-            Rabbits: 'Doe',
-            Sheep: 'Ewe'
-        };
-
-        var animalGrowthStages = {
-            Cattle: {
-                'Calf': ['Weaner Calf'],
-                'Weaner Calf': ['Bull', 'Heifer', 'Steer'],
-                'Heifer': ['Cow'],
-                'Cow': [],
-                'Steer': ['Ox'],
-                'Ox': [],
-                'Bull': []
-            },
-            Game: {
-                'Calf': ['Weaner Calf'],
-                'Weaner Calf': ['Heifer', 'Steer', 'Bull'],
-                'Heifer': ['Cow'],
-                'Cow': [],
-                'Steer': ['Ox'],
-                'Ox': [],
-                'Bull': []
-            },
-            Goats: {
-                'Kid': ['Weaner Kid'],
-                'Weaner Kid': ['Ewe', 'Castrate', 'Ram'],
-                'Ewe': [],
-                'Castrate': [],
-                'Ram': []
-            },
-            Rabbits: {
-                'Kit': ['Weaner Kit'],
-                'Weaner Kit': ['Doe', 'Lapin', 'Buck'],
-                'Doe': [],
-                'Lapin': [],
-                'Buck': []
-            },
-            Sheep: {
-                'Lamb': ['Weaner Lamb'],
-                'Weaner Lamb': ['Ewe', 'Wether', 'Ram'],
-                'Ewe': [],
-                'Wether': [],
-                'Ram': []
-            }
-        };
-
-        var conversionRate = {
-            Cattle: {
-                'Calf': 0.32,
-                'Weaner Calf': 0.44,
-                'Cow': 1.1,
-                'Heifer': 1.1,
-                'Steer': 0.75,
-                'Ox': 1.1,
-                'Bull': 1.36
-            },
-            Game: {
-                'Calf': 0.32,
-                'Weaner Calf': 0.44,
-                'Cow': 1.1,
-                'Heifer': 1.1,
-                'Steer': 0.75,
-                'Ox': 1.1,
-                'Bull': 1.36
-            },
-            Goats: {
-                'Kid': 0.08,
-                'Weaner Kid': 0.12,
-                'Ewe': 0.17,
-                'Castrate': 0.17,
-                'Ram': 0.22
-            },
-            Rabbits: {
-                'Kit': 0.08,
-                'Weaner Kit': 0.12,
-                'Doe': 0.17,
-                'Lapin': 0.17,
-                'Buck': 0.22
-            },
-            Sheep: {
-                'Lamb': 0.08,
-                'Weaner Lamb': 0.11,
-                'Ewe': 0.16,
-                'Wether': 0.16,
-                'Ram': 0.23
-            }
-        };
-
-        privateProperty(Livestock, 'getBaseAnimal', function (type) {
-            return baseAnimals[type] || type;
-        });
-
-        function getBirthingAnimal (type) {
-            var baseAnimal = baseAnimals[type] || type;
-
-            return baseAnimal && birthAnimals[baseAnimal];
-        }
-
-        privateProperty(Livestock, 'getBirthingAnimal', function (type) {
-            return getBirthingAnimal(type);
-        });
-
-        function getWeanedAnimal (type) {
-            var baseAnimal = baseAnimals[type] || type,
-                birthAnimal = birthAnimals[baseAnimal];
-
-            return birthAnimal && animalGrowthStages[baseAnimal] && underscore.first(animalGrowthStages[baseAnimal][birthAnimal]);
-        }
-
-        privateProperty(Livestock, 'getWeanedAnimal', function (type) {
-            return getWeanedAnimal(type);
-        });
-
-        privateProperty(Livestock, 'getAnimalGrowthStages', function (type) {
-            var baseAnimal = baseAnimals[type] || type;
-
-            return baseAnimal && animalGrowthStages[baseAnimal] || [];
-        });
-
-        privateProperty(Livestock, 'getConversionRate', function (type, category) {
-            var baseAnimal = baseAnimals[type] || type;
-
-            return baseAnimal && conversionRate[baseAnimal] && (conversionRate[baseAnimal][category] || conversionRate[baseAnimal][representativeAnimals[baseAnimal]]);
-        });
-
-        privateProperty(Livestock, 'getConversionRates', function (type) {
-            var baseAnimal = baseAnimals[type] || type;
-
-            return baseAnimal && conversionRate[baseAnimal] || {};
-        });
-
-        privateProperty(Livestock, 'getRepresentativeAnimal', function (type) {
-            var baseAnimal = baseAnimals[type] || type;
-
-            return baseAnimal && representativeAnimals[baseAnimal];
-        });
-
-        Livestock.validates({
-            assetKey: {
-                required: true
-            },
-            data: {
-                required: true,
-                object: true
-            },
-            legalEntityId: {
-                required: true,
-                numeric: true
-            },
-            type: {
-                required: true,
-                equal: {
-                    to: 'livestock'
-                }
-            }
-        });
-
-        return Livestock;
-    }]);
+    AssetFactoryProvider.add('livestock', 'Livestock');
+}]);
 
 var sdkModelStock = angular.module('ag.sdk.model.stock', ['ag.sdk.model.asset']);
 
-sdkModelStock.factory('Stock', ['AssetBase', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (AssetBase, Base, computedProperty, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
-        function Stock (attrs) {
-            AssetBase.apply(this, arguments);
+sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryProvider) {
+    this.$get = ['AssetBase', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+        function (AssetBase, Base, computedProperty, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+            function Stock (attrs) {
+                AssetBase.apply(this, arguments);
 
-            computedProperty(this, 'startMonth', function () {
-                return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
-                    .pluck('date')
-                    .first()
-                    .value(), 'YYYY-MM-DD').date(1));
-            });
+                computedProperty(this, 'startMonth', function () {
+                    return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
+                        .pluck('date')
+                        .first()
+                        .value(), 'YYYY-MM-DD').date(1));
+                });
 
-            computedProperty(this, 'endMonth', function () {
-                return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
-                    .pluck('date')
-                    .last()
-                    .value(), 'YYYY-MM-DD').date(1));
-            });
+                computedProperty(this, 'endMonth', function () {
+                    return (underscore.isEmpty(this.data.ledger) ? undefined : moment(underscore.chain(this.data.ledger)
+                        .pluck('date')
+                        .last()
+                        .value(), 'YYYY-MM-DD').date(1));
+                });
 
-            // Actions
-            readOnlyProperty(this, 'actions', {
-                'credit': [
-                    'Production',
-                    'Purchase'],
-                'debit': [
-                    'Consumption',
-                    'Internal',
-                    'Household',
-                    'Labour',
-                    'Repay',
-                    'Sale']
-            }, {configurable: true});
+                // Actions
+                readOnlyProperty(this, 'actions', {
+                    'credit': [
+                        'Production',
+                        'Purchase'],
+                    'debit': [
+                        'Consumption',
+                        'Internal',
+                        'Household',
+                        'Labour',
+                        'Repay',
+                        'Sale']
+                }, {configurable: true});
 
-            readOnlyProperty(this, 'actionTitles', {
-                'Consumption': 'Consume',
-                'Household': 'Household Consumption',
-                'Internal': 'Internal Consumption',
-                'Labour': 'Labour Consumption',
-                'Production': 'Produce',
-                'Purchase': 'Buy Stock',
-                'Repay': 'Repay Credit',
-                'Sale': 'Sell Stock'
-            }, {configurable: true});
+                readOnlyProperty(this, 'actionTitles', {
+                    'Consumption': 'Consume',
+                    'Household': 'Household Consumption',
+                    'Internal': 'Internal Consumption',
+                    'Labour': 'Labour Consumption',
+                    'Production': 'Produce',
+                    'Purchase': 'Buy Stock',
+                    'Repay': 'Repay Credit',
+                    'Sale': 'Sell Stock'
+                }, {configurable: true});
 
-            privateProperty(this, 'getActionTitle', function (action) {
-                return this.actionTitles[action];
-            }, {configurable: true});
+                privateProperty(this, 'getActionTitle', function (action) {
+                    return this.actionTitles[action];
+                }, {configurable: true});
 
-            // Ledger
-            function addLedgerEntry (instance, item) {
-                if (instance.isLedgerEntryValid(item)) {
-                    instance.data.ledger = underscore.chain(instance.data.ledger)
-                        .union([underscore.extend(item, {
-                            date: moment(item.date).format('YYYY-MM-DD')
-                        })])
-                        .sortBy(function (item) {
-                            return moment(item.date).valueOf() + getActionGroup(instance, item.action);
+                // Ledger
+                function addLedgerEntry (instance, item) {
+                    if (instance.isLedgerEntryValid(item)) {
+                        instance.data.ledger = underscore.chain(instance.data.ledger)
+                            .union([underscore.extend(item, {
+                                date: moment(item.date).format('YYYY-MM-DD')
+                            })])
+                            .sortBy(function (item) {
+                                return moment(item.date).valueOf() + getActionGroup(instance, item.action);
+                            })
+                            .value();
+
+                        recalculateAndCache(instance, {checkEntries: true});
+                    }
+                }
+
+                privateProperty(this, 'addLedgerEntry', function (item) {
+                    return addLedgerEntry(this, item);
+                });
+
+                function getActionGroup (instance, action) {
+                    return underscore.chain(instance.actions)
+                        .keys()
+                        .filter(function (group) {
+                            return underscore.contains(instance.actions[group], asPureAction(action));
                         })
+                        .first()
                         .value();
-
-                    recalculateAndCache(instance, {checkEntries: true});
-                }
-            }
-
-            privateProperty(this, 'addLedgerEntry', function (item) {
-                return addLedgerEntry(this, item);
-            });
-
-            function getActionGroup (instance, action) {
-                return underscore.chain(instance.actions)
-                    .keys()
-                    .filter(function (group) {
-                        return underscore.contains(instance.actions[group], asPureAction(action));
-                    })
-                    .first()
-                    .value();
-            }
-
-            privateProperty(this, 'getActionGroup', function (action) {
-                return getActionGroup(this, action);
-            });
-
-            privateProperty(this, 'findLedgerEntry', function (query) {
-                if (underscore.isObject(query)) {
-                    var entry = underscore.findWhere(this.data.ledger, query);
-
-                    return entry || underscore.findWhere(this.data.ledger, {
-                        reference: underscore.compact([query.reference, query.action, query.date]).join('/')
-                    });
                 }
 
-                return underscore.findWhere(this.data.ledger, {reference: query});
-            });
+                privateProperty(this, 'getActionGroup', function (action) {
+                    return getActionGroup(this, action);
+                });
 
-            privateProperty(this, 'hasLedgerEntries', function () {
-                return this.data.ledger.length > 0;
-            });
+                privateProperty(this, 'findLedgerEntry', function (query) {
+                    if (underscore.isObject(query)) {
+                        var entry = underscore.findWhere(this.data.ledger, query);
 
-            privateProperty(this, 'hasQuantityBefore', function (before) {
-                var beforeDate = moment(before, 'YYYY-MM-DD');
-
-                return !underscore.isUndefined(underscore.chain(this.data.ledger)
-                    .filter(function (entry) {
-                        return moment(entry.date).isSameOrBefore(beforeDate);
-                    })
-                    .pluck('quantity')
-                    .last()
-                    .value());
-            });
-
-            privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, markDeleted) {
-                if (ledgerEntry) {
-                    if (markDeleted) {
-                        ledgerEntry.deleted = true;
-                    } else {
-                        this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
-                            return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
+                        return entry || underscore.findWhere(this.data.ledger, {
+                            reference: underscore.compact([query.reference, query.action, query.date]).join('/')
                         });
                     }
 
-                    recalculateAndCache(this);
-                }
-            });
-
-            privateProperty(this, 'generateLedgerEntryReference', function (entry) {
-                return '/' + underscore.compact([entry.action, entry.date]).join('/');
-            });
-
-            privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
-                this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
-                    return s.include(entry.reference, reference);
+                    return underscore.findWhere(this.data.ledger, {reference: query});
                 });
 
-                recalculateAndCache(this);
-            });
+                privateProperty(this, 'hasLedgerEntries', function () {
+                    return this.data.ledger.length > 0;
+                });
 
-            privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
-                return inventoryInRange(this, rangeStart, rangeEnd);
-            });
+                privateProperty(this, 'hasQuantityBefore', function (before) {
+                    var beforeDate = moment(before, 'YYYY-MM-DD');
 
-            privateProperty(this, 'inventoryBefore', function (before) {
-                var beforeDate = moment(before, 'YYYY-MM-DD');
+                    return !underscore.isUndefined(underscore.chain(this.data.ledger)
+                        .filter(function (entry) {
+                            return moment(entry.date).isSameOrBefore(beforeDate);
+                        })
+                        .pluck('quantity')
+                        .last()
+                        .value());
+                });
 
-                if (this.startMonth && beforeDate.isSameOrAfter(this.startMonth)) {
-                    var numberOfMonths = beforeDate.diff(this.startMonth, 'months');
+                privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, markDeleted) {
+                    if (ledgerEntry) {
+                        if (markDeleted) {
+                            ledgerEntry.deleted = true;
+                        } else {
+                            this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                                return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
+                            });
+                        }
 
-                    if (underscore.isEmpty(_monthly)) {
                         recalculateAndCache(this);
                     }
-
-                    return _monthly[numberOfMonths] || underscore.last(_monthly);
-                }
-
-                return openingMonth(this);
-            });
-
-            privateProperty(this, 'subtotalInRange', function (actions, rangeStart, rangeEnd) {
-                var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD'),
-                    rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD');
-
-                actions = (underscore.isArray(actions) ? actions : [actions]);
-
-                return underscore.chain(this.data.ledger)
-                    .reject(function (entry) {
-                        var entryDate = moment(entry.date);
-
-                        return entry.deleted || !underscore.contains(actions, entry.action) || entryDate.isBefore(rangeStartDate) || entryDate.isSameOrAfter(rangeEndDate);
-                    })
-                    .reduce(function (result, entry) {
-                        result.quantity = safeMath.plus(result.quantity, entry.quantity);
-                        result.value = safeMath.plus(result.value, entry.value);
-                        result.price = safeMath.dividedBy(result.value, result.quantity);
-                        return result;
-                    }, {})
-                    .value();
-            });
-
-            privateProperty(this, 'marketPriceAtDate', function (before) {
-                var beforeDate = moment(before, 'YYYY-MM-DD'),
-                    actions = ['Purchase', 'Sale'];
-
-                return underscore.chain(this.data.ledger)
-                    .filter(function (entry) {
-                        return !entry.deleted && underscore.contains(actions, entry.action) && moment(entry.date).isSameOrBefore(beforeDate);
-                    })
-                    .map(function (entry) {
-                        return safeMath.dividedBy(entry.value, entry.quantity);
-                    })
-                    .last()
-                    .value() || this.data.pricePerUnit;
-            });
-
-            privateProperty(this, 'isLedgerEntryValid', function (item) {
-                return isLedgerEntryValid(this, item);
-            });
-
-            privateProperty(this, 'clearLedger', function () {
-                this.data.ledger = [];
-
-                recalculateAndCache(this);
-            });
-
-            privateProperty(this, 'recalculateLedger' ,function () {
-                recalculateAndCache(this);
-            });
-
-            var _monthly = [];
-
-            function balanceEntry (curr, prev) {
-                curr.opening = prev.closing;
-                curr.balance = underscore.mapObject(curr.opening, function (value, key) {
-                    return safeMath.chain(value)
-                        .plus(underscore.reduce(curr.credit, function (total, item) {
-                            return safeMath.plus(total, item[key]);
-                        }, 0))
-                        .minus(underscore.reduce(curr.debit, function (total, item) {
-                            return safeMath.plus(total, item[key]);
-                        }, 0))
-                        .toNumber();
                 });
-                curr.closing = curr.balance;
-            }
 
-            function inventoryInRange(instance, rangeStart, rangeEnd) {
-                var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
-                    rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
-                    numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
-                    appliedStart = (instance.startMonth ? instance.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
-                    appliedEnd = (instance.endMonth ? rangeEndDate.diff(instance.endMonth, 'months') : 0),
-                    startCrop = Math.abs(Math.min(0, appliedStart));
+                privateProperty(this, 'generateLedgerEntryReference', function (entry) {
+                    return '/' + underscore.compact([entry.action, entry.date]).join('/');
+                });
 
-                if (underscore.isEmpty(_monthly) && !underscore.isEmpty(instance.data.ledger)) {
-                    recalculateAndCache(instance);
+                privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
+                    this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
+                        return s.include(entry.reference, reference);
+                    });
+
+                    recalculateAndCache(this);
+                });
+
+                privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
+                    return inventoryInRange(this, rangeStart, rangeEnd);
+                });
+
+                privateProperty(this, 'inventoryBefore', function (before) {
+                    var beforeDate = moment(before, 'YYYY-MM-DD');
+
+                    if (this.startMonth && beforeDate.isSameOrAfter(this.startMonth)) {
+                        var numberOfMonths = beforeDate.diff(this.startMonth, 'months');
+
+                        if (underscore.isEmpty(_monthly)) {
+                            recalculateAndCache(this);
+                        }
+
+                        return _monthly[numberOfMonths] || underscore.last(_monthly);
+                    }
+
+                    return openingMonth(this);
+                });
+
+                privateProperty(this, 'subtotalInRange', function (actions, rangeStart, rangeEnd) {
+                    var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD'),
+                        rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD');
+
+                    actions = (underscore.isArray(actions) ? actions : [actions]);
+
+                    return underscore.chain(this.data.ledger)
+                        .reject(function (entry) {
+                            var entryDate = moment(entry.date);
+
+                            return entry.deleted || !underscore.contains(actions, entry.action) || entryDate.isBefore(rangeStartDate) || entryDate.isSameOrAfter(rangeEndDate);
+                        })
+                        .reduce(function (result, entry) {
+                            result.quantity = safeMath.plus(result.quantity, entry.quantity);
+                            result.value = safeMath.plus(result.value, entry.value);
+                            result.price = safeMath.dividedBy(result.value, result.quantity);
+                            return result;
+                        }, {})
+                        .value();
+                });
+
+                privateProperty(this, 'marketPriceAtDate', function (before) {
+                    var beforeDate = moment(before, 'YYYY-MM-DD'),
+                        actions = ['Purchase', 'Sale'];
+
+                    return underscore.chain(this.data.ledger)
+                        .filter(function (entry) {
+                            return !entry.deleted && underscore.contains(actions, entry.action) && moment(entry.date).isSameOrBefore(beforeDate);
+                        })
+                        .map(function (entry) {
+                            return safeMath.dividedBy(entry.value, entry.quantity);
+                        })
+                        .last()
+                        .value() || this.data.pricePerUnit;
+                });
+
+                privateProperty(this, 'isLedgerEntryValid', function (item) {
+                    return isLedgerEntryValid(this, item);
+                });
+
+                privateProperty(this, 'clearLedger', function () {
+                    this.data.ledger = [];
+
+                    recalculateAndCache(this);
+                });
+
+                privateProperty(this, 'recalculateLedger' ,function () {
+                    recalculateAndCache(this);
+                });
+
+                var _monthly = [];
+
+                function balanceEntry (curr, prev) {
+                    curr.opening = prev.closing;
+                    curr.balance = underscore.mapObject(curr.opening, function (value, key) {
+                        return safeMath.chain(value)
+                            .plus(underscore.reduce(curr.credit, function (total, item) {
+                                return safeMath.plus(total, item[key]);
+                            }, 0))
+                            .minus(underscore.reduce(curr.debit, function (total, item) {
+                                return safeMath.plus(total, item[key]);
+                            }, 0))
+                            .toNumber();
+                    });
+                    curr.closing = curr.balance;
                 }
 
-                return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
-                        .concat(_monthly)
-                        .concat(defaultMonths(Math.max(0, appliedEnd))),
-                    function (monthly, curr) {
+                function inventoryInRange(instance, rangeStart, rangeEnd) {
+                    var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
+                        rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
+                        numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
+                        appliedStart = (instance.startMonth ? instance.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
+                        appliedEnd = (instance.endMonth ? rangeEndDate.diff(instance.endMonth, 'months') : 0),
+                        startCrop = Math.abs(Math.min(0, appliedStart));
+
+                    if (underscore.isEmpty(_monthly) && !underscore.isEmpty(instance.data.ledger)) {
+                        recalculateAndCache(instance);
+                    }
+
+                    return underscore.reduce(defaultMonths(Math.max(0, appliedStart))
+                            .concat(_monthly)
+                            .concat(defaultMonths(Math.max(0, appliedEnd))),
+                        function (monthly, curr) {
+                            balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
+                            monthly.push(curr);
+                            return monthly;
+                        }, [])
+                        .slice(startCrop, startCrop + numberOfMonths);
+                }
+
+                function recalculate (instance, options) {
+                    var startMonth = instance.startMonth,
+                        endMonth = instance.endMonth,
+                        numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : -1);
+
+                    options = underscore.defaults(options || {}, {
+                        checkEntries: false
+                    });
+
+                    return underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
+                        var offsetDate = moment(startMonth).add(offset, 'M');
+
+                        var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, entry) {
+                            var itemDate = moment(entry.date),
+                                pureAction = asPureAction(entry.action);
+
+                            if (!entry.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
+                                underscore.each(['credit', 'debit'], function (key) {
+                                    if (underscore.contains(instance.actions[key], pureAction)) {
+                                        if (options.checkEntries) {
+                                            recalculateEntry(instance, entry);
+                                        }
+
+                                        month.entries.push(entry);
+                                        month[key][pureAction] = underscore.mapObject(month[key][pureAction] || defaultItem(), function (value, key) {
+                                            return safeMath.plus(value, entry[key]);
+                                        });
+                                    }
+                                });
+                            }
+
+                            return month;
+                        }, {
+                            credit: {},
+                            debit: {},
+                            entries: []
+                        }));
+
                         balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
                         monthly.push(curr);
                         return monthly;
-                    }, [])
-                    .slice(startCrop, startCrop + numberOfMonths);
+                    }, []);
+                }
+
+                function recalculateEntry (instance, entry) {
+                    if (underscore.isUndefined(entry.price) && !underscore.isUndefined(entry.quantity) && !underscore.isUndefined(instance.data.pricePerUnit)) {
+                        entry.price = instance.data.pricePerUnit;
+                        entry.value = safeMath.times((entry.rate || 1), safeMath.times(entry.price, entry.quantity));
+                    }
+                }
+
+                function recalculateAndCache (instance, options) {
+                    _monthly = recalculate(instance, options);
+                }
+
+                Base.initializeObject(this.data, 'ledger', []);
+                Base.initializeObject(this.data, 'openingBalance', 0);
+
+
+                this.type = 'stock';
             }
 
-            function recalculate (instance, options) {
-                var startMonth = instance.startMonth,
-                    endMonth = instance.endMonth,
-                    numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : -1);
-
-                options = underscore.defaults(options || {}, {
-                    checkEntries: false
-                });
-
-                return underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
-                    var offsetDate = moment(startMonth).add(offset, 'M');
-
-                    var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, entry) {
-                        var itemDate = moment(entry.date),
-                            pureAction = asPureAction(entry.action);
-
-                        if (!entry.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
-                            underscore.each(['credit', 'debit'], function (key) {
-                                if (underscore.contains(instance.actions[key], pureAction)) {
-                                    if (options.checkEntries) {
-                                        recalculateEntry(instance, entry);
-                                    }
-
-                                    month.entries.push(entry);
-                                    month[key][pureAction] = underscore.mapObject(month[key][pureAction] || defaultItem(), function (value, key) {
-                                        return safeMath.plus(value, entry[key]);
-                                    });
-                                }
-                            });
-                        }
-
-                        return month;
-                    }, {
-                        credit: {},
-                        debit: {},
-                        entries: []
-                    }));
-
-                    balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
-                    monthly.push(curr);
-                    return monthly;
-                }, []);
+            function asPureAction (action) {
+                return s.strLeft(action, ':');
             }
 
-            function recalculateEntry (instance, entry) {
-                if (underscore.isUndefined(entry.price) && !underscore.isUndefined(entry.quantity) && !underscore.isUndefined(instance.data.pricePerUnit)) {
-                    entry.price = instance.data.pricePerUnit;
-                    entry.value = safeMath.times((entry.rate || 1), safeMath.times(entry.price, entry.quantity));
+            function defaultItem (quantity, value) {
+                return {
+                    quantity: quantity || 0,
+                    value: value || 0
                 }
             }
 
-            function recalculateAndCache (instance, options) {
-                _monthly = recalculate(instance, options);
-            }
-
-            Base.initializeObject(this.data, 'ledger', []);
-            Base.initializeObject(this.data, 'openingBalance', 0);
-
-
-            this.type = 'stock';
-        }
-
-        function asPureAction (action) {
-            return s.strLeft(action, ':');
-        }
-
-        function defaultItem (quantity, value) {
-            return {
-                quantity: quantity || 0,
-                value: value || 0
-            }
-        }
-
-        function defaultMonth (quantity, value) {
-            return {
-                opening: defaultItem(quantity, value),
-                credit: {},
-                debit: {},
-                entries: [],
-                balance: defaultItem(quantity, value),
-                interest: 0,
-                closing: defaultItem(quantity, value)
-            }
-        }
-
-        function defaultMonths (size) {
-            return underscore.range(size).map(defaultMonth);
-        }
-
-        function openingMonth (instance) {
-            var quantity = instance.data.openingBalance,
-                value = safeMath.times(instance.data.openingBalance, instance.data.pricePerUnit);
-
-            return defaultMonth(quantity, value);
-        }
-
-        function isLedgerEntryValid (instance, item) {
-            var pureAction = asPureAction(item.action);
-            return item && item.date && moment(item.date).isValid() && /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
-                (underscore.contains(instance.actions.credit, pureAction) || underscore.contains(instance.actions.debit, pureAction));
-        }
-
-        inheritModel(Stock, AssetBase);
-
-        Stock.validates({
-            assetKey: {
-                required: true
-            },
-            data: {
-                required: true,
-                object: true
-            },
-            legalEntityId: {
-                required: true,
-                numeric: true
-            },
-            type: {
-                required: true,
-                inclusion: {
-                    in: underscore.keys(AssetBase.assetTypesWithOther)
+            function defaultMonth (quantity, value) {
+                return {
+                    opening: defaultItem(quantity, value),
+                    credit: {},
+                    debit: {},
+                    entries: [],
+                    balance: defaultItem(quantity, value),
+                    interest: 0,
+                    closing: defaultItem(quantity, value)
                 }
             }
-        });
 
-        return Stock;
-    }]);
+            function defaultMonths (size) {
+                return underscore.range(size).map(defaultMonth);
+            }
+
+            function openingMonth (instance) {
+                var quantity = instance.data.openingBalance,
+                    value = safeMath.times(instance.data.openingBalance, instance.data.pricePerUnit);
+
+                return defaultMonth(quantity, value);
+            }
+
+            function isLedgerEntryValid (instance, item) {
+                var pureAction = asPureAction(item.action);
+                return item && item.date && moment(item.date).isValid() && /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
+                    (underscore.contains(instance.actions.credit, pureAction) || underscore.contains(instance.actions.debit, pureAction));
+            }
+
+            inheritModel(Stock, AssetBase);
+
+            Stock.validates({
+                assetKey: {
+                    required: true
+                },
+                data: {
+                    required: true,
+                    object: true
+                },
+                legalEntityId: {
+                    required: true,
+                    numeric: true
+                },
+                type: {
+                    required: true,
+                    inclusion: {
+                        in: underscore.keys(AssetBase.assetTypesWithOther)
+                    }
+                }
+            });
+
+            return Stock;
+        }];
+
+    AssetFactoryProvider.add('stock', 'Stock');
+}]);
 
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.helper.enterprise-budget', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
-sdkModelBusinessPlanDocument.factory('BusinessPlan', ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
-    function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
-        var _version = 16;
+sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
+        function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
+            var _version = 16;
 
-        function BusinessPlan (attrs) {
-            Document.apply(this, arguments);
+            function BusinessPlan (attrs) {
+                Document.apply(this, arguments);
 
-            this.docType = 'financial resource plan';
+                this.docType = 'financial resource plan';
 
-            this.data.startDate = moment(this.data.startDate).format('YYYY-MM-DD');
-            this.data.endDate = moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD');
+                this.data.startDate = moment(this.data.startDate).format('YYYY-MM-DD');
+                this.data.endDate = moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD');
 
-            Base.initializeObject(this.data, 'account', {});
-            Base.initializeObject(this.data, 'models', {});
-            Base.initializeObject(this.data, 'adjustmentFactors', {});
-            Base.initializeObject(this.data, 'assetStatement', {});
-            Base.initializeObject(this.data, 'liabilityStatement', {});
+                Base.initializeObject(this.data, 'account', {});
+                Base.initializeObject(this.data, 'models', {});
+                Base.initializeObject(this.data, 'adjustmentFactors', {});
+                Base.initializeObject(this.data, 'assetStatement', {});
+                Base.initializeObject(this.data, 'liabilityStatement', {});
 
-            Base.initializeObject(this.data.assetStatement, 'total', {});
-            Base.initializeObject(this.data.liabilityStatement, 'total', {});
+                Base.initializeObject(this.data.assetStatement, 'total', {});
+                Base.initializeObject(this.data.liabilityStatement, 'total', {});
 
-            Base.initializeObject(this.data.account, 'monthly', []);
-            Base.initializeObject(this.data.account, 'yearly', []);
-            Base.initializeObject(this.data.account, 'openingBalance', 0);
-            Base.initializeObject(this.data.account, 'interestRateCredit', 0);
-            Base.initializeObject(this.data.account, 'interestRateDebit', 0);
-            Base.initializeObject(this.data.account, 'depreciationRate', 0);
+                Base.initializeObject(this.data.account, 'monthly', []);
+                Base.initializeObject(this.data.account, 'yearly', []);
+                Base.initializeObject(this.data.account, 'openingBalance', 0);
+                Base.initializeObject(this.data.account, 'interestRateCredit', 0);
+                Base.initializeObject(this.data.account, 'interestRateDebit', 0);
+                Base.initializeObject(this.data.account, 'depreciationRate', 0);
 
-            Base.initializeObject(this.data.models, 'assets', []);
-            Base.initializeObject(this.data.models, 'budgets', []);
-            Base.initializeObject(this.data.models, 'expenses', []);
-            Base.initializeObject(this.data.models, 'financials', []);
-            Base.initializeObject(this.data.models, 'income', []);
-            Base.initializeObject(this.data.models, 'liabilities', []);
-            Base.initializeObject(this.data.models, 'productionSchedules', []);
+                Base.initializeObject(this.data.models, 'assets', []);
+                Base.initializeObject(this.data.models, 'budgets', []);
+                Base.initializeObject(this.data.models, 'expenses', []);
+                Base.initializeObject(this.data.models, 'financials', []);
+                Base.initializeObject(this.data.models, 'income', []);
+                Base.initializeObject(this.data.models, 'liabilities', []);
+                Base.initializeObject(this.data.models, 'productionSchedules', []);
 
-            function reEvaluateBusinessPlan (instance) {
-                recalculate(instance);
-                recalculateRatios(instance);
-            }
+                function reEvaluateBusinessPlan (instance) {
+                    recalculate(instance);
+                    recalculateRatios(instance);
+                }
 
-            /**
-             * Helper functions
-             */
-            function asJson (object, omit) {
-                return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON() : object, omit || []);
-            }
+                /**
+                 * Helper functions
+                 */
+                function asJson (object, omit) {
+                    return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON() : object, omit || []);
+                }
 
-            /**
-             * Production Schedule handling
-             */
-            privateProperty(this, 'updateProductionSchedules', function (schedules, options) {
-                updateProductionSchedules(this, schedules, options);
-            });
-
-            function updateProductionSchedules (instance, schedules, options) {
-                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
-                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
-                    oldSchedules = underscore.map(instance.models.productionSchedules, ProductionSchedule.newCopy);
-
-                options = underscore.defaults(options || {}, {
-                    extractStockAssets: true
+                /**
+                 * Production Schedule handling
+                 */
+                privateProperty(this, 'updateProductionSchedules', function (schedules, options) {
+                    updateProductionSchedules(this, schedules, options);
                 });
 
-                instance.models.productionSchedules = [];
+                function updateProductionSchedules (instance, schedules, options) {
+                    var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                        endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
+                        oldSchedules = underscore.map(instance.models.productionSchedules, ProductionSchedule.newCopy);
 
-                underscore.chain(schedules)
-                    .map(function (schedule) {
-                        return (schedule instanceof ProductionSchedule ? schedule : ProductionSchedule.newCopy(schedule));
-                    })
-                    .sortBy(function (schedule) {
-                        return moment(schedule.startDate).valueOf();
-                    })
-                    .each(function (schedule) {
-                        // Add valid production schedule if between business plan dates
-                        if (schedule.validate() && (startMonth.isBetween(schedule.startDate, schedule.endDate) || (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
-                            if (options.extractStockAssets) {
-                                extractProductionScheduleStockAssets(instance, schedule);
+                    options = underscore.defaults(options || {}, {
+                        extractStockAssets: true
+                    });
+
+                    instance.models.productionSchedules = [];
+
+                    underscore.chain(schedules)
+                        .map(function (schedule) {
+                            return (schedule instanceof ProductionSchedule ? schedule : ProductionSchedule.newCopy(schedule));
+                        })
+                        .sortBy(function (schedule) {
+                            return moment(schedule.startDate).valueOf();
+                        })
+                        .each(function (schedule) {
+                            // Add valid production schedule if between business plan dates
+                            if (schedule.validate() && (startMonth.isBetween(schedule.startDate, schedule.endDate) || (startMonth.isBefore(schedule.endDate) && endMonth.isAfter(schedule.startDate)))) {
+                                if (options.extractStockAssets) {
+                                    extractProductionScheduleStockAssets(instance, schedule);
+                                }
+
+                                instance.models.productionSchedules.push(asJson(schedule, ['asset']));
+
+                                oldSchedules = underscore.reject(oldSchedules, function (oldSchedule) {
+                                    return oldSchedule.scheduleKey === schedule.scheduleKey;
+                                });
                             }
+                        });
 
-                            instance.models.productionSchedules.push(asJson(schedule, ['asset']));
+                    if (oldSchedules.length > 0) {
+                        var stockAssets = underscore.chain(instance.models.assets)
+                            .filter(function (asset) {
+                                return underscore.contains(['livestock', 'stock'], asset.type);
+                            })
+                            .map(AssetFactory.newCopy)
+                            .value();
 
-                            oldSchedules = underscore.reject(oldSchedules, function (oldSchedule) {
-                                return oldSchedule.scheduleKey === schedule.scheduleKey;
+                        underscore.each(oldSchedules, function (oldSchedule) {
+                            underscore.each(stockAssets, function (stock) {
+                                stock.removeLedgerEntriesByReference(oldSchedule.scheduleKey);
+
+                                addStockAsset(instance, stock);
                             });
+                        });
+                    }
+
+                    updateBudgets(instance);
+                    reEvaluateBusinessPlan(instance);
+                }
+
+                function initializeCategoryValues (instance, section, category, length) {
+                    instance.data[section] = instance.data[section] || {};
+                    instance.data[section][category] = instance.data[section][category] || Base.initializeArray(length);
+                }
+
+                function getLowerIndexBound (scheduleArray, offset) {
+                    return (scheduleArray ? Math.min(scheduleArray.length, Math.abs(Math.min(0, offset))) : 0);
+                }
+
+                function getUpperIndexBound (scheduleArray, offset, numberOfMonths) {
+                    return (scheduleArray ? Math.min(numberOfMonths, offset + scheduleArray.length) - offset : 0);
+                }
+
+                function extractProductionScheduleCategoryValuePerMonth(dataStore, schedule, code, startMonth, numberOfMonths, forceCategory) {
+                    var section = underscore.findWhere(schedule.data.sections, {code: code}),
+                        scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD'),
+                        enterprise = schedule.data.details.commodity;
+
+                    if (section) {
+                        var offset = scheduleStart.diff(startMonth, 'months');
+
+                        angular.forEach(section.productCategoryGroups, function (group) {
+                            var dataCategory = 'enterpriseProduction' + (code === 'INC' ? 'Income' : 'Expenditure');
+
+                            angular.forEach(group.productCategories, function (category) {
+                                // Ignore stockable categories
+                                if (!underscore.contains(EnterpriseBudget.stockableCategoryCodes, category.code)) {
+                                    var categoryName = (!forceCategory && (schedule.type !== 'livestock' && code === 'INC') ? schedule.data.details.commodity : category.name),
+                                        index = getLowerIndexBound(category.valuePerMonth, offset),
+                                        maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+
+                                    Base.initializeObject(dataStore[dataCategory], enterprise, {});
+                                    dataStore[dataCategory][enterprise][categoryName] = dataStore[dataCategory][enterprise][categoryName] || Base.initializeArray(numberOfMonths);
+
+                                    for (; index < maxIndex; index++) {
+                                        dataStore[dataCategory][enterprise][categoryName][index + offset] = safeMath.plus(dataStore[dataCategory][enterprise][categoryName][index + offset], category.valuePerMonth[index]);
+                                    }
+                                }
+                            });
+                        });
+                    }
+                }
+
+                function findStockAsset (instance, type, stockType, category) {
+                    return underscore.find(instance.models.assets, function (asset) {
+                        return asset.type === type && asset.data.category === category && (underscore.isUndefined(stockType) || asset.data.type === stockType);
+                    });
+                }
+
+                function getStockAsset (instance, type, stockType, category, priceUnit, quantityUnit) {
+                    var stock = AssetFactory.new(findStockAsset(instance, type, stockType, category) || {
+                        type: type,
+                        legalEntityId: underscore.chain(instance.data.legalEntities)
+                            .where({isPrimary: true})
+                            .pluck('id')
+                            .first()
+                            .value(),
+                        data: underscore.extend({
+                            category: category,
+                            priceUnit: priceUnit,
+                            quantityUnit: quantityUnit
+                        }, (underscore.isUndefined(stockType) ? {} : {
+                            type: stockType
+                        }))
+                    });
+
+                    stock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: stock.legalEntityId}));
+
+                    return stock;
+                }
+
+                function addStockAsset (instance, stock, force) {
+                    instance.models.assets = underscore.reject(instance.models.assets, function (asset) {
+                        return asset.assetKey === stock.assetKey;
+                    });
+
+                    if (force || stock.hasLedgerEntries()) {
+                        instance.models.assets.push(asJson(stock));
+                    }
+                }
+
+                function extractProductionScheduleStockAssets (instance, productionSchedule) {
+                    var startDate = moment(productionSchedule.startDate);
+
+                    underscore.each(productionSchedule.data.sections, function (section) {
+                        underscore.each(section.productCategoryGroups, function (group) {
+                            underscore.each(group.productCategories, function (category) {
+                                if (underscore.contains(EnterpriseBudget.stockableCategoryCodes, category.code)) {
+                                    var assetType = (group.code === 'INC-LSS' ? 'livestock' : 'stock'),
+                                        priceUnit = (category.unit === 'Total' ? undefined : category.unit),
+                                        stockType = (section.code === 'INC' ? productionSchedule.commodityType : undefined),
+                                        stock = getStockAsset(instance, assetType, stockType, category.name, priceUnit, category.supplyUnit);
+
+                                    if (assetType === 'livestock' && category.value) {
+                                        Base.initializeObject(stock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
+                                    }
+
+                                    productionSchedule.updateCategoryStock(section.code, category.code, stock);
+
+                                    addStockAsset(instance, stock, true);
+                                }
+                            });
+
+                            if (group.code === 'INC-LSS') {
+                                // Representative Animal
+                                var representativeAnimal = productionSchedule.getRepresentativeAnimal(),
+                                    representativeCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: representativeAnimal});
+
+                                // Birth/Weaned Animals
+                                var birthAnimal = productionSchedule.birthAnimal,
+                                    birthCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: birthAnimal}),
+                                    weanedCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: Livestock.getWeanedAnimal(productionSchedule.commodityType)});
+
+                                if (!underscore.isUndefined(representativeCategory) && !underscore.isUndefined(birthCategory) && !underscore.isUndefined(weanedCategory)) {
+                                    var representativeLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, representativeAnimal, representativeCategory.unit, representativeCategory.supplyUnit),
+                                        birthLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, birthAnimal, birthCategory.unit, birthCategory.supplyUnit),
+                                        weanedLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, weanedCategory.name, weanedCategory.unit, weanedCategory.supplyUnit);
+
+                                    var firstBirthLedgerEntry = underscore.first(birthLivestock.data.ledger),
+                                        retainLivestockMap = {
+                                            'Retain': birthLivestock,
+                                            'Retained': weanedLivestock
+                                        };
+
+                                    if (underscore.isUndefined(firstBirthLedgerEntry) || moment(productionSchedule.startDate).isSameOrBefore(firstBirthLedgerEntry.date)) {
+                                        representativeLivestock.data.openingBalance = productionSchedule.data.details.herdSize;
+                                    }
+
+                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', representativeCategory.code, productionSchedule.costStage);
+                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', birthCategory.code, productionSchedule.costStage);
+                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', weanedCategory.code, productionSchedule.costStage);
+
+                                    underscore.each(underscore.keys(productionSchedule.budget.data.events).sort(), function (action) {
+                                        var shiftedSchedule = productionSchedule.budget.shiftMonthlyArray(productionSchedule.budget.data.events[action]);
+
+                                        underscore.each(shiftedSchedule, function (rate, index) {
+                                            if (rate > 0) {
+                                                var formattedDate = moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
+                                                    representativeLivestockInventory = representativeLivestock.inventoryBefore(formattedDate),
+                                                    ledgerEntry = birthLivestock.findLedgerEntry({date: formattedDate, action: action, reference: productionSchedule.scheduleKey}),
+                                                    actionReference = [productionSchedule.scheduleKey, action, formattedDate].join('/'),
+                                                    quantity = Math.floor(safeMath.chain(rate)
+                                                        .times(representativeLivestockInventory.closing.quantity)
+                                                        .dividedBy(100)
+                                                        .toNumber()),
+                                                    value = safeMath.times(quantity, birthLivestock.data.pricePerUnit);
+
+                                                if (underscore.isUndefined(ledgerEntry)) {
+                                                    birthLivestock.addLedgerEntry({
+                                                        action: action,
+                                                        commodity: productionSchedule.commodityType,
+                                                        date: formattedDate,
+                                                        price: birthLivestock.data.pricePerUnit,
+                                                        priceUnit: birthLivestock.data.quantityUnit,
+                                                        quantity: quantity,
+                                                        quantityUnit: birthLivestock.data.quantityUnit,
+                                                        reference: actionReference,
+                                                        value: value
+                                                    });
+                                                } else {
+                                                    underscore.extend(ledgerEntry, {
+                                                        commodity: productionSchedule.commodityType,
+                                                        price: birthLivestock.data.pricePerUnit,
+                                                        priceUnit: birthLivestock.data.quantityUnit,
+                                                        quantity: quantity,
+                                                        quantityUnit: birthLivestock.data.quantityUnit,
+                                                        reference: actionReference,
+                                                        value: value
+                                                    });
+
+                                                    birthLivestock.recalculateLedger();
+                                                }
+
+                                                if (action === 'Death') {
+                                                    var retainReference = [productionSchedule.scheduleKey, 'Retain:' + birthAnimal, formattedDate].join('/');
+
+                                                    // Removed already included retained entries, as it affects the inventory balance
+                                                    birthLivestock.removeLedgerEntriesByReference(retainReference);
+
+                                                    // Retains birth animal as weaned animal
+                                                    var inventory = birthLivestock.inventoryBefore(formattedDate);
+
+                                                    underscore.each(underscore.keys(retainLivestockMap), function (retainAction) {
+                                                        var retainLivestock = retainLivestockMap[retainAction],
+                                                            retainLedgerEntry = retainLivestock.findLedgerEntry(retainReference),
+                                                            value = inventory.closing.value || safeMath.times(retainLivestock.data.pricePerUnit, inventory.closing.quantity);
+
+                                                        if (underscore.isUndefined(retainLedgerEntry)) {
+                                                            retainLivestock.addLedgerEntry({
+                                                                action: retainAction + ':' + birthAnimal,
+                                                                commodity: productionSchedule.commodityType,
+                                                                date: formattedDate,
+                                                                price: retainLivestock.data.pricePerUnit,
+                                                                priceUnit: retainLivestock.data.quantityUnit,
+                                                                quantity: inventory.closing.quantity,
+                                                                quantityUnit: retainLivestock.data.quantityUnit,
+                                                                reference: retainReference,
+                                                                value: value
+                                                            });
+                                                        } else {
+                                                            underscore.extend(retainLedgerEntry, {
+                                                                commodity: productionSchedule.commodityType,
+                                                                price: retainLivestock.data.pricePerUnit,
+                                                                priceUnit: retainLivestock.data.quantityUnit,
+                                                                quantity: inventory.closing.quantity,
+                                                                quantityUnit: retainLivestock.data.quantityUnit,
+                                                                reference: retainReference,
+                                                                value: value
+                                                            });
+
+                                                            retainLivestock.recalculateLedger();
+                                                        }
+                                                    });
+                                                }
+                                            }
+                                        });
+                                    });
+
+                                    addStockAsset(instance, representativeLivestock, true);
+                                    addStockAsset(instance, birthLivestock, true);
+                                    addStockAsset(instance, weanedLivestock, true);
+                                }
+                            }
+                        });
+                    });
+                }
+
+                function calculateYearlyProductionIncomeComposition(productionIncomeComposition, year) {
+                    var yearlyComposition = underscore.mapObject(productionIncomeComposition, function (monthlyComposition) {
+                        return underscore.reduce(monthlyComposition.slice((year - 1) * 12, year * 12), function (yearly, consumption) {
+                            yearly.unit = consumption.unit;
+                            yearly.value = safeMath.plus(yearly.value, consumption.value);
+                            yearly.quantity = safeMath.plus(yearly.quantity, consumption.quantity);
+                            yearly.pricePerUnit = safeMath.dividedBy(yearly.value, yearly.quantity);
+
+                            return yearly;
+                        }, {
+                            quantity: 0,
+                            value: 0
+                        });
+                    });
+
+                    yearlyComposition.total = {
+                        value: safeArrayMath.reduce(underscore.chain(yearlyComposition)
+                            .values()
+                            .pluck('value')
+                            .value()) || 0
+                    };
+
+                    underscore.each(yearlyComposition, function(consumption, enterprise) {
+                        consumption.percent = (enterprise !== 'total' ? safeMath.times(safeMath.dividedBy(100, yearlyComposition.total.value), consumption.value) : 100);
+                    });
+
+                    return yearlyComposition;
+                }
+
+                function reEvaluateProductionSchedules (instance) {
+                    var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                        numberOfMonths = instance.numberOfMonths;
+
+                    // Indirect production income & expenses
+                    underscore.chain(instance.models.income)
+                        .where({type: 'production'})
+                        .each(function (income) {
+                            Base.initializeObject(instance.data.enterpriseProductionIncome, 'Indirect', {});
+                            Base.initializeObject(instance.data.enterpriseProductionIncome['Indirect'], income.name, Base.initializeArray(numberOfMonths, 0));
+                            instance.data.enterpriseProductionIncome['Indirect'][income.name] = safeArrayMath.plus(instance.data.enterpriseProductionIncome['Indirect'][income.name], income.months);
+                        });
+
+                    underscore.chain(instance.models.expenses)
+                        .where({type: 'production'})
+                        .each(function (expense) {
+                            Base.initializeObject(instance.data.enterpriseProductionExpenditure, 'Indirect', {});
+                            Base.initializeObject(instance.data.enterpriseProductionExpenditure['Indirect'], expense.name, Base.initializeArray(numberOfMonths, 0));
+                            instance.data.enterpriseProductionExpenditure['Indirect'][expense.name] = safeArrayMath.plus(instance.data.enterpriseProductionExpenditure['Indirect'][expense.name], expense.months);
+                        });
+
+                    // Production income & expenses
+                    angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
+                        var schedule = ProductionSchedule.new(productionSchedule);
+
+                        extractProductionScheduleCategoryValuePerMonth(instance.data, schedule, 'INC', startMonth, numberOfMonths, true);
+                        extractProductionScheduleCategoryValuePerMonth(instance.data, schedule, 'EXP', startMonth, numberOfMonths, true);
+                    });
+                }
+
+                function reEvaluateProductionIncomeAndExpenditure (instance, numberOfMonths) {
+                    instance.data.productionIncome = underscore.extend(instance.data.productionIncome, underscore.reduce(instance.data.enterpriseProductionIncome, function (results, groupedValues) {
+                        return underscore.reduce(groupedValues, function (totals, values, group) {
+                            Base.initializeObject(totals, group, Base.initializeArray(numberOfMonths, 0));
+                            totals[group] = safeArrayMath.plus(totals[group], values);
+                            return totals;
+                        }, results);
+                    }, {}));
+
+                    instance.data.productionExpenditure = underscore.extend(instance.data.productionExpenditure, underscore.reduce(instance.data.enterpriseProductionExpenditure, function (results, groupedValues) {
+                        return underscore.reduce(groupedValues, function (totals, values, group) {
+                            Base.initializeObject(totals, group, Base.initializeArray(numberOfMonths, 0));
+                            totals[group] = safeArrayMath.plus(totals[group], values);
+                            return totals;
+                        }, results);
+                    }, {}));
+
+                    instance.data.unallocatedProductionIncome = instance.data.productionIncome;
+                    instance.data.unallocatedProductionExpenditure = instance.data.productionExpenditure;
+                }
+
+                /**
+                 * Income & Expenses handling
+                 */
+                function addIncomeExpense (instance, type, item) {
+                    instance.models[type] = underscore.reject(instance.models[type], function (modelItem) {
+                        return modelItem.uuid === item.uuid;
+                    });
+
+                    instance.models[type].push(item);
+
+                    reEvaluateBusinessPlan(instance);
+                }
+
+                function removeIncomeExpense (instance, type, item) {
+                    instance.models[type] = underscore.reject(instance.models[type], function (modelItem) {
+                        return modelItem.uuid === item.uuid;
+                    });
+
+                    reEvaluateBusinessPlan(instance);
+                }
+
+                privateProperty(this, 'addIncome', function (income) {
+                    addIncomeExpense(this, 'income', income);
+                });
+
+                privateProperty(this, 'removeIncome', function (income) {
+                    removeIncomeExpense(this, 'income', income);
+                });
+
+                privateProperty(this, 'addExpense', function (expense) {
+                    addIncomeExpense(this, 'expenses', expense);
+                });
+
+                privateProperty(this, 'removeExpense', function (expense) {
+                    removeIncomeExpense(this, 'expenses', expense);
+                });
+
+                function reEvaluateIncomeAndExpenses (instance) {
+                    var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                        endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
+                        numberOfMonths = endMonth.diff(startMonth, 'months'),
+                        evaluatedModels = [];
+
+                    underscore.each(instance.models.income, function (income) {
+                        var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: income.legalEntityId}),
+                            evaluatedModel = underscore.findWhere(evaluatedModels, {uuid: income.uuid}),
+                            type = (income.type ? income.type : 'other') + 'Income';
+
+                        // Check income is not already added
+                        if (income.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
+                            initializeCategoryValues(instance, type, income.name, numberOfMonths);
+
+                            instance.data[type][income.name] = underscore.map(income.months, function (monthValue, index) {
+                                return safeMath.plus(monthValue, instance.data[type][income.name][index]);
+                            });
+
+                            evaluatedModels.push(income);
                         }
                     });
 
-                if (oldSchedules.length > 0) {
-                    var stockAssets = underscore.chain(instance.models.assets)
-                        .filter(function (asset) {
-                            return underscore.contains(['livestock', 'stock'], asset.type);
+                    underscore.each(instance.models.expenses, function (expense) {
+                        var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: expense.legalEntityId}),
+                            evaluatedModel = underscore.findWhere(evaluatedModels, {uuid: expense.uuid}),
+                            type = (expense.type ? expense.type : 'other') + 'Expenditure';
+
+                        // Check expense is not already added
+                        if (expense.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
+                            initializeCategoryValues(instance, type, expense.name, numberOfMonths);
+
+                            instance.data[type][expense.name] = underscore.map(expense.months, function (monthValue, index) {
+                                return safeMath.plus(monthValue, instance.data[type][expense.name][index]);
+                            });
+
+                            evaluatedModels.push(expense);
+                        }
+                    });
+                }
+
+                /**
+                 * Financials
+                 */
+                privateProperty(this, 'updateFinancials', function (financials) {
+                    this.models.financials = underscore.filter(financials, function (financial) {
+                        return Financial.new(financial).validate();
+                    });
+
+                    this.data.consolidatedFinancials = underscore.chain(this.models.financials)
+                        .groupBy('year')
+                        .map(function (groupedFinancials) {
+                            return asJson(FinancialGroup.new({
+                                financials: groupedFinancials
+                            }), ['financials']);
                         })
-                        .map(AssetFactory.newCopy)
+                        .sortBy('year')
+                        .last(3)
+                        .value();
+                });
+
+                /**
+                 *   Assets & Liabilities Handling
+                 */
+                privateProperty(this, 'addAsset', function (asset) {
+                    var instance = this,
+                        oldAsset = underscore.findWhere(instance.models.assets, {assetKey: asset.assetKey});
+
+                    asset = AssetFactory.new(asset);
+
+                    if (asset.validate()) {
+                        // Remove the old asset's liabilities if we are updating an existing asset
+                        if (!underscore.isUndefined(oldAsset)) {
+                            instance.models.liabilities = underscore.reject(instance.models.liabilities, function (liability) {
+                                return underscore.findWhere(oldAsset.liabilities, {uuid: liability.uuid});
+                            });
+                        }
+
+                        // Remove the asset
+                        instance.models.assets = underscore.reject(instance.models.assets, function (item) {
+                            return item.assetKey === asset.assetKey;
+                        });
+
+                        // Add the new asset's liabilities
+                        asset.liabilities = underscore.chain(asset.liabilities)
+                            .map(function (liability) {
+                                if (liability.validate()) {
+                                    instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
+                                        return item.uuid === liability.uuid;
+                                    });
+
+                                    instance.models.liabilities.push(asJson(liability));
+                                }
+
+                                return asJson(liability);
+                            })
+                            .value();
+
+                        // Add the new asset
+                        instance.models.assets.push(asJson(asset));
+
+                        reEvaluateBusinessPlan(instance);
+                    }
+                });
+
+                privateProperty(this, 'removeAsset', function (asset) {
+                    var instance = this;
+
+                    instance.models.assets = underscore.reject(instance.models.assets, function (item) {
+                        return item.assetKey === asset.assetKey;
+                    });
+
+                    underscore.each(asset.liabilities, function (liability) {
+                        instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
+                            return item.uuid === liability.uuid;
+                        });
+                    });
+
+                    reEvaluateBusinessPlan(instance);
+                });
+
+                privateProperty(this, 'addLiability', function (liability) {
+                    liability = Liability.new(liability);
+
+                    if (liability.validate()) {
+                        this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
+                            return item.uuid === liability.uuid;
+                        });
+
+                        this.models.liabilities.push(asJson(liability));
+
+                        reEvaluateBusinessPlan(this);
+                    }
+                });
+
+                privateProperty(this, 'removeLiability', function (liability) {
+                    this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
+                        return item.uuid === liability.uuid;
+                    });
+
+                    reEvaluateBusinessPlan(this);
+                });
+
+                function reEvaluateProductionCredit(instance) {
+                    instance.data.unallocatedEnterpriseProductionExpenditure = angular.copy(instance.data.enterpriseProductionExpenditure);
+                    instance.data.unallocatedProductionExpenditure = angular.copy(instance.data.productionExpenditure);
+
+                    underscore.chain(instance.data.models.liabilities)
+                        .where({type: 'production-credit'})
+                        .map(Liability.newCopy)
+                        .each(function (liability) {
+                            underscore.each(liability.liabilityInRange(instance.startDate, instance.endDate), function (monthly, index) {
+                                underscore.each(liability.data.enterprises, function (enterprise) {
+                                    underscore.each(liability.data.inputs, function (input) {
+                                        instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index], monthly.withdrawal));
+                                        instance.data.unallocatedProductionExpenditure[input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedProductionExpenditure[input][index], monthly.withdrawal));
+                                    });
+                                });
+                            });
+                        });
+                }
+
+                privateProperty(this, 'reEvaluateProductionCredit', function (liabilities) {
+                    return reEvaluateProductionCredit(this, liabilities);
+                });
+
+                function updateAssetStatementCategory(instance, category, name, asset) {
+                    asset.data.assetValue = asset.data.assetValue || 0;
+
+                    var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                        numberOfMonths = instance.numberOfMonths,
+                        numberOfYears = instance.numberOfYears,
+                        assetCategory = underscore.findWhere(instance.data.assetStatement[category], {name: name}) || {
+                            name: name,
+                            estimatedValue: 0,
+                            marketValue: 0,
+                            monthly: {
+                                depreciation: Base.initializeArray(numberOfMonths),
+                                marketValue: Base.initializeArray(numberOfMonths)
+                            },
+                            yearly: {
+                                depreciation: Base.initializeArray(numberOfYears),
+                                marketValue: Base.initializeArray(numberOfYears)
+                            },
+                            assets: []
+                        };
+
+                    if (!underscore.findWhere(assetCategory.assets, {assetKey: asset.assetKey})) {
+                        assetCategory.assets.push(asJson(asset, ['liabilities', 'productionSchedules']));
+                    }
+
+                    if (!asset.data.acquisitionDate || startMonth.isAfter(asset.data.acquisitionDate)) {
+                        assetCategory.estimatedValue = safeMath.plus(assetCategory.estimatedValue, asset.data.assetValue);
+                    }
+
+                    instance.data.assetStatement[category] = underscore.chain(instance.data.assetStatement[category])
+                        .reject(function (item) {
+                            return item.name === assetCategory.name;
+                        })
+                        .union([assetCategory])
+                        .value()
+                        .sort(function (a, b) {
+                            return naturalSort(a.name, b.name);
+                        });
+                }
+
+                function updateLiabilityStatementCategory(instance, liability) {
+                    var category = (liability.type === 'production-credit' ? 'medium-term' : (liability.type === 'rent' ? 'short-term' : liability.type)),
+                        name = (liability.type === 'production-credit' ? 'Production Credit' : (liability.type === 'rent' ? 'Rent overdue' : liability.category || liability.name)),
+                        numberOfYears = instance.numberOfYears,
+                        liabilityCategory = underscore.findWhere(instance.data.liabilityStatement[category], {name: name}) || {
+                            name: name,
+                            currentValue: 0,
+                            yearlyValues: Base.initializeArray(numberOfYears),
+                            liabilities: []
+                        };
+
+                    liabilityCategory.currentValue = safeMath.plus(liabilityCategory.currentValue, liability.liabilityInMonth(instance.startDate).opening);
+
+                    if (!underscore.findWhere(liabilityCategory.liabilities, {uuid: liability.uuid})) {
+                        liabilityCategory.liabilities.push(asJson(liability));
+                    }
+
+                    // Calculate total year-end values for liability category
+                    for (var year = 0; year < numberOfYears; year++) {
+                        var yearEnd = moment.min(moment(instance.endDate, 'YYYY-MM-DD'), moment(instance.startDate, 'YYYY-MM-DD').add(year, 'years').add(11, 'months'));
+                        liabilityCategory.yearlyValues[year] = safeMath.plus(liabilityCategory.yearlyValues[year], liability.liabilityInMonth(yearEnd).closing);
+                    }
+
+                    instance.data.liabilityStatement[category] = underscore.chain(instance.data.liabilityStatement[category])
+                        .reject(function (item) {
+                            return item.name === liabilityCategory.name;
+                        })
+                        .union([liabilityCategory])
+                        .value()
+                        .sort(function (a, b) {
+                            return naturalSort(a.name, b.name);
+                        });
+                }
+
+                function recalculateAssetStatement (instance) {
+                    var ignoredItems = ['Bank Capital', 'Bank Overdraft'],
+                        depreciationRatePerMonth = safeMath.chain(instance.data.account.depreciationRate || 0)
+                            .dividedBy(100)
+                            .dividedBy(12)
+                            .toNumber();
+
+                    angular.forEach(instance.data.assetStatement, function (statementItems, category) {
+                        if (category !== 'total') {
+                            angular.forEach(statementItems, function (item) {
+                                if (!underscore.contains(ignoredItems, item.name)) {
+                                    var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1,
+                                        assetMarketValue = instance.data.assetMarketValue[item.name] || Base.initializeArray(instance.numberOfMonths),
+                                        assetStockValue = instance.data.assetStockValue[item.name],
+                                        capitalExpenditure = instance.data.capitalExpenditure[item.name] || Base.initializeArray(instance.numberOfMonths);
+
+                                    item.marketValue = safeMath.times(item.estimatedValue, adjustmentFactor);
+
+                                    item.monthly.marketValue = (underscore.isArray(assetStockValue) ?
+                                        assetStockValue :
+                                        underscore.map(item.monthly.marketValue, function (value, index) {
+                                            return safeMath.chain(item.marketValue)
+                                                .minus(safeArrayMath.reduce(assetMarketValue.slice(0, index)))
+                                                .plus(safeArrayMath.reduce(capitalExpenditure.slice(0, index)))
+                                                .toNumber();
+                                        }));
+
+                                    item.monthly.depreciation = underscore.map(item.monthly.marketValue, function (value) {
+                                        return (item.name !== 'Vehicles, Machinery & Equipment' ? 0 : safeMath.times(value, depreciationRatePerMonth));
+                                    });
+                                    item.monthly.marketValue = safeArrayMath.minus(item.monthly.marketValue, assetMarketValue);
+
+                                    item.yearly.depreciation = [calculateYearlyTotal(item.monthly.depreciation, 1), calculateYearlyTotal(item.monthly.depreciation, 2)];
+                                    item.yearly.marketValue = [calculateEndOfYearValue(item.monthly.marketValue, 1), calculateEndOfYearValue(item.monthly.marketValue, 2)];
+                                }
+                            });
+                        }
+                    });
+                }
+
+                function totalAssetsAndLiabilities(instance) {
+                    var numberOfMonths = instance.numberOfMonths,
+                        numberOfYears = instance.numberOfYears;
+
+                    instance.data.assetStatement.total = underscore.chain(instance.data.assetStatement)
+                        .omit('total')
+                        .values()
+                        .flatten(true)
+                        .reduce(function(result, asset) {
+                            result.estimatedValue = safeMath.plus(result.estimatedValue, asset.estimatedValue);
+                            result.marketValue = safeMath.plus(result.marketValue, asset.marketValue);
+                            result.monthly.depreciation = safeArrayMath.plus(result.monthly.depreciation, asset.monthly.depreciation);
+                            result.monthly.marketValue = safeArrayMath.plus(result.monthly.marketValue, asset.monthly.marketValue);
+                            result.yearly.depreciation = safeArrayMath.plus(result.yearly.depreciation, asset.yearly.depreciation);
+                            result.yearly.marketValue = safeArrayMath.plus(result.yearly.marketValue, asset.yearly.marketValue);
+                            return result;
+                        }, {
+                            estimatedValue: 0,
+                            marketValue: 0,
+                            monthly: {
+                                depreciation: Base.initializeArray(numberOfMonths),
+                                marketValue: Base.initializeArray(numberOfMonths)
+                            },
+                            yearly: {
+                                depreciation: Base.initializeArray(numberOfYears),
+                                marketValue: Base.initializeArray(numberOfYears)
+                            }
+                        })
                         .value();
 
-                    underscore.each(oldSchedules, function (oldSchedule) {
-                        underscore.each(stockAssets, function (stock) {
-                            stock.removeLedgerEntriesByReference(oldSchedule.scheduleKey);
-
-                            addStockAsset(instance, stock);
-                        });
-                    });
+                    instance.data.liabilityStatement.total = underscore.chain(instance.data.liabilityStatement)
+                        .omit('total')
+                        .values()
+                        .flatten(true)
+                        .reduce(function(result, liability) {
+                            result.currentValue = safeMath.plus(result.currentValue, liability.currentValue);
+                            result.yearlyValues = safeArrayMath.plus(result.yearlyValues, liability.yearlyValues);
+                            return result;
+                        }, {
+                            currentValue: 0,
+                            yearlyValues: Base.initializeArray(numberOfYears)
+                        })
+                        .value();
                 }
 
-                updateBudgets(instance);
-                reEvaluateBusinessPlan(instance);
-            }
+                function reEvaluateAssetsAndLiabilities (instance) {
+                    var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                        endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
+                        numberOfMonths = endMonth.diff(startMonth, 'months'),
+                        evaluatedModels = [],
+                        monthDiff = 0;
 
-            function initializeCategoryValues (instance, section, category, length) {
-                instance.data[section] = instance.data[section] || {};
-                instance.data[section][category] = instance.data[section][category] || Base.initializeArray(length);
-            }
+                    var assetRank = {
+                        'cropland': 1,
+                        'pasture': 1,
+                        'permanent crop': 1,
+                        'plantation': 1,
+                        'wasteland': 1,
+                        'farmland': 2
+                    };
 
-            function getLowerIndexBound (scheduleArray, offset) {
-                return (scheduleArray ? Math.min(scheduleArray.length, Math.abs(Math.min(0, offset))) : 0);
-            }
+                    underscore.chain(instance.models.assets)
+                        .sortBy(function (asset) {
+                            return assetRank[asset.type] || 0;
+                        })
+                        .each(function (asset) {
+                            var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
+                                evaluatedAsset = underscore.findWhere(evaluatedModels, {assetKey: asset.assetKey});
 
-            function getUpperIndexBound (scheduleArray, offset, numberOfMonths) {
-                return (scheduleArray ? Math.min(numberOfMonths, offset + scheduleArray.length) - offset : 0);
-            }
+                            // Check asset is not already added
+                            if (registerLegalEntity && underscore.isUndefined(evaluatedAsset)) {
+                                evaluatedModels.push(asset);
 
-            function extractProductionScheduleCategoryValuePerMonth(dataStore, schedule, code, startMonth, numberOfMonths, forceCategory) {
-                var section = underscore.findWhere(schedule.data.sections, {code: code}),
-                    scheduleStart = moment(schedule.startDate, 'YYYY-MM-DD'),
-                    enterprise = schedule.data.details.commodity;
+                                asset = AssetFactory.new(asset);
 
-                if (section) {
-                    var offset = scheduleStart.diff(startMonth, 'months');
+                                var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
+                                    soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
+                                    constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
+                                    demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate) : undefined);
 
-                    angular.forEach(section.productCategoryGroups, function (group) {
-                        var dataCategory = 'enterpriseProduction' + (code === 'INC' ? 'Income' : 'Expenditure');
+                                // VME
+                                if (asset.type === 'vme') {
+                                    if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                        monthDiff = acquisitionDate.diff(startMonth, 'months');
 
-                        angular.forEach(group.productCategories, function (category) {
-                            // Ignore stockable categories
-                            if (!underscore.contains(EnterpriseBudget.stockableCategoryCodes, category.code)) {
-                                var categoryName = (!forceCategory && (schedule.type !== 'livestock' && code === 'INC') ? schedule.data.details.commodity : category.name),
-                                    index = getLowerIndexBound(category.valuePerMonth, offset),
-                                    maxIndex = getUpperIndexBound(category.valuePerMonth, offset, numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                                Base.initializeObject(dataStore[dataCategory], enterprise, {});
-                                dataStore[dataCategory][enterprise][categoryName] = dataStore[dataCategory][enterprise][categoryName] || Base.initializeArray(numberOfMonths);
+                                        instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff], asset.data.assetValue);
+                                    }
 
-                                for (; index < maxIndex; index++) {
-                                    dataStore[dataCategory][enterprise][categoryName][index + offset] = safeMath.plus(dataStore[dataCategory][enterprise][categoryName][index + offset], category.valuePerMonth[index]);
-                                }
-                            }
-                        });
-                    });
-                }
-            }
+                                    if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                        monthDiff = soldDate.diff(startMonth, 'months');
 
-            function findStockAsset (instance, type, stockType, category) {
-                return underscore.find(instance.models.assets, function (asset) {
-                    return asset.type === type && asset.data.category === category && (underscore.isUndefined(stockType) || asset.data.type === stockType);
-                });
-            }
+                                        var value = safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
+                                            .dividedBy(100)
+                                            .dividedBy(12)
+                                            .times(asset.data.assetValue)
+                                            .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
+                                                soldDate.diff(acquisitionDate, 'months') :
+                                                monthDiff + 1)
+                                            .toNumber());
 
-            function getStockAsset (instance, type, stockType, category, priceUnit, quantityUnit) {
-                var stock = AssetFactory.new(findStockAsset(instance, type, stockType, category) || {
-                    type: type,
-                    legalEntityId: underscore.chain(instance.data.legalEntities)
-                        .where({isPrimary: true})
-                        .pluck('id')
-                        .first()
-                        .value(),
-                    data: underscore.extend({
-                        category: category,
-                        priceUnit: priceUnit,
-                        quantityUnit: quantityUnit
-                    }, (underscore.isUndefined(stockType) ? {} : {
-                        type: stockType
-                    }))
-                });
+                                        initializeCategoryValues(instance, 'assetMarketValue', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalIncome', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalProfit', 'Vehicles, Machinery & Equipment', numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalLoss', 'Vehicles, Machinery & Equipment', numberOfMonths);
 
-                stock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: stock.legalEntityId}));
+                                        instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff], safeMath.plus(asset.data.assetValue, value));
+                                        instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff], asset.data.salePrice);
+                                        instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
+                                        instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
+                                    }
+                                } else if (asset.type === 'improvement') {
+                                    if (asset.data.assetValue && constructionDate && constructionDate.isBetween(startMonth, endMonth)) {
+                                        monthDiff = constructionDate.diff(startMonth, 'months');
 
-                return stock;
-            }
+                                        initializeCategoryValues(instance, 'capitalExpenditure', 'Fixed Improvements', numberOfMonths);
 
-            function addStockAsset (instance, stock, force) {
-                instance.models.assets = underscore.reject(instance.models.assets, function (asset) {
-                    return asset.assetKey === stock.assetKey;
-                });
+                                        instance.data.capitalExpenditure['Fixed Improvements'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Fixed Improvements'][monthDiff], asset.data.assetValue);
+                                    }
+                                } else if (asset.type === 'stock') {
+                                    underscore.each(asset.inventoryInRange(startMonth, endMonth), function (monthly, index) {
+                                        initializeCategoryValues(instance, 'assetStockValue', 'Stock On Hand', numberOfMonths);
+                                        instance.data.assetStockValue['Stock On Hand'][index] = safeMath.plus(instance.data.assetStockValue['Stock On Hand'][index], monthly.closing.value);
 
-                if (force || stock.hasLedgerEntries()) {
-                    instance.models.assets.push(asJson(stock));
-                }
-            }
+                                        underscore.each(monthly.entries, function (entry) {
+                                            var commodity = entry.commodity || 'Indirect';
 
-            function extractProductionScheduleStockAssets (instance, productionSchedule) {
-                var startDate = moment(productionSchedule.startDate);
+                                            switch (entry.action) {
+                                                case 'Household':
+                                                    initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
+                                                    instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], entry.value);
+                                                    break;
+                                                case 'Labour':
+                                                    Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
+                                                    instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
+                                                    instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index], entry.value);
+                                                    break;
+                                                case 'Purchase':
+                                                    Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
+                                                    instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] = instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] || Base.initializeArray(numberOfMonths);
+                                                    instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index], entry.value);
+                                                    break;
+                                                case 'Sale':
+                                                    // Stock Production Income
+                                                    Base.initializeObject(instance.data.enterpriseProductionIncome, commodity, {});
+                                                    instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] = instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] || Base.initializeArray(numberOfMonths);
+                                                    instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index], entry.value);
 
-                underscore.each(productionSchedule.data.sections, function (section) {
-                    underscore.each(section.productCategoryGroups, function (group) {
-                        underscore.each(group.productCategories, function (category) {
-                            if (underscore.contains(EnterpriseBudget.stockableCategoryCodes, category.code)) {
-                                var assetType = (group.code === 'INC-LSS' ? 'livestock' : 'stock'),
-                                    priceUnit = (category.unit === 'Total' ? undefined : category.unit),
-                                    stockType = (section.code === 'INC' ? productionSchedule.commodityType : undefined),
-                                    stock = getStockAsset(instance, assetType, stockType, category.name, priceUnit, category.supplyUnit);
+                                                    // Composition
+                                                    instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
+                                                        return {
+                                                            unit: asset.data.quantityUnit || asset.data.priceUnit,
+                                                            quantity: 0,
+                                                            value: 0
+                                                        };
+                                                    });
 
-                                if (assetType === 'livestock' && category.value) {
-                                    Base.initializeObject(stock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
-                                }
+                                                    var compositionMonth = instance.data.productionIncomeComposition[asset.data.category][index];
+                                                    compositionMonth.value = safeMath.plus(compositionMonth.value, entry.value);
+                                                    compositionMonth.quantity = safeMath.plus(compositionMonth.quantity, entry.quantity);
+                                                    compositionMonth.pricePerUnit = safeMath.dividedBy(compositionMonth.value, compositionMonth.quantity);
+                                                    break;
+                                            }
+                                        });
 
-                                productionSchedule.updateCategoryStock(section.code, category.code, stock);
+                                        if (index === 0) {
+                                            updateAssetStatementCategory(instance, 'short-term', 'Stock On Hand', {
+                                                data: {
+                                                    name: asset.data.category,
+                                                    liquidityType: 'short-term',
+                                                    assetValue: monthly.opening.value,
+                                                    reference: 'production/crop'
+                                                }
+                                            });
+                                        }
+                                    });
+                                } else if (asset.type === 'livestock') {
+                                    var monthlyLedger = asset.inventoryInRange(startMonth, endMonth),
+                                        birthingAnimal = EnterpriseBudget.getBirthingAnimal(asset.data.type);
 
-                                addStockAsset(instance, stock, true);
-                            }
-                        });
+                                    underscore.each(monthlyLedger, function (ledger, index) {
+                                        var offsetDate = moment(instance.startDate, 'YYYY-MM-DD').add(index, 'M'),
+                                            stockValue = safeMath.times(ledger.closing.quantity, asset.marketPriceAtDate(offsetDate));
 
-                        if (group.code === 'INC-LSS') {
-                            // Representative Animal
-                            var representativeAnimal = productionSchedule.getRepresentativeAnimal(),
-                                representativeCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: representativeAnimal});
+                                        if (birthingAnimal === asset.data.category) {
+                                            initializeCategoryValues(instance, 'assetStockValue', 'Marketable Livestock', numberOfMonths);
+                                            instance.data.assetStockValue['Marketable Livestock'][index] = safeMath.plus(instance.data.assetStockValue['Marketable Livestock'][index], stockValue);
+                                        } else {
+                                            initializeCategoryValues(instance, 'assetStockValue', 'Breeding Stock', numberOfMonths);
+                                            instance.data.assetStockValue['Breeding Stock'][index] = safeMath.plus(instance.data.assetStockValue['Breeding Stock'][index], stockValue);
+                                        }
 
-                            // Birth/Weaned Animals
-                            var birthAnimal = productionSchedule.birthAnimal,
-                                birthCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: birthAnimal}),
-                                weanedCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: Livestock.getWeanedAnimal(productionSchedule.commodityType)});
+                                        underscore.chain(ledger)
+                                            .pick(['credit', 'debit'])
+                                            .each(function (actions) {
+                                                underscore.each(actions, function (item, action) {
+                                                    switch (action) {
+                                                        case 'Household':
+                                                            initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
+                                                            instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], item.value);
+                                                            break;
+                                                        case 'Labour':
+                                                            Base.initializeObject(instance.data.enterpriseProductionExpenditure, asset.data.type, {});
+                                                            instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
+                                                            instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index], item.value);
+                                                            break;
+                                                        case 'Purchase':
+                                                            initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
+                                                            instance.data.capitalExpenditure['Livestock'][index] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][index], item.value);
+                                                            break;
+                                                        case 'Sale':
+                                                            // Livestock Production Income
+                                                            Base.initializeObject(instance.data.enterpriseProductionIncome, asset.data.type, {});
+                                                            instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
+                                                            instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index], item.value);
 
-                            if (!underscore.isUndefined(representativeCategory) && !underscore.isUndefined(birthCategory) && !underscore.isUndefined(weanedCategory)) {
-                                var representativeLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, representativeAnimal, representativeCategory.unit, representativeCategory.supplyUnit),
-                                    birthLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, birthAnimal, birthCategory.unit, birthCategory.supplyUnit),
-                                    weanedLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, weanedCategory.name, weanedCategory.unit, weanedCategory.supplyUnit);
+                                                            // Composition
+                                                            instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
+                                                                return {
+                                                                    unit: asset.data.quantityUnit,
+                                                                    quantity: 0,
+                                                                    value: 0
+                                                                };
+                                                            });
 
-                                var firstBirthLedgerEntry = underscore.first(birthLivestock.data.ledger),
-                                    retainLivestockMap = {
-                                        'Retain': birthLivestock,
-                                        'Retained': weanedLivestock
-                                    };
+                                                            var compositionMonth = instance.data.productionIncomeComposition[asset.data.category][index];
+                                                            compositionMonth.value = safeMath.plus(compositionMonth.value, item.value);
+                                                            compositionMonth.quantity = safeMath.plus(compositionMonth.quantity, item.quantity);
+                                                            compositionMonth.pricePerUnit = safeMath.dividedBy(compositionMonth.value, compositionMonth.quantity);
+                                                            break;
+                                                    }
+                                                });
+                                            });
 
-                                if (underscore.isUndefined(firstBirthLedgerEntry) || moment(productionSchedule.startDate).isSameOrBefore(firstBirthLedgerEntry.date)) {
-                                    representativeLivestock.data.openingBalance = productionSchedule.data.details.herdSize;
-                                }
-
-                                productionSchedule.budget.addCategory('INC', 'Livestock Sales', representativeCategory.code, productionSchedule.costStage);
-                                productionSchedule.budget.addCategory('INC', 'Livestock Sales', birthCategory.code, productionSchedule.costStage);
-                                productionSchedule.budget.addCategory('INC', 'Livestock Sales', weanedCategory.code, productionSchedule.costStage);
-
-                                underscore.each(underscore.keys(productionSchedule.budget.data.events).sort(), function (action) {
-                                    var shiftedSchedule = productionSchedule.budget.shiftMonthlyArray(productionSchedule.budget.data.events[action]);
-
-                                    underscore.each(shiftedSchedule, function (rate, index) {
-                                        if (rate > 0) {
-                                            var formattedDate = moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
-                                                representativeLivestockInventory = representativeLivestock.inventoryBefore(formattedDate),
-                                                ledgerEntry = birthLivestock.findLedgerEntry({date: formattedDate, action: action, reference: productionSchedule.scheduleKey}),
-                                                actionReference = [productionSchedule.scheduleKey, action, formattedDate].join('/'),
-                                                quantity = Math.floor(safeMath.chain(rate)
-                                                    .times(representativeLivestockInventory.closing.quantity)
-                                                    .dividedBy(100)
-                                                    .toNumber()),
-                                                value = safeMath.times(quantity, birthLivestock.data.pricePerUnit);
-
-                                            if (underscore.isUndefined(ledgerEntry)) {
-                                                birthLivestock.addLedgerEntry({
-                                                    action: action,
-                                                    commodity: productionSchedule.commodityType,
-                                                    date: formattedDate,
-                                                    price: birthLivestock.data.pricePerUnit,
-                                                    priceUnit: birthLivestock.data.quantityUnit,
-                                                    quantity: quantity,
-                                                    quantityUnit: birthLivestock.data.quantityUnit,
-                                                    reference: actionReference,
-                                                    value: value
+                                        if (index === 0) {
+                                            if (birthingAnimal === asset.data.category) {
+                                                updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', {
+                                                    data: {
+                                                        name: asset.data.category,
+                                                        liquidityType: 'short-term',
+                                                        assetValue: ledger.opening.value,
+                                                        reference: 'production/livestock'
+                                                    }
                                                 });
                                             } else {
-                                                underscore.extend(ledgerEntry, {
-                                                    commodity: productionSchedule.commodityType,
-                                                    price: birthLivestock.data.pricePerUnit,
-                                                    priceUnit: birthLivestock.data.quantityUnit,
-                                                    quantity: quantity,
-                                                    quantityUnit: birthLivestock.data.quantityUnit,
-                                                    reference: actionReference,
-                                                    value: value
-                                                });
-
-                                                birthLivestock.recalculateLedger();
-                                            }
-
-                                            if (action === 'Death') {
-                                                var retainReference = [productionSchedule.scheduleKey, 'Retain:' + birthAnimal, formattedDate].join('/');
-
-                                                // Removed already included retained entries, as it affects the inventory balance
-                                                birthLivestock.removeLedgerEntriesByReference(retainReference);
-
-                                                // Retains birth animal as weaned animal
-                                                var inventory = birthLivestock.inventoryBefore(formattedDate);
-
-                                                underscore.each(underscore.keys(retainLivestockMap), function (retainAction) {
-                                                    var retainLivestock = retainLivestockMap[retainAction],
-                                                        retainLedgerEntry = retainLivestock.findLedgerEntry(retainReference),
-                                                        value = inventory.closing.value || safeMath.times(retainLivestock.data.pricePerUnit, inventory.closing.quantity);
-
-                                                    if (underscore.isUndefined(retainLedgerEntry)) {
-                                                        retainLivestock.addLedgerEntry({
-                                                            action: retainAction + ':' + birthAnimal,
-                                                            commodity: productionSchedule.commodityType,
-                                                            date: formattedDate,
-                                                            price: retainLivestock.data.pricePerUnit,
-                                                            priceUnit: retainLivestock.data.quantityUnit,
-                                                            quantity: inventory.closing.quantity,
-                                                            quantityUnit: retainLivestock.data.quantityUnit,
-                                                            reference: retainReference,
-                                                            value: value
-                                                        });
-                                                    } else {
-                                                        underscore.extend(retainLedgerEntry, {
-                                                            commodity: productionSchedule.commodityType,
-                                                            price: retainLivestock.data.pricePerUnit,
-                                                            priceUnit: retainLivestock.data.quantityUnit,
-                                                            quantity: inventory.closing.quantity,
-                                                            quantityUnit: retainLivestock.data.quantityUnit,
-                                                            reference: retainReference,
-                                                            value: value
-                                                        });
-
-                                                        retainLivestock.recalculateLedger();
+                                                updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
+                                                    data: {
+                                                        name: asset.data.category,
+                                                        liquidityType: 'medium-term',
+                                                        assetValue: ledger.opening.value,
+                                                        reference: 'production/livestock'
                                                     }
                                                 });
                                             }
                                         }
                                     });
-                                });
-
-                                addStockAsset(instance, representativeLivestock, true);
-                                addStockAsset(instance, birthLivestock, true);
-                                addStockAsset(instance, weanedLivestock, true);
-                            }
-                        }
-                    });
-                });
-            }
-
-            function calculateYearlyProductionIncomeComposition(productionIncomeComposition, year) {
-                var yearlyComposition = underscore.mapObject(productionIncomeComposition, function (monthlyComposition) {
-                    return underscore.reduce(monthlyComposition.slice((year - 1) * 12, year * 12), function (yearly, consumption) {
-                        yearly.unit = consumption.unit;
-                        yearly.value = safeMath.plus(yearly.value, consumption.value);
-                        yearly.quantity = safeMath.plus(yearly.quantity, consumption.quantity);
-                        yearly.pricePerUnit = safeMath.dividedBy(yearly.value, yearly.quantity);
-
-                        return yearly;
-                    }, {
-                        quantity: 0,
-                        value: 0
-                    });
-                });
-
-                yearlyComposition.total = {
-                    value: safeArrayMath.reduce(underscore.chain(yearlyComposition)
-                        .values()
-                        .pluck('value')
-                        .value()) || 0
-                };
-
-                underscore.each(yearlyComposition, function(consumption, enterprise) {
-                    consumption.percent = (enterprise !== 'total' ? safeMath.times(safeMath.dividedBy(100, yearlyComposition.total.value), consumption.value) : 100);
-                });
-
-                return yearlyComposition;
-            }
-
-            function reEvaluateProductionSchedules (instance) {
-                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
-                    numberOfMonths = instance.numberOfMonths;
-
-                // Indirect production income & expenses
-                underscore.chain(instance.models.income)
-                    .where({type: 'production'})
-                    .each(function (income) {
-                        Base.initializeObject(instance.data.enterpriseProductionIncome, 'Indirect', {});
-                        Base.initializeObject(instance.data.enterpriseProductionIncome['Indirect'], income.name, Base.initializeArray(numberOfMonths, 0));
-                        instance.data.enterpriseProductionIncome['Indirect'][income.name] = safeArrayMath.plus(instance.data.enterpriseProductionIncome['Indirect'][income.name], income.months);
-                    });
-
-                underscore.chain(instance.models.expenses)
-                    .where({type: 'production'})
-                    .each(function (expense) {
-                        Base.initializeObject(instance.data.enterpriseProductionExpenditure, 'Indirect', {});
-                        Base.initializeObject(instance.data.enterpriseProductionExpenditure['Indirect'], expense.name, Base.initializeArray(numberOfMonths, 0));
-                        instance.data.enterpriseProductionExpenditure['Indirect'][expense.name] = safeArrayMath.plus(instance.data.enterpriseProductionExpenditure['Indirect'][expense.name], expense.months);
-                    });
-
-                // Production income & expenses
-                angular.forEach(instance.models.productionSchedules, function (productionSchedule) {
-                    var schedule = ProductionSchedule.new(productionSchedule);
-
-                    extractProductionScheduleCategoryValuePerMonth(instance.data, schedule, 'INC', startMonth, numberOfMonths, true);
-                    extractProductionScheduleCategoryValuePerMonth(instance.data, schedule, 'EXP', startMonth, numberOfMonths, true);
-                });
-            }
-
-            function reEvaluateProductionIncomeAndExpenditure (instance, numberOfMonths) {
-                instance.data.productionIncome = underscore.extend(instance.data.productionIncome, underscore.reduce(instance.data.enterpriseProductionIncome, function (results, groupedValues) {
-                    return underscore.reduce(groupedValues, function (totals, values, group) {
-                        Base.initializeObject(totals, group, Base.initializeArray(numberOfMonths, 0));
-                        totals[group] = safeArrayMath.plus(totals[group], values);
-                        return totals;
-                    }, results);
-                }, {}));
-
-                instance.data.productionExpenditure = underscore.extend(instance.data.productionExpenditure, underscore.reduce(instance.data.enterpriseProductionExpenditure, function (results, groupedValues) {
-                    return underscore.reduce(groupedValues, function (totals, values, group) {
-                        Base.initializeObject(totals, group, Base.initializeArray(numberOfMonths, 0));
-                        totals[group] = safeArrayMath.plus(totals[group], values);
-                        return totals;
-                    }, results);
-                }, {}));
-
-                instance.data.unallocatedProductionIncome = instance.data.productionIncome;
-                instance.data.unallocatedProductionExpenditure = instance.data.productionExpenditure;
-            }
-
-            /**
-             * Income & Expenses handling
-             */
-            function addIncomeExpense (instance, type, item) {
-                instance.models[type] = underscore.reject(instance.models[type], function (modelItem) {
-                    return modelItem.uuid === item.uuid;
-                });
-
-                instance.models[type].push(item);
-
-                reEvaluateBusinessPlan(instance);
-            }
-
-            function removeIncomeExpense (instance, type, item) {
-                instance.models[type] = underscore.reject(instance.models[type], function (modelItem) {
-                    return modelItem.uuid === item.uuid;
-                });
-
-                reEvaluateBusinessPlan(instance);
-            }
-
-            privateProperty(this, 'addIncome', function (income) {
-                addIncomeExpense(this, 'income', income);
-            });
-
-            privateProperty(this, 'removeIncome', function (income) {
-                removeIncomeExpense(this, 'income', income);
-            });
-
-            privateProperty(this, 'addExpense', function (expense) {
-                addIncomeExpense(this, 'expenses', expense);
-            });
-
-            privateProperty(this, 'removeExpense', function (expense) {
-                removeIncomeExpense(this, 'expenses', expense);
-            });
-
-            function reEvaluateIncomeAndExpenses (instance) {
-                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
-                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
-                    numberOfMonths = endMonth.diff(startMonth, 'months'),
-                    evaluatedModels = [];
-
-                underscore.each(instance.models.income, function (income) {
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: income.legalEntityId}),
-                        evaluatedModel = underscore.findWhere(evaluatedModels, {uuid: income.uuid}),
-                        type = (income.type ? income.type : 'other') + 'Income';
-
-                    // Check income is not already added
-                    if (income.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
-                        initializeCategoryValues(instance, type, income.name, numberOfMonths);
-
-                        instance.data[type][income.name] = underscore.map(income.months, function (monthValue, index) {
-                            return safeMath.plus(monthValue, instance.data[type][income.name][index]);
-                        });
-
-                        evaluatedModels.push(income);
-                    }
-                });
-
-                underscore.each(instance.models.expenses, function (expense) {
-                    var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: expense.legalEntityId}),
-                        evaluatedModel = underscore.findWhere(evaluatedModels, {uuid: expense.uuid}),
-                        type = (expense.type ? expense.type : 'other') + 'Expenditure';
-
-                    // Check expense is not already added
-                    if (expense.type !== 'production' && registerLegalEntity && underscore.isUndefined(evaluatedModel) && instance.data[type]) {
-                        initializeCategoryValues(instance, type, expense.name, numberOfMonths);
-
-                        instance.data[type][expense.name] = underscore.map(expense.months, function (monthValue, index) {
-                            return safeMath.plus(monthValue, instance.data[type][expense.name][index]);
-                        });
-
-                        evaluatedModels.push(expense);
-                    }
-                });
-            }
-
-            /**
-             * Financials
-             */
-            privateProperty(this, 'updateFinancials', function (financials) {
-                this.models.financials = underscore.filter(financials, function (financial) {
-                    return Financial.new(financial).validate();
-                });
-
-                this.data.consolidatedFinancials = underscore.chain(this.models.financials)
-                    .groupBy('year')
-                    .map(function (groupedFinancials) {
-                        return asJson(FinancialGroup.new({
-                            financials: groupedFinancials
-                        }), ['financials']);
-                    })
-                    .sortBy('year')
-                    .last(3)
-                    .value();
-            });
-
-            /**
-             *   Assets & Liabilities Handling
-             */
-            privateProperty(this, 'addAsset', function (asset) {
-                var instance = this,
-                    oldAsset = underscore.findWhere(instance.models.assets, {assetKey: asset.assetKey});
-
-                asset = AssetFactory.new(asset);
-
-                if (asset.validate()) {
-                    // Remove the old asset's liabilities if we are updating an existing asset
-                    if (!underscore.isUndefined(oldAsset)) {
-                        instance.models.liabilities = underscore.reject(instance.models.liabilities, function (liability) {
-                            return underscore.findWhere(oldAsset.liabilities, {uuid: liability.uuid});
-                        });
-                    }
-
-                    // Remove the asset
-                    instance.models.assets = underscore.reject(instance.models.assets, function (item) {
-                        return item.assetKey === asset.assetKey;
-                    });
-
-                    // Add the new asset's liabilities
-                    asset.liabilities = underscore.chain(asset.liabilities)
-                        .map(function (liability) {
-                            if (liability.validate()) {
-                                instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
-                                    return item.uuid === liability.uuid;
-                                });
-
-                                instance.models.liabilities.push(asJson(liability));
-                            }
-
-                            return asJson(liability);
-                        })
-                        .value();
-
-                    // Add the new asset
-                    instance.models.assets.push(asJson(asset));
-
-                    reEvaluateBusinessPlan(instance);
-                }
-            });
-
-            privateProperty(this, 'removeAsset', function (asset) {
-                var instance = this;
-
-                instance.models.assets = underscore.reject(instance.models.assets, function (item) {
-                    return item.assetKey === asset.assetKey;
-                });
-
-                underscore.each(asset.liabilities, function (liability) {
-                    instance.models.liabilities = underscore.reject(instance.models.liabilities, function (item) {
-                        return item.uuid === liability.uuid;
-                    });
-                });
-
-                reEvaluateBusinessPlan(instance);
-            });
-
-            privateProperty(this, 'addLiability', function (liability) {
-                liability = Liability.new(liability);
-
-                if (liability.validate()) {
-                    this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
-                        return item.uuid === liability.uuid;
-                    });
-
-                    this.models.liabilities.push(asJson(liability));
-
-                    reEvaluateBusinessPlan(this);
-                }
-            });
-
-            privateProperty(this, 'removeLiability', function (liability) {
-                this.models.liabilities = underscore.reject(this.models.liabilities, function (item) {
-                    return item.uuid === liability.uuid;
-                });
-
-                reEvaluateBusinessPlan(this);
-            });
-
-            function reEvaluateProductionCredit(instance) {
-                instance.data.unallocatedEnterpriseProductionExpenditure = angular.copy(instance.data.enterpriseProductionExpenditure);
-                instance.data.unallocatedProductionExpenditure = angular.copy(instance.data.productionExpenditure);
-
-                underscore.chain(instance.data.models.liabilities)
-                    .where({type: 'production-credit'})
-                    .map(Liability.newCopy)
-                    .each(function (liability) {
-                        underscore.each(liability.liabilityInRange(instance.startDate, instance.endDate), function (monthly, index) {
-                            underscore.each(liability.data.enterprises, function (enterprise) {
-                                underscore.each(liability.data.inputs, function (input) {
-                                    instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index], monthly.withdrawal));
-                                    instance.data.unallocatedProductionExpenditure[input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedProductionExpenditure[input][index], monthly.withdrawal));
-                                });
-                            });
-                        });
-                    });
-            }
-
-            privateProperty(this, 'reEvaluateProductionCredit', function (liabilities) {
-                return reEvaluateProductionCredit(this, liabilities);
-            });
-
-            function updateAssetStatementCategory(instance, category, name, asset) {
-                asset.data.assetValue = asset.data.assetValue || 0;
-
-                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
-                    numberOfMonths = instance.numberOfMonths,
-                    numberOfYears = instance.numberOfYears,
-                    assetCategory = underscore.findWhere(instance.data.assetStatement[category], {name: name}) || {
-                        name: name,
-                        estimatedValue: 0,
-                        marketValue: 0,
-                        monthly: {
-                            depreciation: Base.initializeArray(numberOfMonths),
-                            marketValue: Base.initializeArray(numberOfMonths)
-                        },
-                        yearly: {
-                            depreciation: Base.initializeArray(numberOfYears),
-                            marketValue: Base.initializeArray(numberOfYears)
-                        },
-                        assets: []
-                    };
-
-                if (!underscore.findWhere(assetCategory.assets, {assetKey: asset.assetKey})) {
-                    assetCategory.assets.push(asJson(asset, ['liabilities', 'productionSchedules']));
-                }
-
-                if (!asset.data.acquisitionDate || startMonth.isAfter(asset.data.acquisitionDate)) {
-                    assetCategory.estimatedValue = safeMath.plus(assetCategory.estimatedValue, asset.data.assetValue);
-                }
-
-                instance.data.assetStatement[category] = underscore.chain(instance.data.assetStatement[category])
-                    .reject(function (item) {
-                        return item.name === assetCategory.name;
-                    })
-                    .union([assetCategory])
-                    .value()
-                    .sort(function (a, b) {
-                        return naturalSort(a.name, b.name);
-                    });
-            }
-
-            function updateLiabilityStatementCategory(instance, liability) {
-                var category = (liability.type === 'production-credit' ? 'medium-term' : (liability.type === 'rent' ? 'short-term' : liability.type)),
-                    name = (liability.type === 'production-credit' ? 'Production Credit' : (liability.type === 'rent' ? 'Rent overdue' : liability.category || liability.name)),
-                    numberOfYears = instance.numberOfYears,
-                    liabilityCategory = underscore.findWhere(instance.data.liabilityStatement[category], {name: name}) || {
-                        name: name,
-                        currentValue: 0,
-                        yearlyValues: Base.initializeArray(numberOfYears),
-                        liabilities: []
-                    };
-
-                liabilityCategory.currentValue = safeMath.plus(liabilityCategory.currentValue, liability.liabilityInMonth(instance.startDate).opening);
-
-                if (!underscore.findWhere(liabilityCategory.liabilities, {uuid: liability.uuid})) {
-                    liabilityCategory.liabilities.push(asJson(liability));
-                }
-
-                // Calculate total year-end values for liability category
-                for (var year = 0; year < numberOfYears; year++) {
-                    var yearEnd = moment.min(moment(instance.endDate, 'YYYY-MM-DD'), moment(instance.startDate, 'YYYY-MM-DD').add(year, 'years').add(11, 'months'));
-                    liabilityCategory.yearlyValues[year] = safeMath.plus(liabilityCategory.yearlyValues[year], liability.liabilityInMonth(yearEnd).closing);
-                }
-
-                instance.data.liabilityStatement[category] = underscore.chain(instance.data.liabilityStatement[category])
-                    .reject(function (item) {
-                        return item.name === liabilityCategory.name;
-                    })
-                    .union([liabilityCategory])
-                    .value()
-                    .sort(function (a, b) {
-                        return naturalSort(a.name, b.name);
-                    });
-            }
-
-            function recalculateAssetStatement (instance) {
-                var ignoredItems = ['Bank Capital', 'Bank Overdraft'],
-                    depreciationRatePerMonth = safeMath.chain(instance.data.account.depreciationRate || 0)
-                        .dividedBy(100)
-                        .dividedBy(12)
-                        .toNumber();
-
-                angular.forEach(instance.data.assetStatement, function (statementItems, category) {
-                    if (category !== 'total') {
-                        angular.forEach(statementItems, function (item) {
-                            if (!underscore.contains(ignoredItems, item.name)) {
-                                var adjustmentFactor = instance.data.adjustmentFactors[item.name] || 1,
-                                    assetMarketValue = instance.data.assetMarketValue[item.name] || Base.initializeArray(instance.numberOfMonths),
-                                    assetStockValue = instance.data.assetStockValue[item.name],
-                                    capitalExpenditure = instance.data.capitalExpenditure[item.name] || Base.initializeArray(instance.numberOfMonths);
-
-                                item.marketValue = safeMath.times(item.estimatedValue, adjustmentFactor);
-
-                                item.monthly.marketValue = (underscore.isArray(assetStockValue) ?
-                                    assetStockValue :
-                                    underscore.map(item.monthly.marketValue, function (value, index) {
-                                        return safeMath.chain(item.marketValue)
-                                            .minus(safeArrayMath.reduce(assetMarketValue.slice(0, index)))
-                                            .plus(safeArrayMath.reduce(capitalExpenditure.slice(0, index)))
-                                            .toNumber();
-                                    }));
-
-                                item.monthly.depreciation = underscore.map(item.monthly.marketValue, function (value) {
-                                    return (item.name !== 'Vehicles, Machinery & Equipment' ? 0 : safeMath.times(value, depreciationRatePerMonth));
-                                });
-                                item.monthly.marketValue = safeArrayMath.minus(item.monthly.marketValue, assetMarketValue);
-
-                                item.yearly.depreciation = [calculateYearlyTotal(item.monthly.depreciation, 1), calculateYearlyTotal(item.monthly.depreciation, 2)];
-                                item.yearly.marketValue = [calculateEndOfYearValue(item.monthly.marketValue, 1), calculateEndOfYearValue(item.monthly.marketValue, 2)];
-                            }
-                        });
-                    }
-                });
-            }
-
-            function totalAssetsAndLiabilities(instance) {
-                var numberOfMonths = instance.numberOfMonths,
-                    numberOfYears = instance.numberOfYears;
-
-                instance.data.assetStatement.total = underscore.chain(instance.data.assetStatement)
-                    .omit('total')
-                    .values()
-                    .flatten(true)
-                    .reduce(function(result, asset) {
-                        result.estimatedValue = safeMath.plus(result.estimatedValue, asset.estimatedValue);
-                        result.marketValue = safeMath.plus(result.marketValue, asset.marketValue);
-                        result.monthly.depreciation = safeArrayMath.plus(result.monthly.depreciation, asset.monthly.depreciation);
-                        result.monthly.marketValue = safeArrayMath.plus(result.monthly.marketValue, asset.monthly.marketValue);
-                        result.yearly.depreciation = safeArrayMath.plus(result.yearly.depreciation, asset.yearly.depreciation);
-                        result.yearly.marketValue = safeArrayMath.plus(result.yearly.marketValue, asset.yearly.marketValue);
-                        return result;
-                    }, {
-                        estimatedValue: 0,
-                        marketValue: 0,
-                        monthly: {
-                            depreciation: Base.initializeArray(numberOfMonths),
-                            marketValue: Base.initializeArray(numberOfMonths)
-                        },
-                        yearly: {
-                            depreciation: Base.initializeArray(numberOfYears),
-                            marketValue: Base.initializeArray(numberOfYears)
-                        }
-                    })
-                    .value();
-
-                instance.data.liabilityStatement.total = underscore.chain(instance.data.liabilityStatement)
-                    .omit('total')
-                    .values()
-                    .flatten(true)
-                    .reduce(function(result, liability) {
-                        result.currentValue = safeMath.plus(result.currentValue, liability.currentValue);
-                        result.yearlyValues = safeArrayMath.plus(result.yearlyValues, liability.yearlyValues);
-                        return result;
-                    }, {
-                        currentValue: 0,
-                        yearlyValues: Base.initializeArray(numberOfYears)
-                    })
-                    .value();
-            }
-
-            function reEvaluateAssetsAndLiabilities (instance) {
-                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
-                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
-                    numberOfMonths = endMonth.diff(startMonth, 'months'),
-                    evaluatedModels = [],
-                    monthDiff = 0;
-
-                var assetRank = {
-                    'cropland': 1,
-                    'pasture': 1,
-                    'permanent crop': 1,
-                    'plantation': 1,
-                    'wasteland': 1,
-                    'farmland': 2
-                };
-
-                underscore.chain(instance.models.assets)
-                    .sortBy(function (asset) {
-                        return assetRank[asset.type] || 0;
-                    })
-                    .each(function (asset) {
-                        var registerLegalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
-                            evaluatedAsset = underscore.findWhere(evaluatedModels, {assetKey: asset.assetKey});
-
-                        // Check asset is not already added
-                        if (registerLegalEntity && underscore.isUndefined(evaluatedAsset)) {
-                            evaluatedModels.push(asset);
-
-                            asset = AssetFactory.new(asset);
-
-                            var acquisitionDate = (asset.data.acquisitionDate ? moment(asset.data.acquisitionDate) : undefined),
-                                soldDate = (asset.data.soldDate ? moment(asset.data.soldDate) : undefined),
-                                constructionDate = (asset.data.constructionDate ? moment(asset.data.constructionDate) : undefined),
-                                demolitionDate = (asset.data.demolitionDate ? moment(asset.data.demolitionDate) : undefined);
-
-                            // VME
-                            if (asset.type === 'vme') {
-                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    monthDiff = acquisitionDate.diff(startMonth, 'months');
-
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Vehicles, Machinery & Equipment', numberOfMonths);
-
-                                    instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Vehicles, Machinery & Equipment'][monthDiff], asset.data.assetValue);
-                                }
-
-                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                    monthDiff = soldDate.diff(startMonth, 'months');
-
-                                    var value = safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
-                                        .dividedBy(100)
-                                        .dividedBy(12)
-                                        .times(asset.data.assetValue)
-                                        .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
-                                            soldDate.diff(acquisitionDate, 'months') :
-                                            monthDiff + 1)
-                                        .toNumber());
-
-                                    initializeCategoryValues(instance, 'assetMarketValue', 'Vehicles, Machinery & Equipment', numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Vehicles, Machinery & Equipment', numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalProfit', 'Vehicles, Machinery & Equipment', numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalLoss', 'Vehicles, Machinery & Equipment', numberOfMonths);
-
-                                    instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Vehicles, Machinery & Equipment'][monthDiff], safeMath.plus(asset.data.assetValue, value));
-                                    instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Vehicles, Machinery & Equipment'][monthDiff], asset.data.salePrice);
-                                    instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
-                                    instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Vehicles, Machinery & Equipment'][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
-                                }
-                            } else if (asset.type === 'improvement') {
-                                if (asset.data.assetValue && constructionDate && constructionDate.isBetween(startMonth, endMonth)) {
-                                    monthDiff = constructionDate.diff(startMonth, 'months');
-
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Fixed Improvements', numberOfMonths);
-
-                                    instance.data.capitalExpenditure['Fixed Improvements'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Fixed Improvements'][monthDiff], asset.data.assetValue);
-                                }
-                            } else if (asset.type === 'stock') {
-                                underscore.each(asset.inventoryInRange(startMonth, endMonth), function (monthly, index) {
-                                    initializeCategoryValues(instance, 'assetStockValue', 'Stock On Hand', numberOfMonths);
-                                    instance.data.assetStockValue['Stock On Hand'][index] = safeMath.plus(instance.data.assetStockValue['Stock On Hand'][index], monthly.closing.value);
-
-                                    underscore.each(monthly.entries, function (entry) {
-                                        var commodity = entry.commodity || 'Indirect';
-
-                                        switch (entry.action) {
-                                            case 'Household':
-                                                initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
-                                                instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], entry.value);
-                                                break;
-                                            case 'Labour':
-                                                Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
-                                                instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
-                                                instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index], entry.value);
-                                                break;
-                                            case 'Purchase':
-                                                Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
-                                                instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] = instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] || Base.initializeArray(numberOfMonths);
-                                                instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index], entry.value);
-                                                break;
-                                            case 'Sale':
-                                                // Stock Production Income
-                                                Base.initializeObject(instance.data.enterpriseProductionIncome, commodity, {});
-                                                instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] = instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] || Base.initializeArray(numberOfMonths);
-                                                instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index], entry.value);
-
-                                                // Composition
-                                                instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
-                                                    return {
-                                                        unit: asset.data.quantityUnit || asset.data.priceUnit,
-                                                        quantity: 0,
-                                                        value: 0
-                                                    };
-                                                });
-
-                                                var compositionMonth = instance.data.productionIncomeComposition[asset.data.category][index];
-                                                compositionMonth.value = safeMath.plus(compositionMonth.value, entry.value);
-                                                compositionMonth.quantity = safeMath.plus(compositionMonth.quantity, entry.quantity);
-                                                compositionMonth.pricePerUnit = safeMath.dividedBy(compositionMonth.value, compositionMonth.quantity);
-                                                break;
-                                        }
-                                    });
-
-                                    if (index === 0) {
-                                        updateAssetStatementCategory(instance, 'short-term', 'Stock On Hand', {
-                                            data: {
-                                                name: asset.data.category,
-                                                liquidityType: 'short-term',
-                                                assetValue: monthly.opening.value,
-                                                reference: 'production/crop'
-                                            }
-                                        });
-                                    }
-                                });
-                            } else if (asset.type === 'livestock') {
-                                var monthlyLedger = asset.inventoryInRange(startMonth, endMonth),
-                                    birthingAnimal = EnterpriseBudget.getBirthingAnimal(asset.data.type);
-
-                                underscore.each(monthlyLedger, function (ledger, index) {
-                                    var offsetDate = moment(instance.startDate, 'YYYY-MM-DD').add(index, 'M'),
-                                        stockValue = safeMath.times(ledger.closing.quantity, asset.marketPriceAtDate(offsetDate));
-
-                                    if (birthingAnimal === asset.data.category) {
-                                        initializeCategoryValues(instance, 'assetStockValue', 'Marketable Livestock', numberOfMonths);
-                                        instance.data.assetStockValue['Marketable Livestock'][index] = safeMath.plus(instance.data.assetStockValue['Marketable Livestock'][index], stockValue);
-                                    } else {
-                                        initializeCategoryValues(instance, 'assetStockValue', 'Breeding Stock', numberOfMonths);
-                                        instance.data.assetStockValue['Breeding Stock'][index] = safeMath.plus(instance.data.assetStockValue['Breeding Stock'][index], stockValue);
-                                    }
-
-                                    underscore.chain(ledger)
-                                        .pick(['credit', 'debit'])
-                                        .each(function (actions) {
-                                            underscore.each(actions, function (item, action) {
-                                                switch (action) {
-                                                    case 'Household':
-                                                        initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
-                                                        instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], item.value);
-                                                        break;
-                                                    case 'Labour':
-                                                        Base.initializeObject(instance.data.enterpriseProductionExpenditure, asset.data.type, {});
-                                                        instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
-                                                        instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[asset.data.type]['Farm Products Consumed'][index], item.value);
-                                                        break;
-                                                    case 'Purchase':
-                                                        initializeCategoryValues(instance, 'capitalExpenditure', 'Livestock', numberOfMonths);
-                                                        instance.data.capitalExpenditure['Livestock'][index] = safeMath.plus(instance.data.capitalExpenditure['Livestock'][index], item.value);
-                                                        break;
-                                                    case 'Sale':
-                                                        // Livestock Production Income
-                                                        Base.initializeObject(instance.data.enterpriseProductionIncome, asset.data.type, {});
-                                                        instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] = instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'] || Base.initializeArray(numberOfMonths);
-                                                        instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[asset.data.type]['Livestock Sales'][index], item.value);
-
-                                                        // Composition
-                                                        instance.data.productionIncomeComposition[asset.data.category] = instance.data.productionIncomeComposition[asset.data.category] || underscore.range(numberOfMonths).map(function () {
-                                                            return {
-                                                                unit: asset.data.quantityUnit,
-                                                                quantity: 0,
-                                                                value: 0
-                                                            };
-                                                        });
-
-                                                        var compositionMonth = instance.data.productionIncomeComposition[asset.data.category][index];
-                                                        compositionMonth.value = safeMath.plus(compositionMonth.value, item.value);
-                                                        compositionMonth.quantity = safeMath.plus(compositionMonth.quantity, item.quantity);
-                                                        compositionMonth.pricePerUnit = safeMath.dividedBy(compositionMonth.value, compositionMonth.quantity);
-                                                        break;
-                                                }
-                                            });
-                                        });
-
-                                    if (index === 0) {
-                                        if (birthingAnimal === asset.data.category) {
-                                            updateAssetStatementCategory(instance, 'short-term', 'Marketable Livestock', {
-                                                data: {
-                                                    name: asset.data.category,
-                                                    liquidityType: 'short-term',
-                                                    assetValue: ledger.opening.value,
-                                                    reference: 'production/livestock'
-                                                }
-                                            });
-                                        } else {
-                                            updateAssetStatementCategory(instance, 'medium-term', 'Breeding Stock', {
-                                                data: {
-                                                    name: asset.data.category,
-                                                    liquidityType: 'medium-term',
-                                                    assetValue: ledger.opening.value,
-                                                    reference: 'production/livestock'
-                                                }
-                                            });
-                                        }
-                                    }
-                                });
-                            } else if (asset.type === 'farmland') {
-                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    monthDiff = acquisitionDate.diff(startMonth, 'months');
-
-                                    initializeCategoryValues(instance, 'capitalExpenditure', 'Land', numberOfMonths);
-
-                                    instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], asset.data.assetValue);
-                                }
-
-                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                    monthDiff = soldDate.diff(startMonth, 'months');
-
-                                    initializeCategoryValues(instance, 'assetMarketValue', 'Land', numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalIncome', 'Land', numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalProfit', 'Land', numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalLoss', 'Land', numberOfMonths);
-
-                                    instance.data.assetMarketValue['Land'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Land'][monthDiff], asset.data.assetValue);
-                                    instance.data.capitalIncome['Land'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Land'][monthDiff], asset.data.salePrice);
-                                    instance.data.capitalProfit['Land'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, asset.data.assetValue)));
-                                    instance.data.capitalLoss['Land'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.assetValue, asset.data.salePrice)));
-                                }
-                            } else if (asset.type === 'other') {
-                                asset.data.liquidityCategory = asset.data.liquidityCategory || asset.data.category;
-
-                                if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
-                                    monthDiff = acquisitionDate.diff(startMonth, 'months');
-
-                                    initializeCategoryValues(instance, 'capitalExpenditure', asset.data.liquidityCategory, numberOfMonths);
-
-                                    instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
-                                }
-
-                                if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
-                                    monthDiff = soldDate.diff(startMonth, 'months');
-
-                                    var value = (asset.data.liquidityCategory !== 'Vehicles, Machinery & Equipment' ? asset.data.assetValue : safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
-                                        .dividedBy(100)
-                                        .dividedBy(12)
-                                        .times(asset.data.assetValue)
-                                        .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
-                                            soldDate.diff(acquisitionDate, 'months') :
-                                            monthDiff + 1)
-                                        .toNumber()));
-
-                                    initializeCategoryValues(instance, 'assetMarketValue', asset.data.liquidityCategory, numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalIncome', asset.data.liquidityCategory, numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalProfit', asset.data.liquidityCategory, numberOfMonths);
-                                    initializeCategoryValues(instance, 'capitalLoss', asset.data.liquidityCategory, numberOfMonths);
-
-                                    instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
-                                    instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff], asset.data.salePrice);
-                                    instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
-                                    instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
-                                }
-                            }
-
-                            if (!(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
-                                switch(asset.type) {
-                                    case 'cropland':
-                                    case 'pasture':
-                                    case 'permanent crop':
-                                    case 'plantation':
-                                    case 'wasteland':
-                                        updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
-                                        break;
-                                    case 'farmland':
-                                        instance.data.assetStatement['long-term'] = instance.data.assetStatement['long-term'] || [];
-
-                                        var assetCategory = underscore.findWhere(instance.data.assetStatement['long-term'], {name: 'Land'}) || {},
-                                            landUseValue = underscore.chain(assetCategory.assets || [])
-                                                .reject(function (statementAsset) {
-                                                    return statementAsset.farmId !== asset.farmId || statementAsset.type === 'farmland';
-                                                })
-                                                .reduce(function (total, statementAsset) {
-                                                    return safeMath.plus(total, statementAsset.data.assetValue);
-                                                }, 0)
-                                                .value();
-
-                                        if (landUseValue === 0) {
-                                            updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
-                                        }
-                                        break;
-                                    case 'improvement':
-                                        updateAssetStatementCategory(instance, 'long-term', 'Fixed Improvements', asset);
-                                        break;
-                                    case 'vme':
-                                        updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
-                                        break;
-                                    case 'other':
-                                        updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.liquidityCategory, asset);
-                                        break;
-                                }
-                            }
-
-                            angular.forEach(asset.liabilities, function (liability) {
-                                // Check liability is not already added
-                                if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
-                                    evaluatedModels.push(liability);
-
-                                    var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
-                                        typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
-                                        liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
-
-                                    if (asset.type === 'farmland' && liability.type !== 'rent' && moment(liability.startDate, 'YYYY-MM-DD').isBetween(startMonth, endMonth)) {
-                                        monthDiff = moment(liability.startDate, 'YYYY-MM-DD').diff(startMonth, 'months');
+                                } else if (asset.type === 'farmland') {
+                                    if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                        monthDiff = acquisitionDate.diff(startMonth, 'months');
 
                                         initializeCategoryValues(instance, 'capitalExpenditure', 'Land', numberOfMonths);
 
-                                        instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], liability.openingBalance);
+                                        instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], asset.data.assetValue);
                                     }
 
-                                    initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+                                    if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                        monthDiff = soldDate.diff(startMonth, 'months');
 
-                                    instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                                        return safeArrayMath.reduce(month.repayment, instance.data[section][typeTitle][index]);
-                                    });
+                                        initializeCategoryValues(instance, 'assetMarketValue', 'Land', numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalIncome', 'Land', numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalProfit', 'Land', numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalLoss', 'Land', numberOfMonths);
 
-                                    // TODO: deal with missing liquidityType for 'Other' liabilities
-                                    updateLiabilityStatementCategory(instance, liability)
+                                        instance.data.assetMarketValue['Land'][monthDiff] = safeMath.plus(instance.data.assetMarketValue['Land'][monthDiff], asset.data.assetValue);
+                                        instance.data.capitalIncome['Land'][monthDiff] = safeMath.plus(instance.data.capitalIncome['Land'][monthDiff], asset.data.salePrice);
+                                        instance.data.capitalProfit['Land'][monthDiff] = safeMath.plus(instance.data.capitalProfit['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, asset.data.assetValue)));
+                                        instance.data.capitalLoss['Land'][monthDiff] = safeMath.plus(instance.data.capitalLoss['Land'][monthDiff], Math.max(0, safeMath.minus(asset.data.assetValue, asset.data.salePrice)));
+                                    }
+                                } else if (asset.type === 'other') {
+                                    asset.data.liquidityCategory = asset.data.liquidityCategory || asset.data.category;
+
+                                    if (asset.data.assetValue && acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth)) {
+                                        monthDiff = acquisitionDate.diff(startMonth, 'months');
+
+                                        initializeCategoryValues(instance, 'capitalExpenditure', asset.data.liquidityCategory, numberOfMonths);
+
+                                        instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalExpenditure[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
+                                    }
+
+                                    if (asset.data.sold && asset.data.salePrice && soldDate && soldDate.isBetween(startMonth, endMonth)) {
+                                        monthDiff = soldDate.diff(startMonth, 'months');
+
+                                        var value = (asset.data.liquidityCategory !== 'Vehicles, Machinery & Equipment' ? asset.data.assetValue : safeMath.minus(asset.data.assetValue, safeMath.chain(instance.data.account.depreciationRate || 0)
+                                            .dividedBy(100)
+                                            .dividedBy(12)
+                                            .times(asset.data.assetValue)
+                                            .times(acquisitionDate && acquisitionDate.isBetween(startMonth, endMonth) ?
+                                                soldDate.diff(acquisitionDate, 'months') :
+                                                monthDiff + 1)
+                                            .toNumber()));
+
+                                        initializeCategoryValues(instance, 'assetMarketValue', asset.data.liquidityCategory, numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalIncome', asset.data.liquidityCategory, numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalProfit', asset.data.liquidityCategory, numberOfMonths);
+                                        initializeCategoryValues(instance, 'capitalLoss', asset.data.liquidityCategory, numberOfMonths);
+
+                                        instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.assetMarketValue[asset.data.liquidityCategory][monthDiff], asset.data.assetValue);
+                                        instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalIncome[asset.data.liquidityCategory][monthDiff], asset.data.salePrice);
+                                        instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalProfit[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(asset.data.salePrice, value)));
+                                        instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff] = safeMath.plus(instance.data.capitalLoss[asset.data.liquidityCategory][monthDiff], Math.max(0, safeMath.minus(value, asset.data.salePrice)));
+                                    }
                                 }
-                            });
-                        }
-                    });
 
-                underscore.each(instance.models.liabilities, function (liability) {
-                    // Check liability is not already added
-                    if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
-                        evaluatedModels.push(liability);
+                                if (!(asset.data.sold && soldDate && soldDate.isBefore(startMonth)) && !(asset.data.demolished && demolitionDate && demolitionDate.isBefore(startMonth))) {
+                                    switch(asset.type) {
+                                        case 'cropland':
+                                        case 'pasture':
+                                        case 'permanent crop':
+                                        case 'plantation':
+                                        case 'wasteland':
+                                            updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
+                                            break;
+                                        case 'farmland':
+                                            instance.data.assetStatement['long-term'] = instance.data.assetStatement['long-term'] || [];
 
-                        liability = Liability.new(liability);
+                                            var assetCategory = underscore.findWhere(instance.data.assetStatement['long-term'], {name: 'Land'}) || {},
+                                                landUseValue = underscore.chain(assetCategory.assets || [])
+                                                    .reject(function (statementAsset) {
+                                                        return statementAsset.farmId !== asset.farmId || statementAsset.type === 'farmland';
+                                                    })
+                                                    .reduce(function (total, statementAsset) {
+                                                        return safeMath.plus(total, statementAsset.data.assetValue);
+                                                    }, 0)
+                                                    .value();
 
-                        var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
-                            typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
-                            liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+                                            if (landUseValue === 0) {
+                                                updateAssetStatementCategory(instance, 'long-term', 'Land', asset);
+                                            }
+                                            break;
+                                        case 'improvement':
+                                            updateAssetStatementCategory(instance, 'long-term', 'Fixed Improvements', asset);
+                                            break;
+                                        case 'vme':
+                                            updateAssetStatementCategory(instance, 'medium-term', 'Vehicles, Machinery & Equipment', asset);
+                                            break;
+                                        case 'other':
+                                            updateAssetStatementCategory(instance, asset.data.liquidityType, asset.data.liquidityCategory, asset);
+                                            break;
+                                    }
+                                }
 
-                        initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+                                angular.forEach(asset.liabilities, function (liability) {
+                                    // Check liability is not already added
+                                    if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
+                                        evaluatedModels.push(liability);
 
-                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
-                            return safeArrayMath.reduce(month.repayment, instance.data[section][typeTitle][index]);
+                                        var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
+                                            typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
+                                            liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
+
+                                        if (asset.type === 'farmland' && liability.type !== 'rent' && moment(liability.startDate, 'YYYY-MM-DD').isBetween(startMonth, endMonth)) {
+                                            monthDiff = moment(liability.startDate, 'YYYY-MM-DD').diff(startMonth, 'months');
+
+                                            initializeCategoryValues(instance, 'capitalExpenditure', 'Land', numberOfMonths);
+
+                                            instance.data.capitalExpenditure['Land'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Land'][monthDiff], liability.openingBalance);
+                                        }
+
+                                        initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
+
+                                        instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                                            return safeArrayMath.reduce(month.repayment, instance.data[section][typeTitle][index]);
+                                        });
+
+                                        // TODO: deal with missing liquidityType for 'Other' liabilities
+                                        updateLiabilityStatementCategory(instance, liability)
+                                    }
+                                });
+                            }
                         });
 
-                        updateLiabilityStatementCategory(instance, liability);
-                    }
-                });
-            }
+                    underscore.each(instance.models.liabilities, function (liability) {
+                        // Check liability is not already added
+                        if (underscore.findWhere(evaluatedModels, {uuid: liability.uuid}) === undefined) {
+                            evaluatedModels.push(liability);
 
-            /**
-             * Recalculate summary & ratio data
-             */
-            function calculateYearlyTotal (monthlyTotals, year) {
-                return safeArrayMath.reduce(monthlyTotals.slice((year - 1) * 12, year * 12));
-            }
+                            liability = Liability.new(liability);
 
-            function calculateEndOfYearValue(monthlyTotals, year) {
-                var yearSlice = monthlyTotals.slice((year - 1) * 12, year * 12);
-                return yearSlice[yearSlice.length - 1];
-            }
+                            var section = (liability.type === 'rent' ? 'capitalExpenditure' : 'debtRedemption'),
+                                typeTitle = (liability.type !== 'other' ? Liability.getTypeTitle(liability.type) : liability.name),
+                                liabilityMonths = liability.liabilityInRange(instance.startDate, instance.endDate);
 
-            function calculateMonthlyAssetTotal (instance, types) {
-                var ignoredItems = ['Bank Capital', 'Bank Overdraft'];
+                            initializeCategoryValues(instance, section, typeTitle, numberOfMonths);
 
-                return underscore.chain(instance.data.assetStatement)
-                    .pick(types)
-                    .values()
-                    .flatten()
-                    .compact()
-                    .reduce(function (totals, item) {
-                        return (!underscore.contains(ignoredItems, item.name) && !underscore.isUndefined(item.monthly) ? safeArrayMath.plus(totals, item.monthly.marketValue) : totals);
-                    }, Base.initializeArray(instance.numberOfMonths))
-                    .value();
-            }
+                            instance.data[section][typeTitle] = underscore.map(liabilityMonths, function (month, index) {
+                                return safeArrayMath.reduce(month.repayment, instance.data[section][typeTitle][index]);
+                            });
 
-            function calculateAssetLiabilityGroupTotal (instance, type, subTypes) {
-                subTypes = (underscore.isArray(subTypes) ? subTypes : [subTypes]);
-
-                var numberOfMonths = instance.numberOfMonths,
-                    numberOfYears = instance.numberOfYears,
-                    result = (type === 'asset' ? {
-                        estimatedValue: 0,
-                        marketValue: 0,
-                        monthly: {
-                            marketValue: Base.initializeArray(numberOfMonths),
-                            depreciation: Base.initializeArray(numberOfMonths)
-                        },
-                        yearly: {
-                            marketValue: Base.initializeArray(numberOfYears),
-                            depreciation: Base.initializeArray(numberOfYears)
+                            updateLiabilityStatementCategory(instance, liability);
                         }
-                    } : {
-                        currentValue: 0,
-                        yearlyValues: Base.initializeArray(numberOfYears)
-                    } );
-
-                underscore.each(subTypes, function (subType) {
-                    result = underscore.reduce(instance.data[type + 'Statement'][subType], function(total, item) {
-                        if (type === 'asset') {
-                            total.estimatedValue = safeMath.plus(total.estimatedValue, item.estimatedValue);
-                            total.marketValue = safeMath.plus(total.marketValue, item.marketValue);
-                            total.monthly.depreciation = safeArrayMath.plus(total.monthly.depreciation, item.monthly.depreciation);
-                            total.monthly.marketValue = safeArrayMath.plus(total.monthly.marketValue, item.monthly.marketValue);
-                            total.yearly.depreciation = safeArrayMath.plus(total.yearly.depreciation, item.yearly.depreciation);
-                            total.yearly.marketValue = safeArrayMath.plus(total.yearly.marketValue, item.yearly.marketValue);
-                        } else {
-                            total.currentValue = safeMath.plus(total.currentValue, item.currentValue);
-                            total.yearlyValues = safeArrayMath.plus(total.yearlyValues, item.yearlyValues);
-                        }
-                        return total;
-                    }, result);
-                });
-
-                return result;
-            }
-
-            function calculateMonthlyLiabilityPropertyTotal (instance, liabilityTypes, property, startMonth, endMonth) {
-                var liabilities = underscore.filter(instance.models.liabilities, function(liability) {
-                    if (!liabilityTypes || liabilityTypes.length === 0) return true;
-
-                    return liabilityTypes.indexOf(liability.type) !== -1;
-                });
-
-                if (liabilities.length === 0) return Base.initializeArray(instance.numberOfMonths);
-
-                return underscore.chain(liabilities)
-                    .map(function(liability) {
-                        var range = new Liability(liability).liabilityInRange(startMonth, endMonth);
-
-                        return underscore.chain(range)
-                            .pluck(property)
-                            .map(function (propertyValue) {
-                                return (underscore.isNumber(propertyValue) ? propertyValue : safeArrayMath.reduce(propertyValue))
-                            })
-                            .value();
-                    })
-                    .unzip()
-                    .map(safeArrayMath.reduce)
-                    .value();
-            }
-
-            function calculateMonthlyCategoriesTotal (categories, results) {
-                underscore.reduce(categories, function (currentTotals, category) {
-                    underscore.each(category, function (month, index) {
-                        currentTotals[index] += month;
                     });
-                    return currentTotals;
-                }, results);
+                }
 
-                return results;
-            }
+                /**
+                 * Recalculate summary & ratio data
+                 */
+                function calculateYearlyTotal (monthlyTotals, year) {
+                    return safeArrayMath.reduce(monthlyTotals.slice((year - 1) * 12, year * 12));
+                }
 
-            function calculateMonthlySectionsTotal (sections, results) {
-                return underscore.reduce(sections, function (sectionTotals, section) {
-                    return (section ? calculateMonthlyCategoriesTotal(section, sectionTotals) : sectionTotals);
-                }, results);
-            }
+                function calculateEndOfYearValue(monthlyTotals, year) {
+                    var yearSlice = monthlyTotals.slice((year - 1) * 12, year * 12);
+                    return yearSlice[yearSlice.length - 1];
+                }
+
+                function calculateMonthlyAssetTotal (instance, types) {
+                    var ignoredItems = ['Bank Capital', 'Bank Overdraft'];
+
+                    return underscore.chain(instance.data.assetStatement)
+                        .pick(types)
+                        .values()
+                        .flatten()
+                        .compact()
+                        .reduce(function (totals, item) {
+                            return (!underscore.contains(ignoredItems, item.name) && !underscore.isUndefined(item.monthly) ? safeArrayMath.plus(totals, item.monthly.marketValue) : totals);
+                        }, Base.initializeArray(instance.numberOfMonths))
+                        .value();
+                }
+
+                function calculateAssetLiabilityGroupTotal (instance, type, subTypes) {
+                    subTypes = (underscore.isArray(subTypes) ? subTypes : [subTypes]);
+
+                    var numberOfMonths = instance.numberOfMonths,
+                        numberOfYears = instance.numberOfYears,
+                        result = (type === 'asset' ? {
+                            estimatedValue: 0,
+                            marketValue: 0,
+                            monthly: {
+                                marketValue: Base.initializeArray(numberOfMonths),
+                                depreciation: Base.initializeArray(numberOfMonths)
+                            },
+                            yearly: {
+                                marketValue: Base.initializeArray(numberOfYears),
+                                depreciation: Base.initializeArray(numberOfYears)
+                            }
+                        } : {
+                            currentValue: 0,
+                            yearlyValues: Base.initializeArray(numberOfYears)
+                        } );
+
+                    underscore.each(subTypes, function (subType) {
+                        result = underscore.reduce(instance.data[type + 'Statement'][subType], function(total, item) {
+                            if (type === 'asset') {
+                                total.estimatedValue = safeMath.plus(total.estimatedValue, item.estimatedValue);
+                                total.marketValue = safeMath.plus(total.marketValue, item.marketValue);
+                                total.monthly.depreciation = safeArrayMath.plus(total.monthly.depreciation, item.monthly.depreciation);
+                                total.monthly.marketValue = safeArrayMath.plus(total.monthly.marketValue, item.monthly.marketValue);
+                                total.yearly.depreciation = safeArrayMath.plus(total.yearly.depreciation, item.yearly.depreciation);
+                                total.yearly.marketValue = safeArrayMath.plus(total.yearly.marketValue, item.yearly.marketValue);
+                            } else {
+                                total.currentValue = safeMath.plus(total.currentValue, item.currentValue);
+                                total.yearlyValues = safeArrayMath.plus(total.yearlyValues, item.yearlyValues);
+                            }
+                            return total;
+                        }, result);
+                    });
+
+                    return result;
+                }
+
+                function calculateMonthlyLiabilityPropertyTotal (instance, liabilityTypes, property, startMonth, endMonth) {
+                    var liabilities = underscore.filter(instance.models.liabilities, function(liability) {
+                        if (!liabilityTypes || liabilityTypes.length === 0) return true;
+
+                        return liabilityTypes.indexOf(liability.type) !== -1;
+                    });
+
+                    if (liabilities.length === 0) return Base.initializeArray(instance.numberOfMonths);
+
+                    return underscore.chain(liabilities)
+                        .map(function(liability) {
+                            var range = new Liability(liability).liabilityInRange(startMonth, endMonth);
+
+                            return underscore.chain(range)
+                                .pluck(property)
+                                .map(function (propertyValue) {
+                                    return (underscore.isNumber(propertyValue) ? propertyValue : safeArrayMath.reduce(propertyValue))
+                                })
+                                .value();
+                        })
+                        .unzip()
+                        .map(safeArrayMath.reduce)
+                        .value();
+                }
+
+                function calculateMonthlyCategoriesTotal (categories, results) {
+                    underscore.reduce(categories, function (currentTotals, category) {
+                        underscore.each(category, function (month, index) {
+                            currentTotals[index] += month;
+                        });
+                        return currentTotals;
+                    }, results);
+
+                    return results;
+                }
+
+                function calculateMonthlySectionsTotal (sections, results) {
+                    return underscore.reduce(sections, function (sectionTotals, section) {
+                        return (section ? calculateMonthlyCategoriesTotal(section, sectionTotals) : sectionTotals);
+                    }, results);
+                }
 
 
-            function calculateYearlyLivestockAdjustment (instance, year) {
-                var startDate = moment(instance.startDate).add(year - 1, 'y'),
-                    endDate = moment(instance.startDate).add(year, 'y');
+                function calculateYearlyLivestockAdjustment (instance, year) {
+                    var startDate = moment(instance.startDate).add(year - 1, 'y'),
+                        endDate = moment(instance.startDate).add(year, 'y');
 
-                return underscore.chain(instance.models.assets)
-                    .where({type: 'livestock'})
-                    .map(AssetFactory.new)
-                    .reduce(function (total, asset) {
-                        var monthly = asset.inventoryInRange(startDate, endDate),
-                            openingMonth = underscore.first(monthly),
-                            closingMonth = underscore.last(monthly);
+                    return underscore.chain(instance.models.assets)
+                        .where({type: 'livestock'})
+                        .map(AssetFactory.new)
+                        .reduce(function (total, asset) {
+                            var monthly = asset.inventoryInRange(startDate, endDate),
+                                openingMonth = underscore.first(monthly),
+                                closingMonth = underscore.last(monthly);
 
-                        var openingStockValue = safeMath.times(openingMonth.opening.quantity, asset.marketPriceAtDate(startDate)),
-                            closingStockValue = safeMath.times(closingMonth.opening.quantity, asset.marketPriceAtDate(endDate)),
-                            purchaseSubtotal = asset.subtotalInRange('Purchase', startDate, endDate);
+                            var openingStockValue = safeMath.times(openingMonth.opening.quantity, asset.marketPriceAtDate(startDate)),
+                                closingStockValue = safeMath.times(closingMonth.opening.quantity, asset.marketPriceAtDate(endDate)),
+                                purchaseSubtotal = asset.subtotalInRange('Purchase', startDate, endDate);
 
-                        return safeMath.plus(total, safeMath.minus(safeMath.minus(closingStockValue, openingStockValue), purchaseSubtotal.value));
-                    }, 0)
-                    .value();
-            }
+                            return safeMath.plus(total, safeMath.minus(safeMath.minus(closingStockValue, openingStockValue), purchaseSubtotal.value));
+                        }, 0)
+                        .value();
+                }
 
-            function calculateYearlyLivestockConsumption (instance, year) {
-                var startDate = moment(instance.startDate).add(year - 1, 'y'),
-                    endDate = moment(instance.startDate).add(year, 'y');
+                function calculateYearlyLivestockConsumption (instance, year) {
+                    var startDate = moment(instance.startDate).add(year - 1, 'y'),
+                        endDate = moment(instance.startDate).add(year, 'y');
 
-                return underscore.chain(instance.models.assets)
-                    .where({type: 'livestock'})
-                    .map(AssetFactory.new)
-                    .reduce(function (total, asset) {
-                        return safeMath.plus(total, asset.subtotalInRange(['Household', 'Labour'], startDate, endDate).value);
-                    }, 0)
-                    .value();
-            }
+                    return underscore.chain(instance.models.assets)
+                        .where({type: 'livestock'})
+                        .map(AssetFactory.new)
+                        .reduce(function (total, asset) {
+                            return safeMath.plus(total, asset.subtotalInRange(['Household', 'Labour'], startDate, endDate).value);
+                        }, 0)
+                        .value();
+                }
 
-            function recalculate (instance) {
-                var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
-                    endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
-                    numberOfMonths = instance.numberOfMonths,
-                    taxRatePerYear = safeMath.dividedBy(instance.data.account.incomeTaxRate, 100);
+                function recalculate (instance) {
+                    var startMonth = moment(instance.startDate, 'YYYY-MM-DD'),
+                        endMonth = moment(instance.endDate, 'YYYY-MM-DD'),
+                        numberOfMonths = instance.numberOfMonths,
+                        taxRatePerYear = safeMath.dividedBy(instance.data.account.incomeTaxRate, 100);
 
-                instance.data.summary = {
-                    monthly: {},
-                    yearly: {}
-                };
-
-                instance.data.capitalIncome = {};
-                instance.data.capitalExpenditure = {};
-                instance.data.capitalLoss = {};
-                instance.data.capitalProfit = {};
-                instance.data.cashInflow = {};
-                instance.data.cashOutflow = {};
-                instance.data.debtRedemption = {};
-                instance.data.assetMarketValue = {};
-                instance.data.assetStockValue = {};
-                instance.data.assetStatement = {};
-                instance.data.liabilityStatement = {};
-                instance.data.enterpriseProductionIncome = {};
-                instance.data.enterpriseProductionExpenditure = {};
-                instance.data.productionIncome = {};
-                instance.data.productionExpenditure = {};
-                instance.data.productionIncomeComposition = {};
-                instance.data.otherIncome = {};
-                instance.data.otherExpenditure = {};
-
-                reEvaluateProductionSchedules(instance);
-                reEvaluateAssetsAndLiabilities(instance);
-                reEvaluateIncomeAndExpenses(instance);
-                reEvaluateProductionIncomeAndExpenditure(instance, numberOfMonths);
-                reEvaluateProductionCredit(instance);
-                reEvaluateCashFlow(instance);
-
-                recalculateIncomeExpensesSummary(instance, startMonth, endMonth, numberOfMonths);
-                recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths);
-                addPrimaryAccountAssetsLiabilities(instance);
-
-                recalculateAssetStatement(instance);
-                totalAssetsAndLiabilities(instance);
-                recalculateAssetsLiabilitiesInterestSummary(instance, startMonth, endMonth);
-
-                instance.data.summary.yearly.grossProductionValue = safeArrayMath.plus(instance.data.summary.yearly.productionIncome, safeArrayMath.plus(instance.data.summary.yearly.livestockAdjustment, instance.data.summary.yearly.livestockConsumption));
-                instance.data.summary.yearly.grossProfit = safeArrayMath.minus(instance.data.summary.yearly.grossProductionValue, instance.data.summary.yearly.productionExpenditure);
-                instance.data.summary.yearly.ebitda = safeArrayMath.minus(safeArrayMath.plus(instance.data.summary.yearly.grossProfit, instance.data.summary.yearly.nonFarmIncome), instance.data.summary.yearly.nonFarmExpenditure);
-                instance.data.summary.yearly.ebit = safeArrayMath.minus(instance.data.summary.yearly.ebitda, instance.data.summary.yearly.depreciation);
-                instance.data.summary.yearly.interestPaid = safeArrayMath.plus(instance.data.summary.yearly.totalRent, instance.data.summary.yearly.totalInterest);
-                instance.data.summary.yearly.ebt = safeArrayMath.minus(instance.data.summary.yearly.ebit, instance.data.summary.yearly.interestPaid);
-                instance.data.summary.yearly.taxPaid = underscore.map(instance.data.summary.yearly.ebt, function (value) {
-                    return Math.max(0, safeMath.times(value, taxRatePerYear));
-                });
-                instance.data.summary.yearly.netProfit = safeArrayMath.minus(instance.data.summary.yearly.ebt, instance.data.summary.yearly.taxPaid);
-            }
-
-            function reEvaluateCashFlow (instance) {
-                instance.data.cashInflow = {
-                    capitalIncome: instance.data.capitalIncome,
-                    productionIncome: instance.data.productionIncome,
-                    otherIncome: instance.data.otherIncome
-                };
-
-                instance.data.cashOutflow = {
-                    capitalExpenditure: instance.data.capitalExpenditure,
-                    productionExpenditure: underscore.omit(instance.data.unallocatedProductionExpenditure, ['Farm Products Consumed']),
-                    otherExpenditure: underscore.omit(instance.data.otherExpenditure, ['Farm Products Consumed'])
-                };
-            }
-
-            function recalculateIncomeExpensesSummary (instance, startMonth, endMonth, numberOfMonths) {
-                var cashInflow = calculateMonthlySectionsTotal([instance.data.cashInflow.capitalIncome, instance.data.cashInflow.productionIncome, instance.data.cashInflow.otherIncome], Base.initializeArray(numberOfMonths)),
-                    cashOutflow = calculateMonthlySectionsTotal([instance.data.cashOutflow.capitalExpenditure, instance.data.cashOutflow.productionExpenditure, instance.data.cashOutflow.otherExpenditure], Base.initializeArray(numberOfMonths)),
-                    productionCreditRepayments = underscore.reduce(cashInflow, function (repayment, income, index) {
-                        repayment[index] = (income - repayment[index] < 0 ? income : repayment[index]);
-                        return repayment;
-                    }, calculateMonthlyLiabilityPropertyTotal(instance, ['production-credit'], 'repayment', startMonth, endMonth)),
-                    cashInflowAfterRepayments = safeArrayMath.minus(cashInflow, productionCreditRepayments),
-                    debtRedemptionAfterRepayments = safeArrayMath.minus(calculateMonthlySectionsTotal([instance.data.debtRedemption], Base.initializeArray(numberOfMonths)), productionCreditRepayments);
-
-                underscore.extend(instance.data.summary.monthly, {
-                    // Income
-                    productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], Base.initializeArray(numberOfMonths)),
-                    capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], Base.initializeArray(numberOfMonths)),
-                    capitalProfit: calculateMonthlySectionsTotal([instance.data.capitalProfit], Base.initializeArray(numberOfMonths)),
-                    otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
-                    nonFarmIncome: calculateMonthlySectionsTotal([instance.data.capitalProfit, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
-                    totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
-                    cashInflowAfterRepayments: cashInflowAfterRepayments,
-
-                    // Expenses
-                    unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], Base.initializeArray(numberOfMonths)),
-                    productionExpenditure: calculateMonthlySectionsTotal([instance.data.productionExpenditure], Base.initializeArray(numberOfMonths)),
-                    capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], Base.initializeArray(numberOfMonths)),
-                    capitalLoss: calculateMonthlySectionsTotal([instance.data.capitalLoss], Base.initializeArray(numberOfMonths)),
-                    otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
-                    nonFarmExpenditure: calculateMonthlySectionsTotal([instance.data.capitalLoss, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
-                    debtRedemption: debtRedemptionAfterRepayments,
-                    totalExpenditure: safeArrayMath.plus(debtRedemptionAfterRepayments, calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths))),
-                    cashOutflowAfterRepayments: safeArrayMath.plus(debtRedemptionAfterRepayments, cashOutflow)
-                });
-
-                var livestockAdjustment = [calculateYearlyLivestockAdjustment(instance, 1), calculateYearlyLivestockAdjustment(instance, 2)],
-                    livestockConsumption = [calculateYearlyLivestockConsumption(instance, 1), calculateYearlyLivestockConsumption(instance, 2)];
-
-                underscore.extend(instance.data.summary.yearly, {
-                    livestockAdjustment: livestockAdjustment,
-                    livestockConsumption: livestockConsumption,
-
-                    // Income
-                    productionIncome: [calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 2)],
-                    productionIncomeComposition: [calculateYearlyProductionIncomeComposition(instance.data.productionIncomeComposition, 1), calculateYearlyProductionIncomeComposition(instance.data.productionIncomeComposition, 2)],
-                    capitalIncome: [calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 2)],
-                    capitalProfit: [calculateYearlyTotal(instance.data.summary.monthly.capitalProfit, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalProfit, 2)],
-                    otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
-                    nonFarmIncome: [calculateYearlyTotal(instance.data.summary.monthly.nonFarmIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.nonFarmIncome, 2)],
-                    totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
-                    cashInflowAfterRepayments: [calculateYearlyTotal(instance.data.summary.monthly.cashInflowAfterRepayments, 1), calculateYearlyTotal(instance.data.summary.monthly.cashInflowAfterRepayments, 2)],
-
-                    // Expenses
-                    unallocatedProductionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 2)],
-                    productionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.productionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.productionExpenditure, 2)],
-                    capitalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 2)],
-                    capitalLoss: [calculateYearlyTotal(instance.data.summary.monthly.capitalLoss, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalLoss, 2)],
-                    otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
-                    nonFarmExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.nonFarmExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.nonFarmExpenditure, 2)],
-                    debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
-                    totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
-                    cashOutflowAfterRepayments: [calculateYearlyTotal(instance.data.summary.monthly.cashOutflowAfterRepayments, 1), calculateYearlyTotal(instance.data.summary.monthly.cashOutflowAfterRepayments, 2)]
-                });
-            }
-
-            function recalculateAssetsLiabilitiesInterestSummary (instance, startMonth, endMonth) {
-                var numberOfMonths = instance.numberOfMonths,
-                    numberOfYears = instance.numberOfYears;
-
-                underscore.extend(instance.data.summary.monthly, {
-                    // Interest
-                    productionCreditInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'interest', startMonth, endMonth),
-                    mediumTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'interest', startMonth, endMonth),
-                    longTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'interest', startMonth, endMonth),
-                    totalInterest: safeArrayMath.plus(calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'long-term', 'medium-term'], 'interest', startMonth, endMonth), instance.data.summary.monthly.primaryAccountInterest),
-
-                    // Liabilities
-                    currentLiabilities: safeArrayMath.plus(calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'closing', startMonth, endMonth), instance.data.summary.monthly.primaryAccountLiability),
-                    mediumLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'closing', startMonth, endMonth),
-                    longLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'closing', startMonth, endMonth),
-                    totalLiabilities: safeArrayMath.plus(calculateMonthlyLiabilityPropertyTotal(instance, [], 'closing', startMonth, endMonth), instance.data.summary.monthly.primaryAccountLiability),
-                    totalRent: calculateMonthlyLiabilityPropertyTotal(instance, ['rent'], 'repayment', startMonth, endMonth),
-
-                    // Assets
-                    currentAssets: safeArrayMath.plus(calculateMonthlyAssetTotal(instance, ['short-term']), instance.data.summary.monthly.primaryAccountCapital),
-                    movableAssets: calculateMonthlyAssetTotal(instance, ['medium-term']),
-                    fixedAssets: calculateMonthlyAssetTotal(instance, ['long-term']),
-                    totalAssets: safeArrayMath.plus(calculateMonthlyAssetTotal(instance, ['short-term', 'medium-term', 'long-term']), instance.data.summary.monthly.primaryAccountCapital),
-
-                    depreciation: instance.data.assetStatement.total.monthly.depreciation || Base.initializeArray(numberOfMonths)
-                });
-
-                underscore.extend(instance.data.summary.yearly, {
-                    // Interest
-                    productionCreditInterest: [calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 2)],
-                    mediumTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 2)],
-                    longTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 2)],
-                    totalInterest: [calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 2)],
-
-                    // Liabilities
-                    currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
-                    mediumLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'medium-term'),
-                    longLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'long-term'),
-                    totalLiabilities: [calculateEndOfYearValue(instance.data.summary.monthly.totalLiabilities, 1), calculateEndOfYearValue(instance.data.summary.monthly.totalLiabilities, 2)],
-                    totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
-
-                    // Assets
-                    currentAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'short-term'),
-                    movableAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'medium-term'),
-                    fixedAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'long-term'),
-                    totalAssets: instance.data.assetStatement.total.yearly.marketValue || Base.initializeArray(numberOfYears),
-
-                    depreciation: instance.data.assetStatement.total.yearly.depreciation || Base.initializeArray(numberOfYears)
-                });
-
-                calculateAssetLiabilityGrowth(instance);
-            }
-
-            function calculateAssetLiabilityGrowth (instance) {
-                var currentWorth = safeMath.minus(instance.data.assetStatement.total.estimatedValue, instance.data.liabilityStatement.total.currentValue),
-                    netWorth = safeArrayMath.minus(instance.data.assetStatement.total.yearly.marketValue, instance.data.liabilityStatement.total.yearlyValues);
-
-                underscore.extend(instance.data.summary.yearly, {
-                    netWorth: {
-                        current: currentWorth,
-                        yearly: netWorth
-                    },
-                    netWorthGrowth: underscore.map(netWorth, function (value, index) {
-                        return (index === 0 ? safeMath.minus(value, currentWorth) : safeMath.minus(value, netWorth[index - 1]));
-                    })
-                });
-            }
-
-            /**
-             * Primary Account Handling
-             */
-            function recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths) {
-                var numberOfYears = instance.numberOfYears,
-                    defaultObject = {
-                        opening: 0,
-                        inflow: 0,
-                        outflow: 0,
-                        balance: 0,
-                        interestPayable: 0,
-                        interestReceivable: 0,
-                        closing: 0
+                    instance.data.summary = {
+                        monthly: {},
+                        yearly: {}
                     };
 
-                instance.data.summary.monthly.primaryAccountInterest = Base.initializeArray(numberOfMonths);
-                instance.data.summary.monthly.primaryAccountCapital = Base.initializeArray(numberOfMonths);
-                instance.data.summary.monthly.primaryAccountLiability = Base.initializeArray(numberOfMonths);
+                    instance.data.capitalIncome = {};
+                    instance.data.capitalExpenditure = {};
+                    instance.data.capitalLoss = {};
+                    instance.data.capitalProfit = {};
+                    instance.data.cashInflow = {};
+                    instance.data.cashOutflow = {};
+                    instance.data.debtRedemption = {};
+                    instance.data.assetMarketValue = {};
+                    instance.data.assetStockValue = {};
+                    instance.data.assetStatement = {};
+                    instance.data.liabilityStatement = {};
+                    instance.data.enterpriseProductionIncome = {};
+                    instance.data.enterpriseProductionExpenditure = {};
+                    instance.data.productionIncome = {};
+                    instance.data.productionExpenditure = {};
+                    instance.data.productionIncomeComposition = {};
+                    instance.data.otherIncome = {};
+                    instance.data.otherExpenditure = {};
 
-                instance.account.monthly = underscore.chain(underscore.range(numberOfMonths))
-                    .map(function () {
-                        return underscore.extend({}, defaultObject);
-                    })
-                    .reduce(function (monthly, month, index) {
-                        month.opening = (index === 0 ? instance.account.openingBalance : monthly[monthly.length - 1].closing);
-                        month.inflow = instance.data.summary.monthly.cashInflowAfterRepayments[index];
-                        month.outflow = instance.data.summary.monthly.cashOutflowAfterRepayments[index];
-                        month.balance = safeMath.plus(month.opening, safeMath.minus(month.inflow, month.outflow));
-                        month.interestPayable = (month.balance < 0 && instance.account.interestRateDebit ?
-                            safeMath.times(Math.abs(month.balance), safeMath.chain(instance.account.interestRateDebit)
-                                .dividedBy(100)
-                                .dividedBy(12)
-                                .toNumber()) : 0);
-                        month.interestReceivable = (month.balance > 0 && instance.account.interestRateCredit ?
-                            safeMath.times(month.balance, safeMath.chain(instance.account.interestRateCredit)
-                                .dividedBy(100)
-                                .dividedBy(12)
-                                .toNumber()) : 0);
-                        month.closing = safeMath.chain(month.balance).minus(month.interestPayable).plus(month.interestReceivable).toNumber();
+                    reEvaluateProductionSchedules(instance);
+                    reEvaluateAssetsAndLiabilities(instance);
+                    reEvaluateIncomeAndExpenses(instance);
+                    reEvaluateProductionIncomeAndExpenditure(instance, numberOfMonths);
+                    reEvaluateProductionCredit(instance);
+                    reEvaluateCashFlow(instance);
 
-                        instance.data.summary.monthly.primaryAccountInterest[index] = safeMath.plus(instance.data.summary.monthly.primaryAccountInterest[index], month.interestPayable);
-                        instance.data.summary.monthly.primaryAccountCapital[index] = safeMath.plus(instance.data.summary.monthly.primaryAccountCapital[index], Math.abs(Math.max(0, month.closing)));
-                        instance.data.summary.monthly.primaryAccountLiability[index] = safeMath.plus(instance.data.summary.monthly.primaryAccountLiability[index], Math.abs(Math.min(0, month.closing)));
+                    recalculateIncomeExpensesSummary(instance, startMonth, endMonth, numberOfMonths);
+                    recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths);
+                    addPrimaryAccountAssetsLiabilities(instance);
 
-                        monthly.push(month);
-                        return monthly;
-                    }, [])
-                    .value();
+                    recalculateAssetStatement(instance);
+                    totalAssetsAndLiabilities(instance);
+                    recalculateAssetsLiabilitiesInterestSummary(instance, startMonth, endMonth);
 
-                instance.account.yearly = underscore.chain(underscore.range(numberOfYears))
-                    .map(function () {
-                        return underscore.extend({
-                            worstBalance: 0,
-                            bestBalance: 0,
-                            openingMonth: null,
-                            closingMonth: null
-                        }, defaultObject);
-                    })
-                    .reduce(function (yearly, year, index) {
-                        var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
-                        year.opening = months[0].opening;
-                        year.inflow = safeArrayMath.reduceProperty(months, 'inflow');
-                        year.outflow = safeArrayMath.reduceProperty(months, 'outflow');
-                        year.balance = safeMath.plus(year.opening, safeMath.minus(year.inflow, year.outflow));
-                        year.interestPayable = safeArrayMath.reduceProperty(months, 'interestPayable');
-                        year.interestReceivable = safeArrayMath.reduceProperty(months, 'interestReceivable');
-                        year.closing = safeMath.chain(year.balance).minus(year.interestPayable).plus(year.interestReceivable).toNumber();
-                        year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').format('YYYY-MM-DD');
-                        year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('YYYY-MM-DD');
-
-                        var bestBalance = underscore.max(months, function (month) { return month.closing; }),
-                            worstBalance = underscore.min(months, function (month) { return month.closing; });
-                        year.bestBalance = {
-                            balance: bestBalance.closing,
-                            month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('YYYY-MM-DD')
-                        };
-                        year.worstBalance = {
-                            balance: worstBalance.closing,
-                            month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('YYYY-MM-DD')
-                        };
-
-                        yearly.push(year);
-                        return yearly;
-                    }, [])
-                    .value();
-
-                instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
-                instance.data.summary.yearly.primaryAccountCapital = [calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountCapital, 1), calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountCapital, 2)];
-                instance.data.summary.yearly.primaryAccountLiability = [calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountLiability, 1), calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountLiability, 2)];
-            }
-
-            function addPrimaryAccountAssetsLiabilities (instance) {
-                // Bank Capital
-                instance.data.assetStatement['short-term'] = instance.data.assetStatement['short-term'] || [];
-                instance.data.assetStatement['short-term'].push({
-                    name: 'Bank Capital',
-                    estimatedValue: Math.max(0, instance.account.openingBalance),
-                    marketValue: Math.max(0, instance.account.openingBalance),
-                    monthly: {
-                        marketValue: underscore.map(instance.account.monthly, function (monthly) {
-                            return Math.max(0, monthly.closing);
-                        }),
-                        depreciation: Base.initializeArray(instance.numberOfMonths)
-                    },
-                    yearly: {
-                        marketValue: underscore.map(instance.account.yearly, function (yearly) {
-                            return Math.max(0, yearly.closing);
-                        }),
-                        depreciation: Base.initializeArray(instance.numberOfYears)
-                    }
-                });
-
-                // Bank Overdraft
-                instance.data.liabilityStatement['short-term'] = instance.data.liabilityStatement['short-term'] || [];
-                instance.data.liabilityStatement['short-term'].push({
-                    name: 'Bank Overdraft',
-                    currentValue: Math.abs(Math.min(0, instance.account.openingBalance)),
-                    yearlyValues: [instance.data.summary.yearly.primaryAccountLiability[0], instance.data.summary.yearly.primaryAccountLiability[1]]
-                });
-            }
-
-            /**
-             * Ratios
-             */
-            function recalculateRatios (instance) {
-                instance.data.ratios = {
-                    interestCover: calculateRatio(instance, 'operatingProfit', 'totalInterest'),
-                    inputOutput: calculateRatio(instance, 'productionIncome', ['productionExpenditure', 'productionCreditInterest', 'primaryAccountInterest']),
-                    productionCost: calculateRatio(instance, 'productionExpenditure', 'productionIncome'),
-                    cashFlowBank: calculateRatio(instance, 'cashInflowAfterRepayments', ['capitalExpenditure', 'unallocatedProductionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
-                    //TODO: add payments to co-ops with crop deliveries to cashFlowFarming denominator
-                    cashFlowFarming: calculateRatio(instance, 'totalIncome', ['capitalExpenditure', 'productionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
-                    debtToTurnover: calculateRatio(instance, 'totalLiabilities', ['productionIncome', 'otherIncome']),
-                    interestToTurnover: calculateRatio(instance, 'totalInterest', ['productionIncome', 'otherIncome']),
-                    //TODO: change denominator to total asset value used for farming
-                    returnOnInvestment: calculateRatio(instance, 'operatingProfit', 'totalAssets')
-                };
-
-                calculateAssetsLiabilitiesRatios(instance);
-                calculateAccountRatios(instance);
-            }
-
-            function calculateAccountRatios (instance) {
-                var debtRatioYear1 = calculateDebtStageRatio(instance, 0),
-                    debtRatioYear2 = calculateDebtStageRatio(instance, 1);
-
-                instance.data.ratios = underscore.extend(instance.data.ratios, {
-                    debtMinStage: [debtRatioYear1.min, debtRatioYear2.min],
-                    debtMaxStage: [debtRatioYear1.max, debtRatioYear2.max]
-                });
-            }
-
-            function calculateDebtStageRatio (instance, year) {
-                var yearStart = 12 * year,
-                    yearEnd = 12 * (year + 1);
-
-                function slice (array) {
-                    return array.slice(yearStart, yearEnd);
+                    instance.data.summary.yearly.grossProductionValue = safeArrayMath.plus(instance.data.summary.yearly.productionIncome, safeArrayMath.plus(instance.data.summary.yearly.livestockAdjustment, instance.data.summary.yearly.livestockConsumption));
+                    instance.data.summary.yearly.grossProfit = safeArrayMath.minus(instance.data.summary.yearly.grossProductionValue, instance.data.summary.yearly.productionExpenditure);
+                    instance.data.summary.yearly.ebitda = safeArrayMath.minus(safeArrayMath.plus(instance.data.summary.yearly.grossProfit, instance.data.summary.yearly.nonFarmIncome), instance.data.summary.yearly.nonFarmExpenditure);
+                    instance.data.summary.yearly.ebit = safeArrayMath.minus(instance.data.summary.yearly.ebitda, instance.data.summary.yearly.depreciation);
+                    instance.data.summary.yearly.interestPaid = safeArrayMath.plus(instance.data.summary.yearly.totalRent, instance.data.summary.yearly.totalInterest);
+                    instance.data.summary.yearly.ebt = safeArrayMath.minus(instance.data.summary.yearly.ebit, instance.data.summary.yearly.interestPaid);
+                    instance.data.summary.yearly.taxPaid = underscore.map(instance.data.summary.yearly.ebt, function (value) {
+                        return Math.max(0, safeMath.times(value, taxRatePerYear));
+                    });
+                    instance.data.summary.yearly.netProfit = safeArrayMath.minus(instance.data.summary.yearly.ebt, instance.data.summary.yearly.taxPaid);
                 }
 
-                var totalAssetsMinusAccountCapital = safeArrayMath.minus(slice(instance.data.summary.monthly.totalAssets), slice(instance.data.summary.monthly.primaryAccountCapital)),
-                    minusCapitalIncome = safeArrayMath.minus(totalAssetsMinusAccountCapital, slice(instance.data.summary.monthly.capitalIncome)),
-                    plusAccountCapital = safeArrayMath.plus(minusCapitalIncome, slice(instance.data.summary.monthly.primaryAccountCapital)),
-                    plusCapitalExpenditure = safeArrayMath.plus(plusAccountCapital, slice(instance.data.summary.monthly.capitalExpenditure)),
-                    plusTotalIncome = safeArrayMath.plus(plusCapitalExpenditure, slice(instance.data.summary.monthly.totalIncome)),
-                    minusCashInflowAfterRepayments = safeArrayMath.minus(plusTotalIncome, slice(instance.data.summary.monthly.cashInflowAfterRepayments)),
-                    totalDebt = slice(instance.data.summary.monthly.totalLiabilities);
+                function reEvaluateCashFlow (instance) {
+                    instance.data.cashInflow = {
+                        capitalIncome: instance.data.capitalIncome,
+                        productionIncome: instance.data.productionIncome,
+                        otherIncome: instance.data.otherIncome
+                    };
 
-                var debtRatio = underscore.map(minusCashInflowAfterRepayments, function (month, index) {
-                    return safeMath.dividedBy(totalDebt[index], month);
-                });
+                    instance.data.cashOutflow = {
+                        capitalExpenditure: instance.data.capitalExpenditure,
+                        productionExpenditure: underscore.omit(instance.data.unallocatedProductionExpenditure, ['Farm Products Consumed']),
+                        otherExpenditure: underscore.omit(instance.data.otherExpenditure, ['Farm Products Consumed'])
+                    };
+                }
 
-                return {
-                    min: underscore.min(debtRatio),
-                    max: underscore.max(debtRatio)
-                };
-            }
+                function recalculateIncomeExpensesSummary (instance, startMonth, endMonth, numberOfMonths) {
+                    var cashInflow = calculateMonthlySectionsTotal([instance.data.cashInflow.capitalIncome, instance.data.cashInflow.productionIncome, instance.data.cashInflow.otherIncome], Base.initializeArray(numberOfMonths)),
+                        cashOutflow = calculateMonthlySectionsTotal([instance.data.cashOutflow.capitalExpenditure, instance.data.cashOutflow.productionExpenditure, instance.data.cashOutflow.otherExpenditure], Base.initializeArray(numberOfMonths)),
+                        productionCreditRepayments = underscore.reduce(cashInflow, function (repayment, income, index) {
+                            repayment[index] = (income - repayment[index] < 0 ? income : repayment[index]);
+                            return repayment;
+                        }, calculateMonthlyLiabilityPropertyTotal(instance, ['production-credit'], 'repayment', startMonth, endMonth)),
+                        cashInflowAfterRepayments = safeArrayMath.minus(cashInflow, productionCreditRepayments),
+                        debtRedemptionAfterRepayments = safeArrayMath.minus(calculateMonthlySectionsTotal([instance.data.debtRedemption], Base.initializeArray(numberOfMonths)), productionCreditRepayments);
 
-            function calculateAssetsLiabilitiesRatios (instance) {
-                var defaultObj = { yearly: [], marketValue: 0, estimatedValue: 0 };
+                    underscore.extend(instance.data.summary.monthly, {
+                        // Income
+                        productionIncome: calculateMonthlySectionsTotal([instance.data.productionIncome], Base.initializeArray(numberOfMonths)),
+                        capitalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome], Base.initializeArray(numberOfMonths)),
+                        capitalProfit: calculateMonthlySectionsTotal([instance.data.capitalProfit], Base.initializeArray(numberOfMonths)),
+                        otherIncome: calculateMonthlySectionsTotal([instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                        nonFarmIncome: calculateMonthlySectionsTotal([instance.data.capitalProfit, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                        totalIncome: calculateMonthlySectionsTotal([instance.data.capitalIncome, instance.data.productionIncome, instance.data.otherIncome], Base.initializeArray(numberOfMonths)),
+                        cashInflowAfterRepayments: cashInflowAfterRepayments,
 
-                instance.data.ratios = underscore.extend(instance.data.ratios, {
-                    netCapital: defaultObj,
-                    gearing: defaultObj,
-                    debt: defaultObj
-                });
+                        // Expenses
+                        unallocatedProductionExpenditure: calculateMonthlySectionsTotal([instance.data.unallocatedProductionExpenditure], Base.initializeArray(numberOfMonths)),
+                        productionExpenditure: calculateMonthlySectionsTotal([instance.data.productionExpenditure], Base.initializeArray(numberOfMonths)),
+                        capitalExpenditure: calculateMonthlySectionsTotal([instance.data.capitalExpenditure], Base.initializeArray(numberOfMonths)),
+                        capitalLoss: calculateMonthlySectionsTotal([instance.data.capitalLoss], Base.initializeArray(numberOfMonths)),
+                        otherExpenditure: calculateMonthlySectionsTotal([instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
+                        nonFarmExpenditure: calculateMonthlySectionsTotal([instance.data.capitalLoss, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths)),
+                        debtRedemption: debtRedemptionAfterRepayments,
+                        totalExpenditure: safeArrayMath.plus(debtRedemptionAfterRepayments, calculateMonthlySectionsTotal([instance.data.capitalExpenditure, instance.data.unallocatedProductionExpenditure, instance.data.otherExpenditure], Base.initializeArray(numberOfMonths))),
+                        cashOutflowAfterRepayments: safeArrayMath.plus(debtRedemptionAfterRepayments, cashOutflow)
+                    });
 
-                instance.data.ratios.netCapital = underscore.mapObject(instance.data.ratios.netCapital, function(value, key) {
-                    if (underscore.contains(['marketValue', 'estimatedValue'], key)) {
-                        return safeMath.dividedBy(instance.data.assetStatement.total[key], instance.data.liabilityStatement.total.currentValue);
-                    } else if (key === 'yearly') {
-                        return safeArrayMath.dividedBy(instance.data.assetStatement.total.yearly.marketValue, instance.data.liabilityStatement.total.yearlyValues);
-                    }
-                });
+                    var livestockAdjustment = [calculateYearlyLivestockAdjustment(instance, 1), calculateYearlyLivestockAdjustment(instance, 2)],
+                        livestockConsumption = [calculateYearlyLivestockConsumption(instance, 1), calculateYearlyLivestockConsumption(instance, 2)];
 
-                instance.data.ratios.debt = underscore.mapObject(instance.data.ratios.debt, function(value, key) {
-                    if (underscore.contains(['marketValue', 'estimatedValue'], key)) {
-                        return safeMath.dividedBy(instance.data.liabilityStatement.total.currentValue, instance.data.assetStatement.total[key]);
-                    } else if (key === 'yearly') {
-                        return safeArrayMath.dividedBy(instance.data.liabilityStatement.total.yearlyValues, instance.data.assetStatement.total.yearly.marketValue);
-                    }
-                });
+                    underscore.extend(instance.data.summary.yearly, {
+                        livestockAdjustment: livestockAdjustment,
+                        livestockConsumption: livestockConsumption,
 
-                instance.data.ratios.gearing = underscore.mapObject(instance.data.ratios.gearing, function(value, key) {
-                    if (underscore.contains(['marketValue', 'estimatedValue'], key)) {
-                        return safeMath.dividedBy(instance.data.liabilityStatement.total.currentValue, safeMath.minus(instance.data.assetStatement.total[key], instance.data.liabilityStatement.total.currentValue));
-                    } else if (key === 'yearly') {
-                        return safeArrayMath.dividedBy(instance.data.liabilityStatement.total.yearlyValues, safeArrayMath.minus(instance.data.assetStatement.total.yearly.marketValue, instance.data.liabilityStatement.total.yearlyValues));
-                    }
-                });
-            }
+                        // Income
+                        productionIncome: [calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.productionIncome, 2)],
+                        productionIncomeComposition: [calculateYearlyProductionIncomeComposition(instance.data.productionIncomeComposition, 1), calculateYearlyProductionIncomeComposition(instance.data.productionIncomeComposition, 2)],
+                        capitalIncome: [calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalIncome, 2)],
+                        capitalProfit: [calculateYearlyTotal(instance.data.summary.monthly.capitalProfit, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalProfit, 2)],
+                        otherIncome: [calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.otherIncome, 2)],
+                        nonFarmIncome: [calculateYearlyTotal(instance.data.summary.monthly.nonFarmIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.nonFarmIncome, 2)],
+                        totalIncome: [calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 1), calculateYearlyTotal(instance.data.summary.monthly.totalIncome, 2)],
+                        cashInflowAfterRepayments: [calculateYearlyTotal(instance.data.summary.monthly.cashInflowAfterRepayments, 1), calculateYearlyTotal(instance.data.summary.monthly.cashInflowAfterRepayments, 2)],
 
-            function calculateRatio(instance, numeratorProperties, denominatorProperties) {
-                numeratorProperties = (underscore.isArray(numeratorProperties) ? numeratorProperties : [numeratorProperties]);
-                denominatorProperties = (underscore.isArray(denominatorProperties) ? denominatorProperties : [denominatorProperties]);
+                        // Expenses
+                        unallocatedProductionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.unallocatedProductionExpenditure, 2)],
+                        productionExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.productionExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.productionExpenditure, 2)],
+                        capitalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalExpenditure, 2)],
+                        capitalLoss: [calculateYearlyTotal(instance.data.summary.monthly.capitalLoss, 1), calculateYearlyTotal(instance.data.summary.monthly.capitalLoss, 2)],
+                        otherExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.otherExpenditure, 2)],
+                        nonFarmExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.nonFarmExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.nonFarmExpenditure, 2)],
+                        debtRedemption: [calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 1), calculateYearlyTotal(instance.data.summary.monthly.debtRedemption, 2)],
+                        totalExpenditure: [calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 1), calculateYearlyTotal(instance.data.summary.monthly.totalExpenditure, 2)],
+                        cashOutflowAfterRepayments: [calculateYearlyTotal(instance.data.summary.monthly.cashOutflowAfterRepayments, 1), calculateYearlyTotal(instance.data.summary.monthly.cashOutflowAfterRepayments, 2)]
+                    });
+                }
 
-                function sumPropertyValuesForInterval (propertyList, interval) {
-                    if (!instance.data.summary[interval]) {
-                        return [];
-                    }
+                function recalculateAssetsLiabilitiesInterestSummary (instance, startMonth, endMonth) {
+                    var numberOfMonths = instance.numberOfMonths,
+                        numberOfYears = instance.numberOfYears;
 
-                    var valueArrays = underscore.chain(propertyList)
-                        .map(function(propertyName) {
-                            if (propertyName.charAt(0) === '-') {
-                                propertyName = propertyName.substr(1);
-                                return safeArrayMath.negate(instance.data.summary[interval][propertyName]);
-                            }
-                            return instance.data.summary[interval][propertyName];
+                    underscore.extend(instance.data.summary.monthly, {
+                        // Interest
+                        productionCreditInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'interest', startMonth, endMonth),
+                        mediumTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'interest', startMonth, endMonth),
+                        longTermInterest: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'interest', startMonth, endMonth),
+                        totalInterest: safeArrayMath.plus(calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'long-term', 'medium-term'], 'interest', startMonth, endMonth), instance.data.summary.monthly.primaryAccountInterest),
+
+                        // Liabilities
+                        currentLiabilities: safeArrayMath.plus(calculateMonthlyLiabilityPropertyTotal(instance, ['short-term', 'production-credit'], 'closing', startMonth, endMonth), instance.data.summary.monthly.primaryAccountLiability),
+                        mediumLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['medium-term'], 'closing', startMonth, endMonth),
+                        longLiabilities: calculateMonthlyLiabilityPropertyTotal(instance, ['long-term'], 'closing', startMonth, endMonth),
+                        totalLiabilities: safeArrayMath.plus(calculateMonthlyLiabilityPropertyTotal(instance, [], 'closing', startMonth, endMonth), instance.data.summary.monthly.primaryAccountLiability),
+                        totalRent: calculateMonthlyLiabilityPropertyTotal(instance, ['rent'], 'repayment', startMonth, endMonth),
+
+                        // Assets
+                        currentAssets: safeArrayMath.plus(calculateMonthlyAssetTotal(instance, ['short-term']), instance.data.summary.monthly.primaryAccountCapital),
+                        movableAssets: calculateMonthlyAssetTotal(instance, ['medium-term']),
+                        fixedAssets: calculateMonthlyAssetTotal(instance, ['long-term']),
+                        totalAssets: safeArrayMath.plus(calculateMonthlyAssetTotal(instance, ['short-term', 'medium-term', 'long-term']), instance.data.summary.monthly.primaryAccountCapital),
+
+                        depreciation: instance.data.assetStatement.total.monthly.depreciation || Base.initializeArray(numberOfMonths)
+                    });
+
+                    underscore.extend(instance.data.summary.yearly, {
+                        // Interest
+                        productionCreditInterest: [calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.productionCreditInterest, 2)],
+                        mediumTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.mediumTermInterest, 2)],
+                        longTermInterest: [calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.longTermInterest, 2)],
+                        totalInterest: [calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.totalInterest, 2)],
+
+                        // Liabilities
+                        currentLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'short-term'),
+                        mediumLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'medium-term'),
+                        longLiabilities: calculateAssetLiabilityGroupTotal(instance, 'liability', 'long-term'),
+                        totalLiabilities: [calculateEndOfYearValue(instance.data.summary.monthly.totalLiabilities, 1), calculateEndOfYearValue(instance.data.summary.monthly.totalLiabilities, 2)],
+                        totalRent: [calculateYearlyTotal(instance.data.summary.monthly.totalRent, 1), calculateYearlyTotal(instance.data.summary.monthly.totalRent, 2)],
+
+                        // Assets
+                        currentAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'short-term'),
+                        movableAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'medium-term'),
+                        fixedAssets: calculateAssetLiabilityGroupTotal(instance, 'asset', 'long-term'),
+                        totalAssets: instance.data.assetStatement.total.yearly.marketValue || Base.initializeArray(numberOfYears),
+
+                        depreciation: instance.data.assetStatement.total.yearly.depreciation || Base.initializeArray(numberOfYears)
+                    });
+
+                    calculateAssetLiabilityGrowth(instance);
+                }
+
+                function calculateAssetLiabilityGrowth (instance) {
+                    var currentWorth = safeMath.minus(instance.data.assetStatement.total.estimatedValue, instance.data.liabilityStatement.total.currentValue),
+                        netWorth = safeArrayMath.minus(instance.data.assetStatement.total.yearly.marketValue, instance.data.liabilityStatement.total.yearlyValues);
+
+                    underscore.extend(instance.data.summary.yearly, {
+                        netWorth: {
+                            current: currentWorth,
+                            yearly: netWorth
+                        },
+                        netWorthGrowth: underscore.map(netWorth, function (value, index) {
+                            return (index === 0 ? safeMath.minus(value, currentWorth) : safeMath.minus(value, netWorth[index - 1]));
                         })
-                        .compact()
+                    });
+                }
+
+                /**
+                 * Primary Account Handling
+                 */
+                function recalculatePrimaryAccount(instance, startMonth, endMonth, numberOfMonths) {
+                    var numberOfYears = instance.numberOfYears,
+                        defaultObject = {
+                            opening: 0,
+                            inflow: 0,
+                            outflow: 0,
+                            balance: 0,
+                            interestPayable: 0,
+                            interestReceivable: 0,
+                            closing: 0
+                        };
+
+                    instance.data.summary.monthly.primaryAccountInterest = Base.initializeArray(numberOfMonths);
+                    instance.data.summary.monthly.primaryAccountCapital = Base.initializeArray(numberOfMonths);
+                    instance.data.summary.monthly.primaryAccountLiability = Base.initializeArray(numberOfMonths);
+
+                    instance.account.monthly = underscore.chain(underscore.range(numberOfMonths))
+                        .map(function () {
+                            return underscore.extend({}, defaultObject);
+                        })
+                        .reduce(function (monthly, month, index) {
+                            month.opening = (index === 0 ? instance.account.openingBalance : monthly[monthly.length - 1].closing);
+                            month.inflow = instance.data.summary.monthly.cashInflowAfterRepayments[index];
+                            month.outflow = instance.data.summary.monthly.cashOutflowAfterRepayments[index];
+                            month.balance = safeMath.plus(month.opening, safeMath.minus(month.inflow, month.outflow));
+                            month.interestPayable = (month.balance < 0 && instance.account.interestRateDebit ?
+                                safeMath.times(Math.abs(month.balance), safeMath.chain(instance.account.interestRateDebit)
+                                    .dividedBy(100)
+                                    .dividedBy(12)
+                                    .toNumber()) : 0);
+                            month.interestReceivable = (month.balance > 0 && instance.account.interestRateCredit ?
+                                safeMath.times(month.balance, safeMath.chain(instance.account.interestRateCredit)
+                                    .dividedBy(100)
+                                    .dividedBy(12)
+                                    .toNumber()) : 0);
+                            month.closing = safeMath.chain(month.balance).minus(month.interestPayable).plus(month.interestReceivable).toNumber();
+
+                            instance.data.summary.monthly.primaryAccountInterest[index] = safeMath.plus(instance.data.summary.monthly.primaryAccountInterest[index], month.interestPayable);
+                            instance.data.summary.monthly.primaryAccountCapital[index] = safeMath.plus(instance.data.summary.monthly.primaryAccountCapital[index], Math.abs(Math.max(0, month.closing)));
+                            instance.data.summary.monthly.primaryAccountLiability[index] = safeMath.plus(instance.data.summary.monthly.primaryAccountLiability[index], Math.abs(Math.min(0, month.closing)));
+
+                            monthly.push(month);
+                            return monthly;
+                        }, [])
                         .value();
 
-                    return underscore.reduce(valueArrays.slice(1), function(result, array) {
-                        return safeArrayMath.plus(result, array);
-                    }, angular.copy(valueArrays[0]) || []);
+                    instance.account.yearly = underscore.chain(underscore.range(numberOfYears))
+                        .map(function () {
+                            return underscore.extend({
+                                worstBalance: 0,
+                                bestBalance: 0,
+                                openingMonth: null,
+                                closingMonth: null
+                            }, defaultObject);
+                        })
+                        .reduce(function (yearly, year, index) {
+                            var months = instance.account.monthly.slice(index * 12, (index + 1) * 12);
+                            year.opening = months[0].opening;
+                            year.inflow = safeArrayMath.reduceProperty(months, 'inflow');
+                            year.outflow = safeArrayMath.reduceProperty(months, 'outflow');
+                            year.balance = safeMath.plus(year.opening, safeMath.minus(year.inflow, year.outflow));
+                            year.interestPayable = safeArrayMath.reduceProperty(months, 'interestPayable');
+                            year.interestReceivable = safeArrayMath.reduceProperty(months, 'interestReceivable');
+                            year.closing = safeMath.chain(year.balance).minus(year.interestPayable).plus(year.interestReceivable).toNumber();
+                            year.openingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').format('YYYY-MM-DD');
+                            year.closingMonth = moment(startMonth, 'YYYY-MM-DD').add(index, 'years').add(months.length - 1, 'months').format('YYYY-MM-DD');
+
+                            var bestBalance = underscore.max(months, function (month) { return month.closing; }),
+                                worstBalance = underscore.min(months, function (month) { return month.closing; });
+                            year.bestBalance = {
+                                balance: bestBalance.closing,
+                                month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(bestBalance), 'months').format('YYYY-MM-DD')
+                            };
+                            year.worstBalance = {
+                                balance: worstBalance.closing,
+                                month: moment(year.openingMonth, 'YYYY-MM-DD').add(months.indexOf(worstBalance), 'months').format('YYYY-MM-DD')
+                            };
+
+                            yearly.push(year);
+                            return yearly;
+                        }, [])
+                        .value();
+
+                    instance.data.summary.yearly.primaryAccountInterest = [calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 1), calculateYearlyTotal(instance.data.summary.monthly.primaryAccountInterest, 2)];
+                    instance.data.summary.yearly.primaryAccountCapital = [calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountCapital, 1), calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountCapital, 2)];
+                    instance.data.summary.yearly.primaryAccountLiability = [calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountLiability, 1), calculateEndOfYearValue(instance.data.summary.monthly.primaryAccountLiability, 2)];
                 }
 
-                return {
-                    monthly: safeArrayMath.dividedBy(sumPropertyValuesForInterval(numeratorProperties, 'monthly'), sumPropertyValuesForInterval(denominatorProperties, 'monthly')),
-                    yearly: safeArrayMath.dividedBy(sumPropertyValuesForInterval(numeratorProperties, 'yearly'), sumPropertyValuesForInterval(denominatorProperties, 'yearly'))
+                function addPrimaryAccountAssetsLiabilities (instance) {
+                    // Bank Capital
+                    instance.data.assetStatement['short-term'] = instance.data.assetStatement['short-term'] || [];
+                    instance.data.assetStatement['short-term'].push({
+                        name: 'Bank Capital',
+                        estimatedValue: Math.max(0, instance.account.openingBalance),
+                        marketValue: Math.max(0, instance.account.openingBalance),
+                        monthly: {
+                            marketValue: underscore.map(instance.account.monthly, function (monthly) {
+                                return Math.max(0, monthly.closing);
+                            }),
+                            depreciation: Base.initializeArray(instance.numberOfMonths)
+                        },
+                        yearly: {
+                            marketValue: underscore.map(instance.account.yearly, function (yearly) {
+                                return Math.max(0, yearly.closing);
+                            }),
+                            depreciation: Base.initializeArray(instance.numberOfYears)
+                        }
+                    });
+
+                    // Bank Overdraft
+                    instance.data.liabilityStatement['short-term'] = instance.data.liabilityStatement['short-term'] || [];
+                    instance.data.liabilityStatement['short-term'].push({
+                        name: 'Bank Overdraft',
+                        currentValue: Math.abs(Math.min(0, instance.account.openingBalance)),
+                        yearlyValues: [instance.data.summary.yearly.primaryAccountLiability[0], instance.data.summary.yearly.primaryAccountLiability[1]]
+                    });
+                }
+
+                /**
+                 * Ratios
+                 */
+                function recalculateRatios (instance) {
+                    instance.data.ratios = {
+                        interestCover: calculateRatio(instance, 'operatingProfit', 'totalInterest'),
+                        inputOutput: calculateRatio(instance, 'productionIncome', ['productionExpenditure', 'productionCreditInterest', 'primaryAccountInterest']),
+                        productionCost: calculateRatio(instance, 'productionExpenditure', 'productionIncome'),
+                        cashFlowBank: calculateRatio(instance, 'cashInflowAfterRepayments', ['capitalExpenditure', 'unallocatedProductionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
+                        //TODO: add payments to co-ops with crop deliveries to cashFlowFarming denominator
+                        cashFlowFarming: calculateRatio(instance, 'totalIncome', ['capitalExpenditure', 'productionExpenditure', 'debtRedemption', 'otherExpenditure', 'primaryAccountInterest']),
+                        debtToTurnover: calculateRatio(instance, 'totalLiabilities', ['productionIncome', 'otherIncome']),
+                        interestToTurnover: calculateRatio(instance, 'totalInterest', ['productionIncome', 'otherIncome']),
+                        //TODO: change denominator to total asset value used for farming
+                        returnOnInvestment: calculateRatio(instance, 'operatingProfit', 'totalAssets')
+                    };
+
+                    calculateAssetsLiabilitiesRatios(instance);
+                    calculateAccountRatios(instance);
+                }
+
+                function calculateAccountRatios (instance) {
+                    var debtRatioYear1 = calculateDebtStageRatio(instance, 0),
+                        debtRatioYear2 = calculateDebtStageRatio(instance, 1);
+
+                    instance.data.ratios = underscore.extend(instance.data.ratios, {
+                        debtMinStage: [debtRatioYear1.min, debtRatioYear2.min],
+                        debtMaxStage: [debtRatioYear1.max, debtRatioYear2.max]
+                    });
+                }
+
+                function calculateDebtStageRatio (instance, year) {
+                    var yearStart = 12 * year,
+                        yearEnd = 12 * (year + 1);
+
+                    function slice (array) {
+                        return array.slice(yearStart, yearEnd);
+                    }
+
+                    var totalAssetsMinusAccountCapital = safeArrayMath.minus(slice(instance.data.summary.monthly.totalAssets), slice(instance.data.summary.monthly.primaryAccountCapital)),
+                        minusCapitalIncome = safeArrayMath.minus(totalAssetsMinusAccountCapital, slice(instance.data.summary.monthly.capitalIncome)),
+                        plusAccountCapital = safeArrayMath.plus(minusCapitalIncome, slice(instance.data.summary.monthly.primaryAccountCapital)),
+                        plusCapitalExpenditure = safeArrayMath.plus(plusAccountCapital, slice(instance.data.summary.monthly.capitalExpenditure)),
+                        plusTotalIncome = safeArrayMath.plus(plusCapitalExpenditure, slice(instance.data.summary.monthly.totalIncome)),
+                        minusCashInflowAfterRepayments = safeArrayMath.minus(plusTotalIncome, slice(instance.data.summary.monthly.cashInflowAfterRepayments)),
+                        totalDebt = slice(instance.data.summary.monthly.totalLiabilities);
+
+                    var debtRatio = underscore.map(minusCashInflowAfterRepayments, function (month, index) {
+                        return safeMath.dividedBy(totalDebt[index], month);
+                    });
+
+                    return {
+                        min: underscore.min(debtRatio),
+                        max: underscore.max(debtRatio)
+                    };
+                }
+
+                function calculateAssetsLiabilitiesRatios (instance) {
+                    var defaultObj = { yearly: [], marketValue: 0, estimatedValue: 0 };
+
+                    instance.data.ratios = underscore.extend(instance.data.ratios, {
+                        netCapital: defaultObj,
+                        gearing: defaultObj,
+                        debt: defaultObj
+                    });
+
+                    instance.data.ratios.netCapital = underscore.mapObject(instance.data.ratios.netCapital, function(value, key) {
+                        if (underscore.contains(['marketValue', 'estimatedValue'], key)) {
+                            return safeMath.dividedBy(instance.data.assetStatement.total[key], instance.data.liabilityStatement.total.currentValue);
+                        } else if (key === 'yearly') {
+                            return safeArrayMath.dividedBy(instance.data.assetStatement.total.yearly.marketValue, instance.data.liabilityStatement.total.yearlyValues);
+                        }
+                    });
+
+                    instance.data.ratios.debt = underscore.mapObject(instance.data.ratios.debt, function(value, key) {
+                        if (underscore.contains(['marketValue', 'estimatedValue'], key)) {
+                            return safeMath.dividedBy(instance.data.liabilityStatement.total.currentValue, instance.data.assetStatement.total[key]);
+                        } else if (key === 'yearly') {
+                            return safeArrayMath.dividedBy(instance.data.liabilityStatement.total.yearlyValues, instance.data.assetStatement.total.yearly.marketValue);
+                        }
+                    });
+
+                    instance.data.ratios.gearing = underscore.mapObject(instance.data.ratios.gearing, function(value, key) {
+                        if (underscore.contains(['marketValue', 'estimatedValue'], key)) {
+                            return safeMath.dividedBy(instance.data.liabilityStatement.total.currentValue, safeMath.minus(instance.data.assetStatement.total[key], instance.data.liabilityStatement.total.currentValue));
+                        } else if (key === 'yearly') {
+                            return safeArrayMath.dividedBy(instance.data.liabilityStatement.total.yearlyValues, safeArrayMath.minus(instance.data.assetStatement.total.yearly.marketValue, instance.data.liabilityStatement.total.yearlyValues));
+                        }
+                    });
+                }
+
+                function calculateRatio(instance, numeratorProperties, denominatorProperties) {
+                    numeratorProperties = (underscore.isArray(numeratorProperties) ? numeratorProperties : [numeratorProperties]);
+                    denominatorProperties = (underscore.isArray(denominatorProperties) ? denominatorProperties : [denominatorProperties]);
+
+                    function sumPropertyValuesForInterval (propertyList, interval) {
+                        if (!instance.data.summary[interval]) {
+                            return [];
+                        }
+
+                        var valueArrays = underscore.chain(propertyList)
+                            .map(function(propertyName) {
+                                if (propertyName.charAt(0) === '-') {
+                                    propertyName = propertyName.substr(1);
+                                    return safeArrayMath.negate(instance.data.summary[interval][propertyName]);
+                                }
+                                return instance.data.summary[interval][propertyName];
+                            })
+                            .compact()
+                            .value();
+
+                        return underscore.reduce(valueArrays.slice(1), function(result, array) {
+                            return safeArrayMath.plus(result, array);
+                        }, angular.copy(valueArrays[0]) || []);
+                    }
+
+                    return {
+                        monthly: safeArrayMath.dividedBy(sumPropertyValuesForInterval(numeratorProperties, 'monthly'), sumPropertyValuesForInterval(denominatorProperties, 'monthly')),
+                        yearly: safeArrayMath.dividedBy(sumPropertyValuesForInterval(numeratorProperties, 'yearly'), sumPropertyValuesForInterval(denominatorProperties, 'yearly'))
+                    }
+                }
+
+                computedProperty(this, 'startDate', function () {
+                    return this.data.startDate;
+                });
+
+                computedProperty(this, 'endDate', function () {
+                    this.data.endDate = (this.data.startDate ?
+                        moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD') :
+                        this.data.endDate);
+
+                    return this.data.endDate;
+                });
+
+                computedProperty(this, 'account', function () {
+                    return this.data.account;
+                });
+
+                computedProperty(this, 'adjustmentFactors', function () {
+                    return this.data.adjustmentFactors;
+                });
+
+                computedProperty(this, 'numberOfMonths', function () {
+                    return moment(this.endDate, 'YYYY-MM-DD').diff(moment(this.startDate, 'YYYY-MM-DD'), 'months');
+                });
+
+                computedProperty(this, 'numberOfYears', function () {
+                    return Math.ceil(moment(this.endDate, 'YYYY-MM-DD').diff(moment(this.startDate, 'YYYY-MM-DD'), 'years', true));
+                });
+
+                computedProperty(this, 'models', function () {
+                    return this.data.models;
+                });
+
+                privateProperty(this, 'reEvaluate', function() {
+                    reEvaluateBusinessPlan(this);
+                });
+
+                privateProperty(this, 'recalculateAccount', function() {
+                    recalculatePrimaryAccount(this);
+                });
+
+                if (underscore.isEmpty(this.data.models.budgets) && !underscore.isEmpty(this.data.models.productionSchedules))  {
+                    updateBudgets(this);
+                }
+
+                if (this.data.version !== _version) {
+                    this.updateProductionSchedules(this.data.models.productionSchedules);
+                    this.updateFinancials(this.data.models.financials);
+                    this.data.version = _version;
                 }
             }
 
-            computedProperty(this, 'startDate', function () {
-                return this.data.startDate;
-            });
-
-            computedProperty(this, 'endDate', function () {
-                this.data.endDate = (this.data.startDate ?
-                    moment(this.data.startDate).add(2, 'y').format('YYYY-MM-DD') :
-                    this.data.endDate);
-
-                return this.data.endDate;
-            });
-
-            computedProperty(this, 'account', function () {
-                return this.data.account;
-            });
-
-            computedProperty(this, 'adjustmentFactors', function () {
-                return this.data.adjustmentFactors;
-            });
-
-            computedProperty(this, 'numberOfMonths', function () {
-                return moment(this.endDate, 'YYYY-MM-DD').diff(moment(this.startDate, 'YYYY-MM-DD'), 'months');
-            });
-
-            computedProperty(this, 'numberOfYears', function () {
-                return Math.ceil(moment(this.endDate, 'YYYY-MM-DD').diff(moment(this.startDate, 'YYYY-MM-DD'), 'years', true));
-            });
-
-            computedProperty(this, 'models', function () {
-                return this.data.models;
-            });
-
-            privateProperty(this, 'reEvaluate', function() {
-                reEvaluateBusinessPlan(this);
-            });
-
-            privateProperty(this, 'recalculateAccount', function() {
-                recalculatePrimaryAccount(this);
-            });
-
-            if (underscore.isEmpty(this.data.models.budgets) && !underscore.isEmpty(this.data.models.productionSchedules))  {
-                updateBudgets(this);
+            function updateBudgets (instance) {
+                instance.data.models.budgets = underscore.chain(instance.data.models.productionSchedules)
+                    .pluck('budget')
+                    .compact()
+                    .uniq(false, function (budget) {
+                        return budget.uuid;
+                    })
+                    .value();
             }
 
-            if (this.data.version !== _version) {
-                this.updateProductionSchedules(this.data.models.productionSchedules);
-                this.updateFinancials(this.data.models.financials);
-                this.data.version = _version;
+            inheritModel(BusinessPlan, Document);
+
+            readOnlyProperty(BusinessPlan, 'incomeExpenseTypes', {
+                'capital': 'Capital',
+                'production': 'Production',
+                'other': 'Other'
+            });
+
+            readOnlyProperty(BusinessPlan, 'incomeSubtypes', {
+                'other': [
+                    'Interest, Dividends & Subsidies',
+                    'Pension Fund',
+                    'Short-term Insurance Claims',
+                    'VAT Refund',
+                    'Inheritance',
+                    'Shares',
+                    'Other']
+            });
+
+            readOnlyProperty(BusinessPlan, 'expenseSubtypes', {
+                'production': [
+                    'Accident Insurance',
+                    'Administration',
+                    'Accounting Fees',
+                    'Bank Charges',
+                    'Crop Insurance',
+                    'Fuel',
+                    'Electricity',
+                    'Government Levy',
+                    'Licenses & Membership Fees',
+                    'Long term insurance & Policies',
+                    'Office Costs',
+                    'Property Rates',
+                    'Protective Clothing',
+                    'Rations',
+                    'Repairs & Maintenance',
+                    'Staff Salaries & Wages',
+                    'Security',
+                    'Short-term Insurance',
+                    'Unemployment Insurance',
+                    'Other'],
+                'other': [
+                    'Drawings',
+                    'Medical',
+                    'Life insurance',
+                    'University / School fees',
+                    'Other']
+            });
+
+            BusinessPlan.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    equal: {
+                        to: 'financial resource plan'
+                    }
+                },
+                startDate: {
+                    required: true,
+                    format: {
+                        date: true
+                    }
+                }
+            }, Document.validations));
+
+            return BusinessPlan;
+        }];
+
+    DocumentFactoryProvider.add('financial resource plan', 'BusinessPlan');
+}]);
+
+var sdkModelCropInspectionDocument = angular.module('ag.sdk.model.crop-inspection', ['ag.sdk.model.document']);
+
+sdkModelCropInspectionDocument.provider('CropInspection', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['Base', 'computedProperty', 'Document', 'inheritModel', 'readOnlyProperty', 'underscore',
+        function (Base, computedProperty, Document, inheritModel, readOnlyProperty, underscore) {
+            function CropInspection (attrs) {
+                Document.apply(this, arguments);
+
+                Base.initializeObject(this.data, 'attachments', []);
+                Base.initializeObject(this.data, 'request', {});
+                Base.initializeObject(this.data, 'report', {});
+                Base.initializeObject(this.data.request, 'assets', []);
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.docType = (underscore.contains(CropInspection.docTypes, attrs.docType) ? attrs.docType : underscore.first(CropInspection.docTypes));
             }
-        }
 
-        function updateBudgets (instance) {
-            instance.data.models.budgets = underscore.chain(instance.data.models.productionSchedules)
-                .pluck('budget')
-                .compact()
-                .uniq(false, function (budget) {
-                    return budget.uuid;
-                })
-                .value();
-        }
+            inheritModel(CropInspection, Document);
 
-        inheritModel(BusinessPlan, Document);
+            readOnlyProperty(CropInspection, 'approvalTypes', [
+                'Approved',
+                'Not Approved',
+                'Not Planted']);
 
-        readOnlyProperty(BusinessPlan, 'incomeExpenseTypes', {
-            'capital': 'Capital',
-            'production': 'Production',
-            'other': 'Other'
-        });
+            readOnlyProperty(CropInspection, 'commentTypes', [
+                'Crop amendment',
+                'Crop re-plant',
+                'Insurance coverage discontinued',
+                'Multi-insured',
+                'Without prejudice',
+                'Wrongfully reported']);
 
-        readOnlyProperty(BusinessPlan, 'incomeSubtypes', {
-            'other': [
-                'Interest, Dividends & Subsidies',
-                'Pension Fund',
-                'Short-term Insurance Claims',
-                'VAT Refund',
-                'Inheritance',
-                'Shares',
-                'Other']
-        });
+            readOnlyProperty(CropInspection, 'docTypes', [
+                'emergence inspection',
+                'hail inspection',
+                'harvest inspection',
+                'preharvest inspection',
+                'progress inspection']);
 
-        readOnlyProperty(BusinessPlan, 'expenseSubtypes', {
-            'production': [
-                'Accident Insurance',
-                'Administration',
-                'Accounting Fees',
-                'Bank Charges',
-                'Crop Insurance',
-                'Fuel',
-                'Electricity',
-                'Government Levy',
-                'Licenses & Membership Fees',
-                'Long term insurance & Policies',
-                'Office Costs',
-                'Property Rates',
-                'Protective Clothing',
-                'Rations',
-                'Repairs & Maintenance',
-                'Staff Salaries & Wages',
-                'Security',
-                'Short-term Insurance',
-                'Unemployment Insurance',
-                'Other'],
-            'other': [
-                'Drawings',
-                'Medical',
-                'Life insurance',
-                'University / School fees',
-                'Other']
-        });
+            readOnlyProperty(CropInspection, 'moistureStatuses', [
+                'Dry',
+                'Moist',
+                'Wet']);
 
-        BusinessPlan.validates({
-            author: {
-                required: true,
-                length: {
-                    min: 1,
-                    max: 255
+            CropInspection.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    inclusion: {
+                        in: CropInspection.docTypes
+                    }
                 }
-            },
-            docType: {
-                required: true,
-                equal: {
-                    to: 'financial resource plan'
-                }
-            },
-            organizationId: {
-                required: true,
-                numeric: true
-            },
-            startDate: {
-                required: true,
-                format: {
-                    date: true
-                }
-            },
-            title: {
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            }
-        });
+            }, Document.validations));
 
-        return BusinessPlan;
-    }]);
+            return CropInspection;
+        }];
+
+    DocumentFactoryProvider.add('emergence inspection', 'CropInspection');
+    DocumentFactoryProvider.add('hail inspection', 'CropInspection');
+    DocumentFactoryProvider.add('harvest inspection', 'CropInspection');
+    DocumentFactoryProvider.add('preharvest inspection', 'CropInspection');
+    DocumentFactoryProvider.add('progress inspection', 'CropInspection');
+}]);
 
 var sdkModelDesktopValuationDocument = angular.module('ag.sdk.model.desktop-valuation', ['ag.sdk.model.comparable-sale', 'ag.sdk.model.document']);
 
-sdkModelDesktopValuationDocument.factory('DesktopValuation', ['Base', 'ComparableSale', 'computedProperty', 'Document', 'inheritModel', 'privateProperty', 'underscore',
-    function (Base, ComparableSale, computedProperty, Document, inheritModel, privateProperty, underscore) {
-        function DesktopValuation (attrs) {
-            Document.apply(this, arguments);
+sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['Base', 'ComparableSale', 'computedProperty', 'Document', 'inheritModel', 'privateProperty', 'underscore',
+        function (Base, ComparableSale, computedProperty, Document, inheritModel, privateProperty, underscore) {
+            function DesktopValuation (attrs) {
+                Document.apply(this, arguments);
 
-            this.docType = 'desktop valuation';
+                this.docType = 'desktop valuation';
 
-            var defaultReportBody = '<div class="tinymce-container pdf-container">' +
-                '<h2 id="property-description">Property Description</h2><br/><table id="property-description-table" width="100%"></table><br/>' +
-                '<h2 id="farmland-value">Estimated Farmland Value</h2><br/><div id="farmland-value-table"></div><br/>' +
-                '<h2 id="regional-value">Regional Value Development</h2><br/><div id="regional-value-graph"></div><br/>' +
-                '<h2 id="comparable-sales">Comparable Sales</h2><table id="comparable-sales-table" width="100%"></table><br/>' +
-                '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
-                '</div>';
+                var defaultReportBody = '<div class="tinymce-container pdf-container">' +
+                    '<h2 id="property-description">Property Description</h2><br/><table id="property-description-table" width="100%"></table><br/>' +
+                    '<h2 id="farmland-value">Estimated Farmland Value</h2><br/><div id="farmland-value-table"></div><br/>' +
+                    '<h2 id="regional-value">Regional Value Development</h2><br/><div id="regional-value-graph"></div><br/>' +
+                    '<h2 id="comparable-sales">Comparable Sales</h2><table id="comparable-sales-table" width="100%"></table><br/>' +
+                    '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
+                    '</div>';
 
-            Base.initializeObject(this.data, 'attachments', []);
-            Base.initializeObject(this.data, 'request', {});
-            Base.initializeObject(this.data, 'report', {});
+                Base.initializeObject(this.data, 'attachments', []);
+                Base.initializeObject(this.data, 'request', {});
+                Base.initializeObject(this.data, 'report', {});
 
-            Base.initializeObject(this.data.request, 'farmland', []);
+                Base.initializeObject(this.data.request, 'farmland', []);
 
-            Base.initializeObject(this.data.report, 'body', defaultReportBody);
-            Base.initializeObject(this.data.report, 'comparableSales', []);
-            Base.initializeObject(this.data.report, 'improvements', []);
-            Base.initializeObject(this.data.report, 'improvementsValue', {});
-            Base.initializeObject(this.data.report, 'landUseComponents', {});
-            Base.initializeObject(this.data.report, 'landUseValue', {});
-            Base.initializeObject(this.data.report, 'summary', {});
+                Base.initializeObject(this.data.report, 'body', defaultReportBody);
+                Base.initializeObject(this.data.report, 'comparableSales', []);
+                Base.initializeObject(this.data.report, 'improvements', []);
+                Base.initializeObject(this.data.report, 'improvementsValue', {});
+                Base.initializeObject(this.data.report, 'landUseComponents', {});
+                Base.initializeObject(this.data.report, 'landUseValue', {});
+                Base.initializeObject(this.data.report, 'summary', {});
 
-            /**
-             * Legal Entity handling
-             */
-            privateProperty(this, 'setLegalEntity', function (entity) {
-                this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
-            });
-
-            /**
-             * Attachment handling
-             */
-            privateProperty(this, 'addAttachment', function (attachment) {
-                this.removeAttachment(attachment);
-
-                this.data.attachments.push(attachment);
-            });
-
-            privateProperty(this, 'removeAttachment', function (attachment) {
-                this.data.attachments = underscore.reject(this.data.attachments, function (item) {
-                    return item.key === attachment.key;
-                });
-            });
-
-            /**
-             * Farmland handling
-             */
-            privateProperty(this, 'getFarmland', function () {
-                return this.data.request.farmland;
-            });
-
-            privateProperty(this, 'hasFarmland', function (farmland) {
-                return underscore.some(this.data.request.farmland, function (asset) {
-                    return asset.assetKey === farmland.assetKey;
-                });
-            });
-
-            privateProperty(this, 'addFarmland', function (farmland) {
-                this.removeFarmland(farmland);
-
-                this.data.request.farmland.push(farmland);
-            });
-
-            privateProperty(this, 'removeFarmland', function (farmland) {
-                this.data.request.farmland = underscore.reject(this.data.request.farmland, function (asset) {
-                    return asset.assetKey === farmland.assetKey;
-                });
-            });
-
-            privateProperty(this, 'getFarmlandSummary', function () {
-                return underscore.chain(this.data.request.farmland)
-                    .groupBy(function (farmland) {
-                        return (farmland.data.farmLabel ? farmland.data.farmLabel :
-                            (farmland.data.officialFarmName ? underscore.titleize(farmland.data.officialFarmName) : 'Unknown'));
-                    })
-                    .mapObject(function (farmGroup) {
-                        return {
-                            portionList: (underscore.size(farmGroup) > 1 ? underscore.chain(farmGroup)
-                                .map(function (farmland) {
-                                    return (farmland.data.portionNumber ? farmland.data.portionNumber : farmland.data.portionLabel);
-                                })
-                                .sort()
-                                .toSentence()
-                                .value() : underscore.first(farmGroup).data.portionLabel),
-                            town: underscore.chain(farmGroup)
-                                .map(function (farmland) {
-                                    return (farmland.data.town ? underscore.titleize(farmland.data.town) : '');
-                                })
-                                .first()
-                                .value(),
-                            province: underscore.chain(farmGroup)
-                                .map(function (farmland) {
-                                    return (farmland.data.province ? underscore.titleize(farmland.data.province) : '');
-                                })
-                                .first()
-                                .value(),
-                            area: underscore.reduce(farmGroup, function (total, farmland) {
-                                return total + (farmland.data.area || 0);
-                            }, 0)
-                        }
-                    })
-                    .value();
-            });
-
-            /**
-             * Comparable Handling
-             */
-            privateProperty(this, 'addComparableSale', function (comparableSale) {
-                var _this = this;
-
-                comparableSale = ComparableSale.new(comparableSale);
-
-                _this.removeComparableSale(comparableSale);
-
-                _this.data.report.comparableSales.push(comparableSale.asJSON());
-
-                underscore.each(comparableSale.attachments, function (attachment) {
-                    _this.addAttachment(attachment);
-                });
-            });
-
-            privateProperty(this, 'removeComparableSale', function (comparableSale) {
-                var _this = this;
-
-                _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, function (comparable) {
-                    return comparable.uuid === comparableSale.uuid;
+                /**
+                 * Legal Entity handling
+                 */
+                privateProperty(this, 'setLegalEntity', function (entity) {
+                    this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
                 });
 
-                underscore.each(comparableSale.attachments, function (attachment) {
-                    _this.removeAttachment(attachment);
+                /**
+                 * Attachment handling
+                 */
+                privateProperty(this, 'addAttachment', function (attachment) {
+                    this.removeAttachment(attachment);
+
+                    this.data.attachments.push(attachment);
                 });
-            });
-        }
 
-        inheritModel(DesktopValuation, Document);
+                privateProperty(this, 'removeAttachment', function (attachment) {
+                    this.data.attachments = underscore.reject(this.data.attachments, function (item) {
+                        return item.key === attachment.key;
+                    });
+                });
 
-        DesktopValuation.validates({
-            author: {
-                required: true,
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            },
-            docType: {
-                required: true,
-                equal: {
-                    to: 'desktop valuation'
-                }
-            },
-            organizationId: {
-                required: true,
-                numeric: true
+                /**
+                 * Farmland handling
+                 */
+                privateProperty(this, 'getFarmland', function () {
+                    return this.data.request.farmland;
+                });
+
+                privateProperty(this, 'hasFarmland', function (farmland) {
+                    return underscore.some(this.data.request.farmland, function (asset) {
+                        return asset.assetKey === farmland.assetKey;
+                    });
+                });
+
+                privateProperty(this, 'addFarmland', function (farmland) {
+                    this.removeFarmland(farmland);
+
+                    this.data.request.farmland.push(farmland);
+                });
+
+                privateProperty(this, 'removeFarmland', function (farmland) {
+                    this.data.request.farmland = underscore.reject(this.data.request.farmland, function (asset) {
+                        return asset.assetKey === farmland.assetKey;
+                    });
+                });
+
+                privateProperty(this, 'getFarmlandSummary', function () {
+                    return underscore.chain(this.data.request.farmland)
+                        .groupBy(function (farmland) {
+                            return (farmland.data.farmLabel ? farmland.data.farmLabel :
+                                (farmland.data.officialFarmName ? underscore.titleize(farmland.data.officialFarmName) : 'Unknown'));
+                        })
+                        .mapObject(function (farmGroup) {
+                            return {
+                                portionList: (underscore.size(farmGroup) > 1 ? underscore.chain(farmGroup)
+                                    .map(function (farmland) {
+                                        return (farmland.data.portionNumber ? farmland.data.portionNumber : farmland.data.portionLabel);
+                                    })
+                                    .sort()
+                                    .toSentence()
+                                    .value() : underscore.first(farmGroup).data.portionLabel),
+                                town: underscore.chain(farmGroup)
+                                    .map(function (farmland) {
+                                        return (farmland.data.town ? underscore.titleize(farmland.data.town) : '');
+                                    })
+                                    .first()
+                                    .value(),
+                                province: underscore.chain(farmGroup)
+                                    .map(function (farmland) {
+                                        return (farmland.data.province ? underscore.titleize(farmland.data.province) : '');
+                                    })
+                                    .first()
+                                    .value(),
+                                area: underscore.reduce(farmGroup, function (total, farmland) {
+                                    return total + (farmland.data.area || 0);
+                                }, 0)
+                            }
+                        })
+                        .value();
+                });
+
+                /**
+                 * Comparable Handling
+                 */
+                privateProperty(this, 'addComparableSale', function (comparableSale) {
+                    var _this = this;
+
+                    comparableSale = ComparableSale.new(comparableSale);
+
+                    _this.removeComparableSale(comparableSale);
+
+                    _this.data.report.comparableSales.push(comparableSale.asJSON());
+
+                    underscore.each(comparableSale.attachments, function (attachment) {
+                        _this.addAttachment(attachment);
+                    });
+                });
+
+                privateProperty(this, 'removeComparableSale', function (comparableSale) {
+                    var _this = this;
+
+                    _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, function (comparable) {
+                        return comparable.uuid === comparableSale.uuid;
+                    });
+
+                    underscore.each(comparableSale.attachments, function (attachment) {
+                        _this.removeAttachment(attachment);
+                    });
+                });
             }
-        });
 
-        return DesktopValuation;
-    }]);
+            inheritModel(DesktopValuation, Document);
+
+            DesktopValuation.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    equal: {
+                        to: 'desktop valuation'
+                    }
+                }
+            }, Document.validations));
+
+            return DesktopValuation;
+        }];
+
+    DocumentFactoryProvider.add('desktop valuation', 'DesktopValuation');
+}]);
 
 var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
 
@@ -23827,25 +24560,16 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             this.docType = attrs.docType;
             this.documentId = attrs.documentId;
             this.id = attrs.id || attrs.$id;
-            this.organization = attrs.organization;
             this.organizationId = attrs.organizationId;
             this.originUuid = attrs.originUuid;
             this.origin = attrs.origin;
             this.title = attrs.title;
+
+            this.organization = attrs.organization;
+            this.tasks = attrs.tasks;
         }
 
         inheritModel(Document, Model.Base);
-
-        readOnlyProperty(Document, 'docTypes', {
-            'asset register': 'Asset Register',
-            'desktop valuation': 'Desktop Valuation',
-            'emergence report': 'Emergence Report',
-            'farm valuation': 'Farm Valuation',
-            'financial resource plan': 'Financial Resource Plan',
-            'insurance policy': 'Insurance Policy',
-            'production plan': 'Production Plan',
-            'progress report': 'Progress Report'
-        });
 
         Document.validates({
             author: {
@@ -23857,8 +24581,9 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
             },
             docType: {
                 required: true,
-                inclusion: {
-                    in: underscore.keys(Document.docTypes)
+                length: {
+                    min: 1,
+                    max: 255
                 }
             },
             organizationId: {
@@ -23870,40 +24595,71 @@ sdkModelDocument.factory('Document', ['inheritModel', 'Model', 'privateProperty'
         return Document;
     }]);
 
-var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+sdkModelDocument.provider('DocumentFactory', function () {
+    var instances = {};
 
-sdkModelFarmValuationDocument.factory('FarmValuation', ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
-    function (Asset, computedProperty, Document, inheritModel, privateProperty) {
-        function FarmValuation (attrs) {
-            Document.apply(this, arguments);
+    this.add = function (docType, modelName) {
+        instances[docType] = modelName;
+    };
 
-            this.docType = 'farm valuation';
+    this.$get = ['$injector', 'Document', function ($injector, Document) {
+        function apply (attrs, fnName) {
+            if (instances[attrs.docType]) {
+                if (typeof instances[attrs.docType] === 'string') {
+                    instances[attrs.docType] = $injector.get(instances[attrs.docType]);
+                }
+
+                return instances[attrs.docType][fnName](attrs);
+            }
+
+            return Document[fnName](attrs);
         }
 
-        inheritModel(FarmValuation, Document);
-
-        FarmValuation.validates({
-            author: {
-                required: true,
-                length: {
-                    min: 1,
-                    max: 255
-                }
+        return {
+            isInstanceOf: function (document) {
+                return (document ?
+                    (instances[document.docType] ?
+                        document instanceof instances[document.docType] :
+                        document instanceof Document) :
+                    false);
             },
-            docType: {
-                required: true,
-                equal: {
-                    to: 'farm valuation'
-                }
+            new: function (attrs) {
+                return apply(attrs, 'new');
             },
-            organizationId: {
-                required: true,
-                numeric: true
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
             }
-        });
+        }
+    }];
+});
 
-        return FarmValuation;
-    }]);
+var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
+
+sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
+        function (Asset, computedProperty, Document, inheritModel, privateProperty) {
+            function FarmValuation (attrs) {
+                Document.apply(this, arguments);
+
+                this.docType = 'farm valuation';
+            }
+
+            inheritModel(FarmValuation, Document);
+
+            FarmValuation.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    equal: {
+                        to: 'farm valuation'
+                    }
+                }
+            }, Document.validations));
+
+            return FarmValuation;
+        }];
+
+    DocumentFactoryProvider.add('farm valuation', 'FarmValuation');
+}]);
 
 var sdkModelFarmer = angular.module('ag.sdk.model.farmer', ['ag.sdk.model.organization']);
 
@@ -24197,6 +24953,325 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
 
 
 
+var sdkModelTaskEmergenceInspection = angular.module('ag.sdk.model.task.emergence-inspection', ['ag.sdk.model.crop-inspection', 'ag.sdk.model.task']);
+
+sdkModelTaskEmergenceInspection.provider('EmergenceInspectionTask', ['TaskFactoryProvider', function (TaskFactoryProvider) {
+    this.$get = ['computedProperty', 'CropInspection', 'inheritModel', 'Task', 'underscore',
+        function (computedProperty, CropInspection, inheritModel, Task, underscore) {
+            function EmergenceInspectionTask (attrs) {
+                Task.apply(this, arguments);
+
+                computedProperty(this, 'inspectionDate', function () {
+                    return this.data.inspectionDate;
+                });
+
+                computedProperty(this, 'landRecommendation', function () {
+                    return this.data.landRecommendation;
+                });
+
+                computedProperty(this, 'moistureStatus', function () {
+                    return this.data.moistureStatus;
+                });
+
+                computedProperty(this, 'zones', function () {
+                    return this.data.asset.data.zones;
+                });
+            }
+
+            inheritModel(EmergenceInspectionTask, Task);
+
+            EmergenceInspectionTask.validates(underscore.extend({
+                inspectionDate: {
+                    required: true,
+                    format: {
+                        date: true
+                    }
+                },
+                landRecommendation: {
+                    required: true,
+                    inclusion: {
+                        in: CropInspection.approvalTypes
+                    }
+                },
+                moistureStatus: {
+                    requiredIf: function (value, instance, field) {
+                        return instance.landRecommendation !== 'Not Planted';
+                    },
+                    inclusion: {
+                        in: CropInspection.moistureStatuses
+                    }
+                },
+                zones: {
+                    requiredIf: function (value, instance, field) {
+                        return instance.landRecommendation !== 'Not Planted';
+                    },
+                    length: {
+                        min: 1
+                    }
+                }
+            }, Task.validations));
+
+            return EmergenceInspectionTask;
+        }];
+
+    TaskFactoryProvider.add('emergence inspection', 'EmergenceInspectionTask');
+}]);
+var sdkModelTaskProgressInspection = angular.module('ag.sdk.model.task.progress-inspection', ['ag.sdk.model.crop', 'ag.sdk.model.task']);
+
+sdkModelTaskProgressInspection.provider('ProcessInspectionTask', ['TaskFactoryProvider', function (TaskFactoryProvider) {
+    this.$get = ['Base', 'computedProperty', 'Crop', 'CropInspection', 'inheritModel', 'privateProperty', 'safeArrayMath', 'safeMath', 'Task', 'underscore',
+        function (Base, computedProperty, Crop, CropInspection, inheritModel, privateProperty, safeArrayMath, safeMath, Task, underscore) {
+            function ProcessInspectionTask (attrs) {
+                Task.apply(this, arguments);
+
+                Base.initializeObject(this.data, 'samples', []);
+
+                privateProperty(this, 'calculateResults', function () {
+                    calculateResults(this);
+                });
+
+                computedProperty(this, 'inspectionDate', function () {
+                    return this.data.inspectionDate;
+                });
+
+                computedProperty(this, 'moistureStatus', function () {
+                    return this.data.moistureStatus;
+                });
+
+                computedProperty(this, 'pitWeight', function () {
+                    return this.data.pitWeight;
+                });
+
+                computedProperty(this, 'realization', function () {
+                    return this.data.realization;
+                });
+
+                computedProperty(this, 'samples', function () {
+                    return this.data.samples;
+                });
+            }
+
+            inheritModel(ProcessInspectionTask, Task);
+
+            function reduceSamples (samples, prop) {
+                return safeMath.dividedBy(underscore.reduce(samples, function (total, sample) {
+                    return safeMath.plus(total, sample[prop]);
+                }, 0), samples.length);
+            }
+
+            function calculateResults (instance) {
+                var asset = Crop.newCopy(instance.data.asset),
+                    pitWeight = instance.data.pitWeight || 0,
+                    realization = instance.data.realization || 100;
+
+                var zoneResults = underscore.map(asset.zones, function (zone) {
+                    var zoneSamples = underscore.where(instance.data.samples, {zoneUuid: zone.uuid}),
+                        result = {
+                            zoneUuid: zone.uuid,
+                            sampleSize: underscore.size(zoneSamples),
+                            coverage: safeMath.dividedBy(zone.size, asset.data.plantedArea),
+                            heads: reduceSamples(zoneSamples, 'heads'),
+                            weight: reduceSamples(zoneSamples, 'weight')
+                        };
+
+                    if (asset.flower === 'spikelet') {
+                        result.yield = safeMath.dividedBy(
+                            safeMath.times(result.weight, result.heads),
+                            safeMath.times((asset.data.irrigated ? 3000 : 3500), (zone.plantedInRows ? safeMath.times(zone.rowWidth, 3) : 1)));
+                    } else if (asset.flower === 'pod') {
+                        result.pods = reduceSamples(zoneSamples, 'pods');
+                        result.seeds = reduceSamples(zoneSamples, 'seeds');
+                        result.yield = safeMath.dividedBy(
+                            safeArrayMath.reduce([pitWeight, result.seeds, result.pods, result.heads], 0, 'times'),
+                            safeMath.times(zone.rowWidth, 300));
+                    } else {
+                        result.yield = safeMath.dividedBy(
+                            safeMath.times(result.weight, result.heads),
+                            safeMath.times(zone.rowWidth, 1000));
+                    }
+
+                    result.yield = safeMath.times(result.yield, safeMath.dividedBy(realization, 100));
+
+                    return result;
+                });
+
+                instance.data.inspection = {
+                    flower: asset.flower,
+                    results: zoneResults,
+                    totalYield: underscore.reduce(zoneResults, function (total, item) {
+                        return total + (item.coverage * item.yield);
+                    }, 0)
+                };
+            }
+
+            ProcessInspectionTask.validates(underscore.extend({
+                inspectionDate: {
+                    required: true,
+                    format: {
+                        date: true
+                    }
+                },
+                moistureStatus: {
+                    required: true,
+                    inclusion: {
+                        in: CropInspection.moistureStatuses
+                    }
+                },
+                pitWeight: {
+                    required: true,
+                    range: {
+                        from: 0
+                    },
+                    numeric: true
+                },
+                realization: {
+                    required: true,
+                    range: {
+                        from: 0,
+                        to: 100
+                    },
+                    numeric: true
+                },
+                samples: {
+                    required: true,
+                    length: {
+                        min: 1
+                    }
+                }
+            }, Task.validations));
+
+            return ProcessInspectionTask;
+        }];
+
+    TaskFactoryProvider.add('progress inspection', 'ProcessInspectionTask');
+}]);
+var sdkModelTask = angular.module('ag.sdk.model.task', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelTask.factory('Task', ['Base', 'inheritModel', 'Model', 'underscore',
+    function (Base, inheritModel, Model, underscore) {
+        function Task (attrs) {
+            Model.Base.apply(this, arguments);
+
+            this.data = (attrs && attrs.data ? attrs.data : {});
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.assignedAt = attrs.assignedAt;
+            this.assignedBy = attrs.assignedBy;
+            this.assignedTo = attrs.assignedTo;
+            this.completedAt = attrs.completedAt;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.documentId = attrs.documentId;
+            this.documentKey = attrs.documentKey;
+            this.organizationId = attrs.organizationId;
+            this.originUuid = attrs.originUuid;
+            this.parentTaskId = attrs.parentTaskId;
+            this.progressAt = attrs.progressAt;
+            this.providerType = attrs.providerType;
+            this.providerUuid = attrs.providerUuid;
+            this.status = attrs.status;
+            this.todo = attrs.todo;
+            this.type = attrs.type;
+            this.updatedAt = attrs.updatedAt;
+            this.updatedBy = attrs.updatedBy;
+
+            // Models
+            this.document = attrs.document;
+            this.organization = attrs.organization;
+        }
+
+        inheritModel(Task, Model.Base);
+
+        Task.validates({
+            documentId: {
+                required: true,
+                numeric: true
+            },
+            organizationId: {
+                required: true,
+                numeric: true
+            },
+            originUuid: {
+                requiredIf: function (value, instance, field) {
+                    return instance.type === 'external';
+                },
+                format: {
+                    uuid: true
+                }
+            },
+            parentTaskId: {
+                requiredIf: function (value, instance, field) {
+                    return instance.type !== 'parent';
+                },
+                numeric: true
+            },
+            providerType: {
+                requiredIf: function (value, instance, field) {
+                    return instance.type === 'external';
+                },
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            },
+            providerUuid: {
+                requiredIf: function (value, instance, field) {
+                    return instance.type === 'external';
+                },
+                format: {
+                    uuid: true
+                }
+            },
+            uuid: {
+                format: {
+                    uuid: true
+                }
+            }
+        });
+
+        return Task;
+    }]);
+
+sdkModelTask.provider('TaskFactory', function () {
+    var instances = {};
+
+    this.add = function (todo, modelName) {
+        instances[todo] = modelName;
+    };
+
+    this.$get = ['$injector', 'Task', function ($injector, Task) {
+        function apply (attrs, fnName) {
+            if (instances[attrs.todo]) {
+                if (typeof instances[attrs.todo] === 'string') {
+                    instances[attrs.todo] = $injector.get(instances[attrs.todo]);
+                }
+
+                return instances[attrs.todo][fnName](attrs);
+            }
+
+            return Task[fnName](attrs);
+        }
+
+        return {
+            isInstanceOf: function (task) {
+                return (task ?
+                    (instances[task.todo] ?
+                        task instanceof instances[task.todo] :
+                        task instanceof Task) :
+                    false);
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }];
+});
+
 var sdkModelErrors = angular.module('ag.sdk.model.errors', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
@@ -24325,13 +25400,11 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     validateField(instance, validation);
                 });
 
-
                 return instance.$errors.countFor(fieldName) === 0;
             });
 
             function validateField (instance, validation) {
                 if (validation.validate(instance) === false) {
-
                     instance.$errors.add(validation.field, validation.message);
                 } else {
                     instance.$errors.clear(validation.field, validation.message);
@@ -24397,17 +25470,21 @@ sdkModelValidation.factory('Validatable.Field', ['privateProperty', 'underscore'
         function Field (name, validationSet) {
             var field = [];
 
-            privateProperty(field, 'addValidator', function (options, validationName) {
-                var validator = validators.find(validationName) || new Validator(options, validationName),
-                    configuredFunctions = underscore.flatten([validator.configure(options)]);
+            privateProperty(field, 'addValidator', function (params, validationName) {
+                if (params instanceof Validation) {
+                    field.push(params);
+                } else {
+                    var validator = validators.find(validationName) || new Validator(params, validationName),
+                        configuredFunctions = underscore.flatten([validator.configure(params)]);
 
-                if (underscore.isUndefined(validator.message)) {
-                    throw new ValidationMessageNotFoundError(validationName, name);
+                    if (underscore.isUndefined(validator.message)) {
+                        throw new ValidationMessageNotFoundError(validationName, name);
+                    }
+
+                    underscore.each(configuredFunctions, function (configuredFunction) {
+                        field.push(new Validation(name, configuredFunction));
+                    });
                 }
-
-                underscore.each(configuredFunctions, function (configuredFunction) {
-                    field.push(new Validation(name, configuredFunction));
-                })
             });
 
             privateProperty(field, 'addValidators', function (validationSet) {
@@ -24992,9 +26069,12 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
     'ag.sdk.model.comparable-sale',
+    'ag.sdk.model.crop',
+    'ag.sdk.model.crop-inspection',
     'ag.sdk.model.desktop-valuation',
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
+    'ag.sdk.model.expense',
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.farmer',
@@ -25012,6 +26092,9 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',
     'ag.sdk.model.store',
+    'ag.sdk.model.task',
+    'ag.sdk.model.task.emergence-inspection',
+    'ag.sdk.model.task.progress-inspection',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'
 ]);

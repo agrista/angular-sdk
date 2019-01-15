@@ -33,13 +33,11 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                     validateField(instance, validation);
                 });
 
-
                 return instance.$errors.countFor(fieldName) === 0;
             });
 
             function validateField (instance, validation) {
                 if (validation.validate(instance) === false) {
-
                     instance.$errors.add(validation.field, validation.message);
                 } else {
                     instance.$errors.clear(validation.field, validation.message);
@@ -105,17 +103,21 @@ sdkModelValidation.factory('Validatable.Field', ['privateProperty', 'underscore'
         function Field (name, validationSet) {
             var field = [];
 
-            privateProperty(field, 'addValidator', function (options, validationName) {
-                var validator = validators.find(validationName) || new Validator(options, validationName),
-                    configuredFunctions = underscore.flatten([validator.configure(options)]);
+            privateProperty(field, 'addValidator', function (params, validationName) {
+                if (params instanceof Validation) {
+                    field.push(params);
+                } else {
+                    var validator = validators.find(validationName) || new Validator(params, validationName),
+                        configuredFunctions = underscore.flatten([validator.configure(params)]);
 
-                if (underscore.isUndefined(validator.message)) {
-                    throw new ValidationMessageNotFoundError(validationName, name);
+                    if (underscore.isUndefined(validator.message)) {
+                        throw new ValidationMessageNotFoundError(validationName, name);
+                    }
+
+                    underscore.each(configuredFunctions, function (configuredFunction) {
+                        field.push(new Validation(name, configuredFunction));
+                    });
                 }
-
-                underscore.each(configuredFunctions, function (configuredFunction) {
-                    field.push(new Validation(name, configuredFunction));
-                })
             });
 
             privateProperty(field, 'addValidators', function (validationSet) {
