@@ -27,9 +27,12 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
     'ag.sdk.model.comparable-sale',
+    'ag.sdk.model.crop',
+    'ag.sdk.model.crop-inspection',
     'ag.sdk.model.desktop-valuation',
     'ag.sdk.model.document',
     'ag.sdk.model.enterprise-budget',
+    'ag.sdk.model.expense',
     'ag.sdk.model.farm',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.farmer',
@@ -47,6 +50,9 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',
     'ag.sdk.model.store',
+    'ag.sdk.model.task',
+    'ag.sdk.model.task.emergence-inspection',
+    'ag.sdk.model.task.progress-inspection',
     'ag.sdk.model.validation',
     'ag.sdk.model.validators'
 ]);

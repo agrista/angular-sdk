@@ -20,7 +20,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.newCopy = function (attrs, options) {
-                return _constructor.new(deepCopy(attrs), options);
+                return _constructor.new(deepCopy(attrs || {}), options);
             };
 
             _constructor.asJSON = function (omit) {
