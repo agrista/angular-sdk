@@ -3,14 +3,8 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.attachment',
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
-    'ag.sdk.helper.enterprise-budget',
-    'ag.sdk.helper.expense',
-    'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
-    'ag.sdk.helper.merchant',
-    'ag.sdk.helper.production-plan',
     'ag.sdk.helper.task',
-    'ag.sdk.helper.team',
     'ag.sdk.helper.user'
 ]);
 
@@ -72,6 +66,7 @@ angular.module('ag.mobile-sdk.cordova', [
 
 angular.module('ag.mobile-sdk', [
     'ag.sdk.authorization',
+    'ag.sdk.editor',
     'ag.sdk.id',
     'ag.sdk.geospatial',
     'ag.sdk.utilities',

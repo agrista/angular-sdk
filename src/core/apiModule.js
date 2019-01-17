@@ -822,16 +822,6 @@ sdkApiApp.factory('farmApi', ['$http', 'asJson', 'pagingService', 'promiseServic
 sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'configuration', 'organizationApi', 'pagingService', 'promiseService', 'taskApi', 'underscore', function ($http, asJson, configuration, organizationApi, pagingService, promiseService, taskApi, underscore) {
     var _host = configuration.getServer();
 
-    var hasOutstandingRequest = function (id) {
-        return taskApi.searchTasks(underscore.defaults({
-            organizationId: id
-        }, {
-            status: ['assigned', 'backlog', 'in progress', 'in review'],
-            todo: 'farm valuation',
-            type: 'parent'
-        }));
-    };
-
     return {
         getFarmers: function (params) {
             return organizationApi.getOrganizations(underscore.chain(params)
@@ -855,21 +845,6 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'configuration', 'organizatio
         },
         deleteFarmer: function (id) {
             return organizationApi.deleteOrganization(id);
-        },
-        hasOutstandingRequest: hasOutstandingRequest,
-        getAssignedMerchant: function (id) {
-            return promiseService.wrap(function (promise) {
-                hasOutstandingRequest(id).then(function (tasks) {
-                    var task = underscore.first(tasks);
-
-                    if (task) {
-                        organizationApi.searchOrganization({uuid: task.providerUuid})
-                            .then(promise.resolve, promise.reject);
-                    } else {
-                        promise.reject();
-                    }
-                }, promise.reject);
-            });
         }
     };
 }]);

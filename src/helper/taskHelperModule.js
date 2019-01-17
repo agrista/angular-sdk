@@ -120,7 +120,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                 excludeStatus = excludeStatus || [];
 
                 return underscore.filter(tasks, function (task) {
-                    return (_getTaskState(task.todo) !== undefined && underscore.contains(excludeStatus, task.status) == false);
+                    return (_getTaskState(task.todo) !== undefined && !underscore.contains(excludeStatus, task.status));
                 });
             },
             updateListService: function (id, todo, tasks, organization) {
@@ -134,7 +134,7 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
                     todo: todo,
                     organization: organization,
                     subtasks : underscore.filter(tasks, function (task) {
-                        return (task && task.assignedTo == currentUser.username);
+                        return (task && task.assignedTo === currentUser.username);
                     })
                 }, _listServiceMap));
 

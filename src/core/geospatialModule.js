@@ -164,6 +164,9 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         /**
          * Geometry Editing
          */
+        geometry: function () {
+            return topologyHelper.readGeoJSON(getGeometry(this));
+        },
         difference: function (geometry) {
             var geom = topologyHelper.readGeoJSON(getGeometry(this));
             this._json = topologyHelper.writeGeoJSON(geom.difference(geometry));
