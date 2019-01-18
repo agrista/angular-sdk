@@ -2056,7 +2056,7 @@ sdkHelperAttachmentApp.factory('resizeImageService', ['promiseService', 'undersc
 }]);
 var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document', 'ag.sdk.library']);
 
-sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'underscore', function(documentHelper, underscore) {
+sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['underscore', function(underscore) {
     var _approvalTypes = ['Approved', 'Not Approved', 'Not Planted'];
 
     var _commentTypes = ['Crop amendment', 'Crop re-plant', 'Insurance coverage discontinued', 'Multi-insured', 'Other', 'Without prejudice', 'Wrongfully reported'];
@@ -2277,8 +2277,8 @@ sdkHelperDocumentApp.provider('documentRegistry', ['underscore', function (under
 
 var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk.helper.document', 'ag.sdk.helper.task']);
 
-sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore',
-    function (documentHelper, underscore) {
+sdkHelperFavouritesApp.factory('activityHelper', ['documentRegistry', 'underscore',
+    function (documentRegistry, underscore) {
         var _listServiceMap = function(item) {
             var map = {
                 id: item.id || item.$id,
@@ -2315,9 +2315,9 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore'
             map.referenceId = (underscore.contains(['farmer', 'merchant', 'user'], item.referenceType) ? item.organization.id : item[item.referenceType + 'Id']);
 
             if (item.referenceType === 'document' && !underscore.isUndefined(item[item.referenceType])) {
-                map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentHelper.getDocumentTitle(item[item.referenceType].docType) + ' ' + item.referenceType;
+                map.subtitle += _getReferenceArticle(item[item.referenceType].docType) + ' ' + documentRegistry.getProperty(item[item.referenceType].docType, 'title', '') + ' ' + item.referenceType;
 
-                map.referenceState = documentHelper.getDocumentState(item[item.referenceType].docType);
+                map.referenceState = documentRegistry.getProperty(item[item.referenceType].docType, 'state');
             } else if (item.referenceType === 'farmer' && !underscore.isUndefined(item.organization)) {
                 if (item.action === 'invite') {
                     map.subtitle += item.organization.name + ' to create an Agrista account';
@@ -2330,7 +2330,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentHelper', 'underscore'
                 map.referenceState = 'customer.details';
             } else if (item.referenceType === 'task' && !underscore.isUndefined(item[item.referenceType])) {
                 map.subtitle += 'the ' + taskHelper.getTaskTitle(item[item.referenceType].todo) + ' ' + item.referenceType;
-                map.referenceState = documentHelper.getTaskState(item[item.referenceType].todo);
+                map.referenceState = taskHelper.getTaskState(item[item.referenceType].todo);
             } else if (item.referenceType === 'merchant' && !underscore.isUndefined(item.organization)) {
                 if (item.action === 'invite') {
                     map.subtitle += item.organization.name + ' to create an Agrista account';

@@ -1,6 +1,6 @@
 var sdkHelperCropInspectionApp = angular.module('ag.sdk.helper.crop-inspection', ['ag.sdk.helper.document', 'ag.sdk.library']);
 
-sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['documentHelper', 'underscore', function(documentHelper, underscore) {
+sdkHelperCropInspectionApp.factory('cropInspectionHelper', ['underscore', function(underscore) {
     var _approvalTypes = ['Approved', 'Not Approved', 'Not Planted'];
 
     var _commentTypes = ['Crop amendment', 'Crop re-plant', 'Insurance coverage discontinued', 'Multi-insured', 'Other', 'Without prejudice', 'Wrongfully reported'];
