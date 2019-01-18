@@ -277,7 +277,7 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        uploadAssetAttachments: function (id, data) {
+        uploadAttachment: function (id, data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
@@ -436,7 +436,7 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
                 }, promise.reject);
             });
         },
-        uploadComparableAttachments: function (uuid, data) {
+        uploadAttachment: function (uuid, data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
@@ -573,7 +573,7 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
                 }, promise.reject);
             });
         },
-        uploadDocumentAttachments: function (id, data) {
+        uploadAttachment: function (id, data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
@@ -700,7 +700,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
                 }, promise.reject);
             });
         },
-        uploadEnterpriseBudgetAttachments: function (id, data) {
+        uploadAttachment: function (id, data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
@@ -842,6 +842,9 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'configuration', 'organizatio
         },
         updateFarmer: function (data, includeDependencies) {
             return organizationApi.updateOrganization(data, includeDependencies);
+        },
+        uploadAttachment: function (id, data) {
+            return organizationApi.uploadAttachment(id, data);
         },
         deleteFarmer: function (id) {
             return organizationApi.deleteOrganization(id);
@@ -1062,7 +1065,7 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
                 }, promise.reject);
             });
         },
-        uploadEntityAttachments: function (id, data) {
+        uploadAttachment: function (id, data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
@@ -1222,8 +1225,8 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingS
         updateMerchant: function (data) {
             return organizationApi.updateOrganization(data);
         },
-        uploadMerchantAttachments: function (id, data) {
-            return organizationApi.uploadOrganizationAttachments(id, data);
+        uploadAttachment: function (id, data) {
+            return organizationApi.uploadAttachment(id, data);
         },
         deleteMerchant: function (id) {
             return organizationApi.deleteOrganization(id);
@@ -1350,7 +1353,7 @@ sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagin
                 }, promise.reject);
             });
         },
-        uploadOrganizationAttachments: function (id, data) {
+        uploadAttachment: function (id, data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
