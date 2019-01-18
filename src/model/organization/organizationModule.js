@@ -158,7 +158,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             return {
                 id: item.id || item.$id,
                 title: item.name,
-                subtitle: typeMap[item.type] + (item.customerId ? ': ' + item.customerId : ''),
+                subtitle: (item.type ? typeMap[item.type] + ': ' : '') + (item.customerId ? item.customerId : ''),
                 thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
                 searchingIndex: searchingIndex(item),
                 pills: underscore.chain(tagMap)
