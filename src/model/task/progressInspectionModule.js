@@ -64,7 +64,7 @@ sdkModelTaskProgressInspection.provider('ProcessInspectionTask', ['TaskFactoryPr
                         result.pods = reduceSamples(zoneSamples, 'pods');
                         result.seeds = reduceSamples(zoneSamples, 'seeds');
                         result.yield = safeMath.dividedBy(
-                            safeArrayMath.reduce([pitWeight, result.seeds, result.pods, result.heads], 0, 'times'),
+                            safeArrayMath.reduceOperator([pitWeight, result.seeds, result.pods, result.heads], 'times', 0),
                             safeMath.times(zone.rowWidth, 300));
                     } else {
                         result.yield = safeMath.dividedBy(

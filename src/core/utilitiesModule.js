@@ -417,6 +417,13 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         }, angular.copy(arrays.long));
     }
 
+    function reduce (array, initialValue, fnName) {
+        fnName = fnName || 'plus';
+        return underscore.reduce(array || [], function (total, value) {
+            return safeMath[fnName](total, value);
+        }, initialValue || 0);
+    }
+
     return {
         count: function (array) {
             return underscore.reduce(array, function (total, value) {
@@ -435,11 +442,11 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         times: function (arrayA, arrayB) {
             return performSortedOperation(arrayA, arrayB, safeMath.times);
         },
-        reduce: function (array, initialValue, fnName) {
-            fnName = fnName || 'plus';
-            return underscore.reduce(array || [], function (total, value) {
-                return safeMath[fnName](total, value);
-            }, initialValue || 0)
+        reduce: function (array, initialValue) {
+            return reduce(array, initialValue);
+        },
+        reduceOperator: function (array, fnName, initialValue) {
+            return reduce(array, initialValue, fnName);
         },
         reduceProperty: function (array, property, initialValue) {
             return underscore.chain(array || [])
