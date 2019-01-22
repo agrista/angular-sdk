@@ -1,10 +1,14 @@
 var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
 
 sdkModelLegalEntity.provider('LegalEntity', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['Base', 'Asset', 'Financial', 'inheritModel', 'Liability', 'Model', 'readOnlyProperty', 'underscore',
-        function (Base, Asset, Financial, inheritModel, Liability, Model, readOnlyProperty, underscore) {
+    this.$get = ['Base', 'Asset', 'computedProperty', 'Financial', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (Base, Asset, computedProperty, Financial, inheritModel, Liability, Model, privateProperty, readOnlyProperty, underscore) {
             function LegalEntity (attrs) {
                 Model.Base.apply(this, arguments);
+
+                computedProperty(this, 'contactNameRequired', function () {
+                    return contactNameRequired(this);
+                });
 
                 this.data = (attrs && attrs.data ? attrs.data : {});
                 Base.initializeObject(this.data, 'attachments', []);
@@ -35,6 +39,10 @@ sdkModelLegalEntity.provider('LegalEntity', ['listServiceMapProvider', function 
                 this.liabilities = underscore.map(attrs.liabilities, Liability.newCopy);
             }
 
+            function contactNameRequired (instance) {
+                return instance && instance.type && !underscore.contains(['Individual', 'Sole Proprietary'], instance.type);
+            }
+
             inheritModel(LegalEntity, Model.Base);
 
             readOnlyProperty(LegalEntity, 'legalEntityTypes', [
@@ -50,6 +58,10 @@ sdkModelLegalEntity.provider('LegalEntity', ['listServiceMapProvider', function 
                 'Cooperatives',
                 'In- Cooperatives',
                 'Other Financial Intermediaries']);
+
+            privateProperty(LegalEntity, 'getContactNameRequired', function (instance) {
+                return contactNameRequired(instance);
+            });
 
             LegalEntity.validates({
                 addressCity: {
