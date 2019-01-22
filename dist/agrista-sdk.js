@@ -18007,7 +18007,7 @@ sdkModelMerchant.provider('Merchant', ['OrganizationFactoryProvider', function (
 
             Merchant.validates(underscore.defaults({
                 partnerType: {
-                    required: true,
+                    required: false,
                     inclusion: {
                         in: underscore.keys(Merchant.partnerTypes)
                     }
@@ -18019,7 +18019,7 @@ sdkModelMerchant.provider('Merchant', ['OrganizationFactoryProvider', function (
                     }
                 },
                 subscriptionPlan: {
-                    required: true,
+                    required: false,
                     inclusion: {
                         in: underscore.keys(Merchant.subscriptionPlanTypes)
                     }
@@ -18136,6 +18136,11 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 return centroid(instance);
             });
 
+            privateProperty(Organization, 'types', {
+                'farmer': 'Farmer',
+                'merchant': 'AgriBusiness'
+            });
+
             Organization.validates({
                 country: {
                     required: true,
@@ -18172,16 +18177,10 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             return Organization;
         }];
 
-    listServiceMapProvider.add('organization', ['attachmentHelper', 'underscore', function (attachmentHelper, underscore) {
+    listServiceMapProvider.add('organization', ['attachmentHelper', 'Organization', 'underscore', function (attachmentHelper, Organization, underscore) {
         var tagMap = {
             'danger': ['Duplicate Farmland', 'Duplicate Legal Entities'],
             'warning': ['No CIF', 'No Farmland', 'No Homestead', 'No Segmentation']
-        };
-
-        var typeMap = {
-            'farmer': 'Farmer',
-            'merchant': 'AgriBusiness',
-            'organization': 'Organization'
         };
 
         function searchingIndex (item) {
@@ -18198,7 +18197,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             return {
                 id: item.id || item.$id,
                 title: item.name,
-                subtitle: (item.type ? typeMap[item.type] + ': ' : '') + (item.customerId ? item.customerId : ''),
+                subtitle: (item.type && Organization.types[item.type] || '') + (item.customerId ? (item.type ? ': ' : '') + item.customerId : ''),
                 thumbnailUrl: attachmentHelper.findSize(item, 'thumb', 'img/profile-business.png'),
                 searchingIndex: searchingIndex(item),
                 pills: underscore.chain(tagMap)

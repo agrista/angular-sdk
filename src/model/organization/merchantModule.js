@@ -52,7 +52,7 @@ sdkModelMerchant.provider('Merchant', ['OrganizationFactoryProvider', function (
 
             Merchant.validates(underscore.defaults({
                 partnerType: {
-                    required: true,
+                    required: false,
                     inclusion: {
                         in: underscore.keys(Merchant.partnerTypes)
                     }
@@ -64,7 +64,7 @@ sdkModelMerchant.provider('Merchant', ['OrganizationFactoryProvider', function (
                     }
                 },
                 subscriptionPlan: {
-                    required: true,
+                    required: false,
                     inclusion: {
                         in: underscore.keys(Merchant.subscriptionPlanTypes)
                     }
