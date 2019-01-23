@@ -1970,24 +1970,26 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
     };
 
     this.$get = ['$injector', 'promiseService', function ($injector, promiseService) {
-        if (_options.fileResolver instanceof Array) {
+        if (underscore.isArray(_options.fileResolver)) {
             _options.fileResolver = $injector.invoke(_options.fileResolver);
         }
 
         var _getResizedAttachment = function (attachments, size, defaultImage, type) {
-            if ((attachments instanceof Array) == false) {
-                attachments = [attachments];
-            }
-
+            attachments = underscore.isArray(attachments) ? attachments : [attachments];
             defaultImage = defaultImage || _options.defaultImage;
 
             var src = underscore.chain(attachments)
                 .filter(function (attachment) {
-                    return (type === undefined || attachment.type == type) &&
-                        (attachment.sizes && attachment.sizes[size]);
-                }).map(function (attachment) {
-                    return attachment.sizes[size].src;
-                }).last().value();
+                    return (underscore.isUndefined(type) || attachment.type === type) &&
+                        (underscore.isString(attachment.base64) || (attachment.sizes && attachment.sizes[size]));
+                })
+                .map(function (attachment) {
+                    return (underscore.isString(attachment.base64) ?
+                        'data:' + (attachment.mimeType || 'image') + ';data,' + attachment.base64 :
+                        attachment.sizes[size].src);
+                })
+                .last()
+                .value();
 
             return (src ? _options.fileResolver(src) : defaultImage);
         };
