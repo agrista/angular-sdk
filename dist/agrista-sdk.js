@@ -3797,7 +3797,7 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
                 })
                 .map(function (attachment) {
                     return (underscore.isString(attachment.base64) ?
-                        'data:' + (attachment.mimeType || 'image') + ';data,' + attachment.base64 :
+                        'data:' + (attachment.mimeType || 'image') + ';base64,' + attachment.base64 :
                         attachment.sizes[size].src);
                 })
                 .last()
