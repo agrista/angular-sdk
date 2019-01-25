@@ -45,6 +45,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.originHost = attrs.originHost;
                 this.originPort = attrs.originPort;
                 this.primaryContact = attrs.primaryContact;
+                this.pointsOfInterest = attrs.pointsOfInterest || [];
                 this.productionRegion = attrs.productionRegion;
                 this.registered = attrs.registered;
                 this.status = attrs.status;
@@ -57,7 +58,19 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.uuid = attrs.uuid;
             }
 
-            inheritModel(Organization, Locale);
+            function centroid (instance) {
+                var geom = getAssetGeom(instance),
+                    coord = (geom ? geom.getCentroid().getCoordinate() : geom);
+
+                return (coord ? [coord.x, coord.y] : coord);
+            }
+
+            function contains (instance, geojson) {
+                var farmGeom = getAssetGeom(instance),
+                    queryGeom = topologyHelper.readGeoJSON(geojson);
+
+                return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
+            }
 
             function getAssetGeom (instance) {
                 return underscore.chain(instance.legalEntities)
@@ -74,19 +87,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     .value();
             }
 
-            function contains (instance, geojson) {
-                var farmGeom = getAssetGeom(instance),
-                    queryGeom = topologyHelper.readGeoJSON(geojson);
-
-                return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
-            }
-
-            function centroid (instance) {
-                var geom = getAssetGeom(instance),
-                    coord = (geom ? geom.getCentroid().getCoordinate() : geom);
-
-                return (coord ? [coord.x, coord.y] : coord);
-            }
+            inheritModel(Organization, Locale);
 
             privateProperty(Organization, 'contains', function (instance, geojson) {
                 return contains(instance, geojson);

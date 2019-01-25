@@ -40,6 +40,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.map-theme',
     'ag.sdk.model.merchant',
     'ag.sdk.model.organization',
+    'ag.sdk.model.point-of-interest',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',

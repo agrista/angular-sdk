@@ -10700,6 +10700,151 @@ sdkModelMapTheme.factory('MapTheme', ['Base', 'inheritModel', 'Model', 'privateP
         return MapTheme;
     }]);
 
+var sdkModelPointOfInterest = angular.module('ag.sdk.model.point-of-interest', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', function (listServiceMapProvider) {
+    this.$get = ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+            function PointOfInterest (attrs) {
+                Model.Base.apply(this, arguments);
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.id = attrs.id || attrs.$id;
+                this.accessAir = attrs.accessAir;
+                this.accessRail = attrs.accessRail;
+                this.accessRoad = attrs.accessRoad;
+                this.accessSea = attrs.accessSea;
+                this.addressCity = attrs.addressCity;
+                this.addressCode = attrs.addressCode;
+                this.addressDistrict = attrs.addressDistrict;
+                this.addressStreet1 = attrs.addressStreet1;
+                this.addressStreet2 = attrs.addressStreet2;
+                this.location = attrs.location;
+                this.name = attrs.name;
+                this.organization = attrs.organization;
+                this.organizationId = attrs.organizationId;
+                this.poiKey = attrs.poiKey;
+                this.type = attrs.type;
+            }
+
+            inheritModel(PointOfInterest, Model.Base);
+
+            var BRANCH = 'Branch',
+                DEPOT = 'Depot',
+                FARM_GATE = 'Farm Gate',
+                GINNERY = 'Ginnery',
+                GRAIN_MILL = 'Grain Mill',
+                HEAD_OFFICE = 'Head Office',
+                HOMESTEAD = 'Homestead',
+                MARKET = 'Market',
+                PACKHOUSE = 'Packhouse',
+                SHED = 'Shed',
+                SILO = 'Silo',
+                SUGAR_MILL = 'Sugar Mill',
+                TANK = 'Tank';
+
+            readOnlyProperty(PointOfInterest, 'types', [
+                BRANCH,
+                DEPOT,
+                FARM_GATE,
+                GINNERY,
+                GRAIN_MILL,
+                HEAD_OFFICE,
+                HOMESTEAD,
+                MARKET,
+                PACKHOUSE,
+                SHED,
+                SILO,
+                SUGAR_MILL,
+                TANK]);
+
+            readOnlyProperty(PointOfInterest, 'organizationTypes', {
+                farmer: [
+                    FARM_GATE,
+                    HOMESTEAD,
+                    SHED,
+                    TANK],
+                merchant: [
+                    BRANCH,
+                    DEPOT,
+                    GINNERY,
+                    GRAIN_MILL,
+                    HEAD_OFFICE,
+                    MARKET,
+                    PACKHOUSE,
+                    SILO,
+                    SUGAR_MILL]
+            });
+
+            privateProperty(PointOfInterest, 'getOrganizationTypes', function (type) {
+                return PointOfInterest.organizationTypes[type] || PointOfInterest.organizationTypes['merchant'];
+            });
+
+            PointOfInterest.validates({
+                addressCity: {
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                addressCode: {
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                addressDistrict: {
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                addressStreet1: {
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                addressStreet2: {
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                location: {
+                    required: false,
+                    object: true
+                },
+                name: {
+                    required: true,
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                type: {
+                    required: true,
+                    inclusion: {
+                        in: PointOfInterest.types
+                    }
+                }
+            });
+
+            return PointOfInterest;
+        }];
+
+    listServiceMapProvider.add('point of interest', [function () {
+        return function (item) {
+            return {
+                id: item.id || item.$id,
+                title: item.name,
+                subtitle: item.type
+            };
+        };
+    }]);
+}]);
+
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
 sdkModelProductionSchedule.factory('ProductionGroup', ['Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'safeArrayMath', 'safeMath', 'underscore',
@@ -21105,6 +21250,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.originHost = attrs.originHost;
                 this.originPort = attrs.originPort;
                 this.primaryContact = attrs.primaryContact;
+                this.pointsOfInterest = attrs.pointsOfInterest || [];
                 this.productionRegion = attrs.productionRegion;
                 this.registered = attrs.registered;
                 this.status = attrs.status;
@@ -21117,7 +21263,19 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.uuid = attrs.uuid;
             }
 
-            inheritModel(Organization, Locale);
+            function centroid (instance) {
+                var geom = getAssetGeom(instance),
+                    coord = (geom ? geom.getCentroid().getCoordinate() : geom);
+
+                return (coord ? [coord.x, coord.y] : coord);
+            }
+
+            function contains (instance, geojson) {
+                var farmGeom = getAssetGeom(instance),
+                    queryGeom = topologyHelper.readGeoJSON(geojson);
+
+                return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
+            }
 
             function getAssetGeom (instance) {
                 return underscore.chain(instance.legalEntities)
@@ -21134,19 +21292,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     .value();
             }
 
-            function contains (instance, geojson) {
-                var farmGeom = getAssetGeom(instance),
-                    queryGeom = topologyHelper.readGeoJSON(geojson);
-
-                return (farmGeom && queryGeom ? farmGeom.contains(queryGeom) : false);
-            }
-
-            function centroid (instance) {
-                var geom = getAssetGeom(instance),
-                    coord = (geom ? geom.getCentroid().getCoordinate() : geom);
-
-                return (coord ? [coord.x, coord.y] : coord);
-            }
+            inheritModel(Organization, Locale);
 
             privateProperty(Organization, 'contains', function (instance, geojson) {
                 return contains(instance, geojson);
@@ -22413,6 +22559,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.map-theme',
     'ag.sdk.model.merchant',
     'ag.sdk.model.organization',
+    'ag.sdk.model.point-of-interest',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',
