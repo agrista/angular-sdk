@@ -5001,7 +5001,7 @@ sdkInterfaceMapApp.provider('mapMarkerHelper', ['underscore', function (undersco
     };
 }]);
 
-sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', function (mapMarkerHelperProvider) {
+sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', 'underscore', function (mapMarkerHelperProvider, underscore) {
     var _markerIcons = {
         asset: mapMarkerHelperProvider.getMarkerStates('asset', ['default', 'success', 'error']),
         marker: mapMarkerHelperProvider.getMarkerStates('marker', ['default', 'success', 'error'])
@@ -5077,7 +5077,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.8
                 }
             },
-            'permanent crop': {
+            'permanent-crop': {
                 icon: _markerIcons.asset.success,
                 style: {
                     weight: 2,
@@ -5106,12 +5106,6 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillColor: "#ff6666",
                     fillOpacity: 0.8
                 }
-            },
-            farmgate: {
-                icon: 'success'
-            },
-            homestead: {
-                icon: 'success'
             },
             search: {
                 style: {
@@ -5193,7 +5187,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillOpacity: 0.4
                 }
             },
-            'permanent crop': {
+            'permanent-crop': {
                 icon: _markerIcons.asset.default,
                 style: {
                     weight: 1,
@@ -5222,23 +5216,15 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
                     fillColor: "#ff6666",
                     fillOpacity: 0.5
                 }
-            },
-            farmgate: {
-                icon: 'default'
-            },
-            homestead: {
-                icon: 'default',
-                label: {
-                    message: 'Homestead'
-                }
             }
         }
     };
 
     var _getStyle = this.getStyle = function (composition, layerName, label) {
+        layerName = underscore.slugify(layerName);
         var mapStyle = (_mapStyles[composition] && _mapStyles[composition][layerName] ? angular.copy(_mapStyles[composition][layerName]) : {});
 
-        if (typeof mapStyle.icon == 'string') {
+        if (typeof mapStyle.icon === 'string') {
             if (_markerIcons[layerName] === undefined) {
                 _markerIcons[layerName] = mapMarkerHelperProvider.getMarkerStates(layerName, ['default', 'success', 'error']);
             }
@@ -5246,7 +5232,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
             mapStyle.icon = _markerIcons[layerName][mapStyle.icon];
         }
 
-        if (typeof label == 'object') {
+        if (typeof label === 'object') {
             mapStyle.label = label;
         }
 
@@ -5258,10 +5244,23 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', functi
         _mapStyles[composition][layerName] = style;
     };
 
+    var _setStyles = this.setStyles = function (styles) {
+        underscore.each(styles, function (composition, compositionKey) {
+            _mapStyles[compositionKey] = _mapStyles[compositionKey] || {};
+
+            underscore.each(composition, function (style, styleKey) {
+                _mapStyles[compositionKey][styleKey] = underscore.chain(_mapStyles[compositionKey][styleKey] || {})
+                    .extend(style)
+                    .value();
+            });
+        });
+    };
+
     this.$get = function() {
         return {
             getStyle: _getStyle,
-            setStyle: _setStyle
+            setStyle: _setStyle,
+            setStyles: _setStyles
         }
     };
 }]);
