@@ -263,7 +263,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', 'under
 
     var _getStyle = this.getStyle = function (composition, layerName, label) {
         layerName = underscore.slugify(layerName);
-        var mapStyle = (_mapStyles[composition] && _mapStyles[composition][layerName] ? angular.copy(_mapStyles[composition][layerName]) : {});
+        var mapStyle = angular.copy(_mapStyles[composition] && _mapStyles[composition][layerName] || _mapStyles[composition || 'background']['marker']);
 
         if (typeof mapStyle.icon === 'string') {
             if (_markerIcons[layerName] === undefined) {

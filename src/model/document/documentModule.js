@@ -12,25 +12,26 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
+                        organization: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
                         farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
                         farms : organization.farms,
-                        legalEntities: underscore
-                            .map(organization.legalEntities, function (entity) {
-                                return underscore.omit(entity, ['assets', 'farms']);
-                            }),
-                        assets: underscore
-                            .chain(organization.legalEntities)
+                        legalEntities: underscore.map(organization.legalEntities, function (entity) {
+                            return underscore.omit(entity, ['assets', 'farms']);
+                        }),
+                        assets: underscore.chain(organization.legalEntities)
                             .pluck('assets')
                             .flatten()
                             .compact()
                             .groupBy('type')
                             .value(),
-                        liabilities: underscore
-                            .chain(organization.legalEntities)
+                        liabilities: underscore.chain(organization.legalEntities)
                             .pluck('liabilities')
                             .flatten()
                             .compact()
-                            .value()
+                            .value(),
+                        pointsOfInterest: underscore.map(organization.pointsOfInterest, function (pointOfInterest) {
+                            return underscore.omit(pointOfInterest, ['organization']);
+                        })
                     });
                 });
 

@@ -5222,7 +5222,7 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', 'under
 
     var _getStyle = this.getStyle = function (composition, layerName, label) {
         layerName = underscore.slugify(layerName);
-        var mapStyle = (_mapStyles[composition] && _mapStyles[composition][layerName] ? angular.copy(_mapStyles[composition][layerName]) : {});
+        var mapStyle = angular.copy(_mapStyles[composition] && _mapStyles[composition][layerName] || _mapStyles[composition || 'background']['marker']);
 
         if (typeof mapStyle.icon === 'string') {
             if (_markerIcons[layerName] === undefined) {
@@ -14020,25 +14020,26 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
+                        organization: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
                         farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
                         farms : organization.farms,
-                        legalEntities: underscore
-                            .map(organization.legalEntities, function (entity) {
-                                return underscore.omit(entity, ['assets', 'farms']);
-                            }),
-                        assets: underscore
-                            .chain(organization.legalEntities)
+                        legalEntities: underscore.map(organization.legalEntities, function (entity) {
+                            return underscore.omit(entity, ['assets', 'farms']);
+                        }),
+                        assets: underscore.chain(organization.legalEntities)
                             .pluck('assets')
                             .flatten()
                             .compact()
                             .groupBy('type')
                             .value(),
-                        liabilities: underscore
-                            .chain(organization.legalEntities)
+                        liabilities: underscore.chain(organization.legalEntities)
                             .pluck('liabilities')
                             .flatten()
                             .compact()
-                            .value()
+                            .value(),
+                        pointsOfInterest: underscore.map(organization.pointsOfInterest, function (pointOfInterest) {
+                            return underscore.omit(pointOfInterest, ['organization']);
+                        })
                     });
                 });
 
@@ -18345,6 +18346,7 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
                 this.accessSea = attrs.accessSea;
                 this.addressCity = attrs.addressCity;
                 this.addressCode = attrs.addressCode;
+                this.addressCountry = attrs.addressCountry;
                 this.addressDistrict = attrs.addressDistrict;
                 this.addressStreet1 = attrs.addressStreet1;
                 this.addressStreet2 = attrs.addressStreet2;
@@ -18422,6 +18424,12 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
                         max: 255
                     }
                 },
+                addressCountry: {
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
                 addressDistrict: {
                     length: {
                         min: 1,
@@ -18450,6 +18458,10 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
                         min: 1,
                         max: 255
                     }
+                },
+                organizationId: {
+                    required: true,
+                    numeric: true
                 },
                 type: {
                     required: true,

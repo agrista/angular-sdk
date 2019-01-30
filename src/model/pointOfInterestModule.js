@@ -15,6 +15,7 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
                 this.accessSea = attrs.accessSea;
                 this.addressCity = attrs.addressCity;
                 this.addressCode = attrs.addressCode;
+                this.addressCountry = attrs.addressCountry;
                 this.addressDistrict = attrs.addressDistrict;
                 this.addressStreet1 = attrs.addressStreet1;
                 this.addressStreet2 = attrs.addressStreet2;
@@ -92,6 +93,12 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
                         max: 255
                     }
                 },
+                addressCountry: {
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
                 addressDistrict: {
                     length: {
                         min: 1,
@@ -120,6 +127,10 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
                         min: 1,
                         max: 255
                     }
+                },
+                organizationId: {
+                    required: true,
+                    numeric: true
                 },
                 type: {
                     required: true,
