@@ -12943,9 +12943,11 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         inheritModel(Field, Model.Base);
 
         readOnlyProperty(Field, 'croppingPotentials', [
+            'Very High',
             'High',
             'Medium',
-            'Low']);
+            'Low',
+            'Very Low']);
 
         readOnlyProperty(Field, 'effectiveDepths', [
             '0 - 30cm',
