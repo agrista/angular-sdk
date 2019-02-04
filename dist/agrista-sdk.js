@@ -3107,6 +3107,8 @@ sdkLibraryApp.constant('bigNumber', window.BigNumber);
 
 sdkLibraryApp.constant('underscore', window._);
 
+sdkLibraryApp.constant('md5', window.md5);
+
 sdkLibraryApp.constant('moment', window.moment);
 
 sdkLibraryApp.constant('topologySuite', window.jsts);
@@ -3603,6 +3605,33 @@ sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy,
     return function (object, omit) {
         return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : deepCopy(object), omit || []);
     }
+}]);
+
+sdkUtilitiesApp.factory('sortJson', ['underscore', function (underscore) {
+    function sortJson(json) {
+        var keys = underscore.keys(json).sort();
+
+        return underscore.object(keys, underscore.map(keys, function (key) {
+            return sortValue(json[key]);
+        }))
+    }
+
+    function sortValue (value) {
+        return (underscore.isUndefined(value) ? null :
+            (underscore.isObject(value) && !underscore.isArray(value) ? sortJson(value) : value));
+    }
+
+    return sortValue;
+}]);
+
+sdkUtilitiesApp.factory('md5Json', ['md5', 'sortJson', function (md5, sortJson) {
+    function compact (json) {
+        return (json ? JSON.stringify(json).toLowerCase().replace(' ', '') : json);
+    }
+
+    return function (json) {
+        return md5(compact(sortJson(json)));
+    };
 }]);
 
 sdkUtilitiesApp.factory('deepCopy', [function () {
@@ -18338,10 +18367,16 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
 var sdkModelPointOfInterest = angular.module('ag.sdk.model.point-of-interest', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['inheritModel', 'md5Json', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (inheritModel, md5Json, Model, privateProperty, readOnlyProperty, underscore) {
             function PointOfInterest (attrs) {
                 Model.Base.apply(this, arguments);
+
+                privateProperty(this, 'generateKey', function (legalEntity, farm) {
+                    this.poiKey = generateKey(this);
+
+                    return this.poiKey;
+                });
 
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -18365,6 +18400,10 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
             }
 
             inheritModel(PointOfInterest, Model.Base);
+
+            function generateKey (instance) {
+                return md5Json(underscore.pick(instance, ['location', 'name', 'type']));
+            }
 
             var BRANCH = 'Branch',
                 DEPOT = 'Depot',

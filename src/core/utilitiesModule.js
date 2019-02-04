@@ -354,6 +354,33 @@ sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy,
     }
 }]);
 
+sdkUtilitiesApp.factory('sortJson', ['underscore', function (underscore) {
+    function sortJson(json) {
+        var keys = underscore.keys(json).sort();
+
+        return underscore.object(keys, underscore.map(keys, function (key) {
+            return sortValue(json[key]);
+        }))
+    }
+
+    function sortValue (value) {
+        return (underscore.isUndefined(value) ? null :
+            (underscore.isObject(value) && !underscore.isArray(value) ? sortJson(value) : value));
+    }
+
+    return sortValue;
+}]);
+
+sdkUtilitiesApp.factory('md5Json', ['md5', 'sortJson', function (md5, sortJson) {
+    function compact (json) {
+        return (json ? JSON.stringify(json).toLowerCase().replace(' ', '') : json);
+    }
+
+    return function (json) {
+        return md5(compact(sortJson(json)));
+    };
+}]);
+
 sdkUtilitiesApp.factory('deepCopy', [function () {
     return function (object) {
         return JSON.parse(JSON.stringify(object));

@@ -1,10 +1,16 @@
 var sdkModelPointOfInterest = angular.module('ag.sdk.model.point-of-interest', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['inheritModel', 'md5Json', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (inheritModel, md5Json, Model, privateProperty, readOnlyProperty, underscore) {
             function PointOfInterest (attrs) {
                 Model.Base.apply(this, arguments);
+
+                privateProperty(this, 'generateKey', function (legalEntity, farm) {
+                    this.poiKey = generateKey(this);
+
+                    return this.poiKey;
+                });
 
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
@@ -28,6 +34,10 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
             }
 
             inheritModel(PointOfInterest, Model.Base);
+
+            function generateKey (instance) {
+                return md5Json(underscore.pick(instance, ['location', 'name', 'type']));
+            }
 
             var BRANCH = 'Branch',
                 DEPOT = 'Depot',
