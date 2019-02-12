@@ -39,8 +39,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 addStock(this, stock);
             });
 
-            privateProperty(this, 'findStock', function (categoryName, commodityType) {
-                return findStock(this, categoryName, commodityType);
+            privateProperty(this, 'findStock', function (assetType, categoryName, commodityType) {
+                return findStock(this, assetType, categoryName, commodityType);
             });
 
             interfaceProperty(this, 'replaceAllStock', function (stock) {
@@ -118,9 +118,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             privateProperty(this, 'findGroupNameByCategory', function (sectionCode, groupName, categoryCode) {
-                return (groupName ? groupName : underscore.chain(this.getCategoryOptions(sectionCode))
-                    .map(function (categoryGroup, categoryGroupName) {
-                        return (underscore.where(categoryGroup, {code: categoryCode}).length > 0 ? categoryGroupName : undefined);
+                var splitCategoryCode = categoryCode.split('-');
+
+                return (groupName ? groupName : underscore.chain(EnterpriseBudgetBase.groups)
+                    .map(function (group) {
+                        return (s.include(group.code, splitCategoryCode[0] + '-' + splitCategoryCode[1]) ||
+                            s.include(group.code, splitCategoryCode[1])) ? group.name : undefined;
                     })
                     .compact()
                     .first()
@@ -332,9 +335,39 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             Base.initializeObject(this.data, 'sections', []);
 
             this.sortSections();
+            migrateSections(this);
         }
 
         inheritModel(EnterpriseBudgetBase, Locale);
+
+        var migrations = {
+            'INC-HVT-CROP': {
+                code: 'INC-CPS-CROP'
+            },
+            'INC-HVT-FRUT': {
+                code: 'INC-FRS-FRUT'
+            }
+        };
+
+        function migrateSections (instance) {
+            underscore.each(instance.data.sections, function (section) {
+                migrateItem(section);
+
+                underscore.each(section.productCategoryGroups, function (group) {
+                    migrateItem(group);
+
+                    underscore.each(group.productCategories, function (category) {
+                        migrateItem(category);
+                    });
+                });
+            });
+        }
+
+        function migrateItem (item) {
+            if (item && migrations[item.code]) {
+                underscore.extend(item, migrations[item.code]);
+            }
+        }
 
         readOnlyProperty(EnterpriseBudgetBase, 'sections', underscore.indexBy([
             {
@@ -528,13 +561,13 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
             //Crops
             {
-                code: 'INC-HVT-CROP',
+                code: 'INC-CPS-CROP',
                 name: 'Crop',
                 unit: 't'
             },
             //Horticulture (non-perennial)
             {
-                code: 'INC-HVT-FRUT',
+                code: 'INC-FRS-FRUT',
                 name: 'Fruit',
                 unit: 't'
             },
@@ -916,8 +949,8 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             'INC-LSP-MILK',
             'INC-LSP-WOOL',
             'INC-LSP-LFUR',
-            'INC-HVT-CROP',
-            'INC-HVT-FRUT',
+            'INC-CPS-CROP',
+            'INC-FRS-FRUT',
             'EXP-HVP-SEED',
             'EXP-HVP-PLTM',
             'EXP-HVP-FERT',
@@ -938,7 +971,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         readOnlyProperty(EnterpriseBudgetBase, 'categoryOptions', {
             crop: {
                 INC: {
-                    'Crop Sales': getCategoryArray(['INC-HVT-CROP'])
+                    'Crop Sales': getCategoryArray(['INC-CPS-CROP'])
                 },
                 EXP: {
                     'Preharvest': getCategoryArray(['EXP-HVP-FERT', 'EXP-HVP-FUNG', 'EXP-HVP-HEDG', 'EXP-HVP-HERB', 'EXP-HVP-INSH', 'EXP-HVP-INSM', 'EXP-HVP-LIME', 'EXP-HVP-PEST', 'EXP-HVP-PRCI', 'EXP-HVP-SEED', 'EXP-HVP-SPYA']),
@@ -949,7 +982,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             },
             horticulture: {
                 INC: {
-                    'Fruit Sales': getCategoryArray(['INC-HVT-FRUT'])
+                    'Fruit Sales': getCategoryArray(['INC-FRS-FRUT'])
                 },
                 EXP: {
                     'Establishment': getCategoryArray(['EXP-EST-DRAN', 'EXP-EST-IRRG', 'EXP-EST-LPRP', 'EXP-EST-TRLL']),
@@ -1039,9 +1072,9 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             }
         }
 
-        function findStock (instance, categoryName, commodityType) {
+        function findStock (instance, assetType, categoryName, commodityType) {
             return underscore.find(instance.stock, function (stock) {
-                return stock.data.category === categoryName && (underscore.isUndefined(stock.data.type) || stock.data.type === commodityType);
+                return stock.type === assetType && stock.data.category === categoryName && (underscore.isUndefined(stock.data.type) || stock.data.type === commodityType);
             });
         }
 
@@ -1839,7 +1872,7 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
             }
 
             function recalculateCategory (instance, category) {
-                category.name = (underscore.contains(['INC-HVT-CROP', 'INC-HVT-FRUT'], category.code) ?
+                category.name = (underscore.contains(['INC-CPS-CROP', 'INC-FRS-FRUT'], category.code) ?
                     instance.commodityType :
                     EnterpriseBudgetBase.categories[category.code].name);
 

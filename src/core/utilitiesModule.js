@@ -340,6 +340,24 @@ sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
+sdkUtilitiesApp.factory('colorHash', ['md5', function (md5) {
+    function hashCode (str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return hash;
+    }
+
+    return function (str) {
+        var c = (hashCode(str) & 0x00FFFFFF)
+            .toString(16)
+            .toUpperCase();
+
+        return '#' + ('00000'.substring(0, 6 - c.length)) + c;
+    };
+}]);
+
 sdkUtilitiesApp.filter('round', [function () {
     return function (value, precision) {
         precision = precision || 2;

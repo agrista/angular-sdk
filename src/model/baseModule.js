@@ -27,7 +27,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.asJSON = function (omit) {
-                return underscore.omit(deepCopy(this), underscore.union(['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'], omit || []));
+                return underscore.omit(deepCopy(this), underscore.union(['$id', '$uri', '$complete', '$offline', '$delete', '$dirty', '$local', '$saved'], omit || []));
             };
 
             _constructor.copy = function () {

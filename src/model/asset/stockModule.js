@@ -50,23 +50,36 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 }, {configurable: true});
 
                 // Ledger
-                function addLedgerEntry (instance, item) {
-                    if (instance.isLedgerEntryValid(item)) {
+                function addLedgerEntry (instance, ledgerEntry) {
+                    if (instance.isLedgerEntryValid(ledgerEntry)) {
                         instance.data.ledger = underscore.chain(instance.data.ledger)
-                            .union([underscore.extend(item, {
-                                date: moment(item.date).format('YYYY-MM-DD')
+                            .union([underscore.extend(ledgerEntry, {
+                                date: moment(ledgerEntry.date).format('YYYY-MM-DD')
                             })])
                             .sortBy(function (item) {
                                 return moment(item.date).valueOf() + getActionGroup(instance, item.action);
                             })
                             .value();
+                        instance.$dirty = true;
 
                         recalculateAndCache(instance, {checkEntries: true});
                     }
                 }
 
-                privateProperty(this, 'addLedgerEntry', function (item) {
-                    return addLedgerEntry(this, item);
+                privateProperty(this, 'addLedgerEntry', function (ledgerEntry) {
+                    return addLedgerEntry(this, ledgerEntry);
+                });
+
+                function setLedgerEntry (instance, ledgerEntry, data) {
+                    if (!underscore.isEqual(data, underscore.pick(ledgerEntry, underscore.keys(data)))) {
+                        underscore.extend(ledgerEntry, data);
+                        instance.$dirty = true;
+                        recalculateAndCache(instance);
+                    }
+                }
+
+                privateProperty(this, 'setLedgerEntry', function (ledgerEntry, data) {
+                    return setLedgerEntry(this, ledgerEntry, data);
                 });
 
                 function getActionGroup (instance, action) {
@@ -119,6 +132,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                             this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                                 return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
                             });
+                            this.$dirty = true;
                         }
 
                         recalculateAndCache(this);
@@ -133,6 +147,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                         return s.include(entry.reference, reference);
                     });
+                    this.$dirty = true;
 
                     recalculateAndCache(this);
                 });

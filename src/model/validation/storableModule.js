@@ -8,6 +8,7 @@ sdkModelStore.factory('Storable', ['computedProperty', 'privateProperty',
             privateProperty(_storable, 'set', function (inst, attrs) {
                 if (attrs) {
                     inst.$complete = attrs.$complete === true;
+                    inst.$delete = attrs.$delete === true;
                     inst.$dirty = attrs.$dirty === true;
                     inst.$id = attrs.$id;
                     inst.$local = attrs.$local === true;

@@ -53,7 +53,7 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
                 (instance.type === 'stock' ?
                     (instance.data.type ? '-t.' + instance.data.type : '') +
                     (instance.data.category ? '-c.' + instance.data.category : '') +
-                    (instance.data.product ? '-p.' + instance.data.product : '') : '') +
+                    (instance.data.product ? '-pr.' + instance.data.product : '') : '') +
                 (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
                 (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
         }

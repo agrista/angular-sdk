@@ -1127,11 +1127,27 @@ sdkApiApp.factory('liabilityApi', ['$http', 'asJson', 'promiseService', 'configu
     var host = configuration.getServer();
 
     return {
+        createLiability: function (data) {
+            var dataCopy = asJson(data);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/liability', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         updateLiability: function (data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/liability/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteLiability: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/liability/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

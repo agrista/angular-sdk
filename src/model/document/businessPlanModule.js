@@ -159,26 +159,28 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                     });
                 }
 
-                function getStockAsset (instance, type, stockType, category, priceUnit, quantityUnit) {
-                    var stock = AssetFactory.new(findStockAsset(instance, type, stockType, category) || {
-                        type: type,
-                        legalEntityId: underscore.chain(instance.data.legalEntities)
-                            .where({isPrimary: true})
-                            .pluck('id')
-                            .first()
-                            .value(),
-                        data: underscore.extend({
-                            category: category,
-                            priceUnit: priceUnit,
-                            quantityUnit: quantityUnit
-                        }, (underscore.isUndefined(stockType) ? {} : {
-                            type: stockType
-                        }))
-                    });
+                function stockPicker (instance) {
+                    return function (type, stockType, category, priceUnit, quantityUnit) {
+                        var stock = AssetFactory.new(findStockAsset(instance, type, stockType, category) || {
+                            type: type,
+                            legalEntityId: underscore.chain(instance.data.legalEntities)
+                                .where({isPrimary: true})
+                                .pluck('id')
+                                .first()
+                                .value(),
+                            data: underscore.extend({
+                                category: category,
+                                priceUnit: priceUnit,
+                                quantityUnit: quantityUnit
+                            }, (underscore.isUndefined(stockType) ? {} : {
+                                type: stockType
+                            }))
+                        });
 
-                    stock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: stock.legalEntityId}));
+                        stock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: stock.legalEntityId}));
 
-                    return stock;
+                        return stock;
+                    }
                 }
 
                 function addStockAsset (instance, stock, force) {
@@ -192,148 +194,10 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                 }
 
                 function extractProductionScheduleStockAssets (instance, productionSchedule) {
-                    var startDate = moment(productionSchedule.startDate);
+                    var inventory = productionSchedule.extractStock(stockPicker(instance));
 
-                    underscore.each(productionSchedule.data.sections, function (section) {
-                        underscore.each(section.productCategoryGroups, function (group) {
-                            underscore.each(group.productCategories, function (category) {
-                                if (underscore.contains(EnterpriseBudget.stockableCategoryCodes, category.code)) {
-                                    var assetType = (group.code === 'INC-LSS' ? 'livestock' : 'stock'),
-                                        priceUnit = (category.unit === 'Total' ? undefined : category.unit),
-                                        stockType = (section.code === 'INC' ? productionSchedule.commodityType : undefined),
-                                        stock = getStockAsset(instance, assetType, stockType, category.name, priceUnit, category.supplyUnit);
-
-                                    if (assetType === 'livestock' && category.value) {
-                                        Base.initializeObject(stock.data, 'pricePerUnit', safeMath.dividedBy(category.value, category.supply || 1));
-                                    }
-
-                                    productionSchedule.updateCategoryStock(section.code, category.code, stock);
-
-                                    addStockAsset(instance, stock, true);
-                                }
-                            });
-
-                            if (group.code === 'INC-LSS') {
-                                // Representative Animal
-                                var representativeAnimal = productionSchedule.getRepresentativeAnimal(),
-                                    representativeCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: representativeAnimal});
-
-                                // Birth/Weaned Animals
-                                var birthAnimal = productionSchedule.birthAnimal,
-                                    birthCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: birthAnimal}),
-                                    weanedCategory = underscore.findWhere(productionSchedule.getGroupCategoryOptions('INC', 'Livestock Sales'), {name: Livestock.getWeanedAnimal(productionSchedule.commodityType)});
-
-                                if (!underscore.isUndefined(representativeCategory) && !underscore.isUndefined(birthCategory) && !underscore.isUndefined(weanedCategory)) {
-                                    var representativeLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, representativeAnimal, representativeCategory.unit, representativeCategory.supplyUnit),
-                                        birthLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, birthAnimal, birthCategory.unit, birthCategory.supplyUnit),
-                                        weanedLivestock = getStockAsset(instance, 'livestock', productionSchedule.commodityType, weanedCategory.name, weanedCategory.unit, weanedCategory.supplyUnit);
-
-                                    var firstBirthLedgerEntry = underscore.first(birthLivestock.data.ledger),
-                                        retainLivestockMap = {
-                                            'Retain': birthLivestock,
-                                            'Retained': weanedLivestock
-                                        };
-
-                                    if (underscore.isUndefined(firstBirthLedgerEntry) || moment(productionSchedule.startDate).isSameOrBefore(firstBirthLedgerEntry.date)) {
-                                        representativeLivestock.data.openingBalance = productionSchedule.data.details.herdSize;
-                                    }
-
-                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', representativeCategory.code, productionSchedule.costStage);
-                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', birthCategory.code, productionSchedule.costStage);
-                                    productionSchedule.budget.addCategory('INC', 'Livestock Sales', weanedCategory.code, productionSchedule.costStage);
-
-                                    underscore.each(underscore.keys(productionSchedule.budget.data.events).sort(), function (action) {
-                                        var shiftedSchedule = productionSchedule.budget.shiftMonthlyArray(productionSchedule.budget.data.events[action]);
-
-                                        underscore.each(shiftedSchedule, function (rate, index) {
-                                            if (rate > 0) {
-                                                var formattedDate = moment(startDate).add(index, 'M').format('YYYY-MM-DD'),
-                                                    representativeLivestockInventory = representativeLivestock.inventoryBefore(formattedDate),
-                                                    ledgerEntry = birthLivestock.findLedgerEntry({date: formattedDate, action: action, reference: productionSchedule.scheduleKey}),
-                                                    actionReference = [productionSchedule.scheduleKey, action, formattedDate].join('/'),
-                                                    quantity = Math.floor(safeMath.chain(rate)
-                                                        .times(representativeLivestockInventory.closing.quantity)
-                                                        .dividedBy(100)
-                                                        .toNumber()),
-                                                    value = safeMath.times(quantity, birthLivestock.data.pricePerUnit);
-
-                                                if (underscore.isUndefined(ledgerEntry)) {
-                                                    birthLivestock.addLedgerEntry({
-                                                        action: action,
-                                                        commodity: productionSchedule.commodityType,
-                                                        date: formattedDate,
-                                                        price: birthLivestock.data.pricePerUnit,
-                                                        priceUnit: birthLivestock.data.quantityUnit,
-                                                        quantity: quantity,
-                                                        quantityUnit: birthLivestock.data.quantityUnit,
-                                                        reference: actionReference,
-                                                        value: value
-                                                    });
-                                                } else {
-                                                    underscore.extend(ledgerEntry, {
-                                                        commodity: productionSchedule.commodityType,
-                                                        price: birthLivestock.data.pricePerUnit,
-                                                        priceUnit: birthLivestock.data.quantityUnit,
-                                                        quantity: quantity,
-                                                        quantityUnit: birthLivestock.data.quantityUnit,
-                                                        reference: actionReference,
-                                                        value: value
-                                                    });
-
-                                                    birthLivestock.recalculateLedger();
-                                                }
-
-                                                if (action === 'Death') {
-                                                    var retainReference = [productionSchedule.scheduleKey, 'Retain:' + birthAnimal, formattedDate].join('/');
-
-                                                    // Removed already included retained entries, as it affects the inventory balance
-                                                    birthLivestock.removeLedgerEntriesByReference(retainReference);
-
-                                                    // Retains birth animal as weaned animal
-                                                    var inventory = birthLivestock.inventoryBefore(formattedDate);
-
-                                                    underscore.each(underscore.keys(retainLivestockMap), function (retainAction) {
-                                                        var retainLivestock = retainLivestockMap[retainAction],
-                                                            retainLedgerEntry = retainLivestock.findLedgerEntry(retainReference),
-                                                            value = inventory.closing.value || safeMath.times(retainLivestock.data.pricePerUnit, inventory.closing.quantity);
-
-                                                        if (underscore.isUndefined(retainLedgerEntry)) {
-                                                            retainLivestock.addLedgerEntry({
-                                                                action: retainAction + ':' + birthAnimal,
-                                                                commodity: productionSchedule.commodityType,
-                                                                date: formattedDate,
-                                                                price: retainLivestock.data.pricePerUnit,
-                                                                priceUnit: retainLivestock.data.quantityUnit,
-                                                                quantity: inventory.closing.quantity,
-                                                                quantityUnit: retainLivestock.data.quantityUnit,
-                                                                reference: retainReference,
-                                                                value: value
-                                                            });
-                                                        } else {
-                                                            underscore.extend(retainLedgerEntry, {
-                                                                commodity: productionSchedule.commodityType,
-                                                                price: retainLivestock.data.pricePerUnit,
-                                                                priceUnit: retainLivestock.data.quantityUnit,
-                                                                quantity: inventory.closing.quantity,
-                                                                quantityUnit: retainLivestock.data.quantityUnit,
-                                                                reference: retainReference,
-                                                                value: value
-                                                            });
-
-                                                            retainLivestock.recalculateLedger();
-                                                        }
-                                                    });
-                                                }
-                                            }
-                                        });
-                                    });
-
-                                    addStockAsset(instance, representativeLivestock, true);
-                                    addStockAsset(instance, birthLivestock, true);
-                                    addStockAsset(instance, weanedLivestock, true);
-                                }
-                            }
-                        });
+                    underscore.each(inventory, function (stock) {
+                        addStockAsset(instance, stock, true);
                     });
                 }
 
@@ -545,7 +409,9 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                         return item.uuid === liability.uuid;
                                     });
 
-                                    instance.models.liabilities.push(asJson(liability));
+                                    if (liability.$delete === false) {
+                                        instance.models.liabilities.push(asJson(liability));
+                                    }
                                 }
 
                                 return asJson(liability);
