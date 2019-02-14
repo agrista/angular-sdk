@@ -85,7 +85,6 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
                 }
             },
             email: {
-                required: true,
                 format: {
                     email: true
                 }
@@ -98,7 +97,6 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
                 }
             },
             organizationId: {
-                required: true,
                 numeric: true
             },
             teams: {

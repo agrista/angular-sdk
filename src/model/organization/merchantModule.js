@@ -59,7 +59,6 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
                 }
             },
             email: {
-                required: true,
                 format: {
                     email: true
                 }
@@ -72,7 +71,6 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
                 }
             },
             organizationId: {
-                required: true,
                 numeric: true
             },
             partnerType: {

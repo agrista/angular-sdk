@@ -53,7 +53,6 @@ sdkModelFarmer.factory('Farmer', ['Organization', 'Base', 'computedProperty', 'i
                 }
             },
             email: {
-                required: true,
                 format: {
                     email: true
                 }
@@ -66,7 +65,6 @@ sdkModelFarmer.factory('Farmer', ['Organization', 'Base', 'computedProperty', 'i
                 }
             },
             organizationId: {
-                required: true,
                 numeric: true
             }
         });

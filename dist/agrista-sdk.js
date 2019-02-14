@@ -21735,7 +21735,6 @@ sdkModelFarmer.factory('Farmer', ['Organization', 'Base', 'computedProperty', 'i
                 }
             },
             email: {
-                required: true,
                 format: {
                     email: true
                 }
@@ -21748,7 +21747,6 @@ sdkModelFarmer.factory('Farmer', ['Organization', 'Base', 'computedProperty', 'i
                 }
             },
             organizationId: {
-                required: true,
                 numeric: true
             }
         });
@@ -21817,7 +21815,6 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
                 }
             },
             email: {
-                required: true,
                 format: {
                     email: true
                 }
@@ -21830,7 +21827,6 @@ sdkModelMerchant.factory('Merchant', ['Organization', 'Base', 'computedProperty'
                 }
             },
             organizationId: {
-                required: true,
                 numeric: true
             },
             partnerType: {
@@ -21943,7 +21939,6 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
                 }
             },
             email: {
-                required: true,
                 format: {
                     email: true
                 }
@@ -21956,7 +21951,6 @@ sdkModelOrganization.factory('Organization', ['Locale', 'Base', 'inheritModel', 
                 }
             },
             organizationId: {
-                required: true,
                 numeric: true
             },
             teams: {
