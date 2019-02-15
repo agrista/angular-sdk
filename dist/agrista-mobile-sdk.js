@@ -20008,7 +20008,6 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     }
                 },
                 email: {
-                    required: true,
                     format: {
                         email: true
                     }
@@ -20021,7 +20020,6 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     }
                 },
                 organizationId: {
-                    required: true,
                     numeric: true
                 },
                 teams: {
@@ -20782,7 +20780,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                     }
                 }
                 
-                this.setSize(this.asset.data.size);
+                this.setSize(this.asset.data.plantedArea || this.asset.data.size);
             });
             
             privateProperty(this, 'setBudget', function (budget) {
