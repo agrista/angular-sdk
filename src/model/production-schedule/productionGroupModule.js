@@ -1,7 +1,7 @@
 var sdkModelProductionGroup = angular.module('ag.sdk.model.production-group', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'safeArrayMath', 'safeMath', 'underscore',
-    function (Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, safeArrayMath, safeMath, underscore) {
+sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 'EnterpriseBudgetBase', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'promiseService', 'safeArrayMath', 'safeMath', 'underscore',
+    function (Base, computedProperty, EnterpriseBudgetBase, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, promiseService, safeArrayMath, safeMath, underscore) {
         function ProductionGroup (attrs, options) {
             options = options || {};
 
@@ -181,11 +181,17 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
         }
 
         function extractStock (instance, stockPickerFn) {
-            underscore.each(instance.productionSchedules, function (productionSchedule) {
-                addAllStock(instance, productionSchedule.extractStock(stockPickerFn));
+            return promiseService.chain(function (promises) {
+                underscore.each(instance.productionSchedules, function (productionSchedule) {
+                    promises.push(function () {
+                        return productionSchedule.extractStock(stockPickerFn).then(function (stock) {
+                            addAllStock(instance, stock);
+                        });
+                    });
+                });
+            }).then(function () {
+                return instance.stock;
             });
-
-            return instance.stock;
         }
 
         function replaceAllStock (instance, stock) {
