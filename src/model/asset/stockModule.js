@@ -22,10 +22,13 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
 
                 // Actions
                 readOnlyProperty(this, 'actions', {
-                    'credit': [
+                    'incoming': [
                         'Production',
                         'Purchase'],
-                    'debit': [
+                    'movement': [
+                        'Deliver'
+                    ],
+                    'outgoing': [
                         'Consumption',
                         'Internal',
                         'Household',
@@ -39,6 +42,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     'Household': 'Household Consumption',
                     'Internal': 'Internal Consumption',
                     'Labour': 'Labour Consumption',
+                    'Deliver': 'Deliver',
                     'Production': 'Produce',
                     'Purchase': 'Buy Stock',
                     'Repay': 'Repay Credit',
@@ -253,10 +257,10 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     curr.opening = prev.closing;
                     curr.balance = underscore.mapObject(curr.opening, function (value, key) {
                         return safeMath.chain(value)
-                            .plus(underscore.reduce(curr.credit, function (total, item) {
+                            .plus(underscore.reduce(curr.incoming, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
-                            .minus(underscore.reduce(curr.debit, function (total, item) {
+                            .minus(underscore.reduce(curr.outgoing, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
                             .toNumber();
@@ -270,7 +274,8 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                         numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
                         appliedStart = (instance.startMonth ? instance.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
                         appliedEnd = (instance.endMonth ? rangeEndDate.diff(instance.endMonth, 'months') : 0),
-                        startCrop = Math.abs(Math.min(0, appliedStart));
+                        startCrop = Math.abs(Math.min(0, appliedStart)),
+                        openingMonthEntry = openingMonth(instance);
 
                     if (underscore.isEmpty(_monthly) && !underscore.isEmpty(instance.data.ledger)) {
                         recalculateAndCache(instance);
@@ -280,7 +285,9 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                             .concat(_monthly)
                             .concat(defaultMonths(Math.max(0, appliedEnd))),
                         function (monthly, curr) {
-                            balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
+                            var prev = (monthly.length > 0 ? monthly[monthly.length - 1] : openingMonthEntry);
+
+                            balanceEntry(curr, prev);
                             monthly.push(curr);
                             return monthly;
                         }, [])
@@ -292,7 +299,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                         endMonth = instance.endMonth,
                         numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : -1),
                         openingMonthEntry = openingMonth(instance),
-                        types = ['credit', 'debit'];
+                        types = ['incoming', 'movement', 'outgoing'];
 
                     options = underscore.defaults(options || {}, {
                         checkEntries: false
@@ -366,8 +373,9 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
             function defaultMonth (quantity, value) {
                 return {
                     opening: defaultItem(quantity, value),
-                    credit: {},
-                    debit: {},
+                    incoming: {},
+                    movement: {},
+                    outgoing: {},
                     entries: [],
                     balance: defaultItem(quantity, value),
                     interest: 0,
@@ -388,8 +396,9 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
 
             function isLedgerEntryValid (instance, item) {
                 var pureAction = asPureAction(item.action);
-                return item && item.date && moment(item.date).isValid() && /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
-                    (underscore.contains(instance.actions.credit, pureAction) || underscore.contains(instance.actions.debit, pureAction));
+                return item && item.date && moment(item.date).isValid() &&
+                    /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
+                    underscore.contains(underscore.keys(instance.actionTitles), pureAction);
             }
 
             inheritModel(Stock, AssetBase);

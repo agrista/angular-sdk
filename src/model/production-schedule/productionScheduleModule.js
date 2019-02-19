@@ -362,62 +362,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             }
         }
 
-        function updateStockLedgerEntry (instance, stock, ledgerEntry, formattedDate, action, category, index, options) {
-            var reference = [instance.scheduleKey, action, formattedDate].join('/');
-
-            options = underscore.defaults(options || {}, {
-                overwrite: false
-            });
-
-            if (underscore.isUndefined(ledgerEntry)) {
-                ledgerEntry = underscore.extend({
-                    action: action,
-                    date: formattedDate,
-                    commodity: instance.commodityType,
-                    reference: reference,
-                    value: category.valuePerMonth[index]
-                }, (category.unit === 'Total' ? {} :
-                    underscore.extend({
-                        price: category.pricePerUnit,
-                        priceUnit: category.unit
-                    }, (underscore.isUndefined(category.supplyPerMonth) ? {
-                        quantity: category.quantityPerMonth[index],
-                        quantityUnit: category.unit
-                    } : {
-                        quantity: category.supplyPerMonth[index],
-                        quantityUnit: category.supplyUnit,
-                        rate: category.quantity
-                    }))));
-
-                stock.addLedgerEntry(ledgerEntry, options);
-            } else if (!ledgerEntry.edited || options.overwrite) {
-                stock.setLedgerEntry(ledgerEntry, underscore.extend({
-                    commodity: instance.commodityType,
-                    reference: reference,
-                    value: category.valuePerMonth[index]
-                }, (category.unit === 'Total' ? {} :
-                    underscore.extend({
-                        price: category.pricePerUnit,
-                        priceUnit: category.unit
-                    }, (underscore.isUndefined(category.supplyPerMonth) ? {
-                        quantity: category.quantityPerMonth[index],
-                        quantityUnit: category.unit
-                    } : {
-                        quantity: category.supplyPerMonth[index],
-                        quantityUnit: category.supplyUnit,
-                        rate: category.quantity
-                    })))), options);
-
-                if (ledgerEntry.liabilityUuid) {
-                    var liability = underscore.findWhere(stock.liabilities, {uuid: ledgerEntry.liabilityUuid});
-
-                    updateLedgerEntryLiability(liability, category.name, formattedDate, action, category.valuePerMonth[index]);
-                }
-            }
-
-            return ledgerEntry;
-        }
-
         function extractStock (instance, stockPickerFn) {
             return promiseService.wrap(function (promise) {
                 var startDate = moment(instance.startDate);
@@ -572,6 +516,62 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             });
         }
 
+        function updateStockLedgerEntry (instance, stock, ledgerEntry, formattedDate, action, category, index, options) {
+            var reference = [instance.scheduleKey, action, formattedDate].join('/');
+
+            options = underscore.defaults(options || {}, {
+                overwrite: false
+            });
+
+            if (underscore.isUndefined(ledgerEntry)) {
+                ledgerEntry = underscore.extend({
+                    action: action,
+                    date: formattedDate,
+                    commodity: instance.commodityType,
+                    reference: reference,
+                    value: category.valuePerMonth[index]
+                }, (category.unit === 'Total' ? {} :
+                    underscore.extend({
+                        price: category.pricePerUnit,
+                        priceUnit: category.unit
+                    }, (underscore.isUndefined(category.supplyPerMonth) ? {
+                        quantity: category.quantityPerMonth[index],
+                        quantityUnit: category.unit
+                    } : {
+                        quantity: category.supplyPerMonth[index],
+                        quantityUnit: category.supplyUnit,
+                        rate: category.quantity
+                    }))));
+
+                stock.addLedgerEntry(ledgerEntry, options);
+            } else if (!ledgerEntry.edited || options.overwrite) {
+                stock.setLedgerEntry(ledgerEntry, underscore.extend({
+                    commodity: instance.commodityType,
+                    reference: reference,
+                    value: category.valuePerMonth[index]
+                }, (category.unit === 'Total' ? {} :
+                    underscore.extend({
+                        price: category.pricePerUnit,
+                        priceUnit: category.unit
+                    }, (underscore.isUndefined(category.supplyPerMonth) ? {
+                        quantity: category.quantityPerMonth[index],
+                        quantityUnit: category.unit
+                    } : {
+                        quantity: category.supplyPerMonth[index],
+                        quantityUnit: category.supplyUnit,
+                        rate: category.quantity
+                    })))), options);
+
+                if (ledgerEntry.liabilityUuid) {
+                    var liability = underscore.findWhere(stock.liabilities, {uuid: ledgerEntry.liabilityUuid});
+
+                    updateLedgerEntryLiability(liability, category.name, formattedDate, action, category.valuePerMonth[index]);
+                }
+            }
+
+            return ledgerEntry;
+        }
+
         function updateCategoryStock (instance, sectionCode, categoryCode, stock, overwrite) {
             var category = instance.getCategory(sectionCode, categoryCode, instance.costStage),
                 assetType = (s.include(categoryCode, 'INC-LSS') ? 'livestock' : 'stock'),
@@ -585,6 +585,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
 
                 if (stock) {
                     var inputAction = (sectionCode === 'INC' ? 'Production' : 'Purchase'),
+                        deliveryAction = 'Deliver',
                         outputAction = (sectionCode === 'INC' ? 'Sale' : 'Consumption');
 
                     // Remove entries
@@ -593,6 +594,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                             if (value === 0) {
                                 var formattedDate = moment(instance.startDate).add(index, 'M').format('YYYY-MM-DD'),
                                     inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: instance.scheduleKey}),
+                                    deliveryLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: deliveryAction, reference: instance.scheduleKey}),
                                     outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
 
                                 if (inputLedgerEntry && inputLedgerEntry.liabilityUuid) {
@@ -600,6 +602,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                                 }
 
                                 stock.removeLedgerEntry(inputLedgerEntry, updateOptions);
+                                stock.removeLedgerEntry(deliveryLedgerEntry, updateOptions);
                                 stock.removeLedgerEntry(outputLedgerEntry, updateOptions);
                             }
 
@@ -616,6 +619,12 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                             var formattedDate = moment(instance.startDate).add(index, 'M').format('YYYY-MM-DD'),
                                 inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: instance.scheduleKey}),
                                 outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
+
+                            if (sectionCode === 'INC') {
+                                var deliveryLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: deliveryAction, reference: instance.scheduleKey});
+
+                                updateStockLedgerEntry(instance, stock, deliveryLedgerEntry, formattedDate, deliveryAction, category, index, updateOptions);
+                            }
 
                             if (sectionCode === 'EXP' || instance.assetType !== 'livestock') {
                                 inputLedgerEntry = updateStockLedgerEntry(instance, stock, inputLedgerEntry, formattedDate, inputAction, category, index, updateOptions);

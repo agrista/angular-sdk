@@ -794,7 +794,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                         }
 
                                         underscore.chain(ledger)
-                                            .pick(['credit', 'debit'])
+                                            .pick(['incoming', 'outgoing'])
                                             .each(function (actions) {
                                                 underscore.each(actions, function (item, action) {
                                                     switch (action) {

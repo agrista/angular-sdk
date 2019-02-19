@@ -7,11 +7,14 @@ sdkModelLivestock.provider('Livestock', ['AssetFactoryProvider', function (Asset
                 Stock.apply(this, arguments);
 
                 readOnlyProperty(this, 'actions', {
-                    'credit': [
+                    'incoming': [
                         'Birth',
                         'Retained',
                         'Purchase'],
-                    'debit': [
+                    'movement': [
+                        'Deliver'
+                    ],
+                    'outgoing': [
                         'Death',
                         'Household',
                         'Labour',
@@ -82,6 +85,7 @@ sdkModelLivestock.provider('Livestock', ['AssetFactoryProvider', function (Asset
             var actionTitles = {
                 'Birth': 'Register Births',
                 'Death': 'Register Deaths',
+                'Deliver': 'Deliver Livestock',
                 'Purchase': 'Purchase Livestock',
                 'Household': 'Household Consumption',
                 'Labour': 'Labour Consumption',
