@@ -1643,14 +1643,14 @@ sdkApiApp.factory('productDemandApi', ['$http', 'asJson', 'pagingService', 'prom
  */
 sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['asset', 'budget', 'organization'];
+        removableFields = ['assets', 'budget', 'organization'];
 
     return {
         getProductionSchedules: function (id) {
             return pagingService.page(host + 'api/production-schedules' + (id ? '/' + id : ''));
         },
-        createProductionSchedule: function (data) {
-            var dataCopy = asJson(data, removableFields);
+        createProductionSchedule: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/production-schedule', dataCopy, {withCredentials: true}).then(function (res) {
@@ -1665,8 +1665,8 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
                 }, promise.reject);
             });
         },
-        updateProductionSchedule: function (data) {
-            var dataCopy = asJson(data, removableFields);
+        updateProductionSchedule: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/production-schedule/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
@@ -1677,6 +1677,20 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
         deleteProductionSchedule: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/production-schedule/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        attachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/production-schedule/' + id + '/add/' + assetId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/production-schedule/' + id + '/remove/' + assetId, {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -2867,17 +2881,17 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
 
             return _this;
         },
-        addGeometry: function (geometry, properties) {
-            if (geometry) {
+        addGeometry: function (geojson, properties) {
+            if (geojson) {
                 if (this._json === undefined) {
-                    this._json = geometry;
+                    this._json = geojson;
 
                     this.addProperties(properties);
                 } else {
-                    if (this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
+                    if (this._json.type !== 'GeometryCollection' && this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
                         this._json = {
-                            type: 'Feature',
-                            geometry: this._json
+                            type: 'GeometryCollection',
+                            geometries: [this._json]
                         };
                     }
 
@@ -2893,13 +2907,25 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
                     }
 
                     if (this._json.type === 'FeatureCollection') {
-                        this._json.features.push({
-                            type: 'Feature',
-                            geometry: geometry,
-                            properties: underscore.defaults(properties || {}, {
-                                featureId: objectId().toString()
-                            })
-                        });
+                        if (geojson.type === 'Feature') {
+                            this._json.features.push(geojson);
+                        } else {
+                            this._json.features.push({
+                                type: 'Feature',
+                                geometry: geojson,
+                                properties: underscore.defaults(properties || {}, {
+                                    featureId: objectId().toString()
+                                })
+                            });
+                        }
+                    }
+
+                    if (this._json.type === 'GeometryCollection') {
+                        if (geojson.type === 'Feature') {
+                            this._json.features.push(geojson.geometry);
+                        } else {
+                            this._json.geometries.push(geojson);
+                        }
                     }
                 }
             }
@@ -3636,8 +3662,16 @@ sdkUtilitiesApp.filter('round', [function () {
 }]);
 
 sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy, underscore) {
+    function omitFn (omit) {
+        return function (object) {
+            var json = (underscore.isFunction(object.asJSON) ? object.asJSON(omit) : deepCopy(object));
+
+            return (omit ? underscore.omit(json, omit) : json);
+        }
+    }
+
     return function (object, omit) {
-        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : deepCopy(object), omit || []);
+        return (underscore.isArray(object) ? underscore.map(object, omitFn(omit)) : omitFn(omit)(object));
     }
 }]);
 
@@ -8365,8 +8399,8 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         return AssetGroup;
     }]);
 
-sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, underscore) {
+sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function Asset (attrs) {
             AssetBase.apply(this, arguments);
 
@@ -8472,10 +8506,6 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.farmId = attrs.farmId;
-
-            this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
-                return ProductionSchedule.newCopy(schedule);
-            });
 
             if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
                 this.data.assetValuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
@@ -11662,7 +11692,9 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             };
 
             _constructor.asJSON = function (omit) {
-                return underscore.omit(deepCopy(this), underscore.union(['$id', '$uri', '$complete', '$offline', '$delete', '$dirty', '$local', '$saved'], omit || []));
+                var json = deepCopy(this);
+
+                return (omit ? underscore.omit(json, omit) : json);
             };
 
             _constructor.copy = function () {
@@ -12052,9 +12084,9 @@ sdkModelComparableSale.factory('ComparableSale', ['Locale', 'computedProperty', 
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
 sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
-        function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
-            var _version = 16;
+    this.$get = ['asJson', 'AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
+        function (asJson, AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
+            var _version = 17;
 
             function BusinessPlan (attrs) {
                 Document.apply(this, arguments);
@@ -12094,13 +12126,6 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                 }
 
                 /**
-                 * Helper functions
-                 */
-                function asJson (object, omit) {
-                    return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON() : object, omit || []);
-                }
-
-                /**
                  * Production Schedule handling
                  */
                 privateProperty(this, 'updateProductionSchedules', function (schedules, options) {
@@ -12132,7 +12157,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                     extractProductionScheduleStockAssets(instance, schedule);
                                 }
 
-                                instance.models.productionSchedules.push(asJson(schedule, ['asset']));
+                                instance.models.productionSchedules.push(asJson(schedule));
 
                                 oldSchedules = underscore.reject(oldSchedules, function (oldSchedule) {
                                     return oldSchedule.scheduleKey === schedule.scheduleKey;
@@ -12525,6 +12550,9 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                             underscore.each(liability.liabilityInRange(instance.startDate, instance.endDate), function (monthly, index) {
                                 underscore.each(liability.data.enterprises, function (enterprise) {
                                     underscore.each(liability.data.inputs, function (input) {
+                                        Base.initializeObject(instance.data.unallocatedEnterpriseProductionExpenditure[enterprise], input, Base.initializeArray(instance.numberOfMonths, 0));
+                                        Base.initializeObject(instance.data.unallocatedProductionExpenditure, input, Base.initializeArray(instance.numberOfMonths, 0));
+
                                         instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index], monthly.withdrawal));
                                         instance.data.unallocatedProductionExpenditure[input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedProductionExpenditure[input][index], monthly.withdrawal));
                                     });
@@ -13687,11 +13715,49 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                     updateBudgets(this);
                 }
 
-                if (this.data.version !== _version) {
+                if (this.data.version <= 16) {
+                    migrateProductionSchedules(this);
+                }
+
+                if (this.data.version <= 15) {
                     this.updateProductionSchedules(this.data.models.productionSchedules);
                     this.updateFinancials(this.data.models.financials);
-                    this.data.version = _version;
                 }
+
+                this.data.version = _version;
+            }
+
+            function migrateProductionSchedules (instance) {
+                var productionSchedules = underscore.chain(instance.data.models.productionSchedules)
+                    .map(ProductionSchedule.newCopy)
+                    .uniq(function (schedule) {
+                        return schedule.scheduleKey;
+                    })
+                    .value();
+
+                instance.data.models.assets = underscore.map(instance.data.models.assets, function (asset) {
+                    var legalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
+                        assetProductionSchedules = asset.productionSchedules;
+
+                    asset = AssetFactory.new(asset);
+                    asset.generateKey(legalEntity);
+
+                    underscore.each(assetProductionSchedules, function (schedule) {
+                        var assetProductionSchedule = ProductionSchedule.newCopy(schedule),
+                            productionSchedule = underscore.findWhere(productionSchedules, {scheduleKey: assetProductionSchedule.scheduleKey}) || assetProductionSchedule;
+
+                        if (underscore.isUndefined(productionSchedule)) {
+                            productionSchedules.push(assetProductionSchedule);
+                            productionSchedule = assetProductionSchedule;
+                        }
+
+                        productionSchedule.addAsset(asset);
+                    });
+
+                    return asJson(asset);
+                });
+
+                instance.data.models.productionSchedules = asJson(productionSchedules);
             }
 
             function updateBudgets (instance) {
@@ -14168,6 +14234,9 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         function EnterpriseBudgetBase(attrs) {
             Locale.apply(this, arguments);
 
+            this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'sections', []);
+
             computedProperty(this, 'defaultCostStage', function () {
                 return underscore.last(EnterpriseBudgetBase.costStages);
             });
@@ -14492,10 +14561,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return unitAbbreviations[unit] || unit;
             });
 
-            // Properties
-            this.assetType = attrs && attrs.assetType;
-            this.data = (attrs && attrs.data ? attrs.data : {});
-            Base.initializeObject(this.data, 'sections', []);
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.assetType = attrs.assetType;
+            this.commodityType = attrs.commodityType;
 
             this.sortSections();
             migrateSections(this);
@@ -15555,7 +15624,6 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
                 this.cloneCount = attrs.cloneCount || 0;
                 this.createdAt = attrs.createdAt;
                 this.createdBy = attrs.createdBy;
-                this.commodityType = attrs.commodityType;
                 this.favoriteCount = attrs.favoriteCount || 0;
                 this.favorited = attrs.favorited || false;
                 this.followers = attrs.followers || [];
@@ -17997,8 +18065,8 @@ sdkModelMapTheme.factory('MapTheme', ['Base', 'inheritModel', 'Model', 'privateP
 var sdkModelFarmer = angular.module('ag.sdk.model.farmer', ['ag.sdk.model.organization']);
 
 sdkModelFarmer.provider('Farmer', ['OrganizationFactoryProvider', function (OrganizationFactoryProvider) {
-    this.$get = ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (Organization, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+        function (Organization, Base, computedProperty, inheritModel, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
             function Farmer (attrs) {
                 Organization.apply(this, arguments);
 
@@ -18012,6 +18080,8 @@ sdkModelFarmer.provider('Farmer', ['OrganizationFactoryProvider', function (Orga
 
                 this.farms = attrs.farms || [];
                 this.operationType = attrs.operationType;
+
+                this.productionSchedules = underscore.map(attrs.productionSchedules, ProductionSchedule.newCopy);
             }
 
             inheritModel(Farmer, Organization);
@@ -18557,6 +18627,10 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
                 }
             });
 
+            privateProperty(this, 'removeProductionSchedule', function (productionSchedule) {
+                removeProductionSchedule(this, productionSchedule);
+            });
+
             computedProperty(this, 'costStage', function () {
                 return this.defaultCostStage;
             });
@@ -18674,15 +18748,27 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
 
         function addProductionSchedule (instance, productionSchedule) {
             instance.productionSchedules.push(productionSchedule);
-            instance.commodities = underscore.chain(instance.commodities)
-                .union([productionSchedule.commodityType])
+
+            updateSchedules(instance);
+
+            productionSchedule.replaceAllStock(instance.stock);
+        }
+
+        function removeProductionSchedule (instance, productionSchedule) {
+            instance.productionSchedules = underscore.without(instance.productionSchedules, productionSchedule);
+
+            updateSchedules(instance);
+        }
+
+        function updateSchedules (instance) {
+            instance.commodities = underscore.chain(instance.productionSchedules)
+                .pluck('commodityType')
                 .uniq()
+                .compact()
                 .value()
                 .sort(naturalSort);
 
             instance.data.details.size = safeArrayMath.reduceProperty(instance.productionSchedules, 'allocatedSize');
-
-            productionSchedule.replaceAllStock(instance.stock);
         }
 
         // Stock
@@ -19125,8 +19211,8 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
 
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
-    function (Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
+    function (AssetFactory, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -19137,8 +19223,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             });
 
             privateProperty(this, 'setDate', function (startDate) {
-                startDate = moment(startDate);
-                startDate.date(1);
+                startDate = moment(startDate).date(1);
 
                 this.startDate = startDate.format('YYYY-MM-DD');
 
@@ -19152,9 +19237,16 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 if (this.type === 'horticulture') {
                     startDate = moment(this.startDate);
 
-                    this.data.details.establishedDate = (underscore.isUndefined(this.data.details.establishedDate) ?
-                        (this.asset && this.asset.data.establishedDate ? this.asset.data.establishedDate : this.startDate) :
-                        this.data.details.establishedDate);
+                    this.data.details.establishedDate = (!underscore.isUndefined(this.data.details.establishedDate) ?
+                        this.data.details.establishedDate :
+                        underscore.chain(this.assets)
+                            .map(function (asset) {
+                                return asset.data.establishedDate;
+                            })
+                            .union([this.startDate])
+                            .compact()
+                            .first()
+                            .value());
                     var assetAge = (startDate.isAfter(this.data.details.establishedDate) ? startDate.diff(this.data.details.establishedDate, 'years') : 0);
 
                     if (assetAge !== this.data.details.assetAge) {
@@ -19165,37 +19257,30 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 }
             });
 
-            privateProperty(this, 'setAsset', function (asset) {
-                this.asset = underscore.omit(asset, ['liabilities', 'productionSchedules']);
-                this.assetId = this.asset.id;
+            privateProperty(this, 'addAsset', function (asset) {
+                asset = AssetFactory.new(asset);
+                asset.$local = true;
 
-                this.type = ProductionSchedule.typeByAsset[asset.type];
-                this.data.details.fieldName = this.asset.data.fieldName;
-                this.data.details.irrigated = (this.asset.data.irrigated === true);
+                this.assets = underscore.chain(this.assets)
+                    .reject(underscore.identity({assetKey: asset.assetKey}))
+                    .union([asset])
+                    .value();
 
-                if (asset.data.crop) {
-                    this.data.details.commodity = asset.data.crop;
+                if (underscore.size(this.assets) === 1) {
+                    setDetails(this, asset);
                 }
 
-                if (this.type === 'horticulture') {
-                    var startDate = moment(this.startDate);
+                this.recalculateSize();
+            });
 
-                    this.data.details.establishedDate = this.asset.data.establishedDate || this.startDate;
-                    this.data.details.assetAge = (startDate.isAfter(this.data.details.establishedDate) ?
-                        startDate.diff(this.data.details.establishedDate, 'years') : 0);
-                } else if (this.type === 'livestock') {
-                    this.data.details.pastureType = (this.asset.data.intensified ? 'pasture' : 'grazing');
+            privateProperty(this, 'removeAsset', function (asset) {
+                asset.$delete = true;
 
-                    if (this.budget && this.budget.data.details.stockingDensity) {
-                        this.setLivestockStockingDensity(this.budget.data.details.stockingDensity[this.data.details.pastureType]);
-                    }
-                }
-                
-                this.setSize(this.asset.data.plantedArea || this.asset.data.size);
+                this.recalculateSize();
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = EnterpriseBudget.new(budget);
+                this.budget = EnterpriseBudget.new(underscore.omit(budget, ['followers', 'organization', 'region', 'user', 'userData']));
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 
@@ -19214,9 +19299,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                         multiplicationFactor: 0
                     });
                 } else {
-                    this.data.details = underscore.extend(this.data.details, underscore.pick(this.budget.data.details, (this.type === 'horticulture' ?
-                        ['maturityFactor', 'cultivar'] :
-                        ['cultivar'])));
+                    this.data.details = underscore.extend(this.data.details, underscore.pick(this.budget.data.details,
+                        (this.type === 'horticulture' ? ['maturityFactor', 'cultivar', 'seedProvider'] : ['cultivar', 'seedProvider'])));
                 }
 
                 if (this.data.details.pastureType && this.budget.data.details.stockingDensity) {
@@ -19296,9 +19380,22 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 recalculateProductionScheduleCategory(this, categoryCode);
             });
 
+            privateProperty(this, 'recalculateSize', function () {
+                var size = safeMath.round(underscore.chain(this.assets)
+                    .reject({'$delete': true})
+                    .reduce(function (total, asset) {
+                        return safeMath.plus(total, asset.data.plantedArea || asset.data.size);
+                    }, 0)
+                    .value(), 2);
+
+                if (size !== this.data.details.size) {
+                    this.setSize(size);
+                    this.$dirty = true;
+                }
+            });
+
             computedProperty(this, 'scheduleKey', function () {
                 return (this.budgetUuid ? this.budgetUuid + '-' : '') +
-                    (this.data.details.fieldName ? this.data.details.fieldName + '-' : '') +
                     (this.startDate ? moment(this.startDate).unix() + '-' : '') +
                     (this.endDate ? moment(this.endDate).unix() : '');
             }, {
@@ -19367,22 +19464,42 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
-            this.assetId = attrs.assetId;
-            this.budgetUuid = attrs.budgetUuid;
-            this.type = attrs.type;
-            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
+            Base.initializeObject(this.data, 'budget', attrs.budget);
+
             this.id = attrs.id || attrs.$id;
+            this.assets = underscore.map(attrs.assets || [], AssetFactory.new);
+            this.budgetUuid = attrs.budgetUuid;
+            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
+            this.organization = attrs.organization;
             this.organizationId = attrs.organizationId;
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
+            this.type = attrs.type;
 
-            this.organization = attrs.organization;
+            if (this.data.budget) {
+                this.budget = EnterpriseBudget.new(this.data.budget);
+            }
+        }
 
-            if (attrs.asset) {
-                this.setAsset(attrs.asset);
+        function setDetails (instance, asset) {
+            instance.type = ProductionSchedule.typeByAsset[asset.type];
+            instance.data.details.irrigated = (asset.data.irrigated === true);
+
+            if (asset.data.crop && instance.type !== 'livestock') {
+                instance.data.details.commodity = asset.data.crop;
             }
 
-            if (this.data.budget || attrs.budget) {
-                this.setBudget(this.data.budget || attrs.budget);
+            if (instance.type === 'horticulture') {
+                var startDate = moment(instance.startDate);
+
+                instance.data.details.establishedDate = asset.data.establishedDate || instance.startDate;
+                instance.data.details.assetAge = (startDate.isAfter(instance.data.details.establishedDate) ?
+                    startDate.diff(instance.data.details.establishedDate, 'years') : 0);
+            } else if (instance.type === 'livestock') {
+                instance.data.details.pastureType = (asset.data.intensified ? 'pasture' : 'grazing');
+
+                if (instance.budget && instance.budget.data.details.stockingDensity) {
+                    instance.setLivestockStockingDensity(instance.budget.data.details.stockingDensity[instance.data.details.pastureType]);
+                }
             }
         }
 
@@ -20009,17 +20126,16 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             'permanent crop': 'horticulture'
         });
 
+        readOnlyProperty(ProductionSchedule, 'assetByType', underscore.chain(ProductionSchedule.typeByAsset)
+            .omit('cropland')
+            .invert()
+            .value());
+
         privateProperty(ProductionSchedule, 'getTypeTitle', function (type) {
             return ProductionSchedule.productionScheduleTypes[type] || '';
         });
 
         ProductionSchedule.validates({
-            assetId: {
-                requiredIf: function (value, instance) {
-                    return !underscore.isUndefined(instance.id);
-                },
-                numeric: true
-            },
             budget: {
                 required: true,
                 object: true
@@ -20446,18 +20562,21 @@ var sdkModelStore = angular.module('ag.sdk.model.store', ['ag.sdk.library', 'ag.
 
 sdkModelStore.factory('Storable', ['computedProperty', 'privateProperty',
     function (computedProperty, privateProperty) {
+        var booleanProps = ['$complete', '$delete', '$dirty', '$local', '$offline', '$saved'],
+            otherProps = ['$id', '$uri'];
+
         function Storable () {
             var _storable = {};
 
             privateProperty(_storable, 'set', function (inst, attrs) {
                 if (attrs) {
-                    inst.$complete = attrs.$complete === true;
-                    inst.$delete = attrs.$delete === true;
-                    inst.$dirty = attrs.$dirty === true;
-                    inst.$id = attrs.$id;
-                    inst.$local = attrs.$local === true;
-                    inst.$saved = attrs.$saved === true;
-                    inst.$uri = attrs.$uri;
+                    angular.forEach(otherProps, function (prop) {
+                        privateProperty(inst, prop, attrs[prop]);
+                    });
+
+                    angular.forEach(booleanProps, function (prop) {
+                        privateProperty(inst, prop, attrs[prop] === true);
+                    });
                 }
             });
 

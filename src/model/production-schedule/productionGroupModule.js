@@ -30,6 +30,10 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
                 }
             });
 
+            privateProperty(this, 'removeProductionSchedule', function (productionSchedule) {
+                removeProductionSchedule(this, productionSchedule);
+            });
+
             computedProperty(this, 'costStage', function () {
                 return this.defaultCostStage;
             });
@@ -147,15 +151,27 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
 
         function addProductionSchedule (instance, productionSchedule) {
             instance.productionSchedules.push(productionSchedule);
-            instance.commodities = underscore.chain(instance.commodities)
-                .union([productionSchedule.commodityType])
+
+            updateSchedules(instance);
+
+            productionSchedule.replaceAllStock(instance.stock);
+        }
+
+        function removeProductionSchedule (instance, productionSchedule) {
+            instance.productionSchedules = underscore.without(instance.productionSchedules, productionSchedule);
+
+            updateSchedules(instance);
+        }
+
+        function updateSchedules (instance) {
+            instance.commodities = underscore.chain(instance.productionSchedules)
+                .pluck('commodityType')
                 .uniq()
+                .compact()
                 .value()
                 .sort(naturalSort);
 
             instance.data.details.size = safeArrayMath.reduceProperty(instance.productionSchedules, 'allocatedSize');
-
-            productionSchedule.replaceAllStock(instance.stock);
         }
 
         // Stock

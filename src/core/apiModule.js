@@ -1548,14 +1548,14 @@ sdkApiApp.factory('productDemandApi', ['$http', 'asJson', 'pagingService', 'prom
  */
 sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['asset', 'budget', 'organization'];
+        removableFields = ['assets', 'budget', 'organization'];
 
     return {
         getProductionSchedules: function (id) {
             return pagingService.page(host + 'api/production-schedules' + (id ? '/' + id : ''));
         },
-        createProductionSchedule: function (data) {
-            var dataCopy = asJson(data, removableFields);
+        createProductionSchedule: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/production-schedule', dataCopy, {withCredentials: true}).then(function (res) {
@@ -1570,8 +1570,8 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
                 }, promise.reject);
             });
         },
-        updateProductionSchedule: function (data) {
-            var dataCopy = asJson(data, removableFields);
+        updateProductionSchedule: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/production-schedule/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
@@ -1582,6 +1582,20 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
         deleteProductionSchedule: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/production-schedule/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        attachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/production-schedule/' + id + '/add/' + assetId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/production-schedule/' + id + '/remove/' + assetId, {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

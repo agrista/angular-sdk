@@ -2,18 +2,21 @@ var sdkModelStore = angular.module('ag.sdk.model.store', ['ag.sdk.library', 'ag.
 
 sdkModelStore.factory('Storable', ['computedProperty', 'privateProperty',
     function (computedProperty, privateProperty) {
+        var booleanProps = ['$complete', '$delete', '$dirty', '$local', '$offline', '$saved'],
+            otherProps = ['$id', '$uri'];
+
         function Storable () {
             var _storable = {};
 
             privateProperty(_storable, 'set', function (inst, attrs) {
                 if (attrs) {
-                    inst.$complete = attrs.$complete === true;
-                    inst.$delete = attrs.$delete === true;
-                    inst.$dirty = attrs.$dirty === true;
-                    inst.$id = attrs.$id;
-                    inst.$local = attrs.$local === true;
-                    inst.$saved = attrs.$saved === true;
-                    inst.$uri = attrs.$uri;
+                    angular.forEach(otherProps, function (prop) {
+                        privateProperty(inst, prop, attrs[prop]);
+                    });
+
+                    angular.forEach(booleanProps, function (prop) {
+                        privateProperty(inst, prop, attrs[prop] === true);
+                    });
                 }
             });
 

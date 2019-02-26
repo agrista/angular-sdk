@@ -5,6 +5,9 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         function EnterpriseBudgetBase(attrs) {
             Locale.apply(this, arguments);
 
+            this.data = (attrs && attrs.data) || {};
+            Base.initializeObject(this.data, 'sections', []);
+
             computedProperty(this, 'defaultCostStage', function () {
                 return underscore.last(EnterpriseBudgetBase.costStages);
             });
@@ -329,10 +332,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 return unitAbbreviations[unit] || unit;
             });
 
-            // Properties
-            this.assetType = attrs && attrs.assetType;
-            this.data = (attrs && attrs.data ? attrs.data : {});
-            Base.initializeObject(this.data, 'sections', []);
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.assetType = attrs.assetType;
+            this.commodityType = attrs.commodityType;
 
             this.sortSections();
             migrateSections(this);
@@ -1392,7 +1395,6 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
                 this.cloneCount = attrs.cloneCount || 0;
                 this.createdAt = attrs.createdAt;
                 this.createdBy = attrs.createdBy;
-                this.commodityType = attrs.commodityType;
                 this.favoriteCount = attrs.favoriteCount || 0;
                 this.favorited = attrs.favorited || false;
                 this.followers = attrs.followers || [];

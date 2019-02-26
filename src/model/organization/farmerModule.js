@@ -1,8 +1,8 @@
 var sdkModelFarmer = angular.module('ag.sdk.model.farmer', ['ag.sdk.model.organization']);
 
 sdkModelFarmer.provider('Farmer', ['OrganizationFactoryProvider', function (OrganizationFactoryProvider) {
-    this.$get = ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (Organization, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['Organization', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'underscore',
+        function (Organization, Base, computedProperty, inheritModel, privateProperty, ProductionSchedule, readOnlyProperty, underscore) {
             function Farmer (attrs) {
                 Organization.apply(this, arguments);
 
@@ -16,6 +16,8 @@ sdkModelFarmer.provider('Farmer', ['OrganizationFactoryProvider', function (Orga
 
                 this.farms = attrs.farms || [];
                 this.operationType = attrs.operationType;
+
+                this.productionSchedules = underscore.map(attrs.productionSchedules, ProductionSchedule.newCopy);
             }
 
             inheritModel(Farmer, Organization);

@@ -1,9 +1,9 @@
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
 sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
-        function (AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
-            var _version = 16;
+    this.$get = ['asJson', 'AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
+        function (asJson, AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
+            var _version = 17;
 
             function BusinessPlan (attrs) {
                 Document.apply(this, arguments);
@@ -43,13 +43,6 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                 }
 
                 /**
-                 * Helper functions
-                 */
-                function asJson (object, omit) {
-                    return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON() : object, omit || []);
-                }
-
-                /**
                  * Production Schedule handling
                  */
                 privateProperty(this, 'updateProductionSchedules', function (schedules, options) {
@@ -81,7 +74,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                     extractProductionScheduleStockAssets(instance, schedule);
                                 }
 
-                                instance.models.productionSchedules.push(asJson(schedule, ['asset']));
+                                instance.models.productionSchedules.push(asJson(schedule));
 
                                 oldSchedules = underscore.reject(oldSchedules, function (oldSchedule) {
                                     return oldSchedule.scheduleKey === schedule.scheduleKey;
@@ -474,6 +467,9 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                             underscore.each(liability.liabilityInRange(instance.startDate, instance.endDate), function (monthly, index) {
                                 underscore.each(liability.data.enterprises, function (enterprise) {
                                     underscore.each(liability.data.inputs, function (input) {
+                                        Base.initializeObject(instance.data.unallocatedEnterpriseProductionExpenditure[enterprise], input, Base.initializeArray(instance.numberOfMonths, 0));
+                                        Base.initializeObject(instance.data.unallocatedProductionExpenditure, input, Base.initializeArray(instance.numberOfMonths, 0));
+
                                         instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedEnterpriseProductionExpenditure[enterprise][input][index], monthly.withdrawal));
                                         instance.data.unallocatedProductionExpenditure[input][index] = Math.max(0, safeMath.minus(instance.data.unallocatedProductionExpenditure[input][index], monthly.withdrawal));
                                     });
@@ -1636,11 +1632,49 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                     updateBudgets(this);
                 }
 
-                if (this.data.version !== _version) {
+                if (this.data.version <= 16) {
+                    migrateProductionSchedules(this);
+                }
+
+                if (this.data.version <= 15) {
                     this.updateProductionSchedules(this.data.models.productionSchedules);
                     this.updateFinancials(this.data.models.financials);
-                    this.data.version = _version;
                 }
+
+                this.data.version = _version;
+            }
+
+            function migrateProductionSchedules (instance) {
+                var productionSchedules = underscore.chain(instance.data.models.productionSchedules)
+                    .map(ProductionSchedule.newCopy)
+                    .uniq(function (schedule) {
+                        return schedule.scheduleKey;
+                    })
+                    .value();
+
+                instance.data.models.assets = underscore.map(instance.data.models.assets, function (asset) {
+                    var legalEntity = underscore.findWhere(instance.data.legalEntities, {id: asset.legalEntityId}),
+                        assetProductionSchedules = asset.productionSchedules;
+
+                    asset = AssetFactory.new(asset);
+                    asset.generateKey(legalEntity);
+
+                    underscore.each(assetProductionSchedules, function (schedule) {
+                        var assetProductionSchedule = ProductionSchedule.newCopy(schedule),
+                            productionSchedule = underscore.findWhere(productionSchedules, {scheduleKey: assetProductionSchedule.scheduleKey}) || assetProductionSchedule;
+
+                        if (underscore.isUndefined(productionSchedule)) {
+                            productionSchedules.push(assetProductionSchedule);
+                            productionSchedule = assetProductionSchedule;
+                        }
+
+                        productionSchedule.addAsset(asset);
+                    });
+
+                    return asJson(asset);
+                });
+
+                instance.data.models.productionSchedules = asJson(productionSchedules);
             }
 
             function updateBudgets (instance) {

@@ -1,7 +1,7 @@
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
-    function (Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
+    function (AssetFactory, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -12,8 +12,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             });
 
             privateProperty(this, 'setDate', function (startDate) {
-                startDate = moment(startDate);
-                startDate.date(1);
+                startDate = moment(startDate).date(1);
 
                 this.startDate = startDate.format('YYYY-MM-DD');
 
@@ -27,9 +26,16 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 if (this.type === 'horticulture') {
                     startDate = moment(this.startDate);
 
-                    this.data.details.establishedDate = (underscore.isUndefined(this.data.details.establishedDate) ?
-                        (this.asset && this.asset.data.establishedDate ? this.asset.data.establishedDate : this.startDate) :
-                        this.data.details.establishedDate);
+                    this.data.details.establishedDate = (!underscore.isUndefined(this.data.details.establishedDate) ?
+                        this.data.details.establishedDate :
+                        underscore.chain(this.assets)
+                            .map(function (asset) {
+                                return asset.data.establishedDate;
+                            })
+                            .union([this.startDate])
+                            .compact()
+                            .first()
+                            .value());
                     var assetAge = (startDate.isAfter(this.data.details.establishedDate) ? startDate.diff(this.data.details.establishedDate, 'years') : 0);
 
                     if (assetAge !== this.data.details.assetAge) {
@@ -40,37 +46,30 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 }
             });
 
-            privateProperty(this, 'setAsset', function (asset) {
-                this.asset = underscore.omit(asset, ['liabilities', 'productionSchedules']);
-                this.assetId = this.asset.id;
+            privateProperty(this, 'addAsset', function (asset) {
+                asset = AssetFactory.new(asset);
+                asset.$local = true;
 
-                this.type = ProductionSchedule.typeByAsset[asset.type];
-                this.data.details.fieldName = this.asset.data.fieldName;
-                this.data.details.irrigated = (this.asset.data.irrigated === true);
+                this.assets = underscore.chain(this.assets)
+                    .reject(underscore.identity({assetKey: asset.assetKey}))
+                    .union([asset])
+                    .value();
 
-                if (asset.data.crop) {
-                    this.data.details.commodity = asset.data.crop;
+                if (underscore.size(this.assets) === 1) {
+                    setDetails(this, asset);
                 }
 
-                if (this.type === 'horticulture') {
-                    var startDate = moment(this.startDate);
+                this.recalculateSize();
+            });
 
-                    this.data.details.establishedDate = this.asset.data.establishedDate || this.startDate;
-                    this.data.details.assetAge = (startDate.isAfter(this.data.details.establishedDate) ?
-                        startDate.diff(this.data.details.establishedDate, 'years') : 0);
-                } else if (this.type === 'livestock') {
-                    this.data.details.pastureType = (this.asset.data.intensified ? 'pasture' : 'grazing');
+            privateProperty(this, 'removeAsset', function (asset) {
+                asset.$delete = true;
 
-                    if (this.budget && this.budget.data.details.stockingDensity) {
-                        this.setLivestockStockingDensity(this.budget.data.details.stockingDensity[this.data.details.pastureType]);
-                    }
-                }
-                
-                this.setSize(this.asset.data.plantedArea || this.asset.data.size);
+                this.recalculateSize();
             });
             
             privateProperty(this, 'setBudget', function (budget) {
-                this.budget = EnterpriseBudget.new(budget);
+                this.budget = EnterpriseBudget.new(underscore.omit(budget, ['followers', 'organization', 'region', 'user', 'userData']));
                 this.budgetUuid = this.budget.uuid;
                 this.type = this.budget.assetType;
 
@@ -89,9 +88,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                         multiplicationFactor: 0
                     });
                 } else {
-                    this.data.details = underscore.extend(this.data.details, underscore.pick(this.budget.data.details, (this.type === 'horticulture' ?
-                        ['maturityFactor', 'cultivar'] :
-                        ['cultivar'])));
+                    this.data.details = underscore.extend(this.data.details, underscore.pick(this.budget.data.details,
+                        (this.type === 'horticulture' ? ['maturityFactor', 'cultivar', 'seedProvider'] : ['cultivar', 'seedProvider'])));
                 }
 
                 if (this.data.details.pastureType && this.budget.data.details.stockingDensity) {
@@ -171,9 +169,22 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
                 recalculateProductionScheduleCategory(this, categoryCode);
             });
 
+            privateProperty(this, 'recalculateSize', function () {
+                var size = safeMath.round(underscore.chain(this.assets)
+                    .reject({'$delete': true})
+                    .reduce(function (total, asset) {
+                        return safeMath.plus(total, asset.data.plantedArea || asset.data.size);
+                    }, 0)
+                    .value(), 2);
+
+                if (size !== this.data.details.size) {
+                    this.setSize(size);
+                    this.$dirty = true;
+                }
+            });
+
             computedProperty(this, 'scheduleKey', function () {
                 return (this.budgetUuid ? this.budgetUuid + '-' : '') +
-                    (this.data.details.fieldName ? this.data.details.fieldName + '-' : '') +
                     (this.startDate ? moment(this.startDate).unix() + '-' : '') +
                     (this.endDate ? moment(this.endDate).unix() : '');
             }, {
@@ -242,22 +253,42 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
-            this.assetId = attrs.assetId;
-            this.budgetUuid = attrs.budgetUuid;
-            this.type = attrs.type;
-            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
+            Base.initializeObject(this.data, 'budget', attrs.budget);
+
             this.id = attrs.id || attrs.$id;
+            this.assets = underscore.map(attrs.assets || [], AssetFactory.new);
+            this.budgetUuid = attrs.budgetUuid;
+            this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
+            this.organization = attrs.organization;
             this.organizationId = attrs.organizationId;
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
+            this.type = attrs.type;
 
-            this.organization = attrs.organization;
+            if (this.data.budget) {
+                this.budget = EnterpriseBudget.new(this.data.budget);
+            }
+        }
 
-            if (attrs.asset) {
-                this.setAsset(attrs.asset);
+        function setDetails (instance, asset) {
+            instance.type = ProductionSchedule.typeByAsset[asset.type];
+            instance.data.details.irrigated = (asset.data.irrigated === true);
+
+            if (asset.data.crop && instance.type !== 'livestock') {
+                instance.data.details.commodity = asset.data.crop;
             }
 
-            if (this.data.budget || attrs.budget) {
-                this.setBudget(this.data.budget || attrs.budget);
+            if (instance.type === 'horticulture') {
+                var startDate = moment(instance.startDate);
+
+                instance.data.details.establishedDate = asset.data.establishedDate || instance.startDate;
+                instance.data.details.assetAge = (startDate.isAfter(instance.data.details.establishedDate) ?
+                    startDate.diff(instance.data.details.establishedDate, 'years') : 0);
+            } else if (instance.type === 'livestock') {
+                instance.data.details.pastureType = (asset.data.intensified ? 'pasture' : 'grazing');
+
+                if (instance.budget && instance.budget.data.details.stockingDensity) {
+                    instance.setLivestockStockingDensity(instance.budget.data.details.stockingDensity[instance.data.details.pastureType]);
+                }
             }
         }
 
@@ -884,17 +915,16 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['Base', 'computedPrope
             'permanent crop': 'horticulture'
         });
 
+        readOnlyProperty(ProductionSchedule, 'assetByType', underscore.chain(ProductionSchedule.typeByAsset)
+            .omit('cropland')
+            .invert()
+            .value());
+
         privateProperty(ProductionSchedule, 'getTypeTitle', function (type) {
             return ProductionSchedule.productionScheduleTypes[type] || '';
         });
 
         ProductionSchedule.validates({
-            assetId: {
-                requiredIf: function (value, instance) {
-                    return !underscore.isUndefined(instance.id);
-                },
-                numeric: true
-            },
             budget: {
                 required: true,
                 object: true

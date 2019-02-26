@@ -367,8 +367,16 @@ sdkUtilitiesApp.filter('round', [function () {
 }]);
 
 sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy, underscore) {
+    function omitFn (omit) {
+        return function (object) {
+            var json = (underscore.isFunction(object.asJSON) ? object.asJSON(omit) : deepCopy(object));
+
+            return (omit ? underscore.omit(json, omit) : json);
+        }
+    }
+
     return function (object, omit) {
-        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : deepCopy(object), omit || []);
+        return (underscore.isArray(object) ? underscore.map(object, omitFn(omit)) : omitFn(omit)(object));
     }
 }]);
 
