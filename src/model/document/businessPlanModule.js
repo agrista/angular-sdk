@@ -83,9 +83,10 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                         });
 
                     if (oldSchedules.length > 0) {
-                        var stockAssets = underscore.chain(instance.models.assets)
+                        var stockTypes = ['livestock', 'stock'],
+                            stockAssets = underscore.chain(instance.models.assets)
                             .filter(function (asset) {
-                                return underscore.contains(['livestock', 'stock'], asset.type);
+                                return underscore.contains(stockTypes, asset.type);
                             })
                             .map(AssetFactory.newCopy)
                             .value();
@@ -1633,18 +1634,32 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                 }
 
                 if (this.data.version <= 16) {
-                    migrateProductionSchedules(this);
+                    migrateProductionSchedulesV16(this);
+                    migrateStockV16(this);
+                }
+
+                if (this.data.version <= 16) {
+                    this.updateProductionSchedules(this.data.models.productionSchedules);
                 }
 
                 if (this.data.version <= 15) {
-                    this.updateProductionSchedules(this.data.models.productionSchedules);
                     this.updateFinancials(this.data.models.financials);
                 }
 
                 this.data.version = _version;
             }
 
-            function migrateProductionSchedules (instance) {
+            function updateBudgets (instance) {
+                instance.data.models.budgets = underscore.chain(instance.data.models.productionSchedules)
+                    .pluck('budget')
+                    .compact()
+                    .uniq(false, function (budget) {
+                        return budget.uuid;
+                    })
+                    .value();
+            }
+
+            function migrateProductionSchedulesV16 (instance) {
                 var productionSchedules = underscore.chain(instance.data.models.productionSchedules)
                     .map(ProductionSchedule.newCopy)
                     .uniq(function (schedule) {
@@ -1677,14 +1692,22 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                 instance.data.models.productionSchedules = asJson(productionSchedules);
             }
 
-            function updateBudgets (instance) {
-                instance.data.models.budgets = underscore.chain(instance.data.models.productionSchedules)
-                    .pluck('budget')
-                    .compact()
-                    .uniq(false, function (budget) {
-                        return budget.uuid;
-                    })
-                    .value();
+            function migrateStockV16 (instance) {
+                var stockTypes = ['livestock', 'stock'];
+
+                instance.data.models.assets = underscore.map(instance.data.models.assets, function (asset) {
+                    if (underscore.contains(stockTypes, asset.type) && asset.data && asset.data.ledger) {
+                        asset = AssetFactory.newCopy(asset);
+
+                        underscore.each(instance.data.models.budgets, function (budget) {
+                            asset.removeLedgerEntriesByReference(budget.uuid);
+                        });
+
+                        return asJson(asset);
+                    }
+
+                    return asset;
+                });
             }
 
             inheritModel(BusinessPlan, Document);

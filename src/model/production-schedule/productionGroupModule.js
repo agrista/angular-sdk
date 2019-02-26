@@ -197,17 +197,11 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
         }
 
         function extractStock (instance, stockPickerFn) {
-            return promiseService.chain(function (promises) {
-                underscore.each(instance.productionSchedules, function (productionSchedule) {
-                    promises.push(function () {
-                        return productionSchedule.extractStock(stockPickerFn).then(function (stock) {
-                            addAllStock(instance, stock);
-                        });
-                    });
-                });
-            }).then(function () {
-                return instance.stock;
+            underscore.each(instance.productionSchedules, function (productionSchedule) {
+                addAllStock(instance, productionSchedule.extractStock(stockPickerFn));
             });
+
+            return instance.stock;
         }
 
         function replaceAllStock (instance, stock) {
