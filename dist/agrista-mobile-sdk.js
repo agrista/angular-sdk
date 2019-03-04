@@ -3467,14 +3467,14 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     type: 'mapbox'
                 },
                 'Satellite (Vivid)': {
-                    template: 'http://{s}.tiles.mapbox.com/styles/v1/digitalglobe/cinvynyut001db4m6xwd5cz1f/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/cinvynyut001db4m6xwd5cz1f/tiles/{z}/{x}/{y}?access_token={accessToken}',
                     type: 'tileLayer',
                     options: {
                         accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
                     }
                 },
                 'Satellite (Recent)': {
-                    template: 'http://{s}.tiles.mapbox.com/styles/v1/digitalglobe/ciode6t5k0081aqm7k06dod4v/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/ciode6t5k0081aqm7k06dod4v/tiles/{z}/{x}/{y}?access_token={accessToken}',
                     type: 'tileLayer',
                     options: {
                         accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
