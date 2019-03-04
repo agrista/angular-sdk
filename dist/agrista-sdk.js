@@ -9111,9 +9111,19 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     template: 'agrista.f9f5628d',
                     type: 'mapbox'
                 },
-                'Satellite': {
-                    template: 'agrista.a7235891',
-                    type: 'mapbox'
+                'Satellite (Vivid)': {
+                    template: 'http://{s}.tiles.mapbox.com/styles/v1/digitalglobe/cinvynyut001db4m6xwd5cz1f/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    type: 'tileLayer',
+                    options: {
+                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
+                    }
+                },
+                'Satellite (Recent)': {
+                    template: 'http://{s}.tiles.mapbox.com/styles/v1/digitalglobe/ciode6t5k0081aqm7k06dod4v/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    type: 'tileLayer',
+                    options: {
+                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
+                    }
                 },
                 'Hybrid': {
                     template: 'agrista.01e3fb18',
@@ -10736,6 +10746,20 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         this._draw.controls = {};
 
         if(controls instanceof Array && typeof L.Control.Draw == 'function') {
+            this._draw.controls.circle = new L.Control.Draw({
+                draw: {
+                    polyline: false,
+                    polygon: false,
+                    rectangle: false,
+                    circle: (controls.indexOf('circle') == -1 ? false : {
+                        showRadius: true,
+                        feet: false,
+                        metric: true
+                    }),
+                    marker: false
+                }
+            });
+
             this._draw.controls.polyline = new L.Control.Draw({
                 draw: {
                     polyline: (controls.indexOf('polyline') != -1),
@@ -10788,10 +10812,13 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
     Mapbox.prototype.updateDrawControls = function () {
         try {
-            this._map.removeControl(this._draw.controls.polyline);
+            this._map.removeControl(this._draw.controls.circle);
         } catch(exception) {}
         try {
             this._map.removeControl(this._draw.controls.polygon);
+        } catch(exception) {}
+        try {
+            this._map.removeControl(this._draw.controls.polyline);
         } catch(exception) {}
         try {
             this._map.removeControl(this._draw.controls.marker);
@@ -10826,8 +10853,9 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         if (this._editableLayer && (this._editableFeature.getLayers().length == 0 || this._draw.controlOptions.multidraw)) {
             var controlRequirement = {
-                polyline: true,
+                circle: true,
                 polygon: true,
+                polyline: true,
                 marker: true
             };
 
@@ -10838,6 +10866,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                             controlRequirement.polyline = false;
                             break;
                         case 'Polygon':
+                            controlRequirement.circle = false;
                             controlRequirement.polygon = false;
                             break;
                         case 'Point':
@@ -10848,12 +10877,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             });
 
             if (this._draw.controlOptions.exclude) {
-                if(controlRequirement.polyline) {
+                if(controlRequirement.circle) {
                     this._map.addControl(this._draw.controls.polyline);
                 }
 
                 if(controlRequirement.polygon) {
                     this._map.addControl(this._draw.controls.polygon);
+                }
+
+                if(controlRequirement.polyline) {
+                    this._map.addControl(this._draw.controls.polyline);
                 }
 
                 if(controlRequirement.marker) {
@@ -10862,12 +10895,16 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
                 this._map.on('draw:created', this.onDrawn, this);
             } else {
-                if(this._draw.controls.polyline) {
-                    this._map.addControl(this._draw.controls.polyline);
+                if(this._draw.controls.circle) {
+                    this._map.addControl(this._draw.controls.circle);
                 }
 
                 if(this._draw.controls.polygon) {
                     this._map.addControl(this._draw.controls.polygon);
+                }
+
+                if(this._draw.controls.polyline) {
+                    this._map.addControl(this._draw.controls.polyline);
                 }
 
                 if(this._draw.controls.marker) {
@@ -11024,6 +11061,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.onDrawn = function (e) {
+        var _this = this;
         var geojson = {
             type: 'Feature',
             geometry: {},
@@ -11059,19 +11097,35 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             return polygonCoordinates;
         };
 
+        var _circleToPolygon = function (circle, geojson) {
+            var DOUBLE_PI = Math.PI * 2,
+                radius = circle._mRadius,
+                projector = L.Projection.SphericalMercator;
+
+            var centroid = projector.project(circle._latlng),
+                angle = 0.0,
+                vertices = Math.ceil(circle._mRadius / 5),
+                latlngs = [];
+
+            geojson.properties.radius = circle._mRadius;
+
+            for (var i = 0; i < vertices; i++) {
+                angle -= (DOUBLE_PI / vertices);
+
+                var point = new L.Point(centroid.x + (radius * Math.cos(angle)), centroid.y + (radius * Math.sin(angle)));
+
+                if (i > 0 && point.equals(latlngs[i - 1])) {
+                    continue;
+                }
+
+                latlngs.push(projector.unproject(point));
+            }
+
+            return _getCoordinates(latlngs, geojson);
+        };
+
         switch (e.layerType) {
-            case 'polyline':
-                geojson.geometry = {
-                    type: 'LineString',
-                    coordinates: []
-                };
-
-                angular.forEach(e.layer._latlngs, function(latlng) {
-                    geojson.geometry.coordinates.push([latlng.lng, latlng.lat]);
-                });
-
-                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
-                break;
+            case 'circle':
             case 'polygon':
                 geojson.geometry = {
                     type: 'Polygon',
@@ -11086,8 +11140,24 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                     yd_sq: 0
                 };
 
-                angular.forEach(e.layer._latlngs, function (latlngs) {
-                    geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
+                if (e.layerType === 'polygon') {
+                    angular.forEach(e.layer._latlngs, function (latlngs) {
+                        geojson.geometry.coordinates.push(_getCoordinates(latlngs, geojson));
+                    });
+                } else {
+                    geojson.geometry.coordinates.push(_circleToPolygon(e.layer, geojson));
+                }
+
+                this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
+                break;
+            case 'polyline':
+                geojson.geometry = {
+                    type: 'LineString',
+                    coordinates: []
+                };
+
+                angular.forEach(e.layer._latlngs, function(latlng) {
+                    geojson.geometry.coordinates.push([latlng.lng, latlng.lat]);
                 });
 
                 this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-created', geojson);
