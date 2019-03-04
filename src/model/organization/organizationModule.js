@@ -110,7 +110,6 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     }
                 },
                 email: {
-                    required: true,
                     format: {
                         email: true
                     }
@@ -123,7 +122,6 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     }
                 },
                 organizationId: {
-                    required: true,
                     numeric: true
                 },
                 teams: {
