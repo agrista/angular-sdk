@@ -2653,7 +2653,129 @@ sdkEditorApp.factory('teamEditor', ['underscore', function (underscore) {
 
 var sdkGeospatialApp = angular.module('ag.sdk.geospatial', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
-sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'underscore', function (objectId, topologyHelper, underscore) {
+sdkGeospatialApp.factory('sphericalHelper', [function () {
+    var RADIUS = 6378137,
+        FLATTENING = 1/298.257223563,
+        POLAR_RADIUS = 6356752.3142;
+
+    var heading = function(from, to) {
+        var y = Math.sin(Math.PI * (from[0] - to[0]) / 180) * Math.cos(Math.PI * to[1] / 180);
+        var x = Math.cos(Math.PI * from[1] / 180) * Math.sin(Math.PI * to[1] / 180) -
+            Math.sin(Math.PI * from[1] / 180) * Math.cos(Math.PI * to[1] / 180) * Math.cos(Math.PI * (from[0] - to[0]) / 180);
+        return 180 * Math.atan2(y, x) / Math.PI;
+    };
+
+    var distance = function(from, to) {
+        var sinHalfDeltaLon = Math.sin(Math.PI * (to[0] - from[0]) / 360);
+        var sinHalfDeltaLat = Math.sin(Math.PI * (to[1] - from[1]) / 360);
+        var a = sinHalfDeltaLat * sinHalfDeltaLat +
+            sinHalfDeltaLon * sinHalfDeltaLon * Math.cos(Math.PI * from[1] / 180) * Math.cos(Math.PI * to[1] / 180);
+        return 2 * RADIUS * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    var radial = function(from, tc_deg, d_m, wrap) {
+        var tc = rad(tc_deg);
+        var d = d_m / RADIUS;
+
+        var lon1 = rad(from[0]),
+            lat1 = rad(from[1]);
+
+        var lat = Math.asin(
+            Math.sin(lat1) *
+            Math.cos(d) +
+            Math.cos(lat1) *
+            Math.sin(d) *
+            Math.cos(tc));
+
+        var dlon = Math.atan2(
+            Math.sin(tc) *
+            Math.sin(d) *
+            Math.cos(lat1),
+            Math.cos(d) -
+            Math.sin(lat1) *
+            Math.sin(lat));
+
+        var lon;
+        if (wrap) {
+            lon = (lon1 - dlon + Math.PI) %
+                (2 * Math.PI) - Math.PI;
+        } else {
+            lon = (lon1 - dlon + Math.PI) - Math.PI;
+        }
+
+        return [deg(lon), deg(lat)];
+    };
+
+    var rad = function (val) {
+        return val * (Math.PI / 180);
+    };
+
+    var deg = function (val) {
+        return val * (180 / Math.PI);
+    };
+
+    return {
+        RADIUS: RADIUS,
+        heading: heading,
+        distance: distance,
+        radial: radial,
+        rad: rad,
+        deg: deg
+    };
+}]);
+
+sdkGeospatialApp.factory('areaHelper', ['sphericalHelper', function (sphericalHelper) {
+    var polygonArea = function (area, coords) {
+        if (coords && coords.length > 0) {
+            area += Math.abs(ringArea(coords[0]));
+            for (var i = 1; i < coords.length; i++) {
+                area -= Math.abs(ringArea(coords[i]));
+            }
+        }
+
+        return area;
+    };
+
+    var ringArea = function (coords) {
+        var p1, p2, p3, lowerIndex, middleIndex, upperIndex, i,
+            area = 0,
+            coordsLength = coords.length;
+
+        if (coordsLength > 2) {
+            for (i = 0; i < coordsLength; i++) {
+                if (i === coordsLength - 2) {// i = N-2
+                    lowerIndex = coordsLength - 2;
+                    middleIndex = coordsLength -1;
+                    upperIndex = 0;
+                } else if (i === coordsLength - 1) {// i = N-1
+                    lowerIndex = coordsLength - 1;
+                    middleIndex = 0;
+                    upperIndex = 1;
+                } else { // i = 0 to N-3
+                    lowerIndex = i;
+                    middleIndex = i+1;
+                    upperIndex = i+2;
+                }
+                p1 = coords[lowerIndex];
+                p2 = coords[middleIndex];
+                p3 = coords[upperIndex];
+                area += (sphericalHelper.rad(p3[0]) - sphericalHelper.rad(p1[0])) * Math.sin(sphericalHelper.rad(p2[1]));
+            }
+
+            // WGS84 radius
+            area = area * sphericalHelper.RADIUS * sphericalHelper.RADIUS / 2;
+        }
+
+        return area;
+    };
+
+    return {
+        polygon: polygonArea,
+        ring: ringArea
+    };
+}]);
+
+sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHelper', 'underscore', function (areaHelper, objectId, topologyHelper, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
             return new GeojsonHelper(json, properties);
@@ -2678,63 +2800,15 @@ sdkGeospatialApp.factory('geoJSONHelper', ['objectId', 'topologyHelper', 'unders
         if (geojson.type) {
             switch (geojson.type) {
                 case 'Polygon':
-                    return polygonArea(0, geojson.coordinates);
+                    return areaHelper.polygon(0, geojson.coordinates);
                 case 'MultiPolygon':
-                    return underscore.reduce(geojson.coordinates, polygonArea, area);
+                    return underscore.reduce(geojson.coordinates, areaHelper.polygon, area);
                 case 'GeometryCollection':
                     return underscore.reduce(geojson.geometries, geometryArea, area);
             }
         }
 
         return area;
-    }
-
-    function polygonArea (area, coords) {
-        if (coords && coords.length > 0) {
-            area += Math.abs(ringArea(coords[0]));
-            for (var i = 1; i < coords.length; i++) {
-                area -= Math.abs(ringArea(coords[i]));
-            }
-        }
-
-        return area;
-    }
-
-    function ringArea (coords) {
-        var p1, p2, p3, lowerIndex, middleIndex, upperIndex, i,
-            area = 0,
-            coordsLength = coords.length;
-
-        if (coordsLength > 2) {
-            for (i = 0; i < coordsLength; i++) {
-                if (i === coordsLength - 2) {// i = N-2
-                    lowerIndex = coordsLength - 2;
-                    middleIndex = coordsLength -1;
-                    upperIndex = 0;
-                } else if (i === coordsLength - 1) {// i = N-1
-                    lowerIndex = coordsLength - 1;
-                    middleIndex = 0;
-                    upperIndex = 1;
-                } else { // i = 0 to N-3
-                    lowerIndex = i;
-                    middleIndex = i+1;
-                    upperIndex = i+2;
-                }
-                p1 = coords[lowerIndex];
-                p2 = coords[middleIndex];
-                p3 = coords[upperIndex];
-                area += (rad(p3[0]) - rad(p1[0])) * Math.sin(rad(p2[1]));
-            }
-
-            // WGS84 radius
-            area = area * 6378137 * 6378137 / 2;
-        }
-
-        return area;
-    }
-
-    function rad (val) {
-        return val * Math.PI / 180;
     }
 
     function getGeometry (instance) {
@@ -6108,7 +6182,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'mapStyleHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, mapStyleHelper, objectId, underscore) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'mapStyleHelper', 'objectId', 'sphericalHelper', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, mapStyleHelper, objectId, sphericalHelper, underscore) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -6423,9 +6497,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var sidebar = L.control.sidebar('sidebar', {closeButton: true, position: 'right'});
             _this._sidebar = sidebar;
             _this._map.addControl(sidebar);
-//            setTimeout(function () {
-//                sidebar.show();
-//            }, 500);
         });
 
         // Sidebar
@@ -7411,30 +7482,34 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         };
 
         var _circleToPolygon = function (circle, geojson) {
-            var DOUBLE_PI = Math.PI * 2,
+            var center = circle._latlng,
                 radius = circle._mRadius,
-                projector = L.Projection.SphericalMercator;
-
-            var centroid = projector.project(circle._latlng),
-                angle = 0.0,
-                vertices = Math.ceil(circle._mRadius / 5),
+                vertices = Math.max(16, Math.ceil(radius / 5)),
+                angularRadius = radius / sphericalHelper.RADIUS * 180 / Math.PI,
                 latlngs = [];
 
-            geojson.properties.radius = circle._mRadius;
-
-            for (var i = 0; i < vertices; i++) {
-                angle -= (DOUBLE_PI / vertices);
-
-                var point = new L.Point(centroid.x + (radius * Math.cos(angle)), centroid.y + (radius * Math.sin(angle)));
-
-                if (i > 0 && point.equals(latlngs[i - 1])) {
-                    continue;
-                }
-
-                latlngs.push(projector.unproject(point));
+            for (var i = 0; i < vertices + 1; i++) {
+                latlngs.push(sphericalHelper.radial(
+                    [center.lng, center.lat],
+                    (i / vertices) * 360, radius).reverse());
             }
 
-            return _getCoordinates(latlngs, geojson);
+            if (angularRadius > (90 - center.lat)) {
+                latlngs.push([latlngs[0][0], center.lng + 180],
+                    [90, center.lng + 180],
+                    [90, center.lng - 180],
+                    [latlngs[0][0], center.lng - 180]);
+            }
+
+            if (angularRadius > (90 + center.lat)) {
+                latlngs.splice((vertices >> 1) + 1, 0,
+                    [latlngs[(vertices >> 1)][0], center.lng - 180],
+                    [-90, center.lng - 180],
+                    [-90, center.lng + 180],
+                    [latlngs[(vertices >> 1)][0], center.lng + 180]);
+            }
+
+            return _getCoordinates(L.polygon(latlngs)._latlngs[0], geojson);
         };
 
         switch (e.layerType) {

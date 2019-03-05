@@ -1052,7 +1052,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
 /**
  * mapbox
  */
-sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'mapStyleHelper', 'objectId', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, mapStyleHelper, objectId, underscore) {
+sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout', 'configuration', 'mapboxService', 'geoJSONHelper', 'mapStyleHelper', 'objectId', 'sphericalHelper', 'underscore', function ($rootScope, $http, $log, $timeout, configuration, mapboxService, geoJSONHelper, mapStyleHelper, objectId, sphericalHelper, underscore) {
     var _instances = {};
     
     function Mapbox(attrs, scope) {
@@ -1367,9 +1367,6 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             var sidebar = L.control.sidebar('sidebar', {closeButton: true, position: 'right'});
             _this._sidebar = sidebar;
             _this._map.addControl(sidebar);
-//            setTimeout(function () {
-//                sidebar.show();
-//            }, 500);
         });
 
         // Sidebar
@@ -2355,30 +2352,34 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         };
 
         var _circleToPolygon = function (circle, geojson) {
-            var DOUBLE_PI = Math.PI * 2,
+            var center = circle._latlng,
                 radius = circle._mRadius,
-                projector = L.Projection.SphericalMercator;
-
-            var centroid = projector.project(circle._latlng),
-                angle = 0.0,
-                vertices = Math.ceil(circle._mRadius / 5),
+                vertices = Math.max(16, Math.ceil(radius / 5)),
+                angularRadius = radius / sphericalHelper.RADIUS * 180 / Math.PI,
                 latlngs = [];
 
-            geojson.properties.radius = circle._mRadius;
-
-            for (var i = 0; i < vertices; i++) {
-                angle -= (DOUBLE_PI / vertices);
-
-                var point = new L.Point(centroid.x + (radius * Math.cos(angle)), centroid.y + (radius * Math.sin(angle)));
-
-                if (i > 0 && point.equals(latlngs[i - 1])) {
-                    continue;
-                }
-
-                latlngs.push(projector.unproject(point));
+            for (var i = 0; i < vertices + 1; i++) {
+                latlngs.push(sphericalHelper.radial(
+                    [center.lng, center.lat],
+                    (i / vertices) * 360, radius).reverse());
             }
 
-            return _getCoordinates(latlngs, geojson);
+            if (angularRadius > (90 - center.lat)) {
+                latlngs.push([latlngs[0][0], center.lng + 180],
+                    [90, center.lng + 180],
+                    [90, center.lng - 180],
+                    [latlngs[0][0], center.lng - 180]);
+            }
+
+            if (angularRadius > (90 + center.lat)) {
+                latlngs.splice((vertices >> 1) + 1, 0,
+                    [latlngs[(vertices >> 1)][0], center.lng - 180],
+                    [-90, center.lng - 180],
+                    [-90, center.lng + 180],
+                    [latlngs[(vertices >> 1)][0], center.lng + 180]);
+            }
+
+            return _getCoordinates(L.polygon(latlngs)._latlngs[0], geojson);
         };
 
         switch (e.layerType) {
