@@ -147,9 +147,11 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                     }
                 }
 
-                function findStockAsset (instance, type, stockType, category) {
+                function findStockAsset (instance, assetType, stockType, categoryName) {
                     return underscore.find(instance.models.assets, function (asset) {
-                        return asset.type === type && asset.data.category === category && (underscore.isUndefined(stockType) || asset.data.type === stockType);
+                        return (underscore.isUndefined(assetType) || asset.type === assetType) &&
+                            (underscore.isUndefined(categoryName) || asset.data.category === categoryName) &&
+                            (underscore.isUndefined(commodityType) || asset.data.type === commodityType);
                     });
                 }
 
@@ -172,6 +174,8 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                         });
 
                         stock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: stock.legalEntityId}));
+
+                        addStockAsset(instance, stock, true);
 
                         return stock;
                     }

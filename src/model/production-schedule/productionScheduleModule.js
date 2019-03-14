@@ -5,6 +5,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
+            Base.initializeObject(this.data, 'activities', []);
             Base.initializeObject(this.data, 'details', {});
 
             computedProperty(this, 'costStage', function () {
@@ -540,6 +541,47 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                         }
                     });
                 });
+
+                underscore.chain(instance.data.activities)
+                    .where({type: 'delivery'})
+                    .each(function (activity) {
+                        var action = 'Deliver',
+                            assetType = (instance.assetType === 'livestock' ? 'livestock' : 'stock'),
+                            priceUnit = activity.unit,
+                            stockType = instance.commodityType,
+                            stock = stockPickerFn(assetType, stockType, instance.commodityType, priceUnit);
+
+                        var reference = [activity.id, action, activity.date].join('/'),
+                            ledgerEntry = stock.findLedgerEntry(reference),
+                            marketPrice = stock.marketPriceAtDate(activity.date),
+                            value = safeMath.times(marketPrice, activity.quantity);
+
+                        if (underscore.isUndefined(ledgerEntry)) {
+                            stock.addLedgerEntry({
+                                action: action,
+                                commodity: instance.commodityType,
+                                date: activity.date,
+                                price: marketPrice,
+                                priceUnit: activity.unit,
+                                quantity: activity.quantity,
+                                quantityUnit: activity.unit,
+                                reference: reference,
+                                value: value
+                            });
+                        } else {
+                            stock.setLedgerEntry(ledgerEntry, {
+                                commodity: instance.commodityType,
+                                price: marketPrice,
+                                priceUnit: activity.unit,
+                                quantity: activity.quantity,
+                                quantityUnit: activity.unit,
+                                reference: reference,
+                                value: value
+                            });
+                        }
+
+                        instance.addStock(stock);
+                    });
             }
 
             return instance.stock;
@@ -614,7 +656,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
 
                 if (stock) {
                     var inputAction = (sectionCode === 'INC' ? 'Production' : 'Purchase'),
-                        deliveryAction = 'Deliver',
                         outputAction = (sectionCode === 'INC' ? 'Sale' : 'Consumption');
 
                     // Remove entries
@@ -623,7 +664,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                             if (value === 0 && underscore.size(stock.data.ledger) > 0) {
                                 var formattedDate = moment(instance.startDate).add(index, 'M').format('YYYY-MM-DD'),
                                     inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: instance.scheduleKey}),
-                                    deliveryLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: deliveryAction, reference: instance.scheduleKey}),
                                     outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
 
                                 if (inputLedgerEntry && inputLedgerEntry.liabilityUuid) {
@@ -631,7 +671,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                                 }
 
                                 stock.removeLedgerEntry(inputLedgerEntry, updateOptions);
-                                stock.removeLedgerEntry(deliveryLedgerEntry, updateOptions);
                                 stock.removeLedgerEntry(outputLedgerEntry, updateOptions);
                             }
 
@@ -648,12 +687,6 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                             var formattedDate = moment(instance.startDate).add(index, 'M').format('YYYY-MM-DD'),
                                 inputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: inputAction, reference: instance.scheduleKey}),
                                 outputLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: outputAction, reference: instance.scheduleKey});
-
-                            if (sectionCode === 'INC') {
-                                var deliveryLedgerEntry = stock.findLedgerEntry({date: formattedDate, action: deliveryAction, reference: instance.scheduleKey});
-
-                                updateStockLedgerEntry(instance, stock, deliveryLedgerEntry, formattedDate, deliveryAction, category, index, updateOptions);
-                            }
 
                             if (sectionCode === 'EXP' || instance.assetType !== 'livestock') {
                                 inputLedgerEntry = updateStockLedgerEntry(instance, stock, inputLedgerEntry, formattedDate, inputAction, category, index, updateOptions);
