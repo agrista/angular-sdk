@@ -151,7 +151,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                     return underscore.find(instance.models.assets, function (asset) {
                         return (underscore.isUndefined(assetType) || asset.type === assetType) &&
                             (underscore.isUndefined(categoryName) || asset.data.category === categoryName) &&
-                            (underscore.isUndefined(commodityType) || asset.data.type === commodityType);
+                            (underscore.isUndefined(stockType) || asset.data.type === stockType);
                     });
                 }
 

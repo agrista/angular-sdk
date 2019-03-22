@@ -1448,7 +1448,7 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'asJson', 'pagingService', 
 /**
  * Point Of Interest API
  */
-sdkApiApp.factory('pointOfInterestApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('pointOfInterestApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['organization'];
 
@@ -1468,6 +1468,9 @@ sdkApiApp.factory('pointOfInterestApi', ['$http', 'asJson', 'promiseService', 'c
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        searchPointsOfInterest: function (params) {
+            return pagingService.page(host + 'api/points-of-interest/search', params);
         },
         updatePointOfInterest: function (data) {
             var dataCopy = asJson(data, removableFields);
