@@ -1,36 +1,41 @@
 var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['asJson', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (asJson, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
             function Document (attrs, organization) {
                 Model.Base.apply(this, arguments);
 
                 this.data = (attrs && attrs.data) || {};
 
                 privateProperty(this, 'updateRegister', function (organization) {
+                    var organizationJson = asJson(organization);
+
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
-                        organization: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farmer: underscore.omit(organization, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farms : organization.farms,
-                        legalEntities: underscore.map(organization.legalEntities, function (entity) {
+                        organization: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
+                        farmer: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
+                        farms : organizationJson.farms,
+                        legalEntities: underscore.map(organizationJson.legalEntities, function (entity) {
                             return underscore.omit(entity, ['assets', 'farms']);
                         }),
-                        assets: underscore.chain(organization.legalEntities)
+                        assets: underscore.chain(organizationJson.legalEntities)
                             .pluck('assets')
                             .flatten()
                             .compact()
                             .groupBy('type')
                             .value(),
-                        liabilities: underscore.chain(organization.legalEntities)
+                        liabilities: underscore.chain(organizationJson.legalEntities)
                             .pluck('liabilities')
                             .flatten()
                             .compact()
                             .value(),
-                        pointsOfInterest: underscore.map(organization.pointsOfInterest, function (pointOfInterest) {
+                        pointsOfInterest: underscore.map(organizationJson.pointsOfInterest, function (pointOfInterest) {
                             return underscore.omit(pointOfInterest, ['organization']);
+                        }),
+                        productionSchedules: underscore.map(organizationJson.productionSchedules, function (productionSchedule) {
+                            return underscore.omit(productionSchedule, ['organization']);
                         })
                     });
                 });

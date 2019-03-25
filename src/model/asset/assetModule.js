@@ -1121,6 +1121,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                             (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type :
                             'Natural Grazing');
                     }, 'fieldName', 'farmName'];
+                case 'stock':
+                    return ['category'];
                 case 'vme':
                     return ['category', 'model'];
                 case 'wasteland':
@@ -1234,6 +1236,9 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                         map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
                         map.summary = (instance.data.description || '');
                         map.groupby = instance.data.type;
+                        break;
+                    case 'stock':
+                        map.groupby = instance.type;
                         break;
                     case 'vme':
                         map.subtitle = 'Quantity: ' + instance.data.quantity;

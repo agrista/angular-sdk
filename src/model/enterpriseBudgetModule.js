@@ -1,7 +1,7 @@
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Locale', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, computedProperty, inheritModel, interfaceProperty, Locale, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Locale', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, interfaceProperty, Locale, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudgetBase(attrs) {
             Locale.apply(this, arguments);
 
@@ -65,7 +65,20 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
             privateProperty(this, 'sortSections', function () {
                 this.data.sections = underscore.chain(this.data.sections)
-                    .sortBy('name')
+                    .each(function (section) {
+                        underscore.each(section.productCategoryGroups, function (group) {
+                            group.productCategories.sort(function (categoryA, categoryB) {
+                                return naturalSort(categoryA.name, categoryB.name);
+                            });
+                        });
+
+                        section.productCategoryGroups.sort(function (groupA, groupB) {
+                            return naturalSort(groupA.name, groupB.name);
+                        });
+                    })
+                    .sortBy(function (section) {
+                        return section.name + (section.costStage ? '-' + section.costStage : '');
+                    })
                     .reverse()
                     .value();
             });
@@ -102,8 +115,12 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     this.data.sections.push(section);
+                    this.data.sections.sort(function (sectionA, sectionB) {
+                        return naturalSort(sectionA.name + (sectionA.costStage ? '-' + sectionA.costStage : ''), sectionB.name + (sectionB.costStage ? '-' + sectionB.costStage : ''));
+                    });
+                    this.data.sections.reverse();
+
                     this.setCache([sectionCode, costStage], section);
-                    this.sortSections();
                 }
 
                 return section;
@@ -151,6 +168,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     section.productCategoryGroups.push(group);
+                    section.productCategoryGroups.sort(function (groupA, groupB) {
+                        return naturalSort(groupA.name, groupB.name);
+                    });
+
                     this.setCache([groupName, costStage], group);
                 }
 
@@ -253,6 +274,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                     }
 
                     group.productCategories.push(category);
+                    group.productCategories.sort(function (categoryA, categoryB) {
+                        return naturalSort(categoryA.name, categoryB.name);
+                    });
+
                     this.setCache([categoryCode, costStage], category);
                 }
 

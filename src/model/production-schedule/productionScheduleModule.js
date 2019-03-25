@@ -205,7 +205,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
             });
 
             computedProperty(this, 'title', function () {
-                return this.allocatedSize + 'ha ' + (this.commodityType ? 'of ' + this.commodityType : '') + (this.startDate ? ' starting ' + moment(this.startDate).format('MMM YYYY') : '');
+                return getTitle(this);
             });
 
             computedProperty(this, 'numberOfMonths', function () {
@@ -949,6 +949,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
             productionCategory.value = safeArrayMath.reduce(productionCategory.valuePerMonth);
         }
 
+        function getTitle (instance) {
+            return (instance.data && instance.data.details ? instance.data.details.commodity + ' - ' + moment(instance.startDate).format('MMM YYYY') : '');
+        }
+
         inheritModel(ProductionSchedule, EnterpriseBudgetBase);
 
         readOnlyProperty(ProductionSchedule, 'productionScheduleTypes', {
@@ -985,6 +989,10 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
 
         privateProperty(ProductionSchedule, 'getTypeTitle', function (type) {
             return ProductionSchedule.productionScheduleTypes[type] || '';
+        });
+
+        privateProperty(ProductionSchedule, 'getTitle', function (instance) {
+            return getTitle(instance);
         });
 
         ProductionSchedule.validates({
