@@ -15813,6 +15813,7 @@ sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryPro
 
                 Base.initializeObject(this.data, 'inspections', []);
                 Base.initializeObject(this.data, 'problems', []);
+                Base.initializeObject(this.data, 'season', 'Unknown');
                 Base.initializeObject(this.data, 'zones', []);
 
                 computedProperty(this, 'flower', function () {
