@@ -5224,10 +5224,10 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', 'under
             improvement: {
                 icon: 'success',
                 style: {
-                    weight: 4,
+                    weight: 2,
                     color: 'white',
                     opacity: 0.8,
-                    fillColor: "#ff6666",
+                    fillColor: "#808080",
                     fillOpacity: 0.8
                 }
             },
@@ -5334,11 +5334,11 @@ sdkInterfaceMapApp.provider('mapStyleHelper', ['mapMarkerHelperProvider', 'under
             improvement: {
                 icon: 'default',
                 style: {
-                    weight: 4,
+                    weight: 1,
                     color: 'white',
                     opacity: 0.8,
-                    fillColor: "#ff6666",
-                    fillOpacity: 0.5
+                    fillColor: "#c0c0c0",
+                    fillOpacity: 0.4
                 }
             },
             cropland: {
