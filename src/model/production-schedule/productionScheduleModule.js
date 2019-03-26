@@ -265,6 +265,12 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
             this.startDate = attrs.startDate && moment(attrs.startDate).format('YYYY-MM-DD');
             this.type = attrs.type;
 
+            // TODO: WA: Legacy parameter required
+            this.assetId = underscore.chain(this.assets)
+                .pluck('id')
+                .first()
+                .value();
+
             if (this.data.budget) {
                 this.budget = EnterpriseBudget.new(this.data.budget);
             }
@@ -273,6 +279,9 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
         function setDetails (instance, asset) {
             instance.type = ProductionSchedule.typeByAsset[asset.type];
             instance.data.details.irrigated = (asset.data.irrigated === true);
+
+            // TODO: WA: Legacy parameter required
+            instance.assetId = asset.id;
 
             if (asset.data.crop && instance.type !== 'livestock') {
                 instance.data.details.commodity = asset.data.crop;

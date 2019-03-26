@@ -1901,7 +1901,7 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
             function recalculateCategory (instance, category) {
                 category.name = (underscore.contains(['INC-CPS-CROP', 'INC-FRS-FRUT'], category.code) ?
                     instance.commodityType :
-                    EnterpriseBudgetBase.categories[category.code].name);
+                    (EnterpriseBudgetBase.categories[category.code] ? EnterpriseBudgetBase.categories[category.code].name : category.name));
 
                 if (instance.assetType === 'livestock' && instance.getConversionRate(category.name)) {
                     category.quantityPerLSU = safeMath.times(category.quantity, instance.getConversionRate(category.name));
