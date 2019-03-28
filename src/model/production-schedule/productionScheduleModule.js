@@ -324,6 +324,8 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                         budgetCategory.quantityPerLSU = productionCategory.quantityPerLSU;
                         break;
                     case 'stock':
+                        productionCategory.name = (underscore.contains(['INC-CPS-CROP', 'INC-FRS-FRUT'], categoryCode) ? instance.commodityType : productionCategory.name);
+
                         var assetType = (s.include(categoryCode, 'INC-LSS') ? 'livestock' : 'stock'),
                             stock = instance.findStock(assetType, productionCategory.name, instance.commodityType),
                             reference = [instance.scheduleKey, (sectionCode === 'INC' ? 'Sale' : 'Consumption')].join('/'),
@@ -415,8 +417,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                             if (underscore.contains(EnterpriseBudget.stockableCategoryCodes, category.code)) {
                                 var assetType = (group.code === 'INC-LSS' ? 'livestock' : 'stock'),
                                     priceUnit = (category.unit === 'Total' ? undefined : category.unit),
-                                    stockType = (section.code === 'INC' ? instance.commodityType : undefined),
-                                    stock = stockPickerFn(assetType, stockType, category.name, priceUnit, category.supplyUnit);
+                                    stockType = (section.code === 'INC' ? instance.commodityType : undefined);
+
+                                category.name = (underscore.contains(['INC-CPS-CROP', 'INC-FRS-FRUT'], category.code) ? instance.commodityType : category.name);
+
+                                var stock = stockPickerFn(assetType, stockType, category.name, priceUnit, category.supplyUnit);
 
                                 if (assetType === 'livestock' && category.value && underscore.isUndefined(stock.data.pricePerUnit)) {
                                     stock.data.pricePerUnit = safeMath.dividedBy(category.value, category.supply || 1);
@@ -693,6 +698,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                 };
 
             if (category) {
+                category.name = (underscore.contains(['INC-CPS-CROP', 'INC-FRS-FRUT'], category.code) ? instance.commodityType : category.name);
                 stock = stock || instance.findStock(assetType, category.name, instance.commodityType);
 
                 if (stock) {

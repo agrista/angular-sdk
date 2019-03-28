@@ -540,7 +540,11 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
         function recalculateCategory (instance, productionSchedule, startOffset, section, group, category) {
             var productionGroupCategory = instance.addCategory(section.code, group.name, underscore.pick(category, ['code', 'name']), instance.defaultCostStage),
                 assetType = (group.code === 'INC-LSS' ? 'livestock' : 'stock'),
-                stock = instance.findStock(assetType, category.name, productionSchedule.data.details.commodity);
+                commodityType = productionSchedule.data.details.commodity;
+
+            productionGroupCategory.name = (underscore.contains(['INC-CPS-CROP', 'INC-FRS-FRUT'], productionGroupCategory.code) ? commodityType : productionGroupCategory.name);
+
+            var stock = instance.findStock(assetType, productionGroupCategory.name, commodityType);
 
             var productionCategory = underscore.extend({
                 commodity: productionSchedule.commodityType,
