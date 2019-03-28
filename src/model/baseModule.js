@@ -7,12 +7,11 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
     .factory('Base', ['deepCopy', 'Errorable', 'privateProperty', 'Storable', 'underscore', 'Validatable', function (deepCopy, Errorable, privateProperty, Storable, underscore, Validatable) {
         function Base () {
             var _constructor = this;
-            var _prototype = _constructor.prototype;
 
             _constructor.new = function (attrs, options) {
                 var inst = new _constructor(attrs, options);
 
-                if (typeof inst.storable == 'function') {
+                if (typeof inst.storable === 'function') {
                     inst.storable(attrs);
                 }
 
@@ -23,8 +22,14 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 return _constructor.new(deepCopy(attrs || {}), options);
             };
 
+            _constructor.getModel = function () {
+                return _constructor.constructor;
+            };
+
             _constructor.asJSON = function (omit) {
-                return underscore.omit(deepCopy(this), underscore.union(['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'], omit || []));
+                var json = deepCopy(this);
+
+                return (omit ? underscore.omit(json, omit) : json);
             };
 
             _constructor.copy = function () {
@@ -55,7 +60,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
                 var methods = new Module(),
                     propertyNames = Object.getOwnPropertyNames(methods),
                     instancePropertyNames = underscore.filter(propertyNames, function (propertyName) {
-                        return propertyName.slice(0, 2) == '__';
+                        return propertyName.slice(0, 2) === '__';
                     }),
                     oldConstructor = this.new;
 
@@ -84,7 +89,7 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
         });
 
         privateProperty(Base, 'initializeObject', function (object, property, defaultValue) {
-            object[property] = (object[property] && Object.prototype.toString.call(object[property]) == Object.prototype.toString.call(defaultValue))
+            object[property] = (object[property] && Object.prototype.toString.call(object[property]) === Object.prototype.toString.call(defaultValue))
                 ? object[property]
                 : defaultValue;
         });

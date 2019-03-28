@@ -22,10 +22,13 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
 
                 // Actions
                 readOnlyProperty(this, 'actions', {
-                    'credit': [
+                    'incoming': [
                         'Production',
                         'Purchase'],
-                    'debit': [
+                    'movement': [
+                        'Deliver'
+                    ],
+                    'outgoing': [
                         'Consumption',
                         'Internal',
                         'Household',
@@ -39,6 +42,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     'Household': 'Household Consumption',
                     'Internal': 'Internal Consumption',
                     'Labour': 'Labour Consumption',
+                    'Deliver': 'Deliver',
                     'Production': 'Produce',
                     'Purchase': 'Buy Stock',
                     'Repay': 'Repay Credit',
@@ -50,30 +54,60 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 }, {configurable: true});
 
                 // Ledger
-                function addLedgerEntry (instance, item) {
-                    if (instance.isLedgerEntryValid(item)) {
+                function addLedgerEntry (instance, ledgerEntry, options) {
+                    if (instance.isLedgerEntryValid(ledgerEntry)) {
+                        options = underscore.defaults(options || {}, {
+                            checkEntries: true,
+                            recalculate: true
+                        });
+
                         instance.data.ledger = underscore.chain(instance.data.ledger)
-                            .union([underscore.extend(item, {
-                                date: moment(item.date).format('YYYY-MM-DD')
+                            .union([underscore.extend(ledgerEntry, {
+                                date: moment(ledgerEntry.date).format('YYYY-MM-DD')
                             })])
                             .sortBy(function (item) {
                                 return moment(item.date).valueOf() + getActionGroup(instance, item.action);
                             })
                             .value();
+                        instance.$dirty = true;
 
-                        recalculateAndCache(instance, {checkEntries: true});
+                        if (options.recalculate) {
+                            recalculateAndCache(instance, options);
+                        }
                     }
                 }
 
-                privateProperty(this, 'addLedgerEntry', function (item) {
-                    return addLedgerEntry(this, item);
+                privateProperty(this, 'addLedgerEntry', function (ledgerEntry, options) {
+                    return addLedgerEntry(this, ledgerEntry, options);
+                });
+
+                function setLedgerEntry (instance, ledgerEntry, data, options) {
+                    if (!underscore.isEqual(data, underscore.pick(ledgerEntry, underscore.keys(data)))) {
+                        underscore.extend(ledgerEntry, data);
+                        instance.$dirty = true;
+
+                        options = underscore.defaults(options || {}, {
+                            checkEntries: false,
+                            recalculate: true
+                        });
+
+                        if (options.recalculate) {
+                            recalculateAndCache(instance, options);
+                        }
+                    }
+                }
+
+                privateProperty(this, 'setLedgerEntry', function (ledgerEntry, data, options) {
+                    return setLedgerEntry(this, ledgerEntry, data, options);
                 });
 
                 function getActionGroup (instance, action) {
+                    var pureAction = asPureAction(action);
+
                     return underscore.chain(instance.actions)
                         .keys()
                         .filter(function (group) {
-                            return underscore.contains(instance.actions[group], asPureAction(action));
+                            return underscore.contains(instance.actions[group], pureAction);
                         })
                         .first()
                         .value();
@@ -111,17 +145,26 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                         .value());
                 });
 
-                privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, markDeleted) {
+                privateProperty(this, 'removeLedgerEntry', function (ledgerEntry, options) {
+                    options = underscore.defaults(options || {}, {
+                        checkEntries: false,
+                        markDeleted: false,
+                        recalculate: true
+                    });
+
                     if (ledgerEntry) {
-                        if (markDeleted) {
+                        if (options.markDeleted) {
                             ledgerEntry.deleted = true;
                         } else {
                             this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                                 return entry.date === ledgerEntry.date && entry.action === ledgerEntry.action && entry.quantity === ledgerEntry.quantity;
                             });
+                            this.$dirty = true;
                         }
 
-                        recalculateAndCache(this);
+                        if (options.recalculate) {
+                            recalculateAndCache(this, options);
+                        }
                     }
                 });
 
@@ -129,12 +172,13 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     return '/' + underscore.compact([entry.action, entry.date]).join('/');
                 });
 
-                privateProperty(this, 'removeLedgerEntriesByReference', function (reference) {
+                privateProperty(this, 'removeLedgerEntriesByReference', function (reference, options) {
                     this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
                         return s.include(entry.reference, reference);
                     });
+                    this.$dirty = true;
 
-                    recalculateAndCache(this);
+                    recalculateAndCache(this, options);
                 });
 
                 privateProperty(this, 'inventoryInRange', function (rangeStart, rangeEnd) {
@@ -203,8 +247,8 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     recalculateAndCache(this);
                 });
 
-                privateProperty(this, 'recalculateLedger' ,function () {
-                    recalculateAndCache(this);
+                privateProperty(this, 'recalculateLedger' ,function (options) {
+                    recalculateAndCache(this, options);
                 });
 
                 var _monthly = [];
@@ -213,10 +257,10 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     curr.opening = prev.closing;
                     curr.balance = underscore.mapObject(curr.opening, function (value, key) {
                         return safeMath.chain(value)
-                            .plus(underscore.reduce(curr.credit, function (total, item) {
+                            .plus(underscore.reduce(curr.incoming, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
-                            .minus(underscore.reduce(curr.debit, function (total, item) {
+                            .minus(underscore.reduce(curr.outgoing, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
                             .toNumber();
@@ -230,7 +274,8 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                         numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
                         appliedStart = (instance.startMonth ? instance.startMonth.diff(rangeStartDate, 'months') : numberOfMonths),
                         appliedEnd = (instance.endMonth ? rangeEndDate.diff(instance.endMonth, 'months') : 0),
-                        startCrop = Math.abs(Math.min(0, appliedStart));
+                        startCrop = Math.abs(Math.min(0, appliedStart)),
+                        openingMonthEntry = openingMonth(instance);
 
                     if (underscore.isEmpty(_monthly) && !underscore.isEmpty(instance.data.ledger)) {
                         recalculateAndCache(instance);
@@ -240,7 +285,9 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                             .concat(_monthly)
                             .concat(defaultMonths(Math.max(0, appliedEnd))),
                         function (monthly, curr) {
-                            balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
+                            var prev = (monthly.length > 0 ? monthly[monthly.length - 1] : openingMonthEntry);
+
+                            balanceEntry(curr, prev);
                             monthly.push(curr);
                             return monthly;
                         }, [])
@@ -250,42 +297,45 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 function recalculate (instance, options) {
                     var startMonth = instance.startMonth,
                         endMonth = instance.endMonth,
-                        numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : -1);
+                        numberOfMonths = (endMonth ? endMonth.diff(startMonth, 'months') : -1),
+                        openingMonthEntry = openingMonth(instance),
+                        types = ['incoming', 'movement', 'outgoing'];
 
                     options = underscore.defaults(options || {}, {
                         checkEntries: false
                     });
 
                     return underscore.range(numberOfMonths + 1).reduce(function (monthly, offset) {
-                        var offsetDate = moment(startMonth).add(offset, 'M');
+                        var offsetDate = moment(startMonth).add(offset, 'M'),
+                            offsetYear = offsetDate.year(),
+                            offsetMonth = offsetDate.month(),
+                            prev = (monthly.length > 0 ? monthly[monthly.length - 1] : openingMonthEntry);
 
-                        var curr = underscore.extend(defaultMonth(), underscore.reduce(instance.data.ledger, function (month, entry) {
+                        var curr = underscore.reduce(instance.data.ledger, function (month, entry) {
                             var itemDate = moment(entry.date),
                                 pureAction = asPureAction(entry.action);
 
-                            if (!entry.deleted && offsetDate.year() === itemDate.year() && offsetDate.month() === itemDate.month()) {
-                                underscore.each(['credit', 'debit'], function (key) {
-                                    if (underscore.contains(instance.actions[key], pureAction)) {
+                            if (!entry.deleted && offsetMonth === itemDate.month() && offsetYear === itemDate.year()) {
+                                underscore.each(types, function (type) {
+                                    if (underscore.contains(instance.actions[type], pureAction)) {
                                         if (options.checkEntries) {
                                             recalculateEntry(instance, entry);
                                         }
 
                                         month.entries.push(entry);
-                                        month[key][pureAction] = underscore.mapObject(month[key][pureAction] || defaultItem(), function (value, key) {
-                                            return safeMath.plus(value, entry[key]);
-                                        });
+                                        month[type][pureAction] = (underscore.isUndefined(month[type][pureAction]) ?
+                                            defaultItem(entry.quantity, entry.value) :
+                                            underscore.mapObject(month[type][pureAction], function (value, key) {
+                                                return safeMath.plus(value, entry[key]);
+                                            }));
                                     }
                                 });
                             }
 
                             return month;
-                        }, {
-                            credit: {},
-                            debit: {},
-                            entries: []
-                        }));
+                        }, defaultMonth());
 
-                        balanceEntry(curr, underscore.last(monthly) || openingMonth(instance));
+                        balanceEntry(curr, prev);
                         monthly.push(curr);
                         return monthly;
                     }, []);
@@ -323,8 +373,9 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
             function defaultMonth (quantity, value) {
                 return {
                     opening: defaultItem(quantity, value),
-                    credit: {},
-                    debit: {},
+                    incoming: {},
+                    movement: {},
+                    outgoing: {},
                     entries: [],
                     balance: defaultItem(quantity, value),
                     interest: 0,
@@ -345,8 +396,9 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
 
             function isLedgerEntryValid (instance, item) {
                 var pureAction = asPureAction(item.action);
-                return item && item.date && moment(item.date).isValid() && /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
-                    (underscore.contains(instance.actions.credit, pureAction) || underscore.contains(instance.actions.debit, pureAction));
+                return item && item.date && moment(item.date).isValid() &&
+                    /*underscore.isNumber(item.quantity) && */underscore.isNumber(item.value) &&
+                    underscore.contains(underscore.keys(instance.actionTitles), pureAction);
             }
 
             inheritModel(Stock, AssetBase);

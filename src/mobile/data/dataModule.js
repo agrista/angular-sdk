@@ -75,7 +75,7 @@ mobileSdkDataApp.factory('dataStoreUtilities', ['$log', '$timeout', 'dataStoreCo
                 offline: item.$offline,
                 dirty: item.$dirty,
                 local: item.$local,
-                data: underscore.omit(item, ['$id', '$uri', '$complete', '$offline', '$dirty', '$local', '$saved'])
+                data: underscore.omit(item, ['$id', '$uri', '$complete', '$offline', '$delete', '$dirty', '$local', '$saved'])
             };
         },
         transactionPromise: function(db) {

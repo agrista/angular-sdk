@@ -62,7 +62,7 @@ sdkUtilitiesApp.factory('dataMapService', [function() {
     }
 }]);
 
-sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore) {
+sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService', 'dataMapService', 'generateUUID', 'underscore', 'uriQueryFormatArrays', function($rootScope, $http, promiseService, dataMapService, generateUUID, underscore, uriQueryFormatArrays) {
     var _listId = generateUUID();
 
     return {
@@ -170,12 +170,12 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
                         method: 'POST',
                         url: endPoint,
                         data: params.resulttype,
-                        params: underscore.omit(params, 'resulttype'),
+                        params: uriQueryFormatArrays(underscore.omit(params, 'resulttype')),
                         withCredentials: true
                     } : {
                         method: 'GET',
                         url: endPoint,
-                        params: params,
+                        params: uriQueryFormatArrays(params),
                         withCredentials: true
                     });
 
@@ -205,17 +205,17 @@ sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function
     }
 }]);
 
-sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', function ($http, underscore) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
     return function (url, params) {
         params = params || {};
 
         return $http(underscore.extend(underscore.isObject(params.resulttype) ? {
             method: 'POST',
             data: params.resulttype,
-            params: underscore.omit(params, 'resulttype')
+            params: uriQueryFormatArrays(underscore.omit(params, 'resulttype'))
         } : {
             method: 'GET',
-            params: params
+            params: uriQueryFormatArrays(params)
         }, {
             url: url,
             withCredentials: true
@@ -340,6 +340,24 @@ sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
+sdkUtilitiesApp.factory('colorHash', ['md5', function (md5) {
+    function hashCode (str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return hash;
+    }
+
+    return function (str) {
+        var c = (hashCode(str) & 0x00FFFFFF)
+            .toString(16)
+            .toUpperCase();
+
+        return '#' + ('00000'.substring(0, 6 - c.length)) + c;
+    };
+}]);
+
 sdkUtilitiesApp.filter('round', [function () {
     return function (value, precision) {
         precision = precision || 2;
@@ -349,9 +367,44 @@ sdkUtilitiesApp.filter('round', [function () {
 }]);
 
 sdkUtilitiesApp.factory('asJson', ['deepCopy', 'underscore', function (deepCopy, underscore) {
-    return function (object, omit) {
-        return underscore.omit(object && typeof object.asJSON === 'function' ? object.asJSON(omit) : deepCopy(object), omit || []);
+    function omitFn (omit) {
+        return function (object) {
+            var json = (underscore.isFunction(object.asJSON) ? object.asJSON(omit) : deepCopy(object));
+
+            return (omit ? underscore.omit(json, omit) : json);
+        }
     }
+
+    return function (object, omit) {
+        return (underscore.isArray(object) ? underscore.map(object, omitFn(omit)) : omitFn(omit)(object));
+    }
+}]);
+
+sdkUtilitiesApp.factory('sortJson', ['underscore', function (underscore) {
+    function sortJson(json) {
+        var keys = underscore.keys(json).sort();
+
+        return underscore.object(keys, underscore.map(keys, function (key) {
+            return sortValue(json[key]);
+        }))
+    }
+
+    function sortValue (value) {
+        return (underscore.isUndefined(value) ? null :
+            (underscore.isObject(value) && !underscore.isArray(value) ? sortJson(value) : value));
+    }
+
+    return sortValue;
+}]);
+
+sdkUtilitiesApp.factory('md5Json', ['md5', 'sortJson', function (md5, sortJson) {
+    function compact (json) {
+        return (json ? JSON.stringify(json).toLowerCase().replace(' ', '') : json);
+    }
+
+    return function (json) {
+        return md5(compact(sortJson(json)));
+    };
 }]);
 
 sdkUtilitiesApp.factory('deepCopy', [function () {
@@ -417,6 +470,13 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         }, angular.copy(arrays.long));
     }
 
+    function reduce (array, initialValue, fnName) {
+        fnName = fnName || 'plus';
+        return underscore.reduce(array || [], function (total, value) {
+            return safeMath[fnName](total, value);
+        }, initialValue || 0);
+    }
+
     return {
         count: function (array) {
             return underscore.reduce(array, function (total, value) {
@@ -435,11 +495,11 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
         times: function (arrayA, arrayB) {
             return performSortedOperation(arrayA, arrayB, safeMath.times);
         },
-        reduce: function (array, initialValue, fnName) {
-            fnName = fnName || 'plus';
-            return underscore.reduce(array || [], function (total, value) {
-                return safeMath[fnName](total, value);
-            }, initialValue || 0)
+        reduce: function (array, initialValue) {
+            return reduce(array, initialValue);
+        },
+        reduceOperator: function (array, fnName, initialValue) {
+            return reduce(array, initialValue, fnName);
         },
         reduceProperty: function (array, property, initialValue) {
             return underscore.chain(array || [])
@@ -460,6 +520,14 @@ sdkUtilitiesApp.factory('safeArrayMath', ['safeMath', 'underscore', function (sa
             });
         }
     };
+}]);
+
+sdkUtilitiesApp.factory('uriQueryFormatArrays', ['underscore', function (underscore) {
+    return function (query) {
+        return underscore.mapObject(query, function (value) {
+            return (underscore.isArray(value) ? value.join(',') : value);
+        });
+    }
 }]);
 
 sdkUtilitiesApp.factory('uriEncodeQuery', ['underscore', function (underscore) {

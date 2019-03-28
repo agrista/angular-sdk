@@ -7,6 +7,8 @@ sdkLibraryApp.constant('bigNumber', window.BigNumber);
 
 sdkLibraryApp.constant('underscore', window._);
 
+sdkLibraryApp.constant('md5', window.md5);
+
 sdkLibraryApp.constant('moment', window.moment);
 
 sdkLibraryApp.constant('topologySuite', window.jsts);
