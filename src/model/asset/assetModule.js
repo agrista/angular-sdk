@@ -53,7 +53,7 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
                 (instance.type === 'stock' ?
                     (instance.data.type ? '-t.' + instance.data.type : '') +
                     (instance.data.category ? '-c.' + instance.data.category : '') +
-                    (instance.data.product ? '-p.' + instance.data.product : '') : '') +
+                    (instance.data.product ? '-pr.' + instance.data.product : '') : '') +
                 (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
                 (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
         }
@@ -203,8 +203,8 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         return AssetGroup;
     }]);
 
-sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, ProductionSchedule, readOnlyProperty, safeMath, underscore) {
+sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function Asset (attrs) {
             AssetBase.apply(this, arguments);
 
@@ -310,10 +310,6 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.farmId = attrs.farmId;
-
-            this.productionSchedules = underscore.map(attrs.productionSchedules, function (schedule) {
-                return ProductionSchedule.newCopy(schedule);
-            });
 
             if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
                 this.data.assetValuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
@@ -1125,6 +1121,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                             (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type :
                             'Natural Grazing');
                     }, 'fieldName', 'farmName'];
+                case 'stock':
+                    return ['category'];
                 case 'vme':
                     return ['category', 'model'];
                 case 'wasteland':
@@ -1238,6 +1236,9 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                         map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
                         map.summary = (instance.data.description || '');
                         map.groupby = instance.data.type;
+                        break;
+                    case 'stock':
+                        map.groupby = instance.type;
                         break;
                     case 'vme':
                         map.subtitle = 'Quantity: ' + instance.data.quantity;

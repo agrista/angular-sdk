@@ -39,7 +39,7 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
         });
     };
 
-    this.$get = ['$rootScope', '$state', 'authorization', function ($rootScope, $state, authorization) {
+    this.$get = ['$rootScope', '$state', 'authorization', 'promiseService', function ($rootScope, $state, authorization, promiseService) {
         var _slim = false;
         var _footerText = '';
 
@@ -167,10 +167,18 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
                     $rootScope.$broadcast('navigation::items__changed', _groupedApps);
                 }
             },
-            selectItem: function (id) {
-                $rootScope.$broadcast('navigation::item__selected', id);
+            selectItem: function (item) {
+                return promiseService.wrap(function (promise) {
+                    var app = underscore.findWhere(_registeredApps, {id: item.id});
 
-                return $state.go(id);
+                    if (app) {
+                        $rootScope.$broadcast('navigation::item__selected', app);
+
+                        $state.go(app.state, app.params).then(promise.resolve, promise.reject);
+                    } else {
+                        promise.reject();
+                    }
+                });
             },
             /*
              * App registration

@@ -238,6 +238,9 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
         /**
          * Geometry Editing
          */
+        geometry: function () {
+            return topologyHelper.readGeoJSON(getGeometry(this));
+        },
         difference: function (geometry) {
             var geom = topologyHelper.readGeoJSON(getGeometry(this));
             this._json = topologyHelper.writeGeoJSON(geom.difference(geometry));
@@ -299,17 +302,17 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
 
             return _this;
         },
-        addGeometry: function (geometry, properties) {
-            if (geometry) {
+        addGeometry: function (geojson, properties) {
+            if (geojson) {
                 if (this._json === undefined) {
-                    this._json = geometry;
+                    this._json = geojson;
 
                     this.addProperties(properties);
                 } else {
-                    if (this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
+                    if (this._json.type !== 'GeometryCollection' && this._json.type !== 'FeatureCollection' && this._json.type !== 'Feature') {
                         this._json = {
-                            type: 'Feature',
-                            geometry: this._json
+                            type: 'GeometryCollection',
+                            geometries: [this._json]
                         };
                     }
 
@@ -325,13 +328,25 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
                     }
 
                     if (this._json.type === 'FeatureCollection') {
-                        this._json.features.push({
-                            type: 'Feature',
-                            geometry: geometry,
-                            properties: underscore.defaults(properties || {}, {
-                                featureId: objectId().toString()
-                            })
-                        });
+                        if (geojson.type === 'Feature') {
+                            this._json.features.push(geojson);
+                        } else {
+                            this._json.features.push({
+                                type: 'Feature',
+                                geometry: geojson,
+                                properties: underscore.defaults(properties || {}, {
+                                    featureId: objectId().toString()
+                                })
+                            });
+                        }
+                    }
+
+                    if (this._json.type === 'GeometryCollection') {
+                        if (geojson.type === 'Feature') {
+                            this._json.features.push(geojson.geometry);
+                        } else {
+                            this._json.geometries.push(geojson);
+                        }
                     }
                 }
             }

@@ -3,14 +3,8 @@ angular.module('ag.sdk.helper', [
     'ag.sdk.helper.attachment',
     'ag.sdk.helper.crop-inspection',
     'ag.sdk.helper.document',
-    'ag.sdk.helper.enterprise-budget',
-    'ag.sdk.helper.expense',
-    'ag.sdk.helper.farmer',
     'ag.sdk.helper.favourites',
-    'ag.sdk.helper.merchant',
-    'ag.sdk.helper.production-plan',
     'ag.sdk.helper.task',
-    'ag.sdk.helper.team',
     'ag.sdk.helper.user'
 ]);
 
@@ -46,6 +40,8 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.map-theme',
     'ag.sdk.model.merchant',
     'ag.sdk.model.organization',
+    'ag.sdk.model.point-of-interest',
+    'ag.sdk.model.production-group',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',
     'ag.sdk.model.stock',
@@ -63,6 +59,7 @@ angular.module('ag.sdk.test', [
 
 angular.module('ag.sdk', [
     'ag.sdk.authorization',
+    'ag.sdk.editor',
     'ag.sdk.id',
     'ag.sdk.geospatial',
     'ag.sdk.utilities',

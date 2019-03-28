@@ -300,3 +300,29 @@ sdkInterfaceListApp.factory('listService', ['$rootScope', 'objectId', function (
         }
     }
 }]);
+
+sdkInterfaceListApp.provider('listServiceMap', function () {
+    var types = {};
+
+    this.add = function (type, fnOrArray) {
+        types[type] = fnOrArray;
+    };
+
+    this.$get = ['$injector', function ($injector) {
+        function noType (item) {
+            return item;
+        }
+
+        function getType (type) {
+            if (type && types[type] && types[type] instanceof Array) {
+                types[type] = $injector.invoke(types[type]);
+            }
+
+            return types[type];
+        }
+
+        return function (type, defaultType) {
+            return getType(type) || getType(defaultType) || noType;
+        }
+    }];
+});

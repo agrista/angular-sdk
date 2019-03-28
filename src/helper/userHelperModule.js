@@ -1,23 +1,27 @@
 var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 
-sdkHelperUserApp.factory('userHelper', [function() {
-    var _listServiceMap = function (item) {
+sdkHelperUserApp.provider('userHelper', ['listServiceMapProvider', function (listServiceMapProvider) {
+    this.$get = ['listServiceMap', function (listServiceMap) {
+        var _languageList = ['English'];
+
         return {
-            id: item.id || item.$id,
-            title: item.firstName + ' ' + item.lastName,
-            subtitle: item.position,
-            teams: item.teams
+            listServiceMap: function() {
+                return listServiceMap('user');
+            },
+            languageList: function() {
+                return _languageList;
+            }
         }
-    };
+    }];
 
-    var _languageList = ['English'];
-
-    return {
-        listServiceMap: function() {
-            return _listServiceMap;
-        },
-        languageList: function() {
-            return _languageList;
-        }
-    }
+    listServiceMapProvider.add('user', [function () {
+        return function (item) {
+            return {
+                id: item.id || item.$id,
+                title: item.firstName + ' ' + item.lastName,
+                subtitle: item.position,
+                teams: item.teams
+            }
+        };
+    }]);
 }]);
