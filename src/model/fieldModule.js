@@ -22,7 +22,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             });
 
             privateProperty(this, 'setIrrigatedFromLandUse', function () {
-                this.irrigated = s.include(this.landUse, 'Irrigated');
+                this.irrigated = irrigatedFromLandUse(this.landUse);
             });
 
             privateProperty(this, 'fieldNameUnique', function (fieldName, farm) {
@@ -84,6 +84,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             return (farm && farm.data && !underscore.isEmpty(trimmedValue) && !underscore.some(farm.data.fields || [], function (field) {
                 return (s.trim(field.fieldName).toLowerCase() === trimmedValue || (!underscore.isUndefined(instance.loc) && underscore.isEqual(field.loc, instance.loc)));
             }));
+        }
+
+        function irrigatedFromLandUse (landUse) {
+            return s.include(landUse, 'Irrigated');
         }
 
         inheritModel(Field, Model.Base);
@@ -182,6 +186,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         readOnlyProperty(Field, 'terrains', [
             'Mountains',
             'Plains']);
+
+        privateProperty(Field, 'getIrrigatedFromLandUse', function (landUse) {
+            return irrigatedFromLandUse(landUse);
+        });
 
         Field.validates({
             croppingPotential: {

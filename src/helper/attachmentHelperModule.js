@@ -17,13 +17,14 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
             _options.fileResolver = $injector.invoke(_options.fileResolver);
         }
 
-        var _getResizedAttachment = function (attachments, size, defaultImage, type) {
-            attachments = underscore.isArray(attachments) ? attachments : [attachments];
+        var _getResizedAttachment = function (attachments, size, defaultImage, types) {
+            attachments =(underscore.isArray(attachments) ? attachments : [attachments]);
+            types = (underscore.isUndefined(types) || underscore.isArray(types) ? types : [types]);
             defaultImage = defaultImage || _options.defaultImage;
 
             var src = underscore.chain(attachments)
                 .filter(function (attachment) {
-                    return (underscore.isUndefined(type) || attachment.type === type) &&
+                    return (underscore.isUndefined(types) || underscore.contains(types, attachment.type)) &&
                         (underscore.isString(attachment.base64) || (attachment.sizes && attachment.sizes[size]));
                 })
                 .map(function (attachment) {
@@ -38,14 +39,14 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
         };
 
         return {
-            findSize: function (obj, size, defaultImage, type) {
-                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage, type);
+            findSize: function (obj, size, defaultImage, types) {
+                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage, types);
             },
-            getSize: function (attachments, size, defaultImage, type) {
-                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage, type);
+            getSize: function (attachments, size, defaultImage, types) {
+                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage, types);
             },
-            getThumbnail: function (attachments, defaultImage, type) {
-                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage, type);
+            getThumbnail: function (attachments, defaultImage, types) {
+                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage, types);
             },
             resolveUri: function (uri) {
                 return _options.fileResolver(uri);

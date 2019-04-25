@@ -887,6 +887,69 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
 }]);
 
 /**
+ * Farm Sale API
+ */
+sdkApiApp.factory('farmSaleApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['documents', 'organization'];
+
+    return {
+        createFarmSale: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/farm-sale', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getFarmSales: function () {
+            return pagingService.page(host + 'api/farm-sales');
+        },
+        searchFarmSales: function (params) {
+            return pagingService.page(host + 'api/farm-sales/search', params);
+        },
+        getFarmSale: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(host + 'api/farm-sale/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateFarmSale: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/farm-sale/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteFarmSale: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/farm-sale/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        attachDocument: function (id, documentId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/farm-sale/' + id + '/add/' + documentId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachDocument: function (id, documentId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/farm-sale/' + id + '/remove/' + documentId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Financial API
  */
 sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {

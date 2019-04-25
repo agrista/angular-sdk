@@ -152,6 +152,15 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
 
         inheritModel(AssetGroup, Model.Base);
 
+        var dataProps = {
+            'crop': ['crop', 'irrigated', 'irrigation'],
+            'cropland': ['crop', 'croppingPotential', 'irrigated', 'irrigation'],
+            'pasture': ['crop', 'irrigated', 'irrigation', 'terrain'],
+            'permanent crop': ['crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
+            'plantation': ['crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
+            'water right': ['waterSource']
+        };
+
         function addAsset (instance, asset) {
             asset = (AssetFactory.isInstanceOf(asset) ? asset : AssetFactory.new(asset));
 
@@ -164,13 +173,11 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
                     .union([asset])
                     .value();
 
-                if (underscore.contains(['crop', 'pasture', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
-                    instance.data.crop = asset.data.crop;
-                }
-
-                if (underscore.contains(['permanent crop', 'plantation'], instance.type) && asset.data.establishedDate) {
-                    instance.data.establishedDate = asset.data.establishedDate;
-                }
+                underscore.each(dataProps[instance.type], function (prop) {
+                    if (!underscore.isUndefined(asset.data[prop])) {
+                        instance.data[prop] = asset.data[prop];
+                    }
+                });
 
                 instance.recalculate();
             }
@@ -180,7 +187,7 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
             underscore.each(instance.assets, function (asset) {
                 if (asset.data[property] !== instance.data[property]) {
                     asset.data[property] = instance.data[property];
-                    asset.data.assetValue = safeMath.times(asset.data.assetValuePerHa, asset.data.size);
+                    asset.data.assetValue = safeMath.times(asset.data.valuePerHa, asset.data.size);
                     asset.$dirty = true;
                 }
             });
@@ -189,14 +196,14 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
-                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.assetValuePerHa, asset.data.size)));
-                totals.assetValuePerHa = safeMath.dividedBy(totals.assetValue, totals.size);
+                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.valuePerHa, asset.data.size)));
+                totals.valuePerHa = (totals.size > 0 ? safeMath.dividedBy(totals.assetValue, totals.size) : totals.valuePerHa || asset.data.valuePerHa || 0);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa ?
-                safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
+            instance.data.assetValue = (instance.data.size && instance.data.valuePerHa ?
+                safeMath.times(instance.data.valuePerHa, instance.data.size) :
                 instance.data.assetValue);
         }
 
@@ -311,8 +318,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
             this.farmId = attrs.farmId;
 
-            if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
-                this.data.assetValuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
+            if (!this.data.valuePerHa && this.data.assetValue && this.size) {
+                this.data.valuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
                 this.$dirty = true;
             }
         }
@@ -983,6 +990,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Pine',
             'Pineapple',
             'Tea',
+            'Timber',
             'Sisal',
             'Sugarcane',
             'Sugarcane (Irrigated)',
@@ -1024,9 +1032,9 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Cropland (Emerging)': _croplandCrops,
             'Cropland (Irrigated)': _croplandIrrigatedCrops,
             'Cropland (Smallholding)': _croplandCrops,
-            'Forest': ['Pine'],
+            'Forest': ['Pine', 'Timber'],
             'Grazing': _grazingCrops,
-            'Grazing (Bush)': _grazingCrops,
+            'Grazing (Bush)': ['Bush'],
             'Grazing (Fynbos)': _grazingCrops,
             'Grazing (Shrubland)': _grazingCrops,
             'Greenhouses': [],
@@ -1145,7 +1153,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                     } else {
                         switch (prop) {
                             case 'age':
-                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
+                                var years = moment(options.asOfDate).diff(instance.data.establishedDate, 'years');
+                                return instance.data.establishedDate && (years === 0 ? 'Established' : years + ' year' + (years === 1 ? '' : 's'));
                             case 'defaultTitle':
                                 return getProps(instance, getDefaultProps(instance), options);
                             case 'farmName':

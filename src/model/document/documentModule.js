@@ -1,13 +1,17 @@
 var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['asJson', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (asJson, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (asJson, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
             function Document (attrs, organization) {
-                Model.Base.apply(this, arguments);
+                Base.apply(this, arguments);
 
                 this.data = (attrs && attrs.data) || {};
+                Base.initializeObject(this.data, 'attachments', []);
 
+                /**
+                 * Asset Register
+                 */
                 privateProperty(this, 'updateRegister', function (organization) {
                     var organizationJson = asJson(organization);
 
@@ -40,6 +44,35 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     });
                 });
 
+                /**
+                 * Attachment Handling
+                 */
+                computedProperty(this, 'attachments', function () {
+                    return this.data.attachments;
+                });
+
+                privateProperty(this, 'addAttachment', function (attachment) {
+                    this.removeAttachment(attachment);
+
+                    this.data.attachments.push(attachment);
+                });
+
+                privateProperty(this, 'removeAttachment', function (attachment) {
+                    this.data.attachments = underscore.reject(this.data.attachments, function (item) {
+                        return item.key === attachment.key;
+                    });
+                });
+
+                privateProperty(this, 'removeNewAttachments', function () {
+                    var attachments = this.data.attachments;
+
+                    this.data.attachments = underscore.reject(attachments, function (attachment) {
+                        return underscore.isObject(attachment.archive);
+                    });
+
+                    return underscore.difference(attachments, this.data.attachments);
+                });
+
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
                 this.author = attrs.author;
@@ -55,7 +88,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.tasks = attrs.tasks;
             }
 
-            inheritModel(Document, Model.Base);
+            inheritModel(Document, Base);
 
             Document.validates({
                 author: {

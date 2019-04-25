@@ -896,12 +896,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                 return properties.featureId;
             },
             removeGeoJSONFeature: function(layerName, featureId) {
-                if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
-                    var _this = this;
-                    _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId], function () {
+                var _this = this;
+
+                _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', {
+                    layerName: layerName,
+                    featureId: featureId
+                }, function () {
+                    if (_this._config.geojson[layerName]) {
                         delete _this._config.geojson[layerName][featureId];
-                    });
-                }
+                    }
+                });
             },
             removeGeoJSONLayer: function(layerNames) {
                 if ((layerNames instanceof Array) === false) layerNames = [layerNames];
@@ -1935,10 +1939,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.removeGeoJSONFeature = function (data) {
-        if (this._geoJSON[data.layerName] && this._geoJSON[data.layerName][data.properties.featureId]) {
-            this.removeLayerFromLayer(data.properties.featureId, data.layerName);
+        if (this._geoJSON[data.layerName] && this._geoJSON[data.layerName][data.featureId]) {
+            this.removeLayerFromLayer(data.featureId, data.layerName);
             
-            delete this._geoJSON[data.layerName][data.properties.featureId];
+            delete this._geoJSON[data.layerName][data.featureId];
         }
     };
 

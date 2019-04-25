@@ -168,6 +168,25 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
         return new Validator(uuid);
     }]);
 
+sdkModelValidators.factory('Validator.format.uid', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[0-9a-f]{16}$', 'i');
+
+        function uid (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        uid.message = function () {
+            return 'Must be a valid UID';
+        };
+
+        return new Validator(uid);
+    }]);
+
 /**
  * Inclusion Validator
  */

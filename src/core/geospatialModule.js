@@ -204,7 +204,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
             var bounds = [];
 
             if (this._json) {
-                var features = this._json.features || [this._json];
+                var features = this._json.geometries || this._json.features || [this._json];
 
                 angular.forEach(features, function(feature) {
                     var geometry = feature.geometry || feature;

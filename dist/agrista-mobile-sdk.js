@@ -965,7 +965,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
             var bounds = [];
 
             if (this._json) {
-                var features = this._json.features || [this._json];
+                var features = this._json.geometries || this._json.features || [this._json];
 
                 angular.forEach(features, function(feature) {
                     var geometry = feature.geometry || feature;
@@ -2115,13 +2115,14 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
             _options.fileResolver = $injector.invoke(_options.fileResolver);
         }
 
-        var _getResizedAttachment = function (attachments, size, defaultImage, type) {
-            attachments = underscore.isArray(attachments) ? attachments : [attachments];
+        var _getResizedAttachment = function (attachments, size, defaultImage, types) {
+            attachments =(underscore.isArray(attachments) ? attachments : [attachments]);
+            types = (underscore.isUndefined(types) || underscore.isArray(types) ? types : [types]);
             defaultImage = defaultImage || _options.defaultImage;
 
             var src = underscore.chain(attachments)
                 .filter(function (attachment) {
-                    return (underscore.isUndefined(type) || attachment.type === type) &&
+                    return (underscore.isUndefined(types) || underscore.contains(types, attachment.type)) &&
                         (underscore.isString(attachment.base64) || (attachment.sizes && attachment.sizes[size]));
                 })
                 .map(function (attachment) {
@@ -2136,14 +2137,14 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
         };
 
         return {
-            findSize: function (obj, size, defaultImage, type) {
-                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage, type);
+            findSize: function (obj, size, defaultImage, types) {
+                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage, types);
             },
-            getSize: function (attachments, size, defaultImage, type) {
-                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage, type);
+            getSize: function (attachments, size, defaultImage, types) {
+                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage, types);
             },
-            getThumbnail: function (attachments, defaultImage, type) {
-                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage, type);
+            getThumbnail: function (attachments, defaultImage, types) {
+                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage, types);
             },
             resolveUri: function (uri) {
                 return _options.fileResolver(uri);
@@ -4134,12 +4135,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                 return properties.featureId;
             },
             removeGeoJSONFeature: function(layerName, featureId) {
-                if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
-                    var _this = this;
-                    _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId], function () {
+                var _this = this;
+
+                _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', {
+                    layerName: layerName,
+                    featureId: featureId
+                }, function () {
+                    if (_this._config.geojson[layerName]) {
                         delete _this._config.geojson[layerName][featureId];
-                    });
-                }
+                    }
+                });
             },
             removeGeoJSONLayer: function(layerNames) {
                 if ((layerNames instanceof Array) === false) layerNames = [layerNames];
@@ -5173,10 +5178,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.removeGeoJSONFeature = function (data) {
-        if (this._geoJSON[data.layerName] && this._geoJSON[data.layerName][data.properties.featureId]) {
-            this.removeLayerFromLayer(data.properties.featureId, data.layerName);
+        if (this._geoJSON[data.layerName] && this._geoJSON[data.layerName][data.featureId]) {
+            this.removeLayerFromLayer(data.featureId, data.layerName);
             
-            delete this._geoJSON[data.layerName][data.properties.featureId];
+            delete this._geoJSON[data.layerName][data.featureId];
         }
     };
 
@@ -6876,257 +6881,6 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
-
-sdkModelComparableSale.factory('ComparableSale', ['Locale', 'computedProperty', 'Field', 'inheritModel', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (Locale, computedProperty, Field, inheritModel, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
-        function ComparableSale (attrs) {
-            Locale.apply(this, arguments);
-
-            computedProperty(this, 'distanceInKm', function () {
-                return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
-            });
-
-            computedProperty(this, 'improvedRatePerHa', function () {
-                return safeMath.dividedBy(this.purchasePrice, this.area);
-            }, {enumerable: true});
-
-            computedProperty(this, 'vacantLandValue', function () {
-                return safeMath.dividedBy(this.valueMinusImprovements, this.area);
-            }, {enumerable: true});
-
-            computedProperty(this, 'valueMinusImprovements', function () {
-                return safeMath.minus(this.purchasePrice,  this.depImpValue);
-            }, {enumerable: true});
-
-            computedProperty(this, 'farmName', function () {
-                return underscore.chain(this.portions)
-                    .groupBy('farmLabel')
-                    .map(function (portions, farmName) {
-                        var portionSentence = underscore.chain(portions)
-                            .sortBy('portionLabel')
-                            .pluck('portionLabel')
-                            .map(function (portionLabel) {
-                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
-                            })
-                            .toSentence()
-                            .value();
-
-                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
-                    })
-                    .toSentence()
-                    .value();
-            }, {enumerable: true});
-
-
-            computedProperty(this, 'totalLandComponentArea', function () {
-                return underscore.chain(this.landComponents)
-                    .reject(function (component) {
-                        return component.type === 'Water Rights';
-                    })
-                    .reduce(function(total, landComponent) {
-                        return safeMath.plus(total, landComponent.area);
-                    }, 0)
-                    .value();
-            });
-
-            computedProperty(this, 'totalLandComponentValue', function () {
-                return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return safeMath.plus(total, landComponent.assetValue);
-                }, 0);
-            });
-
-            /**
-             * Attachment Handling
-             */
-            privateProperty(this, 'addAttachment', function (attachment) {
-                this.removeAttachment(attachment);
-
-                this.attachments.push(attachment);
-            });
-
-            privateProperty(this, 'removeAttachment', function (attachment) {
-                this.attachments = underscore.reject(this.attachments, function (item) {
-                    return item.key === attachment.key;
-                });
-            });
-
-            privateProperty(this, 'removeNewAttachments', function () {
-                var attachments = this.attachments;
-
-                this.attachments = underscore.reject(attachments, function (attachment) {
-                    return underscore.isObject(attachment.archive);
-                });
-
-                return underscore.difference(attachments, this.attachments);
-            });
-
-            /**
-             * Land Component Handling
-             */
-            privateProperty(this, 'addLandComponent', function (type) {
-                this.landComponents.push({
-                    type: type,
-                    assetValue: 0
-                });
-            });
-
-            privateProperty(this, 'removeLandComponent', function (landComponent) {
-                this.landComponents = underscore.without(this.landComponents, landComponent);
-            });
-
-            /**
-             * Portion Handling
-             */
-            privateProperty(this, 'addPortion', function (portion) {
-                if (!this.hasPortion(portion)) {
-                    this.portions.push(portion);
-
-                    underscore.each(portion.landCover || [], function (landCover) {
-                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
-
-                        if (underscore.isUndefined(landComponent)) {
-                            landComponent = {
-                                type: landCover.label,
-                                assetValue: 0
-                            };
-
-                            this.landComponents.push(landComponent);
-                        }
-
-                        landComponent.area = safeMath.plus(landComponent.area, landCover.area, 3);
-
-                        if (landComponent.unitValue) {
-                            landComponent.assetValue = safeMath.times(landComponent.area, landComponent.unitValue);
-                        }
-                    }, this);
-                }
-
-                recalculateArea(this);
-            });
-
-            privateProperty(this, 'hasPortion', function (portion) {
-                return underscore.some(this.portions, function (storedPortion) {
-                    return storedPortion.sgKey === portion.sgKey;
-                });
-            });
-
-            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
-                this.portions = underscore.reject(this.portions, function (portion) {
-                    return (portion.sgKey === sgKey);
-                });
-                recalculateArea(this);
-            });
-
-            /**
-             * Edit Authorisation
-             */
-            privateProperty(this, 'isEditable', function (user) {
-                return (user && this.authorData && user.username === this.authorData.username && user.company === this.authorData.company);
-            });
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.id = attrs.id || attrs.$id;
-            this.uuid = attrs.uuid;
-            this.area = attrs.area;
-            this.attachments = attrs.attachments || [];
-            this.authorData = attrs.authorData;
-            this.centroid = attrs.centroid;
-            this.comments = attrs.comments;
-            this.createdAt = attrs.createdAt;
-            this.createdBy = attrs.createdBy;
-            this.depImpValue = attrs.depImpValue;
-            this.distance = attrs.distance || 0;
-            this.geometry = attrs.geometry;
-            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
-            this.portions = attrs.portions || [];
-            this.regions = attrs.regions || [];
-            this.propertyKnowledge = attrs.propertyKnowledge;
-            this.purchasedAt = attrs.purchasedAt;
-            this.purchasePrice = attrs.purchasePrice || 0;
-            this.useCount = attrs.useCount || 0;
-        }
-
-        function convertLandComponent (landComponent) {
-            landComponent.type = convertLandComponentType(landComponent.type);
-
-            return landComponent;
-        }
-
-        function convertLandComponentType (type) {
-            switch (type) {
-                case 'Cropland (Dry)':
-                    return 'Cropland';
-                case 'Cropland (Equipped, Irrigable)':
-                case 'Cropland (Irrigable)':
-                    return 'Cropland (Irrigated)';
-                case 'Conservation':
-                    return 'Grazing (Bush)';
-                case 'Horticulture (Intensive)':
-                    return 'Greenhouses';
-                case 'Horticulture (Perennial)':
-                    return 'Orchard';
-                case 'Horticulture (Seasonal)':
-                    return 'Vegetables';
-                case 'Housing':
-                    return 'Homestead';
-                case 'Wasteland':
-                    return 'Non-vegetated';
-            }
-
-            return type;
-        }
-
-        function recalculateArea (instance) {
-            instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
-                return safeMath.plus(total, portion.area);
-            }, 0), 4);
-        }
-
-        inheritModel(ComparableSale, Locale);
-
-        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
-
-        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
-            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
-            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
-
-        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
-
-        ComparableSale.validates({
-            area: {
-                required: true,
-                numeric: true
-            },
-            country: {
-                required: true,
-                length: {
-                    min: 1,
-                    max: 64
-                }
-            },
-            landComponents: {
-                required: true,
-                length: {
-                    min: 1
-                }
-            },
-            portions: {
-                required: true,
-                length: {
-                    min: 1
-                }
-            },
-            purchasePrice: {
-                required: true,
-                numeric: true
-            }
-        });
-
-        return ComparableSale;
-    }]);
-
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
 sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Locale', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
@@ -9369,7 +9123,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             });
 
             privateProperty(this, 'setIrrigatedFromLandUse', function () {
-                this.irrigated = s.include(this.landUse, 'Irrigated');
+                this.irrigated = irrigatedFromLandUse(this.landUse);
             });
 
             privateProperty(this, 'fieldNameUnique', function (fieldName, farm) {
@@ -9431,6 +9185,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             return (farm && farm.data && !underscore.isEmpty(trimmedValue) && !underscore.some(farm.data.fields || [], function (field) {
                 return (s.trim(field.fieldName).toLowerCase() === trimmedValue || (!underscore.isUndefined(instance.loc) && underscore.isEqual(field.loc, instance.loc)));
             }));
+        }
+
+        function irrigatedFromLandUse (landUse) {
+            return s.include(landUse, 'Irrigated');
         }
 
         inheritModel(Field, Model.Base);
@@ -9529,6 +9287,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         readOnlyProperty(Field, 'terrains', [
             'Mountains',
             'Plains']);
+
+        privateProperty(Field, 'getIrrigatedFromLandUse', function (landUse) {
+            return irrigatedFromLandUse(landUse);
+        });
 
         Field.validates({
             croppingPotential: {
@@ -14559,6 +14321,15 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
 
         inheritModel(AssetGroup, Model.Base);
 
+        var dataProps = {
+            'crop': ['crop', 'irrigated', 'irrigation'],
+            'cropland': ['crop', 'croppingPotential', 'irrigated', 'irrigation'],
+            'pasture': ['crop', 'irrigated', 'irrigation', 'terrain'],
+            'permanent crop': ['crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
+            'plantation': ['crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
+            'water right': ['waterSource']
+        };
+
         function addAsset (instance, asset) {
             asset = (AssetFactory.isInstanceOf(asset) ? asset : AssetFactory.new(asset));
 
@@ -14571,13 +14342,11 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
                     .union([asset])
                     .value();
 
-                if (underscore.contains(['crop', 'pasture', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
-                    instance.data.crop = asset.data.crop;
-                }
-
-                if (underscore.contains(['permanent crop', 'plantation'], instance.type) && asset.data.establishedDate) {
-                    instance.data.establishedDate = asset.data.establishedDate;
-                }
+                underscore.each(dataProps[instance.type], function (prop) {
+                    if (!underscore.isUndefined(asset.data[prop])) {
+                        instance.data[prop] = asset.data[prop];
+                    }
+                });
 
                 instance.recalculate();
             }
@@ -14587,7 +14356,7 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
             underscore.each(instance.assets, function (asset) {
                 if (asset.data[property] !== instance.data[property]) {
                     asset.data[property] = instance.data[property];
-                    asset.data.assetValue = safeMath.times(asset.data.assetValuePerHa, asset.data.size);
+                    asset.data.assetValue = safeMath.times(asset.data.valuePerHa, asset.data.size);
                     asset.$dirty = true;
                 }
             });
@@ -14596,14 +14365,14 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
-                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.assetValuePerHa, asset.data.size)));
-                totals.assetValuePerHa = safeMath.dividedBy(totals.assetValue, totals.size);
+                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.valuePerHa, asset.data.size)));
+                totals.valuePerHa = (totals.size > 0 ? safeMath.dividedBy(totals.assetValue, totals.size) : totals.valuePerHa || asset.data.valuePerHa || 0);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa ?
-                safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
+            instance.data.assetValue = (instance.data.size && instance.data.valuePerHa ?
+                safeMath.times(instance.data.valuePerHa, instance.data.size) :
                 instance.data.assetValue);
         }
 
@@ -14718,8 +14487,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
 
             this.farmId = attrs.farmId;
 
-            if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
-                this.data.assetValuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
+            if (!this.data.valuePerHa && this.data.assetValue && this.size) {
+                this.data.valuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
                 this.$dirty = true;
             }
         }
@@ -15390,6 +15159,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Pine',
             'Pineapple',
             'Tea',
+            'Timber',
             'Sisal',
             'Sugarcane',
             'Sugarcane (Irrigated)',
@@ -15431,9 +15201,9 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Cropland (Emerging)': _croplandCrops,
             'Cropland (Irrigated)': _croplandIrrigatedCrops,
             'Cropland (Smallholding)': _croplandCrops,
-            'Forest': ['Pine'],
+            'Forest': ['Pine', 'Timber'],
             'Grazing': _grazingCrops,
-            'Grazing (Bush)': _grazingCrops,
+            'Grazing (Bush)': ['Bush'],
             'Grazing (Fynbos)': _grazingCrops,
             'Grazing (Shrubland)': _grazingCrops,
             'Greenhouses': [],
@@ -15552,7 +15322,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                     } else {
                         switch (prop) {
                             case 'age':
-                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
+                                var years = moment(options.asOfDate).diff(instance.data.establishedDate, 'years');
+                                return instance.data.establishedDate && (years === 0 ? 'Established' : years + ' year' + (years === 1 ? '' : 's'));
                             case 'defaultTitle':
                                 return getProps(instance, getDefaultProps(instance), options);
                             case 'farmName':
@@ -19666,6 +19437,34 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
     DocumentFactoryProvider.add('financial resource plan', 'BusinessPlan');
 }]);
 
+var sdkModelComparableFarmValuationDocument = angular.module('ag.sdk.model.comparable-farm-valuation', ['ag.sdk.model.farm-valuation']);
+
+sdkModelComparableFarmValuationDocument.provider('ComparableFarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['FarmValuation', 'inheritModel', 'underscore',
+        function (FarmValuation, inheritModel, underscore) {
+            function ComparableFarmValuation (attrs) {
+                FarmValuation.apply(this, arguments);
+
+                this.docType = 'comparable farm valuation';
+            }
+
+            inheritModel(ComparableFarmValuation, FarmValuation);
+
+            ComparableFarmValuation.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    equal: {
+                        to: 'comparable farm valuation'
+                    }
+                }
+            }, FarmValuation.validations));
+
+            return ComparableFarmValuation;
+        }];
+
+    DocumentFactoryProvider.add('comparable farm valuation', 'ComparableFarmValuation');
+}]);
+
 var sdkModelCropInspectionDocument = angular.module('ag.sdk.model.crop-inspection', ['ag.sdk.model.document']);
 
 sdkModelCropInspectionDocument.provider('CropInspection', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
@@ -19674,7 +19473,6 @@ sdkModelCropInspectionDocument.provider('CropInspection', ['DocumentFactoryProvi
             function CropInspection (attrs) {
                 Document.apply(this, arguments);
 
-                Base.initializeObject(this.data, 'attachments', []);
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
                 Base.initializeObject(this.data.request, 'assets', []);
@@ -19748,7 +19546,6 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                     '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
                     '</div>';
 
-                Base.initializeObject(this.data, 'attachments', []);
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
 
@@ -19767,21 +19564,6 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                  */
                 privateProperty(this, 'setLegalEntity', function (entity) {
                     this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
-                });
-
-                /**
-                 * Attachment handling
-                 */
-                privateProperty(this, 'addAttachment', function (attachment) {
-                    this.removeAttachment(attachment);
-
-                    this.data.attachments.push(attachment);
-                });
-
-                privateProperty(this, 'removeAttachment', function (attachment) {
-                    this.data.attachments = underscore.reject(this.data.attachments, function (item) {
-                        return item.key === attachment.key;
-                    });
                 });
 
                 /**
@@ -19864,9 +19646,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                 privateProperty(this, 'removeComparableSale', function (comparableSale) {
                     var _this = this;
 
-                    _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, function (comparable) {
-                        return comparable.uuid === comparableSale.uuid;
-                    });
+                    _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, underscore.identity({uuid: comparableSale.uuid}));
 
                     underscore.each(comparableSale.attachments, function (attachment) {
                         _this.removeAttachment(attachment);
@@ -19894,13 +19674,17 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
 var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['asJson', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (asJson, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (asJson, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
             function Document (attrs, organization) {
-                Model.Base.apply(this, arguments);
+                Base.apply(this, arguments);
 
                 this.data = (attrs && attrs.data) || {};
+                Base.initializeObject(this.data, 'attachments', []);
 
+                /**
+                 * Asset Register
+                 */
                 privateProperty(this, 'updateRegister', function (organization) {
                     var organizationJson = asJson(organization);
 
@@ -19933,6 +19717,35 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     });
                 });
 
+                /**
+                 * Attachment Handling
+                 */
+                computedProperty(this, 'attachments', function () {
+                    return this.data.attachments;
+                });
+
+                privateProperty(this, 'addAttachment', function (attachment) {
+                    this.removeAttachment(attachment);
+
+                    this.data.attachments.push(attachment);
+                });
+
+                privateProperty(this, 'removeAttachment', function (attachment) {
+                    this.data.attachments = underscore.reject(this.data.attachments, function (item) {
+                        return item.key === attachment.key;
+                    });
+                });
+
+                privateProperty(this, 'removeNewAttachments', function () {
+                    var attachments = this.data.attachments;
+
+                    this.data.attachments = underscore.reject(attachments, function (attachment) {
+                        return underscore.isObject(attachment.archive);
+                    });
+
+                    return underscore.difference(attachments, this.data.attachments);
+                });
+
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
                 this.author = attrs.author;
@@ -19948,7 +19761,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.tasks = attrs.tasks;
             }
 
-            inheritModel(Document, Model.Base);
+            inheritModel(Document, Base);
 
             Document.validates({
                 author: {
@@ -20033,10 +19846,68 @@ sdkModelDocument.provider('DocumentFactory', function () {
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
 sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
-        function (Asset, computedProperty, Document, inheritModel, privateProperty) {
+    this.$get = ['Base', 'Document', 'inheritModel', 'privateProperty', 'safeMath', 'underscore',
+        function (Base, Document, inheritModel, privateProperty, safeMath, underscore) {
             function FarmValuation (attrs) {
                 Document.apply(this, arguments);
+
+                privateProperty(this, 'asComparable', function () {
+                    return {
+                        attachmentIds: underscore.chain(this.data.attachments)
+                            .filter(function (attachment) {
+                                return attachment.type === 'cover photo' || s.include(attachment.mimeType, 'image');
+                            })
+                            .sortBy(function (attachment, index) {
+                                return (attachment.type === 'cover photo' ? -1 : index);
+                            })
+                            .first(1)
+                            .map(function (attachment) {
+                                return attachment.key;
+                            })
+                            .value(),
+                        authorData: underscore.chain(this.data.report.completedBy || {})
+                            .pick(['displayName', 'email', 'username'])
+                            .extend({
+                                company: this.data.request.merchant.name
+                            })
+                            .value(),
+                        depreciatedImprovements: this.data.report.improvementsValue.depreciatedValue,
+                        improvedRatePerHa: safeMath.dividedBy(this.data.report.totalRoundedValue, this.data.report.summary.totalArea),
+                        improvements: this.data.report.improvements,
+                        knowledgeOfProperty: this.data.report.knowledgeOfProperty,
+                        landUse: underscore.chain(this.data.report.landUseComponents)
+                            .values()
+                            .flatten()
+                            .map(function (landComponent) {
+                                return {
+                                    area: landComponent.area,
+                                    assetValue: landComponent.totalValue,
+                                    type: landComponent.title,
+                                    unitValue: landComponent.valuePerHa
+                                }
+                            })
+                            .sortBy('type')
+                            .value(),
+                        purchasePrice: this.data.report.totalRoundedValue,
+                        vacantLandValue: safeMath.dividedBy(this.data.report.landUseValue.land, this.data.report.summary.totalArea),
+                        valuationDate: this.data.report.completionDate,
+                        valueMinusImprovements: safeMath.minus(this.data.report.totalRoundedValue, this.data.report.improvementsValue.depreciatedValue)
+                    }
+                });
+
+                Base.initializeObject(this.data, 'request', {});
+                Base.initializeObject(this.data.request, 'farmland', []);
+                Base.initializeObject(this.data, 'report', {});
+                Base.initializeObject(this.data.report, 'description', {});
+                Base.initializeObject(this.data.report, 'improvements', []);
+                Base.initializeObject(this.data.report, 'improvementsValue', {});
+                Base.initializeObject(this.data.report, 'landUseComponents', {});
+                Base.initializeObject(this.data.report, 'landUseValue', {});
+                Base.initializeObject(this.data.report, 'location', {});
+                Base.initializeObject(this.data.report, 'research', []);
+                Base.initializeObject(this.data.report, 'services', {});
+                Base.initializeObject(this.data.report, 'summary', {});
+                Base.initializeObject(this.data.report, 'template', 'default');
 
                 this.docType = 'farm valuation';
             }
@@ -22085,6 +21956,444 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
         return ProductionSchedule;
     }]);
 
+var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelComparableSale.factory('ComparableSale', ['Locale', 'computedProperty', 'Field', 'inheritModel', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Locale, computedProperty, Field, inheritModel, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+        function ComparableSale (attrs) {
+            Locale.apply(this, arguments);
+
+            computedProperty(this, 'distanceInKm', function () {
+                return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
+            });
+
+            computedProperty(this, 'improvedRatePerHa', function () {
+                return safeMath.dividedBy(this.purchasePrice, this.area);
+            }, {enumerable: true});
+
+            computedProperty(this, 'vacantLandValue', function () {
+                return safeMath.dividedBy(this.valueMinusImprovements, this.area);
+            }, {enumerable: true});
+
+            computedProperty(this, 'valueMinusImprovements', function () {
+                return safeMath.minus(this.purchasePrice,  this.depImpValue);
+            }, {enumerable: true});
+
+            computedProperty(this, 'farmName', function () {
+                return underscore.chain(this.portions)
+                    .groupBy('farmLabel')
+                    .map(function (portions, farmName) {
+                        var portionSentence = underscore.chain(portions)
+                            .sortBy('portionLabel')
+                            .pluck('portionLabel')
+                            .map(function (portionLabel) {
+                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
+                            })
+                            .toSentence()
+                            .value();
+
+                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
+                    })
+                    .toSentence()
+                    .value();
+            }, {enumerable: true});
+
+
+            computedProperty(this, 'totalLandComponentArea', function () {
+                return underscore.chain(this.landComponents)
+                    .reject(function (component) {
+                        return component.type === 'Water Rights';
+                    })
+                    .reduce(function(total, landComponent) {
+                        return safeMath.plus(total, landComponent.area);
+                    }, 0)
+                    .value();
+            });
+
+            computedProperty(this, 'totalLandComponentValue', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return safeMath.plus(total, landComponent.assetValue);
+                }, 0);
+            });
+
+            /**
+             * Attachment Handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.attachments = underscore.reject(this.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            privateProperty(this, 'removeNewAttachments', function () {
+                var attachments = this.attachments;
+
+                this.attachments = underscore.reject(attachments, function (attachment) {
+                    return underscore.isObject(attachment.archive);
+                });
+
+                return underscore.difference(attachments, this.attachments);
+            });
+
+            /**
+             * Land Component Handling
+             */
+            privateProperty(this, 'addLandComponent', function (type) {
+                this.landComponents.push({
+                    type: type,
+                    assetValue: 0
+                });
+            });
+
+            privateProperty(this, 'removeLandComponent', function (landComponent) {
+                this.landComponents = underscore.without(this.landComponents, landComponent);
+            });
+
+            /**
+             * Portion Handling
+             */
+            privateProperty(this, 'addPortion', function (portion) {
+                if (!this.hasPortion(portion)) {
+                    this.portions.push(portion);
+
+                    underscore.each(portion.landCover || [], function (landCover) {
+                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
+
+                        if (underscore.isUndefined(landComponent)) {
+                            landComponent = {
+                                type: landCover.label,
+                                assetValue: 0
+                            };
+
+                            this.landComponents.push(landComponent);
+                        }
+
+                        landComponent.area = safeMath.plus(landComponent.area, landCover.area, 3);
+
+                        if (landComponent.unitValue) {
+                            landComponent.assetValue = safeMath.times(landComponent.area, landComponent.unitValue);
+                        }
+                    }, this);
+                }
+
+                recalculateArea(this);
+            });
+
+            privateProperty(this, 'hasPortion', function (portion) {
+                return underscore.some(this.portions, function (storedPortion) {
+                    return storedPortion.sgKey === portion.sgKey;
+                });
+            });
+
+            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
+                this.portions = underscore.reject(this.portions, function (portion) {
+                    return (portion.sgKey === sgKey);
+                });
+                recalculateArea(this);
+            });
+
+            /**
+             * Edit Authorisation
+             */
+            privateProperty(this, 'isEditable', function (user) {
+                return (user && this.authorData && user.username === this.authorData.username && user.company === this.authorData.company);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid;
+            this.area = attrs.area;
+            this.attachments = attrs.attachments || [];
+            this.authorData = attrs.authorData;
+            this.centroid = attrs.centroid;
+            this.comments = attrs.comments;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.depImpValue = attrs.depImpValue;
+            this.distance = attrs.distance || 0;
+            this.geometry = attrs.geometry;
+            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
+            this.portions = attrs.portions || [];
+            this.regions = attrs.regions || [];
+            this.propertyKnowledge = attrs.propertyKnowledge;
+            this.purchasedAt = attrs.purchasedAt;
+            this.purchasePrice = attrs.purchasePrice || 0;
+            this.useCount = attrs.useCount || 0;
+        }
+
+        function convertLandComponent (landComponent) {
+            landComponent.type = convertLandComponentType(landComponent.type);
+
+            return landComponent;
+        }
+
+        function convertLandComponentType (type) {
+            switch (type) {
+                case 'Cropland (Dry)':
+                    return 'Cropland';
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    return 'Cropland (Irrigated)';
+                case 'Conservation':
+                    return 'Grazing (Bush)';
+                case 'Horticulture (Intensive)':
+                    return 'Greenhouses';
+                case 'Horticulture (Perennial)':
+                    return 'Orchard';
+                case 'Horticulture (Seasonal)':
+                    return 'Vegetables';
+                case 'Housing':
+                    return 'Homestead';
+                case 'Wasteland':
+                    return 'Non-vegetated';
+            }
+
+            return type;
+        }
+
+        function recalculateArea (instance) {
+            instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
+                return safeMath.plus(total, portion.area);
+            }, 0), 4);
+        }
+
+        inheritModel(ComparableSale, Locale);
+
+        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
+
+        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
+            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
+            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
+
+        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
+
+        ComparableSale.validates({
+            area: {
+                required: true,
+                numeric: true
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
+            landComponents: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            portions: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            purchasePrice: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return ComparableSale;
+    }]);
+
+var sdkModelFarmSale = angular.module('ag.sdk.model.farm-sale', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.farm-valuation']);
+
+sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFactory', 'Locale', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Base, computedProperty, DocumentFactory, Locale, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+        function FarmSale (attrs) {
+            Locale.apply(this, arguments);
+
+            computedProperty(this, 'farmland', function () {
+                return this.data.farmland;
+            });
+
+            privateProperty(this, 'generateUid', function () {
+                this.uid = md5(underscore.chain(this.farmland)
+                    .pluck('data')
+                    .pluck('sgKey')
+                    .compact()
+                    .value()
+                    .join(',') + (this.saleDate ? '/' + moment(this.saleDate).format('YYYY-MM-DD') : ''));
+
+                return this.uid;
+            });
+
+            privateProperty(this, 'asComparable', function () {
+                return {
+                    centroid: this.centroid,
+                    farmland: this.data.farmland,
+                    farmName: this.title,
+                    farmSize: this.area,
+                    uuid: this.uid
+                }
+            });
+
+            /**
+             * Document Handling
+             */
+
+            privateProperty(this, 'addDocument', function (document) {
+                this.documents = underscore.chain(this.documents)
+                    .reject(underscore.identity({documentId: document.documentId}))
+                    .union([document])
+                    .sortBy(function (document) {
+                        return moment(document.data.report && document.data.report.completionDate).unix();
+                    })
+                    .value();
+            });
+
+            /**
+             * Farmland Handling
+             */
+
+            privateProperty(this, 'addFarmland', function (farmland) {
+                this.data.farmland = underscore.chain(this.data.farmland)
+                    .reject(function (item) {
+                        return item.data.sgKey === farmland.data.sgKey;
+                    })
+                    .union([farmland])
+                    .value()
+                    .sort(function (itemA, itemB) {
+                        return naturalSort(itemA.data.sgKey, itemB.data.sgKey);
+                    });
+
+                generateTitle(this);
+                recalculateArea(this);
+            });
+
+            privateProperty(this, 'hasFarmland', function (farmland) {
+                return underscore.some(this.data.farmland, function (item) {
+                    return item.data.sgKey === farmland.data.sgKey;
+                });
+            });
+
+            privateProperty(this, 'removeFarmlandBySgKey', function (sgKey) {
+                this.data.farmland = underscore.reject(this.data.farmland, function (item) {
+                    return (item.data.sgKey === sgKey);
+                });
+
+                generateTitle(this);
+                recalculateArea(this);
+            });
+
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'farmland', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.area = attrs.area || 0;
+            this.centroid = attrs.centroid;
+            this.salePrice = attrs.salePrice;
+            this.saleDate = attrs.saleDate;
+            this.title = attrs.title;
+            this.uid = attrs.uid;
+
+            this.documents = underscore.chain(attrs.documents)
+                .map(DocumentFactory.newCopy)
+                .sortBy(function (document) {
+                    return moment(document.data.report && document.data.report.completionDate).unix();
+                })
+                .value();
+        }
+
+        function generateTitle (instance) {
+            instance.title = underscore.chain(instance.farmland)
+                .groupBy(function (asset) {
+                    return asset.data.farmLabel;
+                })
+                .map(function (assets, farmLabel) {
+                    var portionSentence = underscore.chain(assets)
+                        .pluck('data')
+                        .sortBy('portionLabel')
+                        .pluck('portionLabel')
+                        .compact()
+                        .map(function (portionLabel) {
+                            return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
+                        })
+                        .toSentence()
+                        .value();
+
+                    return (underscore.size(portionSentence) > 0 ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') +
+                        (farmLabel ? (underscore.startsWith(farmLabel.toLowerCase(), 'farm') ? '' : 'farm ') + farmLabel : '');
+                })
+                .toSentence()
+                .prune(1024, '')
+                .value();
+        }
+
+        function recalculateArea (instance) {
+            instance.area = safeMath.round(underscore.reduce(instance.data.farmland, function(total, farmland) {
+                return safeMath.plus(total, farmland.data.area);
+            }, 0), 3);
+        }
+
+        inheritModel(FarmSale, Locale);
+
+        readOnlyProperty(FarmSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
+            'The valuer has inspected this property from aerial photos, and has no firsthand knowledge of the property.',
+            'The valuer has inspected/valued this property before, and has firsthand knowledge of the property.']);
+
+
+        FarmSale.validates({
+            area: {
+                required: true,
+                numeric: true
+            },
+            country: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 64
+                }
+            },
+            data: {
+                required: true,
+                object: true
+            },
+            farmland: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            salePrice: {
+                required: true,
+                numeric: true
+            },
+            saleDate: {
+                required: true,
+                date: true
+            },
+            title: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 1024
+                }
+            },
+            uid: {
+                required: true,
+                format: {
+                    uid: true
+                }
+            }
+        });
+
+        return FarmSale;
+    }]);
+
 var sdkModelTaskEmergenceInspection = angular.module('ag.sdk.model.task.emergence-inspection', ['ag.sdk.model.crop-inspection', 'ag.sdk.model.task']);
 
 sdkModelTaskEmergenceInspection.provider('EmergenceInspectionTask', ['TaskFactoryProvider', function (TaskFactoryProvider) {
@@ -22944,6 +23253,25 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
         return new Validator(uuid);
     }]);
 
+sdkModelValidators.factory('Validator.format.uid', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[0-9a-f]{16}$', 'i');
+
+        function uid (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        uid.message = function () {
+            return 'Must be a valid UID';
+        };
+
+        return new Validator(uid);
+    }]);
+
 /**
  * Inclusion Validator
  */
@@ -23198,6 +23526,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.asset',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
+    'ag.sdk.model.comparable-farm-valuation',
     'ag.sdk.model.comparable-sale',
     'ag.sdk.model.crop',
     'ag.sdk.model.crop-inspection',
@@ -23206,6 +23535,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.expense',
     'ag.sdk.model.farm',
+    'ag.sdk.model.farm-sale',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.farmer',
     'ag.sdk.model.field',
