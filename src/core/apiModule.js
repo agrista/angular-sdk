@@ -512,7 +512,7 @@ sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseServic
 /**
  * Document API
  */
-sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('documentApi', ['$http', 'asJson', 'configuration', 'pagingService', 'promiseService', 'uriEncodeQuery', function ($http, asJson, configuration, pagingService, promiseService, uriEncodeQuery) {
     var host = configuration.getServer(),
         removableFields = ['organization', 'origin', 'tasks'];
 
@@ -550,11 +550,20 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
                 }, promise.reject);
             });
         },
-        relateDocuments: function (id, data) {
-            var dataCopy = asJson(data);
+        attachDocument: function (id, documentId, params) {
+            params = uriEncodeQuery(params);
 
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/' + id + '/relate', dataCopy, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/document/' + id + '/add/' + documentId + (params.length > 0 ? '?' + params : ''), {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachDocument: function (id, documentId, params) {
+            params = uriEncodeQuery(params);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/document/' + id + '/remove/' + documentId + (params.length > 0 ? '?' + params : ''), {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

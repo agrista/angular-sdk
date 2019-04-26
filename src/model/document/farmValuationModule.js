@@ -26,6 +26,7 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
                                 company: this.data.request.merchant.name
                             })
                             .value(),
+                        documentId: this.id,
                         depreciatedImprovements: this.data.report.improvementsValue.depreciatedValue,
                         improvedRatePerHa: safeMath.dividedBy(this.data.report.totalRoundedValue, this.data.report.summary.totalArea),
                         improvements: this.data.report.improvements,
