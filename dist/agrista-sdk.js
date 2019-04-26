@@ -14285,7 +14285,7 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
                             })
                             .value(),
                         authorData: underscore.chain(this.data.report.completedBy || {})
-                            .pick(['displayName', 'email', 'username'])
+                            .pick(['email', 'mobile', 'name', 'position', 'telephone'])
                             .extend({
                                 company: this.data.request.merchant.name
                             })
