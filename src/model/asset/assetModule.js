@@ -901,6 +901,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Cocksfoot',
             'Common Setaria',
             'Dallis',
+            'Eragrostis',
             'Kikuyu',
             'Lucerne',
             'Lupin',
@@ -944,6 +945,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Blackberry',
             'Blueberry',
             'Cherry',
+            'Citrus',
             'Cloudberry',
             'Coconut',
             'Coffee',
@@ -986,6 +988,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
         var _plantationCrops = [
             'Aloe',
             'Bluegum',
+            'Eucalyptus',
             'Hops',
             'Pine',
             'Pineapple',
@@ -1020,11 +1023,13 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Rapeseed'
         ];
         var _vineyardCrops = [
+            'Currant',
             'Grape',
             'Grape (Bush Vine)',
             'Grape (Red)',
             'Grape (Table)',
-            'Grape (White)'
+            'Grape (White)',
+            'Raisin'
         ];
 
         readOnlyProperty(Asset, 'cropsByLandClass', {
