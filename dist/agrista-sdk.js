@@ -1007,8 +1007,8 @@ sdkApiApp.factory('farmSaleApi', ['$http', 'asJson', 'pagingService', 'promiseSe
                 }, promise.reject);
             });
         },
-        getFarmSales: function () {
-            return pagingService.page(host + 'api/farm-sales');
+        getFarmSales: function (params) {
+            return pagingService.page(host + 'api/farm-sales', params);
         },
         searchFarmSales: function (params) {
             return pagingService.page(host + 'api/farm-sales/search', params);
@@ -3784,7 +3784,7 @@ sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-sdkUtilitiesApp.factory('colorHash', ['md5', function (md5) {
+sdkUtilitiesApp.factory('colorHash', [function () {
     function hashCode (str) {
         var hash = 0;
         for (var i = 0; i < str.length; i++) {
@@ -3841,13 +3841,19 @@ sdkUtilitiesApp.factory('sortJson', ['underscore', function (underscore) {
     return sortValue;
 }]);
 
-sdkUtilitiesApp.factory('md5Json', ['md5', 'sortJson', function (md5, sortJson) {
+sdkUtilitiesApp.factory('md5Json', ['md5String', 'sortJson', function (md5String, sortJson) {
     function compact (json) {
-        return (json ? JSON.stringify(json).toLowerCase().replace(' ', '') : json);
+        return (json ? JSON.stringify(json) : json);
     }
 
     return function (json) {
-        return md5(compact(sortJson(json)));
+        return md5String(compact(sortJson(json)));
+    };
+}]);
+
+sdkUtilitiesApp.factory('md5String', ['md5', function (md5) {
+    return function (str) {
+        return (str ? md5(str.toLowerCase().replace(' ', '')) : str);
     };
 }]);
 
@@ -5957,6 +5963,12 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     _this._config.bounds = bounds;
                 });
             },
+            panBy: function (coordinates, options) {
+                this.enqueueRequest('mapbox-' + this._id + '::pan-by', {
+                    coordinates: coordinates,
+                    options: options
+                });
+            },
             panTo: function (coordinates, options) {
                 this.enqueueRequest('mapbox-' + this._id + '::pan-to', {
                     coordinates: coordinates,
@@ -6432,6 +6444,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             _this.setBounds(args);
         });
 
+        scope.$on('mapbox-' + id + '::pan-by', function (event, args) {
+            _this.panBy(args);
+        });
+
         scope.$on('mapbox-' + id + '::pan-to', function (event, args) {
             _this.panTo(args);
         });
@@ -6890,6 +6906,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
             }
+        }
+    };
+
+    Mapbox.prototype.panBy = function (pan) {
+        if (this._map && pan.coordinates) {
+            this._map.panBy(pan.coordinates, pan.options);
         }
     };
 
@@ -19369,8 +19391,8 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
 
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'md5', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
-    function (AssetFactory, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, md5, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
+    function (AssetFactory, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -20668,8 +20690,8 @@ sdkModelComparableSale.factory('ComparableSale', ['Locale', 'computedProperty', 
 
 var sdkModelFarmSale = angular.module('ag.sdk.model.farm-sale', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.farm-valuation']);
 
-sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFactory', 'Locale', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (Base, computedProperty, DocumentFactory, Locale, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFactory', 'Locale', 'inheritModel', 'md5String', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Base, computedProperty, DocumentFactory, Locale, inheritModel, md5String, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function FarmSale (attrs) {
             Locale.apply(this, arguments);
 
@@ -20678,7 +20700,7 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
             });
 
             privateProperty(this, 'generateUid', function () {
-                this.uid = md5(underscore.chain(this.farmland)
+                this.uid = md5String(underscore.chain(this.farmland)
                     .pluck('data')
                     .pluck('sgKey')
                     .compact()
@@ -20710,6 +20732,7 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
                         return moment(document.data.report && document.data.report.completionDate).unix();
                     })
                     .value();
+                this.documentCount = underscore.size(this.documents);
             });
 
             /**
@@ -20754,6 +20777,7 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
             this.id = attrs.id || attrs.$id;
             this.area = attrs.area || 0;
             this.centroid = attrs.centroid;
+            this.documentCount = attrs.documentCount || 0;
             this.salePrice = attrs.salePrice;
             this.saleDate = attrs.saleDate;
             this.title = attrs.title;

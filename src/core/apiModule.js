@@ -912,8 +912,8 @@ sdkApiApp.factory('farmSaleApi', ['$http', 'asJson', 'pagingService', 'promiseSe
                 }, promise.reject);
             });
         },
-        getFarmSales: function () {
-            return pagingService.page(host + 'api/farm-sales');
+        getFarmSales: function (params) {
+            return pagingService.page(host + 'api/farm-sales', params);
         },
         searchFarmSales: function (params) {
             return pagingService.page(host + 'api/farm-sales/search', params);

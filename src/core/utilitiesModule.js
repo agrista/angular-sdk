@@ -340,7 +340,7 @@ sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-sdkUtilitiesApp.factory('colorHash', ['md5', function (md5) {
+sdkUtilitiesApp.factory('colorHash', [function () {
     function hashCode (str) {
         var hash = 0;
         for (var i = 0; i < str.length; i++) {
@@ -397,13 +397,19 @@ sdkUtilitiesApp.factory('sortJson', ['underscore', function (underscore) {
     return sortValue;
 }]);
 
-sdkUtilitiesApp.factory('md5Json', ['md5', 'sortJson', function (md5, sortJson) {
+sdkUtilitiesApp.factory('md5Json', ['md5String', 'sortJson', function (md5String, sortJson) {
     function compact (json) {
-        return (json ? JSON.stringify(json).toLowerCase().replace(' ', '') : json);
+        return (json ? JSON.stringify(json) : json);
     }
 
     return function (json) {
-        return md5(compact(sortJson(json)));
+        return md5String(compact(sortJson(json)));
+    };
+}]);
+
+sdkUtilitiesApp.factory('md5String', ['md5', function (md5) {
+    return function (str) {
+        return (str ? md5(str.toLowerCase().replace(' ', '')) : str);
     };
 }]);
 

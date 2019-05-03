@@ -751,6 +751,12 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     _this._config.bounds = bounds;
                 });
             },
+            panBy: function (coordinates, options) {
+                this.enqueueRequest('mapbox-' + this._id + '::pan-by', {
+                    coordinates: coordinates,
+                    options: options
+                });
+            },
             panTo: function (coordinates, options) {
                 this.enqueueRequest('mapbox-' + this._id + '::pan-to', {
                     coordinates: coordinates,
@@ -1226,6 +1232,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             _this.setBounds(args);
         });
 
+        scope.$on('mapbox-' + id + '::pan-by', function (event, args) {
+            _this.panBy(args);
+        });
+
         scope.$on('mapbox-' + id + '::pan-to', function (event, args) {
             _this.panTo(args);
         });
@@ -1684,6 +1694,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
             } else {
                 this._map.fitBounds(bounds.coordinates, bounds.options);
             }
+        }
+    };
+
+    Mapbox.prototype.panBy = function (pan) {
+        if (this._map && pan.coordinates) {
+            this._map.panBy(pan.coordinates, pan.options);
         }
     };
 
