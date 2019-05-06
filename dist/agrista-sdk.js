@@ -993,7 +993,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
 /**
  * Farm Sale API
  */
-sdkApiApp.factory('farmSaleApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('farmSaleApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['documents', 'organization'];
 
@@ -1009,6 +1009,9 @@ sdkApiApp.factory('farmSaleApi', ['$http', 'asJson', 'pagingService', 'promiseSe
         },
         getFarmSales: function (params) {
             return pagingService.page(host + 'api/farm-sales', params);
+        },
+        aggregateFarmSales: function (params) {
+            return httpRequestor(host + 'api/farm-sales/aggregate', params);
         },
         searchFarmSales: function (params) {
             return pagingService.page(host + 'api/farm-sales/search', params);
