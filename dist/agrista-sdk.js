@@ -14001,12 +14001,17 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                 Base.initializeObject(this.data.request, 'farmland', []);
 
                 Base.initializeObject(this.data.report, 'body', defaultReportBody);
-                Base.initializeObject(this.data.report, 'comparableSales', []);
+                Base.initializeObject(this.data.report, 'comparables', []);
                 Base.initializeObject(this.data.report, 'improvements', []);
                 Base.initializeObject(this.data.report, 'improvementsValue', {});
                 Base.initializeObject(this.data.report, 'landUseComponents', {});
                 Base.initializeObject(this.data.report, 'landUseValue', {});
                 Base.initializeObject(this.data.report, 'summary', {});
+
+                if (!underscore.isUndefined(this.data.report.comparableSales)) {
+                    this.data.report.comparables = this.data.report.comparableSales;
+                    delete this.data.report.comparableSales;
+                }
 
                 /**
                  * Legal Entity handling
@@ -14085,7 +14090,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
 
                     _this.removeComparableSale(comparableSale);
 
-                    _this.data.report.comparableSales.push(comparableSale.asJSON());
+                    _this.data.report.comparables.push(comparableSale.asJSON());
 
                     underscore.each(comparableSale.attachments, function (attachment) {
                         _this.addAttachment(attachment);
@@ -14095,7 +14100,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                 privateProperty(this, 'removeComparableSale', function (comparableSale) {
                     var _this = this;
 
-                    _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, underscore.identity({uuid: comparableSale.uuid}));
+                    _this.data.report.comparables = underscore.reject(_this.data.report.comparables, underscore.identity({uuid: comparableSale.uuid}));
 
                     underscore.each(comparableSale.attachments, function (attachment) {
                         _this.removeAttachment(attachment);
