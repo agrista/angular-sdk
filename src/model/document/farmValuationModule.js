@@ -38,7 +38,8 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
                                 return {
                                     area: landComponent.area,
                                     assetValue: landComponent.totalValue,
-                                    type: landComponent.title,
+                                    type: landComponent.name,
+                                    subType: landComponent.title,
                                     unitValue: landComponent.valuePerHa
                                 }
                             })

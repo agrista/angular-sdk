@@ -143,6 +143,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Tea',
             'Vegetables',
             'Vineyard',
+            'Wasteland',
             'Water',
             'Water (Seasonal)',
             'Wetland']);

@@ -30,6 +30,15 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
         searchAdminRegions: function (params) {
             return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
         },
+        getColorMap: function (query) {
+            var params = uriEncodeTrimmedQuery(underscore.pick(query, ['type']));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/geo/color-map' + (params ? '?' + params : ''),  underscore.omit(query, ['type']), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getDistrict: function (query) {
             query = uriEncodeTrimmedQuery(query);
 

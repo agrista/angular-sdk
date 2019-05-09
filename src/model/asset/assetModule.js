@@ -821,7 +821,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 'Tea'],
             'vme': [],
             'wasteland': [
-                'Non-vegetated'],
+                'Non-vegetated',
+                'Wasteland'],
             'water right': [
                 'Water',
                 'Water (Seasonal)',

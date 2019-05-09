@@ -30,6 +30,15 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
         searchAdminRegions: function (params) {
             return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
         },
+        getColorMap: function (query) {
+            var params = uriEncodeTrimmedQuery(underscore.pick(query, ['type']));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(_host + 'api/geo/color-map' + (params ? '?' + params : ''),  underscore.omit(query, ['type']), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getDistrict: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
@@ -2907,7 +2916,6 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
 
         return (geom1 && geom2 && geom1[relation] ? geom1[relation](geom2) : false);
     }
-    
 
     GeojsonHelper.prototype = {
         getJson: function () {
@@ -2977,14 +2985,21 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
             this._json = topologyHelper.writeGeoJSON(geom.difference(geometry));
             return this;
         },
+        manipulate: function (geojson, relation) {
+            if (geojson) {
+                this._json = (this._json ? topologyHelper.writeGeoJSON(geometryRelation(this, relation, geojson)) : geojson);
+            }
+
+            return this;
+        },
         /**
          * Geometry Relations
          */
-        contains: function (geometry) {
-            return geometryRelation(this, 'contains', geometry);
+        contains: function (geojson) {
+            return geometryRelation(this, 'contains', geojson);
         },
-        within: function (geometry) {
-            return geometryRelation(this, 'within', geometry);
+        within: function (geojson) {
+            return geometryRelation(this, 'within', geojson);
         },
         /**
          * Get Center
@@ -9267,7 +9282,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 'Tea'],
             'vme': [],
             'wasteland': [
-                'Non-vegetated'],
+                'Non-vegetated',
+                'Wasteland'],
             'water right': [
                 'Water',
                 'Water (Seasonal)',
@@ -14337,7 +14353,8 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
                                 return {
                                     area: landComponent.area,
                                     assetValue: landComponent.totalValue,
-                                    type: landComponent.title,
+                                    type: landComponent.name,
+                                    subType: landComponent.title,
                                     unitValue: landComponent.valuePerHa
                                 }
                             })
@@ -16747,6 +16764,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Tea',
             'Vegetables',
             'Vineyard',
+            'Wasteland',
             'Water',
             'Water (Seasonal)',
             'Wetland']);
