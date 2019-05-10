@@ -225,6 +225,28 @@ sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormat
     }
 }]);
 
+sdkUtilitiesApp.filter('parenthesizeProps', ['underscore', function (underscore) {
+    return function (text, allProps, separator) {
+        var closingParentheses = text.lastIndexOf(')'),
+            propsString = underscore.chain(allProps)
+                .compact()
+                .map(function (props) {
+                    return props.split(', ');
+                })
+                .flatten()
+                .reject(function (prop) {
+                    return s.include(text, prop);
+                })
+                .value()
+                .join(separator || ', ');
+
+        return (propsString.length === 0 ? text :
+            (closingParentheses === -1 ?
+                text + ' (' + propsString + ')' :
+                text.substr(0, closingParentheses) + ', ' + propsString + text.substr(closingParentheses)));
+    }
+}]);
+
 sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', function ($timeout, $q, safeApply) {
     var _defer = function() {
         var deferred = $q.defer();

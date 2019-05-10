@@ -72,9 +72,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                 case 'Housing':
                     instance.landUse = 'Homestead';
                     break;
-                case 'Wasteland':
-                    instance.landUse = 'Non-vegetated';
-                    break;
             }
         }
 
@@ -190,6 +187,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
         privateProperty(Field, 'getIrrigatedFromLandUse', function (landUse) {
             return irrigatedFromLandUse(landUse);
+        });
+
+        privateProperty(Field, 'isLandUse', function (landUse) {
+            return landUse && underscore.contains(Field.landClasses, landUse);
         });
 
         Field.validates({
