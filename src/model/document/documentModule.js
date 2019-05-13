@@ -82,7 +82,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.organizationId = attrs.organizationId;
                 this.originUuid = attrs.originUuid;
                 this.origin = attrs.origin;
-                this.title = attrs.title;
+                this.title = underscore.prune(attrs.title, 255, '');
 
                 this.organization = attrs.organization;
                 this.tasks = attrs.tasks;
@@ -117,9 +117,9 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
     listServiceMapProvider.add('document', ['documentRegistry', 'moment', function (documentRegistry, moment) {
         return function (item) {
             var group = documentRegistry.getProperty(item.docType, 'title'),
-                subtitle = (item.organization && item.organization.name ?
+                subtitle = (item.title ? item.title : (item.organization && item.organization.name ?
                     item.organization.name :
-                    'Created ' + moment(item.createdAt).format('YYYY-MM-DD'));
+                    'Created ' + moment(item.createdAt).format('YYYY-MM-DD')));
 
             return {
                 id: item.id || item.$id,
