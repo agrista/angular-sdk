@@ -57,8 +57,15 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                         instance.landUse = 'Cropland (Irrigated)';
                     }
                     break;
+                case 'Building':
+                    instance.landUse = 'Built-up';
+                    break;
                 case 'Conservation':
-                    instance.landUse = 'Grazing (Bush)';
+                    instance.landUse = 'Protected Area';
+                    break;
+                case 'Homestead':
+                case 'Housing':
+                    instance.landUse = 'Residential';
                     break;
                 case 'Horticulture (Intensive)':
                     instance.landUse = 'Greenhouses';
@@ -68,9 +75,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                     break;
                 case 'Horticulture (Seasonal)':
                     instance.landUse = 'Vegetables';
-                    break;
-                case 'Housing':
-                    instance.landUse = 'Homestead';
                     break;
             }
         }
@@ -112,7 +116,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Sub-drainage']);
 
         readOnlyProperty(Field, 'landClasses', [
-            'Building',
             'Built-up',
             'Cropland',
             'Cropland (Emerging)',
@@ -125,7 +128,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Grazing (Fynbos)',
             'Grazing (Shrubland)',
             'Greenhouses',
-            'Homestead',
             'Mining',
             'Non-vegetated',
             'Orchard',
@@ -134,10 +136,17 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Plantation',
             'Plantation (Smallholding)',
             'Planted Pastures',
+            'Protected Area',
+            'Residential',
+            'Structures (Handling)',
+            'Structures (Processing)',
+            'Structures (Retail)',
+            'Structures (Storage)',
             'Sugarcane',
             'Sugarcane (Emerging)',
             'Sugarcane (Irrigated)',
             'Tea',
+            'Utilities',
             'Vegetables',
             'Vineyard',
             'Wasteland',

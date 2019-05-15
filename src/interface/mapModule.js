@@ -382,6 +382,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                         accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
                     }
                 },
+                'Land Cover': {
+                    template: 'https://maps.agrista.com/za/wms?',
+                    type: 'wms',
+                    options: {
+                        crs: L.CRS.EPSG4326,
+                        format: 'image/png',
+                        layers: 'za:land_cover',
+                        version: '1.1.0'
+                    }
+                },
                 'Hybrid': {
                     template: 'agrista.01e3fb18',
                     type: 'mapbox'
@@ -1554,6 +1564,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 baselayer.layer = L.mapbox.tileLayer(baselayer.template, baselayer.options);
             } else if (typeof L[baselayer.type] === 'function') {
                 baselayer.layer = L[baselayer.type](baselayer.template, baselayer.options);
+            } else if (typeof L.tileLayer[baselayer.type] === 'function') {
+                baselayer.layer = L.tileLayer[baselayer.type](baselayer.template, baselayer.options);
             }
 
             if (baselayer.layer) {

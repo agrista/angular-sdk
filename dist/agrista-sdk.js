@@ -5634,6 +5634,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                         accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
                     }
                 },
+                'Land Cover': {
+                    template: 'https://maps.agrista.com/za/wms?',
+                    type: 'wms',
+                    options: {
+                        crs: L.CRS.EPSG4326,
+                        format: 'image/png',
+                        layers: 'za:land_cover',
+                        version: '1.1.0'
+                    }
+                },
                 'Hybrid': {
                     template: 'agrista.01e3fb18',
                     type: 'mapbox'
@@ -6806,6 +6816,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 baselayer.layer = L.mapbox.tileLayer(baselayer.template, baselayer.options);
             } else if (typeof L[baselayer.type] === 'function') {
                 baselayer.layer = L[baselayer.type](baselayer.template, baselayer.options);
+            } else if (typeof L.tileLayer[baselayer.type] === 'function') {
+                baselayer.layer = L.tileLayer[baselayer.type](baselayer.template, baselayer.options);
             }
 
             if (baselayer.layer) {
@@ -8635,9 +8647,12 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
 
         inheritModel(AssetGroup, Model.Base);
 
+        var commonProps = ['areaUnit', 'unitValue'];
+
         var dataProps = {
             'crop': ['crop', 'irrigated', 'irrigation'],
             'cropland': ['crop', 'croppingPotential', 'irrigated', 'irrigation'],
+            'improvement': ['category', 'type'],
             'pasture': ['condition', 'crop', 'grazingCapacity', 'irrigated', 'irrigation', 'terrain'],
             'permanent crop': ['condition', 'crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
             'plantation': ['condition', 'crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
@@ -8656,13 +8671,18 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
                     .union([asset])
                     .value();
 
-                underscore.each(dataProps[instance.type], function (prop) {
-                    if (!underscore.isUndefined(asset.data[prop])) {
-                        instance.data[prop] = asset.data[prop];
-                    }
-                });
+                underscore.each(commonProps, setPropFromAsset(instance, asset));
+                underscore.each(dataProps[instance.type], setPropFromAsset(instance, asset));
 
                 instance.recalculate();
+            }
+        }
+
+        function setPropFromAsset (instance, asset) {
+            return function (prop) {
+                if (!underscore.isUndefined(asset.data[prop])) {
+                    instance.data[prop] = asset.data[prop];
+                }
             }
         }
 
@@ -8670,7 +8690,7 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
             underscore.each(instance.assets, function (asset) {
                 if (asset.data[property] !== instance.data[property]) {
                     asset.data[property] = instance.data[property];
-                    asset.data.assetValue = safeMath.times(asset.data.valuePerHa, asset.data.size);
+                    asset.data.assetValue = safeMath.times(asset.data.unitValue, asset.data.size);
                     asset.$dirty = true;
                 }
             });
@@ -8679,14 +8699,14 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
-                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.valuePerHa, asset.data.size)));
-                totals.valuePerHa = (totals.size > 0 ? safeMath.dividedBy(totals.assetValue, totals.size) : totals.valuePerHa || asset.data.valuePerHa || 0);
+                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.unitValue, asset.data.size)));
+                totals.unitValue = (totals.size > 0 ? safeMath.dividedBy(totals.assetValue, totals.size) : totals.unitValue || asset.data.unitValue || 0);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = (instance.data.size && instance.data.valuePerHa ?
-                safeMath.times(instance.data.valuePerHa, instance.data.size) :
+            instance.data.assetValue = (instance.data.size && instance.data.unitValue ?
+                safeMath.times(instance.data.unitValue, instance.data.size) :
                 instance.data.assetValue);
         }
 
@@ -8759,6 +8779,16 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 return farmRequired(this);
             });
 
+            privateProperty(this, 'unitSize', function (unit) {
+                return convertValue(this, unit, (this.type !== 'farmland' ? 'size' : 'area'));
+            });
+
+            privateProperty(this, 'unitValue', function (unit) {
+                return (this.data.valuePerHa ?
+                    convertUnitValue(this, unit, 'ha', 'valuePerHa') :
+                    convertValue(this, unit, 'unitValue'));
+            });
+
             // Crop
             privateProperty(this, 'availableCrops', function (field) {
                 return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
@@ -8805,6 +8835,34 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 this.data.valuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
                 this.$dirty = true;
             }
+
+            if (!this.data.unitValue && this.data.valuePerHa) {
+                this.data.unitValue = this.data.valuePerHa;
+                this.data.areaUnit = 'ha';
+                this.$dirty = true;
+            }
+        }
+
+        var unitConversions = {
+            'sm/ha': function (value) {
+                return safeMath.dividedBy(value, 10000);
+            },
+            'ha/sm': function (value) {
+                return safeMath.times(value, 10000);
+            }
+        };
+
+        function convertValue (instance, toUnit, prop) {
+            var unit = instance.data.areaUnit || 'ha';
+
+            return convertUnitValue(instance, toUnit, unit, prop);
+        }
+
+        function convertUnitValue (instance, toUnit, unit, prop) {
+            var unitConversion = unitConversions[unit + '/' + toUnit],
+                value = instance.data[prop];
+
+            return (unit === toUnit ? value : unitConversion && unitConversion(value));
         }
 
         inheritModel(Asset, AssetBase);
@@ -8968,7 +9026,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 ['Recreation', 'Squash Court'],
                 ['Recreation', 'Swimming Pool'],
                 ['Recreation'],
-                ['Religeous', 'Church'],
+                ['Religious', 'Church'],
                 ['Residential', 'Carport'],
                 ['Residential', 'Driveway'],
                 ['Residential', 'Flooring'],
@@ -9281,7 +9339,15 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 'Cropland (Smallholding)',
                 'Vegetables'],
             'farmland': [],
-            'improvement': [],
+            'improvement': [
+                'Built-up',
+                'Residential',
+                'Structures (Handling)',
+                'Structures (Processing)',
+                'Structures (Retail)',
+                'Structures (Storage)',
+                'Utilities'
+            ],
             'livestock': [
                 'Grazing',
                 'Grazing (Bush)',
@@ -16739,8 +16805,15 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                         instance.landUse = 'Cropland (Irrigated)';
                     }
                     break;
+                case 'Building':
+                    instance.landUse = 'Built-up';
+                    break;
                 case 'Conservation':
-                    instance.landUse = 'Grazing (Bush)';
+                    instance.landUse = 'Protected Area';
+                    break;
+                case 'Homestead':
+                case 'Housing':
+                    instance.landUse = 'Residential';
                     break;
                 case 'Horticulture (Intensive)':
                     instance.landUse = 'Greenhouses';
@@ -16750,9 +16823,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                     break;
                 case 'Horticulture (Seasonal)':
                     instance.landUse = 'Vegetables';
-                    break;
-                case 'Housing':
-                    instance.landUse = 'Homestead';
                     break;
             }
         }
@@ -16794,7 +16864,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Sub-drainage']);
 
         readOnlyProperty(Field, 'landClasses', [
-            'Building',
             'Built-up',
             'Cropland',
             'Cropland (Emerging)',
@@ -16807,7 +16876,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Grazing (Fynbos)',
             'Grazing (Shrubland)',
             'Greenhouses',
-            'Homestead',
             'Mining',
             'Non-vegetated',
             'Orchard',
@@ -16816,10 +16884,17 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Plantation',
             'Plantation (Smallholding)',
             'Planted Pastures',
+            'Protected Area',
+            'Residential',
+            'Structures (Handling)',
+            'Structures (Processing)',
+            'Structures (Retail)',
+            'Structures (Storage)',
             'Sugarcane',
             'Sugarcane (Emerging)',
             'Sugarcane (Irrigated)',
             'Tea',
+            'Utilities',
             'Vegetables',
             'Vineyard',
             'Wasteland',
