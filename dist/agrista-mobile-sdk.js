@@ -3668,6 +3668,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     template: 'https://maps.agrista.com/za/wms?',
                     type: 'wms',
                     options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
                         crs: L.CRS.EPSG4326,
                         format: 'image/png',
                         layers: 'za:land_cover',
