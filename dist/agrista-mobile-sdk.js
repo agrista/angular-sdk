@@ -3665,14 +3665,13 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     }
                 },
                 'Land Cover': {
-                    template: 'https://maps.agrista.com/za/wms?',
-                    type: 'wms',
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
                     options: {
                         attribution: "&copy; 2019 Agrista, DAFF",
-                        crs: L.CRS.EPSG4326,
-                        format: 'image/png',
-                        layers: 'za:land_cover',
-                        version: '1.1.0'
+                        format: 'image/png8',
+                        layer: 'za:land_cover',
+                        tilematrixSet: 'EPSG:900913'
                     }
                 },
                 'Hybrid': {
