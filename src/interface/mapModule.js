@@ -368,19 +368,53 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     template: 'agrista.f9f5628d',
                     type: 'mapbox'
                 },
-                'Satellite (Vivid)': {
-                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/cinvynyut001db4m6xwd5cz1f/tiles/{z}/{x}/{y}?access_token={accessToken}',
-                    type: 'tileLayer',
+                'Agriculture Light': {
+                    template: 'agrista.e7367e07',
+                    type: 'mapbox'
+                },
+                'Capability (Climate)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
                     options: {
-                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:climate_capability',
+                        tilematrixSet: 'EPSG:900913'
                     }
                 },
-                'Satellite (Recent)': {
-                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/ciode6t5k0081aqm7k06dod4v/tiles/{z}/{x}/{y}?access_token={accessToken}',
-                    type: 'tileLayer',
+                'Capability (Land)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
                     options: {
-                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:land_capability',
+                        tilematrixSet: 'EPSG:900913'
                     }
+                },
+                'Capability (Soil)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
+                    options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:soil_capability',
+                        tilematrixSet: 'EPSG:900913'
+                    }
+                },
+                'Capability (Terrain)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
+                    options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:terrain_capability',
+                        tilematrixSet: 'EPSG:900913'
+                    }
+                },
+                'Hybrid': {
+                    template: 'agrista.01e3fb18',
+                    type: 'mapbox'
                 },
                 'Land Cover': {
                     template: 'https://maps.agrista.com/gwc/service/wmts',
@@ -392,17 +426,23 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                         tilematrixSet: 'EPSG:900913'
                     }
                 },
-                'Hybrid': {
-                    template: 'agrista.01e3fb18',
-                    type: 'mapbox'
-                },
-                'Light': {
-                    template: 'agrista.e7367e07',
-                    type: 'mapbox'
-                },
                 'Production Regions': {
                     template: 'agrista.87ceb2ab',
                     type: 'mapbox'
+                },
+                'Satellite (Recent)': {
+                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/ciode6t5k0081aqm7k06dod4v/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    type: 'tileLayer',
+                    options: {
+                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
+                    }
+                },
+                'Satellite (Vivid)': {
+                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/cinvynyut001db4m6xwd5cz1f/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    type: 'tileLayer',
+                    options: {
+                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
+                    }
                 }
             },
             overlays: {}
