@@ -31,26 +31,41 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
                         documentId: instance.id,
                         depreciatedImprovements: instance.data.report.improvementsValue.depreciatedValue,
                         improvedRatePerHa: safeMath.dividedBy(instance.data.report.totalRoundedValue, instance.data.report.summary.totalArea),
-                        improvements: instance.data.report.improvements,
+                        improvements: underscore.chain(instance.data.report.improvements)
+                            .map(function (asset) {
+                                asset.data.landUse = asset.data.landUse || Asset.getImprovementLandClass(asset);
+
+                                return {
+                                    area: asset.data.size,
+                                    constructionDate: asset.data.constructionDate,
+                                    totalValue: asset.data.assetValue,
+                                    type: asset.data.landUse,
+                                    subType: getLandUseTitle(asset, {
+                                        field: asset.data
+                                    }),
+                                    unit: 'sm',
+                                    unitValue: safeMath.dividedBy(asset.data.assetValue, asset.data.size)
+                                }
+                            })
+                            .value(),
                         knowledgeOfProperty: instance.data.report.knowledgeOfProperty,
                         landUse: underscore.chain(instance.data.report.landUseComponents)
                             .values()
                             .flatten()
                             .map(function (landComponent) {
                                 return underscore.map(landComponent.assets, function (asset) {
-                                    var field = getAssetField(instance, asset),
-                                        type = (field ? field.landUse :
-                                            (Field.isLandUse(asset.data.landUse) ? asset.data.landUse : landComponent.name)),
-                                        subType = getLandUseTitle(asset, {
-                                            asOfDate: instance.data.report.completionDate,
-                                            field: field || asset.data
-                                        });
+                                    var field = getAssetField(instance, asset);
 
                                     return {
                                         area: asset.data.size,
-                                        assetValue: safeMath.times(landComponent.valuePerHa, asset.data.size),
-                                        type: type,
-                                        subType: subType,
+                                        totalValue: safeMath.times(landComponent.valuePerHa, asset.data.size),
+                                        type: (field ? field.landUse :
+                                            (Field.isLandUse(asset.data.landUse) ? asset.data.landUse : landComponent.name)),
+                                        subType: getLandUseTitle(asset, {
+                                            asOfDate: instance.data.report.completionDate,
+                                            field: field || asset.data
+                                        }),
+                                        unit: 'ha',
                                         unitValue: landComponent.valuePerHa
                                     }
                                 });
@@ -87,9 +102,11 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
             var parenthesizeProps = $filter('parenthesizeProps');
 
             function getLandUseTitle (asset, options) {
-                var cropProps = [Asset.getCustomTitle(asset, ['crop', 'age'], options), Asset.getCustomTitle(asset, ['croppingPotential', 'irrigation', 'terrain', 'waterSource'], options)];
+                var assetProps = [Asset.getCustomTitle(asset, (asset.type === 'improvement' ?
+                    ['type', 'category'] :
+                    ['crop', 'age', 'croppingPotential', 'irrigation', 'terrain', 'waterSource']), options)];
 
-                return parenthesizeProps(Asset.getCustomTitle(asset, [['landUse', 'typeTitle']], options), cropProps);
+                return parenthesizeProps(Asset.getCustomTitle(asset, [['landUse', (asset.type === 'improvement' ? 'name' : 'typeTitle')]], options), assetProps);
             }
 
             function getAssetField (instance, asset) {

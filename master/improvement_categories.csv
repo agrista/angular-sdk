@@ -1,266 +1,266 @@
-'category','subCategory'
-'Airport','Hangar'
-'Airport','Helipad'
-'Airport','Runway'
-'Poultry','Hatchery'
-'Aquaculture','Pond'
-'Aquaculture','Net House'
-'Aviary',''
-'Beekeeping',''
-'Borehole',''
-'Borehole','Equipped'
-'Borehole','Pump'
-'Borehole','Windmill'
-'Poultry','Broiler House'
-'Poultry','Broiler House - Atmosphere'
-'Poultry','Broiler House - Semi'
-'Poultry','Broiler House - Zinc'
-'Building','Administrative'
-'Building',''
-'Building','Commercial'
-'Building','Entrance'
-'Building','Lean-to'
-'Building','Outbuilding'
-'Building','Gate'
-'Cold Storage',''
-'Commercial','Coffee Shop'
-'Commercial','Sales Facility'
-'Commercial','Shop'
-'Commercial','Bar'
-'Commercial','Café'
-'Commercial','Restaurant'
-'Commercial','Factory'
-'Commercial','Tasting Facility'
-'Commercial','Cloth House'
-'Compost','Preparing Unit'
-'Crocodile Dam',''
-'Crop Processing','Degreening Room'
-'Crop Processing','Dehusking Facility'
-'Crop Processing','Drying Facility'
-'Crop Processing','Drying Tunnels'
-'Crop Processing','Sorting Facility'
-'Crop Processing','Drying Oven'
-'Crop Processing','Drying Racks'
-'Crop Processing','Crushing Plant'
-'Crop Processing','Nut Cracking Facility'
-'Crop Processing','Nut Factory'
-'Dairy',''
-'Dairy','Pasteurising Facility'
-'Dairy','Milking Parlour'
-'Dam',''
-'Dam','Filter'
-'Dam','Trout'
-'Domestic','Chicken Coop'
-'Domestic','Chicken Run'
-'Domestic','Kennels'
-'Domestic','Gardening Facility'
-'Education','Conference Room'
-'Education','Classroom'
-'Education','Crèche'
-'Education','School'
-'Education','Training Facility'
-'Equipment','Air Conditioner'
-'Equipment','Gantry'
-'Equipment','Oven'
-'Equipment','Pump'
-'Equipment','Pumphouse'
-'Equipment','Scale'
-'Feed Mill',''
-'Feedlot',''
-'Fencing',''
-'Fencing','Electric'
-'Fencing','Game'
-'Fencing','Perimeter'
-'Fencing','Security'
-'Fencing','Wire'
-'Fuel','Tanks'
-'Fuel','Tank Stand'
-'Fuel','Fuelling Facility'
-'Grain Mill',''
-'Greenhouse',''
-'Infrastructure',''
-'Irrigation','Sprinklers'
-'Irrigation',''
-'Laboratory',''
-'Livestock Handling','Auction Facility'
-'Livestock Handling','Cages'
-'Livestock Handling','Growing House'
-'Livestock Handling','Pens'
-'Livestock Handling','Shelter'
-'Livestock Handling','Breeding Facility'
-'Livestock Handling','Culling Shed'
-'Livestock Handling','Dipping Facility'
-'Livestock Handling','Elephant Enclosures'
-'Livestock Handling','Feed Troughs/Dispensers'
-'Livestock Handling','Horse Walker'
-'Livestock Handling','Maternity Shelter/Pen'
-'Livestock Handling','Quarantine Area'
-'Livestock Handling','Rehab Facility'
-'Livestock Handling','Shearing Facility'
-'Livestock Handling','Stable'
-'Livestock Handling','Surgery'
-'Livestock Handling','Treatment Area'
-'Livestock Handling','Weaner House'
-'Livestock Handling','Grading Facility'
-'Livestock Handling','Inspection Facility'
-'Logistics','Handling Equipment'
-'Logistics','Handling Facility'
-'Logistics','Depot'
-'Logistics','Loading Area'
-'Logistics','Loading Shed'
-'Logistics','Hopper'
-'Logistics','Weigh Bridge'
-'Meat Processing','Abattoir'
-'Meat Processing','Deboning Room'
-'Meat Processing','Skinning Facility'
-'Mill',''
-'Mushrooms','Cultivation'
-'Mushrooms','Sweat Room'
-'Nursery ','Plant'
-'Nursery ','Plant Growing Facility'
-'Office',''
-'Packaging Facility',''
-'Paddocks','Camp'
-'Paddocks','Kraal'
-'Paddocks',''
-'Piggery','Farrowing House'
-'Piggery','Pig Sty'
-'Processing','Bottling Facility'
-'Processing','Flavour Shed'
-'Processing','Processing Facility'
-'Recreation','Viewing Area'
-'Recreation','BBQ'
-'Recreation','Clubhouse'
-'Recreation','Event Venue'
-'Recreation','Gallery'
-'Recreation','Game Room'
-'Recreation','Gazebo'
-'Recreation','Gymnasium'
-'Recreation','Jacuzzi'
-'Recreation','Judging Booth'
-'Recreation','Museum'
-'Recreation','Play Area'
-'Recreation','Pool House'
-'Recreation','Pottery Room'
-'Recreation','Racing Track'
-'Recreation','Salon'
-'Recreation','Sauna'
-'Recreation','Shooting Range'
-'Recreation','Spa Facility'
-'Recreation','Squash Court'
-'Recreation','Swimming Pool'
-'Recreation',''
-'Religious','Church'
-'Residential','Carport'
-'Residential','Driveway'
-'Residential','Flooring'
-'Residential','Paving'
-'Residential','Roofing'
-'Residential','Water Feature'
-'Residential','Hall'
-'Residential','Balcony'
-'Residential','Canopy'
-'Residential','Concrete Surface'
-'Residential','Courtyard'
-'Residential','Covered'
-'Residential','Deck'
-'Residential','Mezzanine'
-'Residential','Parking Area'
-'Residential','Patio'
-'Residential','Porch'
-'Residential','Porte Cochere'
-'Residential','Terrace'
-'Residential','Veranda'
-'Residential','Walkways'
-'Residential','Rondavel'
-'Residential','Accommodation Units'
-'Residential','Boma'
-'Residential','Bungalow'
-'Residential','Bunker'
-'Residential','Cabin'
-'Residential','Chalet'
-'Residential','Community Centre'
-'Residential','Dormitory'
-'Residential','Dwelling'
-'Residential','Flat'
-'Residential','Kitchen'
-'Residential','Lapa'
-'Residential','Laundry Facility'
-'Residential','Locker Room'
-'Residential','Lodge'
-'Residential','Shower'
-'Residential','Toilets'
-'Residential','Room'
-'Residential','Cottage'
-'Residential','Garage'
-'Roads','Access Roads'
-'Roads','Gravel'
-'Roads','Tarred'
-'Security','Control Room'
-'Security','Guardhouse'
-'Security','Office'
-'Shade Nets',''
-'Silo',''
-'Sports','Arena'
-'Sports','Tennis Court'
-'Staff','Hostel'
-'Staff','Hut'
-'Staff','Retirement Centre'
-'Staff','Staff Building'
-'Staff','Canteen'
-'Staff','Dining Facility'
-'Storage','Truck Shelter'
-'Storage','Barn'
-'Storage','Dark Room'
-'Storage','Bin Compartments'
-'Storage','Machinery'
-'Storage','Saddle Room'
-'Storage','Shed'
-'Storage','Chemicals'
-'Storage','Tools'
-'Storage','Dry'
-'Storage','Equipment'
-'Storage','Feed'
-'Storage','Fertilizer'
-'Storage','Fuel'
-'Storage','Grain'
-'Storage','Hides'
-'Storage','Oil'
-'Storage','Pesticide'
-'Storage','Poison'
-'Storage','Seed'
-'Storage','Zinc'
-'Storage','Sulphur'
-'Storage',''
-'Storage','Vitamin Room'
-'Sugar Mill',''
-'Tanks','Water'
-'Timber Mill',''
-'Trench',''
-'Utilities','Battery Room'
-'Utilities','Boiler Room'
-'Utilities','Compressor Room'
-'Utilities','Engine Room'
-'Utilities','Generator'
-'Utilities','Power Room'
-'Utilities','Pumphouse'
-'Utilities','Transformer Room'
-'Utilities',''
-'Vacant Area',''
-'Vehicles','Transport Depot'
-'Vehicles','Truck Wash'
-'Vehicles','Workshop'
-'Walls',''
-'Walls','Boundary'
-'Walls','Retaining'
-'Walls','Security'
-'Warehouse',''
-'Water','Reservoir'
-'Water','Tower'
-'Water','Purification Plant'
-'Water','Reticulation Works'
-'Water','Filter Station'
-'Wine Cellar','Tanks'
-'Wine Cellar',''
-'Wine Cellar','Winery'
-'Wine Cellar','Barrel Maturation Room'
+'category','subCategory',landClass
+'Airport','Hangar',Built-up
+'Airport','Helipad',Built-up
+'Airport','Runway',Built-up
+'Poultry','Hatchery',Structures (Handling)
+'Aquaculture','Pond',Structures (Handling)
+'Aquaculture','Net House',Structures (Handling)
+'Aviary','',Structures (Handling)
+'Beekeeping','',Structures (Handling)
+'Borehole','',Utilities
+'Borehole','Equipped',Utilities
+'Borehole','Pump',Utilities
+'Borehole','Windmill',Utilities
+'Poultry','Broiler House',Structures (Handling)
+'Poultry','Broiler House - Atmosphere',Structures (Handling)
+'Poultry','Broiler House - Semi',Structures (Handling)
+'Poultry','Broiler House - Zinc',Structures (Handling)
+'Building','Administrative',Built-up
+'Building','',Built-up
+'Building','Commercial',Built-up
+'Building','Entrance',Built-up
+'Building','Lean-to',Built-up
+'Building','Outbuilding',Built-up
+'Building','Gate',Built-up
+'Cold Storage','',Structures (Storage)
+'Commercial','Coffee Shop',Structures (Retail)
+'Commercial','Sales Facility',Structures (Retail)
+'Commercial','Shop',Structures (Retail)
+'Commercial','Bar',Structures (Retail)
+'Commercial','Café',Structures (Retail)
+'Commercial','Restaurant',Structures (Retail)
+'Commercial','Factory',Structures (Retail)
+'Commercial','Tasting Facility',Structures (Retail)
+'Commercial','Cloth House',Structures (Retail)
+'Compost','Preparing Unit',Utilities
+'Crocodile Dam','',Built-up
+'Crop Processing','Degreening Room',Structures (Processing)
+'Crop Processing','Dehusking Facility',Structures (Processing)
+'Crop Processing','Drying Facility',Structures (Processing)
+'Crop Processing','Drying Tunnels',Structures (Processing)
+'Crop Processing','Sorting Facility',Structures (Processing)
+'Crop Processing','Drying Oven',Structures (Processing)
+'Crop Processing','Drying Racks',Structures (Processing)
+'Crop Processing','Crushing Plant',Structures (Processing)
+'Crop Processing','Nut Cracking Facility',Structures (Processing)
+'Crop Processing','Nut Factory',Structures (Processing)
+'Dairy','',Structures (Handling)
+'Dairy','Pasteurising Facility',Structures (Handling)
+'Dairy','Milking Parlour',Structures (Handling)
+'Dam','',Built-up
+'Dam','Filter',Built-up
+'Dam','Trout',Built-up
+'Domestic','Chicken Coop',Built-up
+'Domestic','Chicken Run',Built-up
+'Domestic','Kennels',Built-up
+'Domestic','Gardening Facility',Built-up
+'Education','Conference Room',Built-up
+'Education','Classroom',Built-up
+'Education','Crèche',Built-up
+'Education','School',Built-up
+'Education','Training Facility',Built-up
+'Equipment','Air Conditioner',Utilities
+'Equipment','Gantry',Utilities
+'Equipment','Oven',Utilities
+'Equipment','Pump',Utilities
+'Equipment','Pumphouse',Utilities
+'Equipment','Scale',Utilities
+'Feed Mill','',Structures (Processing)
+'Feedlot','',Structures (Handling)
+'Fencing','',Built-up
+'Fencing','Electric',Built-up
+'Fencing','Game',Built-up
+'Fencing','Perimeter',Built-up
+'Fencing','Security',Built-up
+'Fencing','Wire',Built-up
+'Fuel','Tanks',Utilities
+'Fuel','Tank Stand',Utilities
+'Fuel','Fuelling Facility',Utilities
+'Grain Mill','',Structures (Processing)
+'Greenhouse','',Structures (Handling)
+'Infrastructure','',Built-up
+'Irrigation','Sprinklers',Utilities
+'Irrigation','',Utilities
+'Laboratory','',Built-up
+'Livestock Handling','Auction Facility',Structures (Handling)
+'Livestock Handling','Cages',Structures (Handling)
+'Livestock Handling','Growing House',Structures (Handling)
+'Livestock Handling','Pens',Structures (Handling)
+'Livestock Handling','Shelter',Structures (Handling)
+'Livestock Handling','Breeding Facility',Structures (Handling)
+'Livestock Handling','Culling Shed',Structures (Handling)
+'Livestock Handling','Dipping Facility',Structures (Handling)
+'Livestock Handling','Elephant Enclosures',Structures (Handling)
+'Livestock Handling','Feed Troughs/Dispensers',Structures (Handling)
+'Livestock Handling','Horse Walker',Structures (Handling)
+'Livestock Handling','Maternity Shelter/Pen',Structures (Handling)
+'Livestock Handling','Quarantine Area',Structures (Handling)
+'Livestock Handling','Rehab Facility',Structures (Handling)
+'Livestock Handling','Shearing Facility',Structures (Handling)
+'Livestock Handling','Stable',Structures (Handling)
+'Livestock Handling','Surgery',Structures (Handling)
+'Livestock Handling','Treatment Area',Structures (Handling)
+'Livestock Handling','Weaner House',Structures (Handling)
+'Livestock Handling','Grading Facility',Structures (Handling)
+'Livestock Handling','Inspection Facility',Structures (Handling)
+'Logistics','Handling Equipment',Utilities
+'Logistics','Handling Facility',Utilities
+'Logistics','Depot',Utilities
+'Logistics','Loading Area',Utilities
+'Logistics','Loading Shed',Utilities
+'Logistics','Hopper',Utilities
+'Logistics','Weigh Bridge',Utilities
+'Meat Processing','Abattoir',Structures (Processing)
+'Meat Processing','Deboning Room',Structures (Processing)
+'Meat Processing','Skinning Facility',Structures (Processing)
+'Mill','',Structures (Processing)
+'Mushrooms','Cultivation',Structures (Handling)
+'Mushrooms','Sweat Room',Structures (Handling)
+'Nursery ','Plant',Structures (Handling)
+'Nursery ','Plant Growing Facility',Structures (Handling)
+'Office','',Built-up
+'Packaging Facility','',Structures (Processing)
+'Paddocks','Camp',Structures (Handling)
+'Paddocks','Kraal',Structures (Handling)
+'Paddocks','',Structures (Handling)
+'Piggery','Farrowing House',Structures (Handling)
+'Piggery','Pig Sty',Structures (Handling)
+'Processing','Bottling Facility',Structures (Processing)
+'Processing','Flavour Shed',Structures (Processing)
+'Processing','Processing Facility',Structures (Processing)
+'Recreation','Viewing Area',Residential
+'Recreation','BBQ',Residential
+'Recreation','Clubhouse',Residential
+'Recreation','Event Venue',Residential
+'Recreation','Gallery',Residential
+'Recreation','Game Room',Residential
+'Recreation','Gazebo',Residential
+'Recreation','Gymnasium',Residential
+'Recreation','Jacuzzi',Residential
+'Recreation','Judging Booth',Residential
+'Recreation','Museum',Residential
+'Recreation','Play Area',Residential
+'Recreation','Pool House',Residential
+'Recreation','Pottery Room',Residential
+'Recreation','Racing Track',Residential
+'Recreation','Salon',Residential
+'Recreation','Sauna',Residential
+'Recreation','Shooting Range',Residential
+'Recreation','Spa Facility',Residential
+'Recreation','Squash Court',Residential
+'Recreation','Swimming Pool',Residential
+'Recreation','',Residential
+'Religious','Church',Residential
+'Residential','Carport',Residential
+'Residential','Driveway',Residential
+'Residential','Flooring',Residential
+'Residential','Paving',Residential
+'Residential','Roofing',Residential
+'Residential','Water Feature',Residential
+'Residential','Hall',Residential
+'Residential','Balcony',Residential
+'Residential','Canopy',Residential
+'Residential','Concrete Surface',Residential
+'Residential','Courtyard',Residential
+'Residential','Covered',Residential
+'Residential','Deck',Residential
+'Residential','Mezzanine',Residential
+'Residential','Parking Area',Residential
+'Residential','Patio',Residential
+'Residential','Porch',Residential
+'Residential','Porte Cochere',Residential
+'Residential','Terrace',Residential
+'Residential','Veranda',Residential
+'Residential','Walkways',Residential
+'Residential','Rondavel',Residential
+'Residential','Accommodation Units',Residential
+'Residential','Boma',Residential
+'Residential','Bungalow',Residential
+'Residential','Bunker',Residential
+'Residential','Cabin',Residential
+'Residential','Chalet',Residential
+'Residential','Community Centre',Residential
+'Residential','Dormitory',Residential
+'Residential','Dwelling',Residential
+'Residential','Flat',Residential
+'Residential','Kitchen',Residential
+'Residential','Lapa',Residential
+'Residential','Laundry Facility',Residential
+'Residential','Locker Room',Residential
+'Residential','Lodge',Residential
+'Residential','Shower',Residential
+'Residential','Toilets',Residential
+'Residential','Room',Residential
+'Residential','Cottage',Residential
+'Residential','Garage',Residential
+'Roads','Access Roads',Built-up
+'Roads','Gravel',Built-up
+'Roads','Tarred',Built-up
+'Security','Control Room',Built-up
+'Security','Guardhouse',Built-up
+'Security','Office',Built-up
+'Shade Nets','',Utilities
+'Silo','',Structures (Storage)
+'Sports','Arena',Residential
+'Sports','Tennis Court',Residential
+'Staff','Hostel',Residential
+'Staff','Hut',Residential
+'Staff','Retirement Centre',Residential
+'Staff','Staff Building',Residential
+'Staff','Canteen',Residential
+'Staff','Dining Facility',Residential
+'Storage','Truck Shelter',Structures (Storage)
+'Storage','Barn',Structures (Storage)
+'Storage','Dark Room',Structures (Storage)
+'Storage','Bin Compartments',Structures (Storage)
+'Storage','Machinery',Structures (Storage)
+'Storage','Saddle Room',Structures (Storage)
+'Storage','Shed',Structures (Storage)
+'Storage','Chemicals',Structures (Storage)
+'Storage','Tools',Structures (Storage)
+'Storage','Dry',Structures (Storage)
+'Storage','Equipment',Structures (Storage)
+'Storage','Feed',Structures (Storage)
+'Storage','Fertilizer',Structures (Storage)
+'Storage','Fuel',Structures (Storage)
+'Storage','Grain',Structures (Storage)
+'Storage','Hides',Structures (Storage)
+'Storage','Oil',Structures (Storage)
+'Storage','Pesticide',Structures (Storage)
+'Storage','Poison',Structures (Storage)
+'Storage','Seed',Structures (Storage)
+'Storage','Zinc',Structures (Storage)
+'Storage','Sulphur',Structures (Storage)
+'Storage','',Structures (Storage)
+'Storage','Vitamin Room',Structures (Storage)
+'Sugar Mill','',Structures (Processing)
+'Tanks','Water',Utilities
+'Timber Mill','',Structures (Processing)
+'Trench','',Built-up
+'Utilities','Battery Room',Utilities
+'Utilities','Boiler Room',Utilities
+'Utilities','Compressor Room',Utilities
+'Utilities','Engine Room',Utilities
+'Utilities','Generator',Utilities
+'Utilities','Power Room',Utilities
+'Utilities','Pumphouse',Utilities
+'Utilities','Transformer Room',Utilities
+'Utilities','',Utilities
+'Vacant Area','',Built-up
+'Vehicles','Transport Depot',Utilities
+'Vehicles','Truck Wash',Utilities
+'Vehicles','Workshop',Utilities
+'Walls','',Built-up
+'Walls','Boundary',Built-up
+'Walls','Retaining',Built-up
+'Walls','Security',Built-up
+'Warehouse','',Structures (Storage)
+'Water','Reservoir',Utilities
+'Water','Tower',Utilities
+'Water','Purification Plant',Utilities
+'Water','Reticulation Works',Utilities
+'Water','Filter Station',Utilities
+'Wine Cellar','Tanks',Structures (Storage)
+'Wine Cellar','',Structures (Storage)
+'Wine Cellar','Winery',Structures (Storage)
+'Wine Cellar','Barrel Maturation Room',Structures (Storage)
