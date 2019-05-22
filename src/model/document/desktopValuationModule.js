@@ -16,7 +16,8 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                     '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
                     '</div>';
 
-                Base.initializeObject(this.data, 'request', {});
+                Base.initializeObject(this.data, 'hashes', {});
+                Base.initializeObject(this.data, 'report', {});
                 Base.initializeObject(this.data, 'report', {});
 
                 Base.initializeObject(this.data.request, 'farmland', []);
