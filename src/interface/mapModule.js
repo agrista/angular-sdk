@@ -365,12 +365,12 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
             baseTile: 'Agriculture',
             baseLayers: {
                 'Agriculture': {
-                    template: 'agrista.f9f5628d',
-                    type: 'mapbox'
+                    template: 'mapbox://styles/agrista/cjdmrq0wu0iq02so2sevccwlm',
+                    type: 'mapbox.styleLayer'
                 },
                 'Agriculture Light': {
-                    template: 'agrista.e7367e07',
-                    type: 'mapbox'
+                    template: 'mapbox://styles/agrista/cjdmt9c8q0mr02srgvyfo2qwg',
+                    type: 'mapbox.styleLayer'
                 },
                 'Capability (Climate)': {
                     template: 'https://maps.agrista.com/gwc/service/wmts',
@@ -412,10 +412,6 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                         tilematrixSet: 'EPSG:900913'
                     }
                 },
-                'Hybrid': {
-                    template: 'agrista.01e3fb18',
-                    type: 'mapbox'
-                },
                 'Land Cover': {
                     template: 'https://maps.agrista.com/gwc/service/wmts',
                     type: 'wmts',
@@ -429,6 +425,10 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                 'Production Regions': {
                     template: 'agrista.87ceb2ab',
                     type: 'mapbox'
+                },
+                'Satellite (Hybrid)': {
+                    template: 'mapbox://styles/agrista/cjdmt8w570l3r2sql91xzgmbn',
+                    type: 'mapbox.styleLayer'
                 },
                 'Satellite (Recent)': {
                     template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/ciode6t5k0081aqm7k06dod4v/tiles/{z}/{x}/{y}?access_token={accessToken}',
@@ -1600,8 +1600,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
     Mapbox.prototype.addBaseLayer = function (baselayer, name, show) {
         if (this._layerControls.baseLayers[name] === undefined) {
-            if (baselayer.type === 'mapbox') {
+            if (baselayer.type === 'mapbox' || baselayer.type === 'mapbox.tileLayer') {
                 baselayer.layer = L.mapbox.tileLayer(baselayer.template, baselayer.options);
+            } else if (baselayer.type === 'mapbox.styleLayer') {
+                baselayer.layer = L.mapbox.styleLayer(baselayer.template, baselayer.options);
             } else if (typeof L[baselayer.type] === 'function') {
                 baselayer.layer = L[baselayer.type](baselayer.template, baselayer.options);
             } else if (typeof L.tileLayer[baselayer.type] === 'function') {
