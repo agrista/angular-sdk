@@ -18,7 +18,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
 
                 Base.initializeObject(this.data, 'hashes', {});
                 Base.initializeObject(this.data, 'report', {});
-                Base.initializeObject(this.data, 'report', {});
+                Base.initializeObject(this.data, 'request', {});
 
                 Base.initializeObject(this.data.request, 'farmland', []);
 
