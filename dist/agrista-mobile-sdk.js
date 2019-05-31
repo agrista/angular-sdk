@@ -3708,23 +3708,18 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     template: 'agrista.87ceb2ab',
                     type: 'mapbox'
                 },
+                'Satellite': {
+                    template: 'https://earthwatch.digitalglobe.com/earthservice/tmsaccess/tms/1.0.0/DigitalGlobe:ImageryTileService@EPSG:3857@png/{z}/{x}/{y}.png?connectId={connectId}',
+                    type: 'tileLayer',
+                    options: {
+                        attribution: '&copy; 2019 DigitalGlobe',
+                        connectId: '7e873a59-1413-4528-83f3-178c195472f8',
+                        tms: true
+                    }
+                },
                 'Satellite (Hybrid)': {
                     template: 'mapbox://styles/agrista/cjdmt8w570l3r2sql91xzgmbn',
                     type: 'mapbox.styleLayer'
-                },
-                'Satellite (Recent)': {
-                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/ciode6t5k0081aqm7k06dod4v/tiles/{z}/{x}/{y}?access_token={accessToken}',
-                    type: 'tileLayer',
-                    options: {
-                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
-                    }
-                },
-                'Satellite (Vivid)': {
-                    template: 'https://{s}.tiles.mapbox.com/styles/v1/digitalglobe/cinvynyut001db4m6xwd5cz1f/tiles/{z}/{x}/{y}?access_token={accessToken}',
-                    type: 'tileLayer',
-                    options: {
-                        accessToken: 'pk.eyJ1IjoiZGlnaXRhbGdsb2JlIiwiYSI6ImNqcjh1NzE4azA1MDU0M3N5ZGQ0eWZieGYifQ.G690aJi4WHE_gTVtN6-E2A'
-                    }
                 }
             },
             overlays: {}
