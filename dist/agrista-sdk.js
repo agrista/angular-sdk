@@ -403,14 +403,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
     return {
         getAttachmentUri: function (key) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/file-attachment/url?key=' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getPDFPreviewImage: function (key) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/attachment/pdf/preview-image/' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/attachment/url?key=' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
