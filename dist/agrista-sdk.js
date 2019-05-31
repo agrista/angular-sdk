@@ -5677,6 +5677,7 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     options: {
                         attribution: '&copy; 2019 DigitalGlobe',
                         connectId: '7e873a59-1413-4528-83f3-178c195472f8',
+                        maxZoom: 20,
                         tms: true
                     }
                 },
