@@ -937,7 +937,7 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'configuration', 'organizatio
                 .value());
         },
         searchFarmers: function (query) {
-            return organizationApi.searchOrganizations(query);
+            return organizationApi.searchOrganizations(underscore.defaults(query, {type: 'farmer'}));
         },
         createFarmer: function (data, includeRemovable) {
             return organizationApi.createOrganization(underscore.defaults(data, {type: 'farmer'}), includeRemovable);
