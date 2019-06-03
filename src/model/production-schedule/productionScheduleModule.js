@@ -64,7 +64,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
             });
 
             privateProperty(this, 'removeAsset', function (asset) {
-                asset.$delete = true;
+                var productionScheduleAsset = underscore.findWhere(this.assets, {assetKey: asset.assetKey});
+
+                if (productionScheduleAsset) {
+                    productionScheduleAsset.$delete = true;
+                }
 
                 this.recalculateSize();
             });

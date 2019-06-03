@@ -5830,6 +5830,9 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
             /*
              * Map
              */
+            getMap: function(handler) {
+                this.enqueueRequest('mapbox-' + this._id + '::get-map', handler);
+            },
             getMapCenter: function(handler) {
                 this.enqueueRequest('mapbox-' + this._id + '::get-center', handler);
             },
@@ -6166,6 +6169,10 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
 
                 var _this = this;
 
+                options = underscore.defaults(options || {},  {
+                    interactive: true
+                });
+
                 properties = underscore.defaults(properties || {},  {
                     featureId: objectId().toString()
                 });
@@ -6439,6 +6446,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         
         var _this = this;
         var id = this._mapboxServiceInstance.getId();
+
+        scope.$on('mapbox-' + id + '::get-map', function (event, handler) {
+            if (typeof handler === 'function') {
+                handler(_this._map);
+            }
+        });
 
         scope.$on('mapbox-' + id + '::get-center', function (event, handler) {
             if (typeof handler === 'function') {
@@ -7203,6 +7216,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         }
 
         L.geoJson(geojson.getJson(), {
+            interactive: geojsonOptions.interactive,
             style: geojsonOptions.style,
             pointToLayer: function(feature, latlng) {
                 var marker;
@@ -19769,7 +19783,11 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
             });
 
             privateProperty(this, 'removeAsset', function (asset) {
-                asset.$delete = true;
+                var productionScheduleAsset = underscore.findWhere(this.assets, {assetKey: asset.assetKey});
+
+                if (productionScheduleAsset) {
+                    productionScheduleAsset.$delete = true;
+                }
 
                 this.recalculateSize();
             });
