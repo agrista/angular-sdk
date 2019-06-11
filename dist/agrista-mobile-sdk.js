@@ -655,7 +655,7 @@ sdkEditorApp.factory('serviceEditor', ['underscore', function (underscore) {
         availableServices = availableServices || [];
 
         this.services = underscore.map(services || [], function (item) {
-            return (item.serviceType ? item.serviceType : item);
+            return (item.name ? item.name : item);
         });
 
         this.selection = {

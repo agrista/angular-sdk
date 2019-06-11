@@ -1729,18 +1729,18 @@ sdkApiApp.factory('roleApi', ['$http', 'asJson', 'promiseService', 'configuratio
 }]);
 
 /**
- * Service API
+ * Label API
  */
-sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('labelApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var host = configuration.getServer();
 
     return {
-        getServices: function (params) {
-            return pagingService.page(host + 'api/services', params);
+        getLabels: function (params) {
+            return pagingService.page(host + 'api/labels', params);
         },
-        getService: function (id) {
+        getLabel: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/service/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/label/' + id, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -2550,7 +2550,7 @@ sdkEditorApp.factory('serviceEditor', ['underscore', function (underscore) {
         availableServices = availableServices || [];
 
         this.services = underscore.map(services || [], function (item) {
-            return (item.serviceType ? item.serviceType : item);
+            return (item.name ? item.name : item);
         });
 
         this.selection = {
