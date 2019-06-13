@@ -47,6 +47,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.primaryContact = attrs.primaryContact;
                 this.pointsOfInterest = attrs.pointsOfInterest || [];
                 this.productionRegion = attrs.productionRegion;
+                this.products = attrs.products;
                 this.registered = attrs.registered;
                 this.status = attrs.status;
                 this.subscriptionPlan = attrs.subscriptionPlan;

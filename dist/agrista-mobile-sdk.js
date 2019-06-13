@@ -650,22 +650,22 @@ sdkEditorApp.factory('enterpriseEditor', ['underscore', function (underscore) {
     }
 }]);
 
-sdkEditorApp.factory('serviceEditor', ['underscore', function (underscore) {
-    function ServiceEditor (/**Array=*/availableServices, /**Array=*/services) {
-        availableServices = availableServices || [];
+sdkEditorApp.factory('labelEditor', ['underscore', function (underscore) {
+    function LabelEditor (/**Array=*/availableLabels, /**Array=*/labels) {
+        availableLabels = availableLabels || [];
 
-        this.services = underscore.map(services || [], function (item) {
+        this.labels = underscore.map(labels || [], function (item) {
             return (item.name ? item.name : item);
         });
 
         this.selection = {
-            list: availableServices,
-            mode: (availableServices.length === 0 ? 'add' : 'select'),
+            list: availableLabels,
+            mode: (availableLabels.length === 0 ? 'add' : 'select'),
             text: undefined
         };
     }
 
-    ServiceEditor.prototype.toggleMode = function() {
+    LabelEditor.prototype.toggleMode = function() {
         if (this.selection.list.length > 0) {
             // Allow toggle
             this.selection.mode = (this.selection.mode === 'select' ? 'add' : 'select');
@@ -673,27 +673,27 @@ sdkEditorApp.factory('serviceEditor', ['underscore', function (underscore) {
         }
     };
 
-    ServiceEditor.prototype.addService = function (service) {
-        service = service || this.selection.text;
+    LabelEditor.prototype.addLabel = function (label) {
+        label = label || this.selection.text;
 
-        if (!underscore.isUndefined(service) && this.services.indexOf(service) === -1) {
-            this.services.push(service);
+        if (!underscore.isUndefined(label) && this.labels.indexOf(label) === -1) {
+            this.labels.push(label);
             this.selection.text = undefined;
         }
     };
 
-    ServiceEditor.prototype.removeService = function (indexOrService) {
-        if (underscore.isString(indexOrService)) {
-            indexOrService = this.services.indexOf(indexOrService);
+    LabelEditor.prototype.removeLabel = function (indexOrLabel) {
+        if (underscore.isString(indexOrLabel)) {
+            indexOrLabel = this.labels.indexOf(indexOrLabel);
         }
 
-        if (indexOrService !== -1) {
-            this.services.splice(indexOrService, 1);
+        if (indexOrLabel !== -1) {
+            this.labels.splice(indexOrLabel, 1);
         }
     };
 
-    return function (/**Array=*/availableServices, /**Array=*/services) {
-        return new ServiceEditor(availableServices, services);
+    return function (/**Array=*/availableLabels, /**Array=*/labels) {
+        return new LabelEditor(availableLabels, labels);
     }
 }]);
 
@@ -11167,6 +11167,106 @@ sdkModelPointOfInterest.provider('PointOfInterest', ['listServiceMapProvider', f
     }]);
 }]);
 
+var sdkModelProduct = angular.module('ag.sdk.model.product', ['ag.sdk.library', 'ag.sdk.model.base']);
+
+sdkModelProduct.provider('Product', ['listServiceMapProvider', function (listServiceMapProvider) {
+    this.$get = ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+        function (inheritModel, Model, readOnlyProperty, underscore) {
+            function Product (attrs) {
+                Model.Base.apply(this, arguments);
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.id = attrs.id || attrs.$id;
+                this.categories = attrs.categories || [];
+                this.description = attrs.description;
+                this.ingredients = attrs.ingredients || [];
+                this.name = attrs.name;
+                this.organization = attrs.organization;
+                this.organizationId = attrs.organizationId;
+                this.published = attrs.published;
+                this.registrationNumber = attrs.registrationNumber;
+                this.sku = attrs.sku;
+                this.tags = attrs.tags || [];
+                this.type = attrs.type;
+                this.quantity = attrs.quantity;
+                this.quantityUnit = attrs.quantityUnit;
+            }
+
+            inheritModel(Product, Model.Base);
+
+            readOnlyProperty(Product, 'types', [
+                'Digital',
+                'Services',
+                'Stock']);
+
+            Product.validates({
+                description: {
+                    required: false,
+                    length: {
+                        max: 1024
+                    }
+                },
+                name: {
+                    required: true,
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                organizationId: {
+                    required: true,
+                    numeric: true
+                },
+                pieces: {
+                    required: false,
+                    numeric: true
+                },
+                registrationNumber: {
+                    required: false,
+                    length: {
+                        max: 32
+                    }
+                },
+                sku: {
+                    required: true,
+                    length: {
+                        max: 32
+                    }
+                },
+                type: {
+                    required: true,
+                    inclusion: {
+                        in: Product.types
+                    }
+                },
+                quantity: {
+                    required: true,
+                    numeric: true
+                },
+                quantityUnit: {
+                    required: true,
+                    length: {
+                        min: 1,
+                        max: 8
+                    }
+                }
+            });
+
+            return Product;
+        }];
+
+    listServiceMapProvider.add('product', [function () {
+        return function (item) {
+            return {
+                id: item.id || item.$id,
+                title: item.name,
+                subtitle: item.description
+            };
+        };
+    }]);
+}]);
+
 var sdkTestDataApp = angular.module('ag.sdk.test.data', ['ag.sdk.utilities', 'ag.sdk.id', 'ag.sdk.library']);
 
 sdkTestDataApp.provider('mockDataService', ['underscore', function (underscore) {
@@ -20263,6 +20363,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.primaryContact = attrs.primaryContact;
                 this.pointsOfInterest = attrs.pointsOfInterest || [];
                 this.productionRegion = attrs.productionRegion;
+                this.products = attrs.products;
                 this.registered = attrs.registered;
                 this.status = attrs.status;
                 this.subscriptionPlan = attrs.subscriptionPlan;
@@ -23237,6 +23338,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.merchant',
     'ag.sdk.model.organization',
     'ag.sdk.model.point-of-interest',
+    'ag.sdk.model.product',
     'ag.sdk.model.production-group',
     'ag.sdk.model.production-schedule',
     'ag.sdk.model.errors',

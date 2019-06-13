@@ -1607,13 +1607,58 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
 }]);
 
 /**
+ * Product API
+ */
+sdkApiApp.factory('productApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['organization'];
+
+    return {
+        createProduct: function (data) {
+            var dataCopy = asJson(data, removableFields);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/product', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProduct: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(host + 'api/product/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchProducts: function (params) {
+            return pagingService.page(host + 'api/products/search', params);
+        },
+        updateProduct: function (data) {
+            var dataCopy = asJson(data, removableFields);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/product/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProduct: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/product/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Role API
  */
 sdkApiApp.factory('roleApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
     var host = configuration.getServer();
 
     return {
-        //todo: handle different report types
         getRoles: function () {
             return promiseService.wrap(function (promise) {
                 $http.get(host + 'api/roles', {withCredentials: true}).then(function (res) {
