@@ -36,7 +36,6 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.legal-entity',
     'ag.sdk.model.liability',
     'ag.sdk.model.livestock',
-    'ag.sdk.model.locale',
     'ag.sdk.model.map-theme',
     'ag.sdk.model.merchant',
     'ag.sdk.model.organization',

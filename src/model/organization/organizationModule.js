@@ -1,10 +1,10 @@
 var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelOrganization.provider('Organization', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['Locale', 'Base', 'computedProperty', 'geoJSONHelper', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
-        function (Locale, Base, computedProperty, geoJSONHelper, inheritModel, privateProperty, readOnlyProperty, topologyHelper, underscore) {
+    this.$get = ['Base', 'computedProperty', 'geoJSONHelper', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+        function (Base, computedProperty, geoJSONHelper, inheritModel, privateProperty, readOnlyProperty, topologyHelper, underscore) {
             function Organization (attrs) {
-                Locale.apply(this, arguments);
+                Base.apply(this, arguments);
 
                 computedProperty(this, 'isActive', function () {
                     return this.status === 'active';
@@ -20,11 +20,12 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 });
 
                 privateProperty(this, 'location', function () {
-                    var centroid = this.centroid();
+                    var centroid = this.centroid(),
+                        countryCentroid = this.country && [this.country.latitude, this.country.longitude];
 
                     return (this.data.loc ?
                         geoJSONHelper(this.data.loc).getCenter() :
-                        centroid ? centroid : this.countryLocale.coordinates);
+                        centroid ? centroid : countryCentroid);
                 });
 
                 this.data = (attrs && attrs.data) || {};
@@ -34,6 +35,8 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
                 this.id = attrs.id || attrs.$id;
+                this.country = attrs.country;
+                this.countryId = attrs.countryId;
                 this.createdAt = attrs.createdAt;
                 this.createdBy = attrs.createdBy;
                 this.customerId = attrs.customerId;
@@ -88,7 +91,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     .value();
             }
 
-            inheritModel(Organization, Locale);
+            inheritModel(Organization, Base);
 
             privateProperty(Organization, 'contains', function (instance, geojson) {
                 return contains(instance, geojson);
@@ -104,12 +107,9 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             });
 
             Organization.validates({
-                country: {
+                countryId: {
                     required: true,
-                    length: {
-                        min: 1,
-                        max: 64
-                    }
+                    numeric: true
                 },
                 email: {
                     format: {

@@ -188,6 +188,8 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
 sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function (pagingService, promiseService) {
     return function (initializeFn, params) {
+        params = params || {};
+
         return promiseService.wrap(function (promise) {
             var results = [];
             var paging = pagingService.initialize(initializeFn, function (items) {

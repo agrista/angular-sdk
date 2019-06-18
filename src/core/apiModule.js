@@ -464,6 +464,39 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
 }]);
 
 /**
+ * Country API
+ */
+sdkApiApp.factory('countryApi', ['apiPager', 'configuration', 'pagingService', 'promiseService', function (apiPager, configuration, pagingService, promiseService) {
+    var host = configuration.getServer(),
+        countries;
+
+    return {
+        getCountries: function () {
+            return promiseService.wrap(function (promise) {
+                if (countries) {
+                    if (typeof countries === 'object' && typeof countries.finally === 'function') {
+                        countries.then(function (result) {
+                            promise.resolve(result);
+                        });
+                    } else {
+                        promise.resolve(countries);
+                    }
+                } else {
+                    countries = apiPager(function (page) {
+                        return pagingService.page(host + 'api/countries', page);
+                    });
+
+                    countries.then(function (results) {
+                        countries = results;
+                        promise.resolve(countries);
+                    }, promise.reject);
+                }
+            });
+        }
+    };
+}]);
+
+/**
  * Data API
  */
 sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, asJson, configuration, promiseService, underscore, uriEncodeQuery) {
@@ -961,7 +994,8 @@ sdkApiApp.factory('inviteApi', ['$http', 'promiseService', 'configuration', func
  * Layers API
  */
 sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
-    var host = configuration.getServer();
+    var host = configuration.getServer(),
+        removableFields = ['country', 'layer'];
 
     return {
         getLayerTypes: function () {
@@ -981,8 +1015,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        createLayer: function (data) {
-            var dataCopy = asJson(data);
+        createLayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/layer', dataCopy, {withCredentials: true}).then(function (res) {
@@ -990,8 +1024,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        updateLayer: function (data) {
-            var dataCopy = asJson(data);
+        updateLayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/layer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
@@ -1016,8 +1050,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        createSublayer: function (data) {
-            var dataCopy = asJson(data);
+        createSublayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/sublayer', dataCopy, {withCredentials: true}).then(function (res) {
@@ -1025,8 +1059,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        updateSublayer: function (data) {
-            var dataCopy = asJson(data);
+        updateSublayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/sublayer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
@@ -1311,7 +1345,7 @@ sdkApiApp.factory('notificationApi', ['$http', 'asJson', 'pagingService', 'promi
  */
 sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['farms', 'legalEntities', 'pointsOfInterest'];
+        removableFields = ['country', 'farms', 'legalEntities', 'pointsOfInterest'];
 
     return {
         createOrganization: function (data, includeRemovable) {
