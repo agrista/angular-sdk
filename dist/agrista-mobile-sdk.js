@@ -3617,13 +3617,10 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     type: 'mapbox'
                 },
                 'Satellite': {
-                    template: 'https://earthwatch.digitalglobe.com/earthservice/tmsaccess/tms/1.0.0/DigitalGlobe:ImageryTileService@EPSG:3857@png/{z}/{x}/{y}.png?connectId={connectId}',
-                    type: 'tileLayer',
+                    type: 'googleMutant',
                     options: {
-                        attribution: '&copy; 2019 DigitalGlobe',
-                        connectId: '7e873a59-1413-4528-83f3-178c195472f8',
-                        maxZoom: 20,
-                        tms: true
+                        attribution: null,
+                        type: 'satellite'
                     }
                 },
                 'Satellite (Hybrid)': {
@@ -4789,6 +4786,8 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
                 baselayer.layer = L.mapbox.tileLayer(baselayer.template, baselayer.options);
             } else if (baselayer.type === 'mapbox.styleLayer') {
                 baselayer.layer = L.mapbox.styleLayer(baselayer.template, baselayer.options);
+            } else if (typeof L.gridLayer[baselayer.type] === 'function') {
+                baselayer.layer = L.gridLayer[baselayer.type](baselayer.options);
             } else if (typeof L[baselayer.type] === 'function') {
                 baselayer.layer = L[baselayer.type](baselayer.template, baselayer.options);
             } else if (typeof L.tileLayer[baselayer.type] === 'function') {
