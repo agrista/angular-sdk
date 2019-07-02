@@ -158,6 +158,9 @@ sdkInterfaceNavigiationApp.provider('navigationService', ['underscore', function
             getGroupedApps: function () {
                 return _groupedApps;
             },
+            updateApps: function () {
+                _updateUserApps();
+            },
             renameApp: function (id, title) {
                 var app = underscore.findWhere(_registeredApps, {id: id});
 
