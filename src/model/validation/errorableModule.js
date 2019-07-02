@@ -7,12 +7,13 @@ sdkModelErrors.factory('Errorable', ['privateProperty', 'underscore',
 
             privateProperty(_$errors, 'count', 0);
 
-            privateProperty(_$errors, 'countFor', function (fieldName) {
-                if (underscore.isUndefined(fieldName)) {
-                    return _$errors.count;
-                }
-
-                return (_$errors[fieldName] ? _$errors[fieldName].length : 0);
+            privateProperty(_$errors, 'countFor', function (withoutFields) {
+                return underscore.chain(_$errors)
+                    .pick(withoutFields || [])
+                    .reduce(function (total, errors) {
+                        return total - errors.length;
+                    }, _$errors.count)
+                    .value();
             });
 
             privateProperty(_$errors, 'add', function (fieldName, errorMessage) {
