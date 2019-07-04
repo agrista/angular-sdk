@@ -3654,7 +3654,7 @@ sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', functi
         return $q.all(list);
     };
 
-    var _wrap = function () {
+    var _wrap = function (action) {
         var deferred = _defer();
 
         $timeout(function () {
