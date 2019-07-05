@@ -1264,6 +1264,8 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingS
             return organizationApi.inviteOrganization(id);
         },
         registerMerchant: function (data) {
+            var dataCopy = asJson(data);
+            
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/register/merchant', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
