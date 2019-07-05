@@ -323,7 +323,7 @@ sdkApiApp.factory('benefitApi', ['$http', 'asJson', 'pagingService', 'promiseSer
     return {
         searchCustomerNumber: function (customerNumber) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/benefit/search?customerNumber=' + customerNumber, {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/benefit/search?customernumber=' + customerNumber, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
