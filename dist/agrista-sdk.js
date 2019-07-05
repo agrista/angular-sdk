@@ -1358,9 +1358,6 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingS
         inviteMerchant: function (id) {
             return organizationApi.inviteOrganization(id);
         },
-        inviteMerchantUser: function (id) {
-            return organizationApi.inviteOrganizationUser(id);
-        },
         registerMerchant: function (data) {
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/register/merchant', dataCopy, {withCredentials: true}).then(function (res) {
@@ -1474,13 +1471,6 @@ sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagin
         inviteOrganization: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/organization/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        inviteOrganizationUser: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization/' + id + '/invite-user', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
