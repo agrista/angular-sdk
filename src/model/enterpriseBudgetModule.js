@@ -1,9 +1,9 @@
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'Locale', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, computedProperty, inheritModel, interfaceProperty, Locale, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (Base, computedProperty, inheritModel, interfaceProperty, naturalSort, privateProperty, readOnlyProperty, underscore) {
         function EnterpriseBudgetBase(attrs) {
-            Locale.apply(this, arguments);
+            Base.apply(this, arguments);
 
             this.data = (attrs && attrs.data) || {};
             Base.initializeObject(this.data, 'sections', []);
@@ -361,12 +361,14 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
 
             this.assetType = attrs.assetType;
             this.commodityType = attrs.commodityType;
+            this.country = attrs.country;
+            this.countryId = attrs.countryId;
 
             this.sortSections();
             migrateSections(this);
         }
 
-        inheritModel(EnterpriseBudgetBase, Locale);
+        inheritModel(EnterpriseBudgetBase, Base);
 
         var migrations = {
             'INC-HVT-CROP': {
@@ -1280,6 +1282,10 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         });
 
         EnterpriseBudgetBase.validates({
+            countryId: {
+                required: true,
+                numeric: true
+            },
             data: {
                 required: true,
                 object: true
@@ -1929,7 +1935,7 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
             }
 
             // Validation
-            EnterpriseBudget.validates({
+            EnterpriseBudget.validates(underscore.defaults({
                 assetType: {
                     required: true,
                     inclusion: {
@@ -1944,10 +1950,6 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
                         }
                     }
                 },
-                data: {
-                    required: true,
-                    object: true
-                },
                 name: {
                     required: true,
                     length: {
@@ -1959,7 +1961,7 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
                     required: true,
                     object: true
                 }
-            });
+            }, EnterpriseBudgetBase.validations));
 
             return EnterpriseBudget;
         }];

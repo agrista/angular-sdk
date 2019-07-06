@@ -26,14 +26,14 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                 });
             });
 
-            privateProperty(_validations, 'validate', function (instance, fieldName) {
-                var toValidate = getFieldsToValidate(fieldName);
+            privateProperty(_validations, 'validate', function (instance, withoutFields) {
+                var validateFields = getFieldsToValidate(withoutFields);
 
-                underscore.each(toValidate, function (validation) {
+                underscore.each(validateFields, function (validation) {
                     validateField(instance, validation);
                 });
 
-                return instance.$errors.countFor(fieldName) === 0;
+                return instance.$errors.countFor(withoutFields) === 0;
             });
 
             function validateField (instance, validation) {
@@ -44,12 +44,9 @@ sdkModelValidation.factory('Validatable', ['computedProperty', 'privateProperty'
                 }
             }
 
-            function getFieldsToValidate (fieldName) {
-                if (fieldName && _validations[fieldName]) {
-                    return _validations[fieldName];
-                }
-
+            function getFieldsToValidate (withoutFields) {
                 return underscore.chain(_validations)
+                    .omit(withoutFields || [])
                     .map(function (validations) {
                         return validations;
                     })
