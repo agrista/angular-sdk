@@ -10132,6 +10132,7 @@ sdkModelLegalEntity.provider('LegalEntity', ['listServiceMapProvider', function 
                 this.id = attrs.id || attrs.$id;
                 this.addressCity = attrs.addressCity;
                 this.addressCode = attrs.addressCode;
+                this.addressCountry = attrs.addressCountry;
                 this.addressDistrict = attrs.addressDistrict;
                 this.addressStreet = attrs.addressStreet;
                 this.cifKey = attrs.cifKey;
