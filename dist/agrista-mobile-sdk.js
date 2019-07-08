@@ -20007,8 +20007,8 @@ sdkModelDocument.provider('DocumentFactory', function () {
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
 sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['Asset', 'computedProperty', 'Document', 'inheritModel', 'privateProperty',
-        function (Asset, computedProperty, Document, inheritModel, privateProperty) {
+    this.$get = ['Asset', 'computedProperty', 'Document', 'inheritModel', 'underscore',
+        function (Asset, computedProperty, Document, inheritModel, underscore) {
             function FarmValuation (attrs) {
                 Document.apply(this, arguments);
 
