@@ -16,7 +16,6 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                     '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
                     '</div>';
 
-                Base.initializeObject(this.data, 'attachments', []);
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
 
@@ -35,21 +34,6 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                  */
                 privateProperty(this, 'setLegalEntity', function (entity) {
                     this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
-                });
-
-                /**
-                 * Attachment handling
-                 */
-                privateProperty(this, 'addAttachment', function (attachment) {
-                    this.removeAttachment(attachment);
-
-                    this.data.attachments.push(attachment);
-                });
-
-                privateProperty(this, 'removeAttachment', function (attachment) {
-                    this.data.attachments = underscore.reject(this.data.attachments, function (item) {
-                        return item.key === attachment.key;
-                    });
                 });
 
                 /**

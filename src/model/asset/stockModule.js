@@ -117,16 +117,11 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     return getActionGroup(this, action);
                 });
 
-                privateProperty(this, 'findLedgerEntry', function (query) {
-                    if (underscore.isObject(query)) {
-                        var entry = underscore.findWhere(this.data.ledger, query);
-
-                        return entry || underscore.findWhere(this.data.ledger, {
-                            reference: underscore.compact([query.reference, query.action, query.date]).join('/')
-                        });
-                    }
-
-                    return underscore.findWhere(this.data.ledger, {reference: query});
+                privateProperty(this, 'findLedgerEntry', function (reference, source) {
+                    return underscore.find(this.data.ledger, function (entry) {
+                        return (underscore.isUndefined(reference) || entry.reference === reference) &&
+                            (underscore.isUndefined(source) || entry.source === source);
+                    });
                 });
 
                 privateProperty(this, 'hasLedgerEntries', function () {
@@ -169,12 +164,17 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 });
 
                 privateProperty(this, 'generateLedgerEntryReference', function (entry) {
-                    return '/' + underscore.compact([entry.action, entry.date]).join('/');
+                    return underscore.compact([entry.action, entry.date]).join('/');
                 });
 
-                privateProperty(this, 'removeLedgerEntriesByReference', function (reference, options) {
+                privateProperty(this, 'removeLedgerEntriesByReference', function (reference, source, options) {
+                    if (underscore.isObject(source)) {
+                        options = source;
+                        source = undefined;
+                    }
+
                     this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
-                        return s.include(entry.reference, reference);
+                        return entry.source === source && s.include(entry.reference, reference);
                     });
                     this.$dirty = true;
 

@@ -1,7 +1,7 @@
-var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base']);
+var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base', 'ag.sdk.model.asset']);
 
-sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (Base, computedProperty, inheritModel, interfaceProperty, naturalSort, privateProperty, readOnlyProperty, underscore) {
+sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['AssetFactory', 'Base', 'computedProperty', 'inheritModel', 'interfaceProperty', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (AssetFactory, Base, computedProperty, inheritModel, interfaceProperty, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function EnterpriseBudgetBase(attrs) {
             Base.apply(this, arguments);
 
@@ -36,22 +36,53 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
             });
 
             // Stock
-            privateProperty(this, 'stock', []);
+            privateProperty(this, 'stockAssets', []);
 
-            interfaceProperty(this, 'addStock', function (stock) {
-                addStock(this, stock);
+            interfaceProperty(this, 'addStockAsset', function (stockAsset) {
+                addStockAsset(this, stockAsset);
             });
 
-            privateProperty(this, 'findStock', function (assetType, categoryName, commodityType) {
-                return findStock(this, assetType, categoryName, commodityType);
+            privateProperty(this, 'createStockAsset', function (category) {
+                var assetType = (underscore.startsWith(category.code, 'INC-LSS') ? 'livestock' : 'stock'),
+                    priceUnit = (category.unit === 'Total' ? undefined : category.unit),
+                    stockType = (underscore.startsWith(category.code, 'INC') ? this.commodityType : undefined);
+
+                var stockAsset = AssetFactory.new({
+                    type: assetType,
+                    data: underscore
+                        .chain({
+                            category: category.name,
+                            priceUnit: priceUnit,
+                            quantityUnit: category.supplyUnit
+                        })
+                        .extend(underscore.isUndefined(stockType) ? {} : {
+                            type: stockType
+                        })
+                        .extend(assetType === 'livestock' && category.value ? {
+                            pricePerUnit: safeMath.dividedBy(category.value, category.supply || 1)
+                        } : {})
+                        .value()
+                });
+
+                stockAsset.$dirty = true;
+
+                return stockAsset;
             });
 
-            interfaceProperty(this, 'replaceAllStock', function (stock) {
-                replaceAllStock(this, stock);
+            privateProperty(this, 'findStockAsset', function (assetType, categoryName, commodityType) {
+                return findStockAsset(this, assetType, categoryName, commodityType);
             });
 
-            interfaceProperty(this, 'removeStock', function (stock) {
-                removeStock(this, stock);
+            privateProperty(this, 'findStockAssets', function (assetType, categoryName, commodityType) {
+                return findStockAssets(this, assetType, categoryName, commodityType);
+            });
+
+            interfaceProperty(this, 'replaceStockAssets', function (stockAssets) {
+                replaceStockAssets(this, stockAssets);
+            });
+
+            interfaceProperty(this, 'removeStockAsset', function (stockAsset) {
+                removeStockAsset(this, stockAsset);
             });
 
             // Sections
@@ -647,7 +678,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 'l'
             }, {
                 code: 'EXP-HVP-FUNG',
-                name: 'Fungicides',
+                name: 'Fungicide',
                 unit: 'Total'
             }, {
                 code: 'EXP-HVP-GENL',
@@ -659,11 +690,11 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
                 unit: 't'
             }, {
                 code: 'EXP-HVP-HERB',
-                name: 'Herbicides',
+                name: 'Herbicide',
                 unit: 'l'
             }, {
                 code: 'EXP-HVP-PEST',
-                name: 'Pesticides',
+                name: 'Pesticide',
                 unit: 'l'
             }, {
                 code: 'EXP-HVP-PGRG',
@@ -1091,35 +1122,37 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['Base', 'computedPrope
         });
 
         // Stock
-        function addStock (instance, stock) {
-            if (stock && underscore.isArray(stock.data.ledger)) {
-                instance.stock = underscore.chain(instance.stock)
+        function addStockAsset (instance, stockAsset) {
+            if (stockAsset && underscore.isArray(stockAsset.data.ledger)) {
+                instance.stockAssets = underscore.chain(instance.stockAssets)
                     .reject(function (item) {
-                        return item.assetKey === stock.assetKey;
+                        return item.assetKey === stockAsset.assetKey;
                     })
-                    .union([stock])
+                    .union([stockAsset])
                     .value();
             }
         }
 
-        function findStock (instance, assetType, categoryName, commodityType) {
-            return underscore.find(instance.stock, function (stock) {
-                return stock.type === assetType && stock.data.category === categoryName && (underscore.isUndefined(stock.data.type) || stock.data.type === commodityType);
+        function findStockAsset (instance, assetType, categoryName, commodityType) {
+            return underscore.first(findStockAssets(instance, assetType, categoryName, commodityType));
+        }
+
+        function findStockAssets (instance, assetType, categoryName, commodityType) {
+            return underscore.filter(instance.stockAssets, function (stockAsset) {
+                return stockAsset.type === assetType && stockAsset.data.category === categoryName && (underscore.isUndefined(stockAsset.data.type) || stockAsset.data.type === commodityType);
             });
         }
 
-        function replaceAllStock (instance, stock) {
-            instance.stock = underscore.filter(stock, function (item) {
-                return item && underscore.isArray(item.data.ledger);
+        function replaceStockAssets (instance, stockAssets) {
+            instance.stockAssets = underscore.filter(stockAssets, function (stockAsset) {
+                return stockAsset && underscore.isArray(stockAsset.data.ledger);
             });
         }
 
-        function removeStock (instance, stock) {
-            instance.stock = underscore.chain(instance.stock)
-                .reject(function (item) {
-                    return item.assetKey === stock.assetKey;
-                })
-                .value();
+        function removeStockAsset (instance, stockAsset) {
+            instance.stockAssets = underscore.reject(instance.stockAssets, function (item) {
+                return item.assetKey === stockAsset.assetKey;
+            });
         }
 
         // Categories

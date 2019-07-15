@@ -1,8 +1,8 @@
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
 sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['asJson', 'AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
-        function (asJson, AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
+    this.$get = ['asJson', 'AssetFactory', 'Base', 'computedProperty', 'Document', 'EnterpriseBudget', 'Financial', 'FinancialGroup', 'generateUUID', 'inheritModel', 'Liability', 'Livestock', 'moment', 'privateProperty', 'ProductionSchedule', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'Stock', 'underscore',
+        function (asJson, AssetFactory, Base, computedProperty, Document, EnterpriseBudget, Financial, FinancialGroup, generateUUID, inheritModel, Liability, Livestock, moment, privateProperty, ProductionSchedule, readOnlyProperty, safeArrayMath, safeMath, Stock, underscore) {
             var _version = 17;
 
             function BusinessPlan (attrs) {
@@ -155,29 +155,23 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                     });
                 }
 
-                function stockPicker (instance) {
-                    return function (type, stockType, category, priceUnit, quantityUnit) {
-                        var stock = AssetFactory.new(findStockAsset(instance, type, stockType, category) || {
-                            type: type,
-                            legalEntityId: underscore.chain(instance.data.legalEntities)
+                function stockPicker (instance, productionSchedule) {
+                    return function (type, stockType, category) {
+                        var stockAsset = findStockAsset(instance, type, stockType, category.name);
+
+                        if (underscore.isUndefined(stockAsset)) {
+                            stockAsset = productionSchedule.createStockAsset(category);
+                            stockAsset.legalEntityId = underscore.chain(instance.data.legalEntities)
                                 .where({isPrimary: true})
                                 .pluck('id')
                                 .first()
-                                .value(),
-                            data: underscore.extend({
-                                category: category,
-                                priceUnit: priceUnit,
-                                quantityUnit: quantityUnit
-                            }, (underscore.isUndefined(stockType) ? {} : {
-                                type: stockType
-                            }))
-                        });
+                                .value();
+                            stockAsset.generateKey(underscore.findWhere(instance.data.legalEntities, {id: stockAsset.legalEntityId}));
 
-                        stock.generateKey(underscore.findWhere(instance.data.legalEntities, {id: stock.legalEntityId}));
+                            addStockAsset(instance, stockAsset, true);
+                        }
 
-                        addStockAsset(instance, stock, true);
-
-                        return stock;
+                        return stockAsset;
                     }
                 }
 
@@ -192,10 +186,10 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                 }
 
                 function extractProductionScheduleStockAssets (instance, productionSchedule) {
-                    var inventory = productionSchedule.extractStock(stockPicker(instance));
+                    var stockAssets = productionSchedule.extractStockAssets(stockPicker(instance, productionSchedule));
 
-                    underscore.each(inventory, function (stock) {
-                        addStockAsset(instance, stock, true);
+                    underscore.each(stockAssets, function (stockAsset) {
+                        addStockAsset(instance, stockAsset, true);
                     });
                 }
 

@@ -6,7 +6,6 @@ sdkModelCropInspectionDocument.provider('CropInspection', ['DocumentFactoryProvi
             function CropInspection (attrs) {
                 Document.apply(this, arguments);
 
-                Base.initializeObject(this.data, 'attachments', []);
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
                 Base.initializeObject(this.data.request, 'assets', []);
