@@ -3619,6 +3619,56 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     template: 'mapbox://styles/agrista/cjdmt9c8q0mr02srgvyfo2qwg',
                     type: 'mapbox.styleLayer'
                 },
+                'Capability (Climate)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
+                    options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:climate_capability',
+                        tilematrixSet: 'EPSG:900913'
+                    }
+                },
+                'Capability (Land)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
+                    options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:land_capability',
+                        tilematrixSet: 'EPSG:900913'
+                    }
+                },
+                'Capability (Soil)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
+                    options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:soil_capability',
+                        tilematrixSet: 'EPSG:900913'
+                    }
+                },
+                'Capability (Terrain)': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
+                    options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:terrain_capability',
+                        tilematrixSet: 'EPSG:900913'
+                    }
+                },
+                'Land Cover': {
+                    template: 'https://maps.agrista.com/gwc/service/wmts',
+                    type: 'wmts',
+                    options: {
+                        attribution: "&copy; 2019 Agrista, DAFF",
+                        format: 'image/png8',
+                        layer: 'za:land_cover',
+                        tilematrixSet: 'EPSG:900913'
+                    }
+                },
                 'Production Regions': {
                     template: 'agrista.87ceb2ab',
                     type: 'mapbox'
@@ -3994,6 +4044,12 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     _this._config.bounds = bounds;
                 });
             },
+            panBy: function (coordinates, options) {
+                this.enqueueRequest('mapbox-' + this._id + '::pan-by', {
+                    coordinates: coordinates,
+                    options: options
+                });
+            },
             panTo: function (coordinates, options) {
                 this.enqueueRequest('mapbox-' + this._id + '::pan-to', {
                     coordinates: coordinates,
@@ -4143,12 +4199,16 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                 return properties.featureId;
             },
             removeGeoJSONFeature: function(layerName, featureId) {
-                if (this._config.geojson[layerName] && this._config.geojson[layerName][featureId]) {
-                    var _this = this;
-                    _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', this._config.geojson[layerName][featureId], function () {
+                var _this = this;
+
+                _this.enqueueRequest('mapbox-' + this._id + '::remove-geojson-feature', {
+                    layerName: layerName,
+                    featureId: featureId
+                }, function () {
+                    if (_this._config.geojson[layerName]) {
                         delete _this._config.geojson[layerName][featureId];
-                    });
-                }
+                    }
+                });
             },
             removeGeoJSONLayer: function(layerNames) {
                 if ((layerNames instanceof Array) === false) layerNames = [layerNames];
@@ -4473,6 +4533,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
 
         scope.$on('mapbox-' + id + '::set-bounds', function (event, args) {
             _this.setBounds(args);
+        });
+
+        scope.$on('mapbox-' + id + '::pan-by', function (event, args) {
+            _this.panBy(args);
         });
 
         scope.$on('mapbox-' + id + '::pan-to', function (event, args) {
@@ -4942,6 +5006,12 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         }
     };
 
+    Mapbox.prototype.panBy = function (pan) {
+        if (this._map && pan.coordinates) {
+            this._map.panBy(pan.coordinates, pan.options);
+        }
+    };
+
     Mapbox.prototype.panTo = function (pan) {
         if (this._map && pan.coordinates) {
             this._map.panTo(pan.coordinates, pan.options);
@@ -5195,10 +5265,10 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.removeGeoJSONFeature = function (data) {
-        if (this._geoJSON[data.layerName] && this._geoJSON[data.layerName][data.properties.featureId]) {
-            this.removeLayerFromLayer(data.properties.featureId, data.layerName);
-            
-            delete this._geoJSON[data.layerName][data.properties.featureId];
+        if (this._geoJSON[data.layerName] && this._geoJSON[data.layerName][data.featureId]) {
+            this.removeLayerFromLayer(data.featureId, data.layerName);
+
+            delete this._geoJSON[data.layerName][data.featureId];
         }
     };
 
@@ -5563,7 +5633,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
     };
 
     Mapbox.prototype.onDrawStart = function (e) {
-       this._editing = true;
+        this._editing = true;
 
         this.broadcast('mapbox-' + this._mapboxServiceInstance.getId() + '::geometry-editing', this._editing);
     };
