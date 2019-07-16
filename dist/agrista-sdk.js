@@ -388,7 +388,7 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
 /**
  * Attachment API
  */
-sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
     var host = configuration.getServer();
 
     return {
@@ -399,12 +399,14 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
                 }, promise.reject);
             });
         },
-        getPDFPreviewImage: function (key) {
+        uploadAttachment: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/attachment/pdf/preview-image/' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/file-attachment/upload', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
-            });
+            })
         }
     };
 }]);
