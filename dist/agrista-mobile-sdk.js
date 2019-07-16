@@ -18038,11 +18038,13 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                 }
 
                 function findStockAsset (instance, assetType, stockType, categoryName) {
-                    return underscore.find(instance.models.assets, function (asset) {
+                    var stockAsset = underscore.find(instance.models.assets, function (asset) {
                         return (underscore.isUndefined(assetType) || asset.type === assetType) &&
                             (underscore.isUndefined(categoryName) || asset.data.category === categoryName) &&
                             (underscore.isUndefined(stockType) || asset.data.type === stockType);
                     });
+
+                    return (stockAsset && AssetFactory.new(stockAsset));
                 }
 
                 function stockPicker (instance, productionSchedule) {
