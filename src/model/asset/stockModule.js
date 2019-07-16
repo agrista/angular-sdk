@@ -256,14 +256,14 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 function balanceEntry (curr, prev) {
                     curr.opening = prev.closing;
                     curr.balance = underscore.mapObject(curr.opening, function (value, key) {
-                        return safeMath.chain(value)
+                        return Math.max(0, safeMath.chain(value)
                             .plus(underscore.reduce(curr.incoming, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
                             .minus(underscore.reduce(curr.outgoing, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
-                            .toNumber();
+                            .toNumber());
                     });
                     curr.closing = curr.balance;
                 }

@@ -11741,14 +11741,14 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 function balanceEntry (curr, prev) {
                     curr.opening = prev.closing;
                     curr.balance = underscore.mapObject(curr.opening, function (value, key) {
-                        return safeMath.chain(value)
+                        return Math.max(0, safeMath.chain(value)
                             .plus(underscore.reduce(curr.incoming, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
                             .minus(underscore.reduce(curr.outgoing, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
-                            .toNumber();
+                            .toNumber());
                     });
                     curr.closing = curr.balance;
                 }
@@ -13051,30 +13051,59 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                         instance.data.capitalExpenditure['Fixed Improvements'][monthDiff] = safeMath.plus(instance.data.capitalExpenditure['Fixed Improvements'][monthDiff], asset.data.assetValue);
                                     }
                                 } else if (asset.type === 'stock') {
+                                    initializeCategoryValues(instance, 'assetStockValue', 'Stock On Hand', numberOfMonths);
+
                                     underscore.each(asset.inventoryInRange(startMonth, endMonth), function (monthly, index) {
-                                        initializeCategoryValues(instance, 'assetStockValue', 'Stock On Hand', numberOfMonths);
-                                        instance.data.assetStockValue['Stock On Hand'][index] = safeMath.plus(instance.data.assetStockValue['Stock On Hand'][index], monthly.closing.value);
+                                        instance.data.assetStockValue['Stock On Hand'][index] = safeMath.plus(instance.data.assetStockValue['Stock On Hand'][index], Math.max(0, monthly.closing.value));
+
+                                        var entryValue = monthly.opening.value;
 
                                         underscore.each(monthly.entries, function (entry) {
                                             var commodity = entry.commodity || 'Indirect';
 
                                             switch (entry.action) {
+                                                case 'Consumption':
+                                                    var consumption = safeMath.minus(entryValue, entry.value),
+                                                        cashRequirement = safeMath.minus(Math.abs(Math.min(0, consumption)), Math.abs(Math.min(0, entryValue)));
+
+                                                    if (cashRequirement > 0) {
+                                                        Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
+                                                        instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] = instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] || Base.initializeArray(numberOfMonths);
+                                                        instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index], cashRequirement);
+                                                    }
+
+                                                    entryValue = consumption;
+                                                    break;
                                                 case 'Household':
+                                                    entryValue = safeMath.minus(entryValue, entry.value);
+
                                                     initializeCategoryValues(instance, 'otherExpenditure', 'Farm Products Consumed', numberOfMonths);
                                                     instance.data.otherExpenditure['Farm Products Consumed'][index] = safeMath.plus(instance.data.otherExpenditure['Farm Products Consumed'][index], entry.value);
                                                     break;
+                                                case 'Internal':
+                                                    entryValue = safeMath.minus(entryValue, entry.value);
+                                                    break;
                                                 case 'Labour':
+                                                    entryValue = safeMath.minus(entryValue, entry.value);
+
                                                     Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
                                                     instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] = instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'] || Base.initializeArray(numberOfMonths);
                                                     instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity]['Farm Products Consumed'][index], entry.value);
                                                     break;
+                                                case 'Production':
+                                                    entryValue = safeMath.plus(entryValue, entry.value);
+                                                    break;
                                                 case 'Purchase':
+                                                    entryValue = safeMath.plus(entryValue, entry.value);
+
                                                     Base.initializeObject(instance.data.enterpriseProductionExpenditure, commodity, {});
                                                     instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] = instance.data.enterpriseProductionExpenditure[commodity][asset.data.category] || Base.initializeArray(numberOfMonths);
                                                     instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index] = safeMath.plus(instance.data.enterpriseProductionExpenditure[commodity][asset.data.category][index], entry.value);
                                                     break;
                                                 case 'Sale':
                                                     // Stock Production Income
+                                                    entryValue = safeMath.minus(entryValue, entry.value);
+
                                                     Base.initializeObject(instance.data.enterpriseProductionIncome, commodity, {});
                                                     instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] = instance.data.enterpriseProductionIncome[commodity]['Crop Sales'] || Base.initializeArray(numberOfMonths);
                                                     instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index] = safeMath.plus(instance.data.enterpriseProductionIncome[commodity]['Crop Sales'][index], entry.value);
@@ -13101,7 +13130,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                                 data: {
                                                     name: asset.data.category,
                                                     liquidityType: 'short-term',
-                                                    assetValue: monthly.opening.value,
+                                                    assetValue: Math.max(0, monthly.opening.value),
                                                     reference: 'production/crop'
                                                 }
                                             });
@@ -13111,9 +13140,9 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                     var monthlyLedger = asset.inventoryInRange(startMonth, endMonth),
                                         birthingAnimal = EnterpriseBudget.getBirthingAnimal(asset.data.type);
 
-                                    underscore.each(monthlyLedger, function (ledger, index) {
+                                    underscore.each(monthlyLedger, function (monthly, index) {
                                         var offsetDate = moment(instance.startDate, 'YYYY-MM-DD').add(index, 'M'),
-                                            stockValue = safeMath.times(ledger.closing.quantity, asset.marketPriceAtDate(offsetDate));
+                                            stockValue = safeMath.times(monthly.closing.quantity, asset.marketPriceAtDate(offsetDate));
 
                                         if (birthingAnimal === asset.data.category) {
                                             initializeCategoryValues(instance, 'assetStockValue', 'Marketable Livestock', numberOfMonths);
@@ -13123,7 +13152,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                             instance.data.assetStockValue['Breeding Stock'][index] = safeMath.plus(instance.data.assetStockValue['Breeding Stock'][index], stockValue);
                                         }
 
-                                        underscore.chain(ledger)
+                                        underscore.chain(monthly)
                                             .pick(['incoming', 'outgoing'])
                                             .each(function (actions) {
                                                 underscore.each(actions, function (item, action) {
@@ -13171,7 +13200,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                                     data: {
                                                         name: asset.data.category,
                                                         liquidityType: 'short-term',
-                                                        assetValue: ledger.opening.value,
+                                                        assetValue: Math.max(0, monthly.opening.value),
                                                         reference: 'production/livestock'
                                                     }
                                                 });
@@ -13180,7 +13209,7 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
                                                     data: {
                                                         name: asset.data.category,
                                                         liquidityType: 'medium-term',
-                                                        assetValue: ledger.opening.value,
+                                                        assetValue: Math.max(0, monthly.opening.value),
                                                         reference: 'production/livestock'
                                                     }
                                                 });
@@ -20299,7 +20328,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                                 inputLedgerEntry = stockAsset.findLedgerEntry([inputAction, formattedDate].join('/'), source),
                                 outputLedgerEntry = stockAsset.findLedgerEntry([outputAction, formattedDate].join('/'), source);
 
-                            if (sectionCode === 'EXP' || instance.assetType !== 'livestock') {
+                            if (sectionCode === 'INC' && instance.assetType !== 'livestock') {
                                 inputLedgerEntry = updateStockLedgerEntry(instance, stockAsset, inputLedgerEntry, formattedDate, inputAction, category, index, updateOptions);
 
                                 if (underscore.size(unassignedLiabilities) > 0 && underscore.isUndefined(inputLedgerEntry.liabilityUuid) && inputAction === 'Purchase') {

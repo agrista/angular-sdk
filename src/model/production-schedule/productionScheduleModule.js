@@ -755,7 +755,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
                                 inputLedgerEntry = stockAsset.findLedgerEntry([inputAction, formattedDate].join('/'), source),
                                 outputLedgerEntry = stockAsset.findLedgerEntry([outputAction, formattedDate].join('/'), source);
 
-                            if (sectionCode === 'EXP' || instance.assetType !== 'livestock') {
+                            if (sectionCode === 'INC' && instance.assetType !== 'livestock') {
                                 inputLedgerEntry = updateStockLedgerEntry(instance, stockAsset, inputLedgerEntry, formattedDate, inputAction, category, index, updateOptions);
 
                                 if (underscore.size(unassignedLiabilities) > 0 && underscore.isUndefined(inputLedgerEntry.liabilityUuid) && inputAction === 'Purchase') {
