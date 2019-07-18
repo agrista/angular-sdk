@@ -219,7 +219,7 @@ sdkApiApp.factory('agristaApi', ['organizationApi', 'underscore', function (orga
  */
 sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['liabilities', 'productionSchedules'];
+        removableFields = ['liabilities', 'product', 'productionSchedules'];
 
     return {
         getAssets: function (id, params) {

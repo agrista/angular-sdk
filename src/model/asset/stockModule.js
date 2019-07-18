@@ -247,7 +247,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     recalculateAndCache(this);
                 });
 
-                privateProperty(this, 'recalculateLedger' ,function (options) {
+                privateProperty(this, 'recalculateLedger', function (options) {
                     recalculateAndCache(this, options);
                 });
 
@@ -268,7 +268,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     curr.closing = curr.balance;
                 }
 
-                function inventoryInRange(instance, rangeStart, rangeEnd) {
+                function inventoryInRange (instance, rangeStart, rangeEnd) {
                     var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
                         rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
                         numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
@@ -355,8 +355,12 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 Base.initializeObject(this.data, 'ledger', []);
                 Base.initializeObject(this.data, 'openingBalance', 0);
 
-
                 this.type = 'stock';
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.productId = attrs.productId;
+                this.product = attrs.product;
             }
 
             function asPureAction (action) {
