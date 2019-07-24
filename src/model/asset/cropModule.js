@@ -6,6 +6,7 @@ sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryPro
             function Crop (attrs) {
                 Asset.apply(this, arguments);
 
+                Base.initializeObject(this.data, 'activities', []);
                 Base.initializeObject(this.data, 'inspections', []);
                 Base.initializeObject(this.data, 'problems', []);
                 Base.initializeObject(this.data, 'season', 'Unknown');
