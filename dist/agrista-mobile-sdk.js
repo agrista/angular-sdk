@@ -2074,7 +2074,7 @@ sdkHelperAssetApp.factory('assetValuationHelper', ['Asset', 'underscore', functi
                         (asset.data.waterSource ? (item.waterSource && item.waterSource.indexOf(asset.data.waterSource) !== -1) : item.category === 'Potential Irrigable Land') :
                         (item.assetClass === 'Cropland' && (item.soilPotential === undefined || item.soilPotential === field.croppingPotential)));
                 });
-            } else if (asset.type === 'pasture' || asset.type === 'wasteland') {
+            } else if (asset.type === 'pasture') {
                 chain = chain.where({assetClass: field.landUse}).filter(function (item) {
                     return ((asset.data.crop === undefined && item.crop === undefined) || (item.crop !== undefined && item.crop.indexOf(asset.data.crop) !== -1)) &&
                         ((field.terrain === undefined && item.terrain === undefined) || item.terrain === field.terrain);
