@@ -53,8 +53,9 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
                 (instance.type === 'stock' ?
                     (instance.data.type ? '-t.' + instance.data.type : '') +
                     (instance.data.category ? '-c.' + instance.data.category : '') +
-                    (instance.data.productName ? '-pn.' + instance.data.productName : '') +
-                    (instance.data.productSku ? '-ps.' + instance.data.productSku : '') : '') +
+                    (instance.product ?
+                            (instance.product.name ? '-pn.' + instance.product.name : '') +
+                            (instance.product.sku ? '-ps.' + instance.product.sku : '')  : '') : '') +
                 (instance.data.waterSource ? '-ws.' + instance.data.waterSource : '') +
                 (instance.type === 'other' ? (instance.data.name ? '-n.' + instance.data.name : '') : '');
         }
