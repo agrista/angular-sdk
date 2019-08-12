@@ -8206,6 +8206,31 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['AssetFactory', 'Base'
             }
         ], 'code'));
 
+        readOnlyProperty(EnterpriseBudgetBase, 'activityTypes', {
+            'BAL': 'Baling/Fodder Production',
+            'HAR': 'Chaining/Harrowing',
+            'CHA': 'Chemical Application',
+            'CPM': 'Crop Monitoring',
+            'CUL': 'Cultivating',
+            'DER': 'Deep Ripping',
+            'FEA': 'Fertiliser Application',
+            'FER': 'Fertiliser Recommendation',
+            'GRP': 'Ground Preparation',
+            'HVT': 'Harvest',
+            'HVC': 'Harvest Contract',
+            'HVD': 'Harvest Delivery',
+            'INS': 'Insurance',
+            'IRR': 'Irrigation',
+            'MAT': 'Manual Tasks',
+            'PEM': 'Pest Monitoring',
+            'PLO': 'Ploughing',
+            'ROL': 'Rolling',
+            'SCA': 'Scarifying',
+            'PNT': 'Seeding/Planting',
+            'ANA': 'Soil/Leaf Analysis',
+            'SWA': 'Swathing',
+            'WEC': 'Weed Counts'
+        });
 
         readOnlyProperty(EnterpriseBudgetBase, 'stockableCategoryCodes', [
             'INC-LSS-SLAMB',
