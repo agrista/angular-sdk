@@ -9291,12 +9291,14 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 'Cropland (Emerging)',
                 'Cropland (Irrigated)',
                 'Cropland (Smallholding)',
+                'Greenhouses',
                 'Vegetables'],
             'cropland': [
                 'Cropland',
                 'Cropland (Emerging)',
                 'Cropland (Irrigated)',
                 'Cropland (Smallholding)',
+                'Greenhouses',
                 'Vegetables'],
             'farmland': [],
             'improvement': [],
@@ -9313,7 +9315,6 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
                 'Grazing (Shrubland)',
                 'Planted Pastures'],
             'permanent crop': [
-                'Greenhouses',
                 'Orchard',
                 'Orchard (Shadenet)',
                 'Vineyard'],
@@ -9543,7 +9544,7 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
             'Grazing (Bush)': _grazingCrops,
             'Grazing (Fynbos)': _grazingCrops,
             'Grazing (Shrubland)': _grazingCrops,
-            'Greenhouses': [],
+            'Greenhouses': _vegetableCrops,
             'Orchard': _perennialCrops,
             'Orchard (Shadenet)': _perennialCrops,
             'Pineapple': ['Pineapple'],
@@ -9559,8 +9560,8 @@ sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'comput
         });
 
         readOnlyProperty(Asset, 'cropsByType', {
-            'crop': _croplandAllCrops,
-            'cropland': _croplandAllCrops,
+            'crop': underscore.union(_croplandAllCrops, _vegetableCrops),
+            'cropland': underscore.union(_croplandAllCrops, _vegetableCrops),
             'livestock': _grazingCrops,
             'pasture': _grazingCrops,
             'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
