@@ -36,22 +36,22 @@ sdkEditorApp.factory('enterpriseEditor', ['underscore', function (underscore) {
     }
 }]);
 
-sdkEditorApp.factory('serviceEditor', ['underscore', function (underscore) {
-    function ServiceEditor (/**Array=*/availableServices, /**Array=*/services) {
-        availableServices = availableServices || [];
+sdkEditorApp.factory('labelEditor', ['underscore', function (underscore) {
+    function LabelEditor (/**Array=*/availableLabels, /**Array=*/labels) {
+        availableLabels = availableLabels || [];
 
-        this.services = underscore.map(services || [], function (item) {
-            return (item.serviceType ? item.serviceType : item);
+        this.labels = underscore.map(labels || [], function (item) {
+            return (item.name ? item.name : item);
         });
 
         this.selection = {
-            list: availableServices,
-            mode: (availableServices.length === 0 ? 'add' : 'select'),
+            list: availableLabels,
+            mode: (availableLabels.length === 0 ? 'add' : 'select'),
             text: undefined
         };
     }
 
-    ServiceEditor.prototype.toggleMode = function() {
+    LabelEditor.prototype.toggleMode = function() {
         if (this.selection.list.length > 0) {
             // Allow toggle
             this.selection.mode = (this.selection.mode === 'select' ? 'add' : 'select');
@@ -59,27 +59,27 @@ sdkEditorApp.factory('serviceEditor', ['underscore', function (underscore) {
         }
     };
 
-    ServiceEditor.prototype.addService = function (service) {
-        service = service || this.selection.text;
+    LabelEditor.prototype.addLabel = function (label) {
+        label = label || this.selection.text;
 
-        if (!underscore.isUndefined(service) && this.services.indexOf(service) === -1) {
-            this.services.push(service);
+        if (!underscore.isUndefined(label) && this.labels.indexOf(label) === -1) {
+            this.labels.push(label);
             this.selection.text = undefined;
         }
     };
 
-    ServiceEditor.prototype.removeService = function (indexOrService) {
-        if (underscore.isString(indexOrService)) {
-            indexOrService = this.services.indexOf(indexOrService);
+    LabelEditor.prototype.removeLabel = function (indexOrLabel) {
+        if (underscore.isString(indexOrLabel)) {
+            indexOrLabel = this.labels.indexOf(indexOrLabel);
         }
 
-        if (indexOrService !== -1) {
-            this.services.splice(indexOrService, 1);
+        if (indexOrLabel !== -1) {
+            this.labels.splice(indexOrLabel, 1);
         }
     };
 
-    return function (/**Array=*/availableServices, /**Array=*/services) {
-        return new ServiceEditor(availableServices, services);
+    return function (/**Array=*/availableLabels, /**Array=*/labels) {
+        return new LabelEditor(availableLabels, labels);
     }
 }]);
 

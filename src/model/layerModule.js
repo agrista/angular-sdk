@@ -1,14 +1,16 @@
 var sdkModelLayer= angular.module('ag.sdk.model.layer', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.geospatial']);
 
-sdkModelLayer.factory('Layer', ['inheritModel', 'Locale', 'privateProperty', 'readOnlyProperty', 'underscore',
-    function (inheritModel, Locale, privateProperty, readOnlyProperty, underscore) {
+sdkModelLayer.factory('Layer', ['inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
         function Layer (attrs) {
-            Locale.apply(this, arguments);
+            Model.Base.apply(this, arguments);
 
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
             this.comments = attrs.comments;
+            this.country = attrs.country;
+            this.countryId = attrs.countryId;
             this.createdAt = attrs.createdAt;
             this.createdBy = attrs.createdBy;
             this.geometry = attrs.geometry;
@@ -23,7 +25,7 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Locale', 'privateProperty', 're
             this.sublayers = attrs.sublayers;
         }
 
-        inheritModel(Layer, Locale);
+        inheritModel(Layer, Model.Base);
 
         privateProperty(Layer, 'listMap', function (item) {
             return {
@@ -40,12 +42,9 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Locale', 'privateProperty', 're
                     max: 255
                 }
             },
-            country: {
+            countryId: {
                 required: true,
-                length: {
-                    min: 1,
-                    max: 64
-                }
+                numeric: true
             },
             geometry: {
                 required: false,
@@ -82,10 +81,10 @@ sdkModelLayer.factory('Layer', ['inheritModel', 'Locale', 'privateProperty', 're
     }]);
 
 
-sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Locale', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
-    function (computedProperty, inheritModel, Locale, privateProperty, readOnlyProperty, topologyHelper, underscore) {
+sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
+    function (computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, topologyHelper, underscore) {
         function Sublayer (attrs) {
-            Locale.apply(this, arguments);
+            Model.Base.apply(this, arguments);
 
             computedProperty(this, 'geom', function () {
                 return topologyHelper.readGeoJSON(this.geometry);
@@ -142,6 +141,8 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Locale',
             this.data = attrs.data;
             this.code = attrs.code;
             this.comments = attrs.comments;
+            this.country = attrs.country;
+            this.countryId = attrs.countryId;
             this.createdAt = attrs.createdAt;
             this.createdBy = attrs.createdBy;
             this.geometry = attrs.geometry;
@@ -156,7 +157,7 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Locale',
             this.layer = attrs.layer;
         }
 
-        inheritModel(Sublayer, Locale);
+        inheritModel(Sublayer, Model.Base);
 
         privateProperty(Sublayer, 'listMap', function (item) {
             return {
@@ -212,12 +213,9 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Locale',
                     max: 255
                 }
             },
-            country: {
+            countryId: {
                 required: true,
-                length: {
-                    min: 1,
-                    max: 64
-                }
+                numeric: true
             },
             data: {
                 required: false,

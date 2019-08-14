@@ -293,7 +293,7 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
 /**
  * Attachment API
  */
-sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
     var host = configuration.getServer();
 
     return {
@@ -303,6 +303,15 @@ sdkApiApp.factory('attachmentApi', ['$http', 'promiseService', 'configuration', 
                     promise.resolve(res.data);
                 }, promise.reject);
             });
+        },
+        uploadAttachment: function (data) {
+            var dataCopy = asJson(data);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/attachment/upload', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            })
         }
     };
 }]);
@@ -316,7 +325,7 @@ sdkApiApp.factory('benefitApi', ['$http', 'asJson', 'pagingService', 'promiseSer
     return {
         searchCustomerNumber: function (customerNumber) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/benefit/search?customerNumber=' + customerNumber, {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/benefit/search?customernumber=' + customerNumber, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -451,6 +460,39 @@ sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promise
                 $http.post(host + 'api/comparable/'+ uuid + '/delete', {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Country API
+ */
+sdkApiApp.factory('countryApi', ['apiPager', 'configuration', 'pagingService', 'promiseService', function (apiPager, configuration, pagingService, promiseService) {
+    var host = configuration.getServer(),
+        countries;
+
+    return {
+        getCountries: function () {
+            return promiseService.wrap(function (promise) {
+                if (countries) {
+                    if (typeof countries === 'object' && typeof countries.finally === 'function') {
+                        countries.then(function (result) {
+                            promise.resolve(result);
+                        });
+                    } else {
+                        promise.resolve(countries);
+                    }
+                } else {
+                    countries = apiPager(function (page) {
+                        return pagingService.page(host + 'api/countries', page);
+                    });
+
+                    countries.then(function (results) {
+                        countries = results;
+                        promise.resolve(countries);
+                    }, promise.reject);
+                }
             });
         }
     };
@@ -893,7 +935,7 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
  */
 sdkApiApp.factory('farmSaleApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['documents', 'organization'];
+        removableFields = ['country', 'documents', 'organization'];
 
     return {
         createFarmSale: function (data, includeRemovable) {
@@ -1029,7 +1071,8 @@ sdkApiApp.factory('inviteApi', ['$http', 'promiseService', 'configuration', func
  * Layers API
  */
 sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
-    var host = configuration.getServer();
+    var host = configuration.getServer(),
+        removableFields = ['country', 'layer'];
 
     return {
         getLayerTypes: function () {
@@ -1049,8 +1092,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        createLayer: function (data) {
-            var dataCopy = asJson(data);
+        createLayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/layer', dataCopy, {withCredentials: true}).then(function (res) {
@@ -1058,8 +1101,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        updateLayer: function (data) {
-            var dataCopy = asJson(data);
+        updateLayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/layer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
@@ -1084,8 +1127,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        createSublayer: function (data) {
-            var dataCopy = asJson(data);
+        createSublayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/sublayer', dataCopy, {withCredentials: true}).then(function (res) {
@@ -1093,8 +1136,8 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
                 }, promise.reject);
             });
         },
-        updateSublayer: function (data) {
-            var dataCopy = asJson(data);
+        updateSublayer: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
 
             return promiseService.wrap(function(promise) {
                 $http.post(host + 'api/sublayer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
@@ -1297,10 +1340,9 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingS
         inviteMerchant: function (id) {
             return organizationApi.inviteOrganization(id);
         },
-        inviteMerchantUser: function (id) {
-            return organizationApi.inviteOrganizationUser(id);
-        },
         registerMerchant: function (data) {
+            var dataCopy = asJson(data);
+
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/register/merchant', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
@@ -1379,7 +1421,7 @@ sdkApiApp.factory('notificationApi', ['$http', 'asJson', 'pagingService', 'promi
  */
 sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['farms', 'legalEntities', 'pointsOfInterest'];
+        removableFields = ['country', 'farms', 'legalEntities', 'pointsOfInterest'];
 
     return {
         createOrganization: function (data, includeRemovable) {
@@ -1413,13 +1455,6 @@ sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagin
         inviteOrganization: function (id) {
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/organization/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        inviteOrganizationUser: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization/' + id + '/invite-user', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -1675,13 +1710,58 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
 }]);
 
 /**
+ * Product API
+ */
+sdkApiApp.factory('productApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['organization'];
+
+    return {
+        createProduct: function (data) {
+            var dataCopy = asJson(data, removableFields);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/product', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        getProduct: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.get(host + 'api/product/' + id, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        searchProducts: function (params) {
+            return pagingService.page(host + 'api/products/search', params);
+        },
+        updateProduct: function (data) {
+            var dataCopy = asJson(data, removableFields);
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/product/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteProduct: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/product/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Role API
  */
 sdkApiApp.factory('roleApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
     var host = configuration.getServer();
 
     return {
-        //todo: handle different report types
         getRoles: function () {
             return promiseService.wrap(function (promise) {
                 $http.get(host + 'api/roles', {withCredentials: true}).then(function (res) {
@@ -1702,18 +1782,18 @@ sdkApiApp.factory('roleApi', ['$http', 'asJson', 'promiseService', 'configuratio
 }]);
 
 /**
- * Service API
+ * Label API
  */
-sdkApiApp.factory('serviceApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
+sdkApiApp.factory('labelApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
     var host = configuration.getServer();
 
     return {
-        getServices: function (params) {
-            return pagingService.page(host + 'api/services', params);
+        getLabels: function (params) {
+            return pagingService.page(host + 'api/labels', params);
         },
-        getService: function (id) {
+        getLabel: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/service/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/label/' + id, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });

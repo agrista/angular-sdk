@@ -1,9 +1,9 @@
 var sdkModelFarmSale = angular.module('ag.sdk.model.farm-sale', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.farm-valuation']);
 
-sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFactory', 'Locale', 'inheritModel', 'md5String', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (Base, computedProperty, DocumentFactory, Locale, inheritModel, md5String, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFactory', 'inheritModel', 'md5String', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Base, computedProperty, DocumentFactory, inheritModel, md5String, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
         function FarmSale (attrs) {
-            Locale.apply(this, arguments);
+            Base.apply(this, arguments);
 
             computedProperty(this, 'farmland', function () {
                 return this.data.farmland;
@@ -87,6 +87,8 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
             this.id = attrs.id || attrs.$id;
             this.area = attrs.area || 0;
             this.centroid = attrs.centroid;
+            this.country = attrs.country;
+            this.countryId = attrs.countryId;
             this.documentCount = attrs.documentCount || 0;
             this.salePrice = attrs.salePrice;
             this.saleDate = attrs.saleDate;
@@ -132,7 +134,7 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
             }, 0), 3);
         }
 
-        inheritModel(FarmSale, Locale);
+        inheritModel(FarmSale, Base);
 
         readOnlyProperty(FarmSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
             'The valuer has inspected this property from aerial photos, and has no firsthand knowledge of the property.',
@@ -144,12 +146,9 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
                 required: true,
                 numeric: true
             },
-            country: {
+            countryId: {
                 required: true,
-                length: {
-                    min: 1,
-                    max: 64
-                }
+                numeric: true
             },
             data: {
                 required: true,

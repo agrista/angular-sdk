@@ -188,6 +188,8 @@ sdkUtilitiesApp.factory('pagingService', ['$rootScope', '$http', 'promiseService
 
 sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function (pagingService, promiseService) {
     return function (initializeFn, params) {
+        params = params || {};
+
         return promiseService.wrap(function (promise) {
             var results = [];
             var paging = pagingService.initialize(initializeFn, function (items) {
@@ -304,6 +306,16 @@ sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', functi
         return $q.all(list);
     };
 
+    var _wrap = function (action) {
+        var deferred = _defer();
+
+        $timeout(function () {
+            action(deferred);
+        }, 0);
+
+        return deferred.promise;
+    };
+
     return {
         all: $q.all,
         reject: $q.reject,
@@ -311,15 +323,7 @@ sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', functi
         chain: function (action) {
             return _chainAll(action, []);
         },
-        wrap: function(action) {
-            var deferred = _defer();
-
-            $timeout(function () {
-                action(deferred);
-            }, 0);
-
-            return deferred.promise;
-        },
+        wrap: _wrap,
         wrapAll: function (action) {
             return _wrapAll(action, []);
         },
@@ -332,7 +336,12 @@ sdkUtilitiesApp.factory('promiseService', ['$timeout', '$q', 'safeApply', functi
         throwError: function (err) {
             throw err;
         },
-        defer: _defer
+        defer: _defer,
+        noop: function () {
+            return _wrap(function (p) {
+                p.resolve();
+            });
+        }
     }
 }]);
 
