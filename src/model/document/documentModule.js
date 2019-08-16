@@ -18,8 +18,8 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
-                        organization: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farmer: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
+                        organization: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
+                        farmer: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
                         farms : organizationJson.farms,
                         legalEntities: underscore.map(organizationJson.legalEntities, function (entity) {
                             return underscore.omit(entity, ['assets', 'farms']);

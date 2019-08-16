@@ -96,51 +96,22 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
 var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities', 'ag.sdk.library', 'ag.sdk.api.geo']);
 
 /**
- * Active Flag API
+ * Action API
  */
-sdkApiApp.factory('activeFlagApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('actionApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer();
 
     return {
-        getActiveFlags: function (purpose) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/active-flags' + (purpose ? '?purpose=' + purpose : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        },
-        getActiveFlagsByPage: function (params) {
-            return pagingService.page(host + 'api/active-flags', params);
-        },
-        updateActiveFlag: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/active-flag/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        }
-    }
-}]);
-
-/**
- * Activity API
- */
-sdkApiApp.factory('activityApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
-    var host = configuration.getServer();
-
-    return {
-        createActivity: function (data) {
+        createAction: function (data) {
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/activity', dataCopy, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/action', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        getActivities: function (id, type, params) {
+        getActions: function (id, type, params) {
             if (typeof type === 'object') {
                 params = type;
                 type = undefined;
@@ -151,24 +122,24 @@ sdkApiApp.factory('activityApi', ['$http', 'asJson', 'pagingService', 'promiseSe
                 id = undefined;
             }
 
-            return pagingService.page(host + 'api/activities' + (id ? '/' + id : '') + (type ? '/' + type : ''), params);
+            return pagingService.page(host + 'api/actions' + (id ? '/' + id : '') + (type ? '/' + type : ''), params);
         },
-        getDocumentActivities: function (id, params) {
-            return pagingService.page(host + 'api/activities/document/' + id, params);
+        getDocumentActions: function (id, params) {
+            return pagingService.page(host + 'api/actions/document/' + id, params);
         },
-        getOrganizationActivities: function (id, params) {
-            return pagingService.page(host + 'api/activities/organization/' + id, params);
+        getOrganizationActions: function (id, params) {
+            return pagingService.page(host + 'api/actions/organization/' + id, params);
         },
-        getActivity: function (id) {
+        getAction: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/activity/' + id, {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/action/' + id, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
-        deleteActivity: function (id) {
+        deleteAction: function (id) {
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/activity/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/action/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -4404,7 +4375,7 @@ sdkHelperDocumentApp.provider('documentRegistry', ['underscore', function (under
 
 var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk.helper.document', 'ag.sdk.helper.task']);
 
-sdkHelperFavouritesApp.factory('activityHelper', ['documentRegistry', 'underscore',
+sdkHelperFavouritesApp.factory('actionHelper', ['documentRegistry', 'underscore',
     function (documentRegistry, underscore) {
         var _listServiceMap = function(item) {
             var map = {
@@ -4412,28 +4383,24 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentRegistry', 'underscor
                 date: item.date
             };
 
-            if (typeof item.actor === 'object') {
-                // User is the actor
-                if (item.actor.displayName) {
-                    map.title = item.actor.displayName;
-                    map.subtitle = item.actor.displayName;
-                }
-                else {
-                    map.title = item.actor.firstName + ' ' + item.actor.lastName;
-                    map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
+            if (typeof item.user === 'object') {
+                if (item.user.displayName) {
+                    map.title = item.user.displayName;
+                    map.subtitle = item.user.displayName;
+                } else {
+                    map.title = item.user.firstName + ' ' + item.user.lastName;
+                    map.subtitle = item.user.firstName + ' ' + item.user.lastName;
                 }
 
-                if (item.actor.position) {
-                    map.title += ' (' + item.actor.position + ')';
+                if (item.user.position) {
+                    map.title += ' (' + item.user.position + ')';
                 }
 
-                map.profilePhotoSrc = item.actor.profilePhotoSrc;
+                map.profilePhotoSrc = item.user.profilePhotoSrc;
             } else if (item.organization) {
-                // Organization is the actor
                 map.title = item.organization.name;
                 map.subtitle = item.organization.name;
             } else {
-                // Unknown actor
                 map.title = 'Someone';
                 map.subtitle = 'Someone';
             }
@@ -4483,7 +4450,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentRegistry', 'underscor
                 map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
             }
 
-            if (item.actor && underscore.contains(['document', 'task'], item.referenceType) && item.organization && item.organization.name) {
+            if (item.user && underscore.contains(['document', 'task'], item.referenceType) && item.organization && item.organization.name) {
                 map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
             }
 
@@ -14481,8 +14448,8 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
-                        organization: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farmer: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
+                        organization: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
+                        farmer: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
                         farms : organizationJson.farms,
                         legalEntities: underscore.map(organizationJson.legalEntities, function (entity) {
                             return underscore.omit(entity, ['assets', 'farms']);

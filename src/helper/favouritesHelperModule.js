@@ -1,6 +1,6 @@
 var sdkHelperFavouritesApp = angular.module('ag.sdk.helper.favourites', ['ag.sdk.helper.document', 'ag.sdk.helper.task']);
 
-sdkHelperFavouritesApp.factory('activityHelper', ['documentRegistry', 'underscore',
+sdkHelperFavouritesApp.factory('actionHelper', ['documentRegistry', 'underscore',
     function (documentRegistry, underscore) {
         var _listServiceMap = function(item) {
             var map = {
@@ -8,28 +8,24 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentRegistry', 'underscor
                 date: item.date
             };
 
-            if (typeof item.actor === 'object') {
-                // User is the actor
-                if (item.actor.displayName) {
-                    map.title = item.actor.displayName;
-                    map.subtitle = item.actor.displayName;
-                }
-                else {
-                    map.title = item.actor.firstName + ' ' + item.actor.lastName;
-                    map.subtitle = item.actor.firstName + ' ' + item.actor.lastName;
+            if (typeof item.user === 'object') {
+                if (item.user.displayName) {
+                    map.title = item.user.displayName;
+                    map.subtitle = item.user.displayName;
+                } else {
+                    map.title = item.user.firstName + ' ' + item.user.lastName;
+                    map.subtitle = item.user.firstName + ' ' + item.user.lastName;
                 }
 
-                if (item.actor.position) {
-                    map.title += ' (' + item.actor.position + ')';
+                if (item.user.position) {
+                    map.title += ' (' + item.user.position + ')';
                 }
 
-                map.profilePhotoSrc = item.actor.profilePhotoSrc;
+                map.profilePhotoSrc = item.user.profilePhotoSrc;
             } else if (item.organization) {
-                // Organization is the actor
                 map.title = item.organization.name;
                 map.subtitle = item.organization.name;
             } else {
-                // Unknown actor
                 map.title = 'Someone';
                 map.subtitle = 'Someone';
             }
@@ -79,7 +75,7 @@ sdkHelperFavouritesApp.factory('activityHelper', ['documentRegistry', 'underscor
                 map.subtitle += _getReferenceArticle(item.referenceType) + ' ' + item.referenceType;
             }
 
-            if (item.actor && underscore.contains(['document', 'task'], item.referenceType) && item.organization && item.organization.name) {
+            if (item.user && underscore.contains(['document', 'task'], item.referenceType) && item.organization && item.organization.name) {
                 map.subtitle += ' ' + _getActionPreposition(item.action) + ' ' + item.organization.name;
             }
 
