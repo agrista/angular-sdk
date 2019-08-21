@@ -53,6 +53,56 @@ sdkApiApp.factory('actionApi', ['$http', 'asJson', 'pagingService', 'promiseServ
 }]);
 
 /**
+ * Activity API
+ */
+sdkApiApp.factory('activityApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['asset', 'assets', 'pointOfInterest'];
+
+    return {
+        createActivity: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateActivity: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteActivity: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        attachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + id + '/add/' + assetId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + id + '/remove/' + assetId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Aggregation API
  */
 sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($http, configuration, promiseService, pagingService, underscore) {

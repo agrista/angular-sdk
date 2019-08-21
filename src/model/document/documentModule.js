@@ -18,22 +18,41 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
-                        organization: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farmer: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
+                        organization: underscore.omit(organizationJson, ['farms', 'legalEntities', 'pointsOfInterest', 'primaryContact', 'teams']),
+                        farmer: underscore.omit(organizationJson, ['farms', 'legalEntities', 'pointsOfInterest', 'primaryContact', 'teams']),
                         farms : organizationJson.farms,
                         legalEntities: underscore.map(organizationJson.legalEntities, function (entity) {
                             return underscore.omit(entity, ['assets', 'farms']);
                         }),
+                        activities: underscore.chain(organizationJson.legalEntities)
+                            .pluck('assets')
+                            .flatten().compact()
+                            .pluck('activities')
+                            .flatten().compact()
+                            .map(function (activity) {
+                                return underscore.chain(activity)
+                                    .extend(underscore.isUndefined(activity.asset) ? {} : {
+                                        asset: underscore.pick(activity.asset, ['id', 'farmId', 'legalEntityId', 'productId', 'assetKey'])
+                                    })
+                                    .extend({
+                                        assets: underscore.map(activity.assets, function (asset) {
+                                            return underscore.pick(asset, ['id', 'farmId', 'legalEntityId', 'productId', 'assetKey']);
+                                        })
+                                    })
+                                    .value();
+                            })
+                            .value(),
                         assets: underscore.chain(organizationJson.legalEntities)
                             .pluck('assets')
-                            .flatten()
-                            .compact()
+                            .flatten().compact()
+                            .map(function (asset) {
+                                return underscore.omit(asset, ['activities']);
+                            })
                             .groupBy('type')
                             .value(),
                         liabilities: underscore.chain(organizationJson.legalEntities)
                             .pluck('liabilities')
-                            .flatten()
-                            .compact()
+                            .flatten().compact()
                             .value(),
                         pointsOfInterest: underscore.map(organizationJson.pointsOfInterest, function (pointOfInterest) {
                             return underscore.omit(pointOfInterest, ['organization']);

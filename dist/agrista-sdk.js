@@ -148,6 +148,56 @@ sdkApiApp.factory('actionApi', ['$http', 'asJson', 'pagingService', 'promiseServ
 }]);
 
 /**
+ * Activity API
+ */
+sdkApiApp.factory('activityApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['asset', 'assets', 'pointOfInterest'];
+
+    return {
+        createActivity: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateActivity: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteActivity: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        attachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + id + '/add/' + assetId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        detachAsset: function (id, assetId) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/activity/' + id + '/remove/' + assetId, {}, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
  * Aggregation API
  */
 sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($http, configuration, promiseService, pagingService, underscore) {
@@ -8477,10 +8527,143 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
     }
 }]);
 
-var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+var sdkModelActivity = angular.module('ag.sdk.model.activity', ['ag.sdk.library', 'ag.sdk.model.base']);
 
-sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (Base, computedProperty, inheritModel, Liability, Model, moment, privateProperty, readOnlyProperty, safeMath, underscore) {
+sdkModelActivity.factory('Activity', ['inheritModel', 'Model', 'readOnlyProperty', 'underscore',
+    function (inheritModel, Model, readOnlyProperty, underscore) {
+        function Activity (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.area = attrs.area;
+            this.areaUnit = attrs.areaUnit;
+            this.assetId = attrs.assetId;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.endDate = attrs.endDate;
+            this.pointOfInterestId = attrs.pointOfInterestId;
+            this.rate = attrs.rate;
+            this.startDate = attrs.startDate;
+            this.total = attrs.total;
+            this.type = attrs.type;
+            this.uid = attrs.uid;
+            this.unit = attrs.unit;
+
+            this.asset = attrs.asset;
+            this.assets = attrs.assets;
+            this.pointOfInterest = attrs.pointOfInterest;
+        }
+
+        inheritModel(Activity, Model.Base);
+
+        readOnlyProperty(Activity, 'types', {
+            'BAL': 'Baling/Fodder Production',
+            'HAR': 'Chaining/Harrowing',
+            'CHA': 'Chemical Application',
+            'CPM': 'Crop Monitoring',
+            'CUL': 'Cultivating',
+            'DER': 'Deep Ripping',
+            'FEA': 'Fertiliser Application',
+            'FER': 'Fertiliser Recommendation',
+            'GRP': 'Ground Preparation',
+            'HVT': 'Harvest',
+            'HVC': 'Harvest Contract',
+            'HVD': 'Harvest Delivery',
+            'INS': 'Insurance',
+            'IRR': 'Irrigation',
+            'MAT': 'Manual Tasks',
+            'PEM': 'Pest Monitoring',
+            'PLO': 'Ploughing',
+            'ROL': 'Rolling',
+            'SCA': 'Scarifying',
+            'PNT': 'Seeding/Planting',
+            'ANA': 'Soil/Leaf Analysis',
+            'SWA': 'Swathing',
+            'WEC': 'Weed Counts'
+        });
+
+        readOnlyProperty(Activity, 'areaUnits', [
+            'ha']);
+
+        readOnlyProperty(Activity, 'units', [
+            'g',
+            'kg',
+            'l',
+            'cl',
+            'ml',
+            'mm']);
+
+        Activity.validates({
+            area: {
+                required: false,
+                numeric: true
+            },
+            areaUnit: {
+                requiredIf: function (value, instance, field) {
+                    return !underscore.isUndefined(instance.area);
+                },
+                inclusion: {
+                    in: Activity.areaUnits
+                }
+            },
+            assetId: {
+                required: false,
+                numeric: true
+            },
+            endDate: {
+                required: false,
+                format: {
+                    date: true
+                }
+            },
+            pointOfInterestId: {
+                required: false,
+                numeric: true
+            },
+            rate: {
+                required: false,
+                numeric: true
+            },
+            startDate: {
+                required: true,
+                format: {
+                    date: true
+                }
+            },
+            total: {
+                required: true,
+                numeric: true
+            },
+            type: {
+                required: true,
+                inclusion: {
+                    in: underscore.keys(Activity.types)
+                }
+            },
+            uid: {
+                required: false,
+                length: {
+                    min: 0,
+                    max: 32
+                }
+            },
+            unit: {
+                required: true,
+                inclusion: {
+                    in: Activity.units
+                }
+            }
+        });
+
+        return Activity;
+    }]);
+
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.activity', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+
+sdkModelAsset.factory('AssetBase', ['Activity', 'Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Activity, Base, computedProperty, inheritModel, Liability, Model, moment, privateProperty, readOnlyProperty, safeMath, underscore) {
         function AssetBase (attrs) {
             Model.Base.apply(this, arguments);
 
@@ -8510,6 +8693,7 @@ sdkModelAsset.factory('AssetBase', ['Base', 'computedProperty', 'inheritModel', 
             this.legalEntityId = attrs.legalEntityId;
             this.type = attrs.type;
 
+            this.activities = underscore.map(attrs.activities, Activity.newCopy);
             this.liabilities = underscore.map(attrs.liabilities, Liability.newCopy);
         }
 
@@ -9886,7 +10070,6 @@ sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryPro
             function Crop (attrs) {
                 Asset.apply(this, arguments);
 
-                Base.initializeObject(this.data, 'activities', []);
                 Base.initializeObject(this.data, 'inspections', []);
                 Base.initializeObject(this.data, 'problems', []);
                 Base.initializeObject(this.data, 'season', 'Unknown');
@@ -14448,22 +14631,41 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
-                        organization: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farmer: underscore.omit(organizationJson, ['farms', 'legalEntities', 'primaryContact', 'teams']),
+                        organization: underscore.omit(organizationJson, ['farms', 'legalEntities', 'pointsOfInterest', 'primaryContact', 'teams']),
+                        farmer: underscore.omit(organizationJson, ['farms', 'legalEntities', 'pointsOfInterest', 'primaryContact', 'teams']),
                         farms : organizationJson.farms,
                         legalEntities: underscore.map(organizationJson.legalEntities, function (entity) {
                             return underscore.omit(entity, ['assets', 'farms']);
                         }),
+                        activities: underscore.chain(organizationJson.legalEntities)
+                            .pluck('assets')
+                            .flatten().compact()
+                            .pluck('activities')
+                            .flatten().compact()
+                            .map(function (activity) {
+                                return underscore.chain(activity)
+                                    .extend(underscore.isUndefined(activity.asset) ? {} : {
+                                        asset: underscore.pick(activity.asset, ['id', 'legalEntityId', 'farmId', 'assetKey'])
+                                    })
+                                    .extend({
+                                        assets: underscore.map(activity.assets, function (asset) {
+                                            return underscore.pick(asset, ['id', 'legalEntityId', 'farmId', 'assetKey']);
+                                        })
+                                    })
+                                    .value();
+                            })
+                            .value(),
                         assets: underscore.chain(organizationJson.legalEntities)
                             .pluck('assets')
-                            .flatten()
-                            .compact()
+                            .flatten().compact()
+                            .map(function (asset) {
+                                return underscore.omit(asset, ['activities']);
+                            })
                             .groupBy('type')
                             .value(),
                         liabilities: underscore.chain(organizationJson.legalEntities)
                             .pluck('liabilities')
-                            .flatten()
-                            .compact()
+                            .flatten().compact()
                             .value(),
                         pointsOfInterest: underscore.map(organizationJson.pointsOfInterest, function (pointOfInterest) {
                             return underscore.omit(pointOfInterest, ['organization']);
@@ -15612,32 +15814,6 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['AssetFactory', 'Base'
                 unit: 't'
             }
         ], 'code'));
-
-        readOnlyProperty(EnterpriseBudgetBase, 'activityTypes', {
-            'BAL': 'Baling/Fodder Production',
-            'HAR': 'Chaining/Harrowing',
-            'CHA': 'Chemical Application',
-            'CPM': 'Crop Monitoring',
-            'CUL': 'Cultivating',
-            'DER': 'Deep Ripping',
-            'FEA': 'Fertiliser Application',
-            'FER': 'Fertiliser Recommendation',
-            'GRP': 'Ground Preparation',
-            'HVT': 'Harvest',
-            'HVC': 'Harvest Contract',
-            'HVD': 'Harvest Delivery',
-            'INS': 'Insurance',
-            'IRR': 'Irrigation',
-            'MAT': 'Manual Tasks',
-            'PEM': 'Pest Monitoring',
-            'PLO': 'Ploughing',
-            'ROL': 'Rolling',
-            'SCA': 'Scarifying',
-            'PNT': 'Seeding/Planting',
-            'ANA': 'Soil/Leaf Analysis',
-            'SWA': 'Swathing',
-            'WEC': 'Weed Counts'
-        });
 
         readOnlyProperty(EnterpriseBudgetBase, 'stockableCategoryCodes', [
             'INC-LSS-SLAMB',
@@ -21875,6 +22051,7 @@ angular.module('ag.sdk.interface', [
 ]);
 
 angular.module('ag.sdk.model', [
+    'ag.sdk.model.activity',
     'ag.sdk.model.asset',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',

@@ -17,6 +17,7 @@ angular.module('ag.sdk.interface', [
 ]);
 
 angular.module('ag.sdk.model', [
+    'ag.sdk.model.activity',
     'ag.sdk.model.asset',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
