@@ -5,6 +5,7 @@ sdkModelActivity.factory('Activity', ['inheritModel', 'Model', 'readOnlyProperty
         function Activity (attrs) {
             Model.Base.apply(this, arguments);
 
+            this.data = (attrs && attrs.data) || {};
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
@@ -54,6 +55,10 @@ sdkModelActivity.factory('Activity', ['inheritModel', 'Model', 'readOnlyProperty
             'SWA': 'Swathing',
             'WEC': 'Weed Counts'
         });
+
+        readOnlyProperty(Activity, 'methods', [
+            'Air',
+            'Ground']);
 
         readOnlyProperty(Activity, 'areaUnits', [
             'ha']);

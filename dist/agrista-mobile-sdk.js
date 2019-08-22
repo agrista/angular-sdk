@@ -6807,6 +6807,7 @@ sdkModelActivity.factory('Activity', ['inheritModel', 'Model', 'readOnlyProperty
         function Activity (attrs) {
             Model.Base.apply(this, arguments);
 
+            this.data = (attrs && attrs.data) || {};
             if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
             this.id = attrs.id || attrs.$id;
@@ -6857,12 +6858,17 @@ sdkModelActivity.factory('Activity', ['inheritModel', 'Model', 'readOnlyProperty
             'WEC': 'Weed Counts'
         });
 
+        readOnlyProperty(Activity, 'methods', [
+            'Air',
+            'Ground']);
+
         readOnlyProperty(Activity, 'areaUnits', [
             'ha']);
 
         readOnlyProperty(Activity, 'units', [
             'g',
             'kg',
+            'kWh',
             'l',
             'cl',
             'ml',
@@ -20178,11 +20184,11 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                             .map(function (activity) {
                                 return underscore.chain(activity)
                                     .extend(underscore.isUndefined(activity.asset) ? {} : {
-                                        asset: underscore.pick(activity.asset, ['id', 'legalEntityId', 'farmId', 'assetKey'])
+                                        asset: underscore.pick(activity.asset, ['id', 'farmId', 'legalEntityId', 'productId', 'assetKey'])
                                     })
                                     .extend({
                                         assets: underscore.map(activity.assets, function (asset) {
-                                            return underscore.pick(asset, ['id', 'legalEntityId', 'farmId', 'assetKey']);
+                                            return underscore.pick(asset, ['id', 'farmId', 'legalEntityId', 'productId', 'assetKey']);
                                         })
                                     })
                                     .value();
