@@ -14387,6 +14387,7 @@ sdkModelCropActivityReportDocument.provider('CropActivityReport', ['DocumentFact
 
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
+                Base.initializeObject(this.data.report, 'signatures', []);
                 Base.initializeObject(this.data.request, 'productionSchedules', []);
 
                 this.docType = 'crop activity report';
