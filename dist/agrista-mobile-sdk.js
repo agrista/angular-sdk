@@ -19910,39 +19910,6 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
     DocumentFactoryProvider.add('financial resource plan', 'BusinessPlan');
 }]);
 
-var sdkModelCropActivityReportDocument = angular.module('ag.sdk.model.crop-activity-report', ['ag.sdk.model.document']);
-
-sdkModelCropActivityReportDocument.provider('CropActivityReport', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['Base', 'Document', 'inheritModel', 'underscore',
-        function (Base, Document, inheritModel, underscore) {
-            function CropActivityReport (attrs) {
-                Document.apply(this, arguments);
-
-                Base.initializeObject(this.data, 'request', {});
-                Base.initializeObject(this.data, 'report', {});
-                Base.initializeObject(this.data.report, 'signatures', []);
-                Base.initializeObject(this.data.request, 'productionSchedules', []);
-
-                this.docType = 'crop activity report';
-            }
-
-            inheritModel(CropActivityReport, Document);
-
-            CropActivityReport.validates(underscore.defaults({
-                docType: {
-                    required: true,
-                    equal: {
-                        to: 'crop activity report'
-                    }
-                }
-            }, Document.validations));
-
-            return CropActivityReport;
-        }];
-
-    DocumentFactoryProvider.add('crop activity report', 'CropActivityReport');
-}]);
-
 var sdkModelCropInspectionDocument = angular.module('ag.sdk.model.crop-inspection', ['ag.sdk.model.document']);
 
 sdkModelCropInspectionDocument.provider('CropInspection', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
@@ -20004,6 +19971,46 @@ sdkModelCropInspectionDocument.provider('CropInspection', ['DocumentFactoryProvi
     DocumentFactoryProvider.add('harvest inspection', 'CropInspection');
     DocumentFactoryProvider.add('preharvest inspection', 'CropInspection');
     DocumentFactoryProvider.add('progress inspection', 'CropInspection');
+}]);
+
+var sdkModelCropReportDocument = angular.module('ag.sdk.model.crop-report', ['ag.sdk.model.document']);
+
+sdkModelCropReportDocument.provider('CropReport', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['Base', 'Document', 'inheritModel', 'readOnlyProperty', 'underscore',
+        function (Base, Document, inheritModel, readOnlyProperty, underscore) {
+            function CropReport (attrs) {
+                Document.apply(this, arguments);
+
+                Base.initializeObject(this.data, 'request', {});
+                Base.initializeObject(this.data, 'report', {});
+                Base.initializeObject(this.data.report, 'signatures', []);
+                Base.initializeObject(this.data.request, 'productionSchedules', []);
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.docType = (underscore.contains(CropReport.docTypes, attrs.docType) ? attrs.docType : underscore.first(CropReport.docTypes));
+            }
+
+            inheritModel(CropReport, Document);
+
+            readOnlyProperty(CropReport, 'docTypes', [
+                'crop activity report',
+                'crop progress report']);
+
+            CropReport.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    inclusion: {
+                        in: CropReport.docTypes
+                    }
+                }
+            }, Document.validations));
+
+            return CropReport;
+        }];
+
+    DocumentFactoryProvider.add('crop activity report', 'CropReport');
+    DocumentFactoryProvider.add('crop progress report', 'CropReport');
 }]);
 
 var sdkModelDesktopValuationDocument = angular.module('ag.sdk.model.desktop-valuation', ['ag.sdk.model.comparable-sale', 'ag.sdk.model.document']);
@@ -23532,7 +23539,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.business-plan',
     'ag.sdk.model.comparable-sale',
     'ag.sdk.model.crop',
-    'ag.sdk.model.crop-activity-report',
+    'ag.sdk.model.crop-report',
     'ag.sdk.model.crop-inspection',
     'ag.sdk.model.desktop-valuation',
     'ag.sdk.model.document',
