@@ -570,7 +570,7 @@ sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseServic
  */
 sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['organization', 'origin', 'tasks'];
+        removableFields = ['organization', 'origin', 'permissions', 'tasks'];
 
     return {
         getDocuments: function (id, params) {
@@ -663,6 +663,42 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
 
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/document/pdf/merge?key=' + key, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Document Permission API
+ */
+sdkApiApp.factory('documentPermissionApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['document', 'user'];
+
+    return {
+        createDocumentPermission: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/document-permission', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateDocumentPermission: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/document-permission/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteDocumentPermission: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/document-permission/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
