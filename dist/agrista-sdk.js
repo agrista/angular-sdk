@@ -665,7 +665,7 @@ sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseServic
  */
 sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['organization', 'origin', 'tasks'];
+        removableFields = ['organization', 'origin', 'permissions', 'tasks'];
 
     return {
         getDocuments: function (id, params) {
@@ -758,6 +758,42 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
 
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/document/pdf/merge?key=' + key, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        }
+    };
+}]);
+
+/**
+ * Document Permission API
+ */
+sdkApiApp.factory('documentPermissionApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['document', 'user'];
+
+    return {
+        createDocumentPermission: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/document-permission', dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        updateDocumentPermission: function (data, includeRemovable) {
+            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
+
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/document-permission/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
+        deleteDocumentPermission: function (id) {
+            return promiseService.wrap(function (promise) {
+                $http.post(host + 'api/document-permission/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -14450,7 +14486,8 @@ sdkModelCropReportDocument.provider('CropReport', ['DocumentFactoryProvider', fu
 
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
-                Base.initializeObject(this.data.report, 'signatures', []);
+                Base.initializeObject(this.data.report, 'contributors', []);
+                Base.initializeObject(this.data.report, 'signatures', {});
                 Base.initializeObject(this.data.request, 'productionSchedules', []);
 
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -14731,6 +14768,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.title = attrs.title;
 
                 this.organization = attrs.organization;
+                this.permissions = attrs.permissions;
                 this.tasks = attrs.tasks;
             }
 
@@ -14815,6 +14853,54 @@ sdkModelDocument.provider('DocumentFactory', function () {
         }
     }];
 });
+
+sdkModelDocument.provider('DocumentPermission', [function () {
+    this.$get = ['inheritModel', 'Model', 'underscore', function (inheritModel, Model, underscore) {
+        function DocumentPermission (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.accessImport = attrs.accessImport;
+            this.accessRead = attrs.accessRead;
+            this.accessShare = attrs.accessShare;
+            this.accessWrite = attrs.accessWrite;
+            this.documentId = attrs.documentId;
+            this.email = attrs.email;
+            this.name = attrs.name;
+            this.reason = attrs.reason;
+            this.userId = attrs.userId;
+
+            this.document = attrs.document;
+            this.user = attrs.user;
+        }
+
+        inheritModel(DocumentPermission, Model.Base);
+
+        DocumentPermission.validates({
+            documentId: {
+                required: true,
+                numeric: true
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return DocumentPermission;
+    }];
+}]);
 
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 

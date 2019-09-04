@@ -19983,7 +19983,8 @@ sdkModelCropReportDocument.provider('CropReport', ['DocumentFactoryProvider', fu
 
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
-                Base.initializeObject(this.data.report, 'signatures', []);
+                Base.initializeObject(this.data.report, 'contributors', []);
+                Base.initializeObject(this.data.report, 'signatures', {});
                 Base.initializeObject(this.data.request, 'productionSchedules', []);
 
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
@@ -20264,6 +20265,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.title = attrs.title;
 
                 this.organization = attrs.organization;
+                this.permissions = attrs.permissions;
                 this.tasks = attrs.tasks;
             }
 
@@ -20348,6 +20350,54 @@ sdkModelDocument.provider('DocumentFactory', function () {
         }
     }];
 });
+
+sdkModelDocument.provider('DocumentPermission', [function () {
+    this.$get = ['inheritModel', 'Model', 'underscore', function (inheritModel, Model, underscore) {
+        function DocumentPermission (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.accessImport = attrs.accessImport;
+            this.accessRead = attrs.accessRead;
+            this.accessShare = attrs.accessShare;
+            this.accessWrite = attrs.accessWrite;
+            this.documentId = attrs.documentId;
+            this.email = attrs.email;
+            this.name = attrs.name;
+            this.reason = attrs.reason;
+            this.userId = attrs.userId;
+
+            this.document = attrs.document;
+            this.user = attrs.user;
+        }
+
+        inheritModel(DocumentPermission, Model.Base);
+
+        DocumentPermission.validates({
+            documentId: {
+                required: true,
+                numeric: true
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return DocumentPermission;
+    }];
+}]);
 
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
