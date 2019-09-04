@@ -8,7 +8,8 @@ sdkModelCropReportDocument.provider('CropReport', ['DocumentFactoryProvider', fu
 
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
-                Base.initializeObject(this.data.report, 'signatures', []);
+                Base.initializeObject(this.data.report, 'contributors', []);
+                Base.initializeObject(this.data.report, 'signatures', {});
                 Base.initializeObject(this.data.request, 'productionSchedules', []);
 
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
