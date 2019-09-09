@@ -43,20 +43,20 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
             });
 
             // Stock
-            privateProperty(this, 'addStock', function (stock) {
-                addStock(this, stock);
+            privateProperty(this, 'addStockAsset', function (stockAsset) {
+                addStockAsset(this, stockAsset);
             });
 
-            privateProperty(this, 'extractStock', function (stockPickerFn) {
-                return extractStock(this, stockPickerFn);
+            privateProperty(this, 'extractStockAssets', function (stockPickerFn) {
+                return extractStockAssets(this, stockPickerFn);
             });
 
-            privateProperty(this, 'replaceAllStock', function (stock) {
-                replaceAllStock(this, stock);
+            privateProperty(this, 'replaceStockAssets', function (stockAssets) {
+                replaceStockAssets(this, stockAssets);
             });
 
-            privateProperty(this, 'removeStock', function (stock) {
-                removeStock(this, stock);
+            privateProperty(this, 'removeStockAsset', function (stockAsset) {
+                removeStockAsset(this, stockAsset);
             });
 
             // Categories
@@ -140,7 +140,7 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
                 this.endDate = attrs.endDate && moment(attrs.endDate).format('YYYY-MM-DD');
             }
 
-            this.replaceAllStock(attrs.stock || []);
+            this.replaceStockAssets(attrs.stockAssets || []);
 
             underscore.each(attrs.productionSchedules, this.addProductionSchedule, this);
 
@@ -154,7 +154,7 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
 
             updateSchedules(instance);
 
-            productionSchedule.replaceAllStock(instance.stock);
+            productionSchedule.replaceStockAssets(instance.stockAssets);
         }
 
         function removeProductionSchedule (instance, productionSchedule) {
@@ -175,54 +175,54 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
         }
 
         // Stock
-        function addAllStock (instance, inventory) {
-            underscore.each(underscore.isArray(inventory) ? inventory : [inventory], function (stock) {
-                addStock(instance, stock);
+        function addStockAssets (instance, stockAssets) {
+            underscore.each(underscore.isArray(stockAssets) ? stockAssets : [stockAssets], function (stockAsset) {
+                addStockAsset(instance, stockAsset);
             });
         }
 
-        function addStock (instance, stock) {
-            if (stock && underscore.isArray(stock.data.ledger)) {
-                instance.stock = underscore.chain(instance.stock)
+        function addStockAsset (instance, stockAsset) {
+            if (stockAsset && underscore.isArray(stockAsset.data.ledger)) {
+                instance.stockAssets = underscore.chain(instance.stockAssets)
                     .reject(function (item) {
-                        return item.assetKey === stock.assetKey;
+                        return item.assetKey === stockAsset.assetKey;
                     })
-                    .union([stock])
+                    .union([stockAsset])
                     .value();
 
                 underscore.each(instance.productionSchedules, function (productionSchedule) {
-                    productionSchedule.addStock(stock);
+                    productionSchedule.addStockAsset(stockAsset);
                 });
             }
         }
 
-        function extractStock (instance, stockPickerFn) {
+        function extractStockAssets (instance, stockPickerFn) {
             underscore.each(instance.productionSchedules, function (productionSchedule) {
-                addAllStock(instance, productionSchedule.extractStock(stockPickerFn));
+                addStockAssets(instance, productionSchedule.extractStockAssets(stockPickerFn));
             });
 
-            return instance.stock;
+            return instance.stockAssets;
         }
 
-        function replaceAllStock (instance, stock) {
-            instance.stock = underscore.filter(stock, function (item) {
-                return item && underscore.isArray(item.data.ledger);
+        function replaceStockAssets (instance, stockAssets) {
+            instance.stockAssets = underscore.filter(stockAssets, function (stockAsset) {
+                return stockAsset && underscore.isArray(stockAsset.data.ledger);
             });
 
             underscore.each(instance.productionSchedules, function (productionSchedule) {
-                productionSchedule.replaceAllStock(stock);
+                productionSchedule.replaceStockAssets(stockAssets);
             });
         }
 
-        function removeStock (instance, stock) {
-            instance.stock = underscore.chain(instance.stock)
+        function removeStockAsset (instance, stockAsset) {
+            instance.stockAssets = underscore.chain(instance.stockAssets)
                 .reject(function (item) {
-                    return item.assetKey === stock.assetKey;
+                    return item.assetKey === stockAsset.assetKey;
                 })
                 .value();
 
             underscore.each(instance.productionSchedules, function (productionSchedule) {
-                productionSchedule.removeStock(stock);
+                productionSchedule.removeStockAsset(stockAsset);
             });
         }
 
@@ -317,7 +317,7 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
                 }, mappedProperty = propertyMap[property] || property;
 
                 switch (property) {
-                    case 'stock':
+                    case 'stockAssets':
                         underscore.each(categorySchedules, function (productionSchedule) {
                             productionSchedule.adjustCategory(sectionCode, categoryQuery, productionSchedule.costStage, property);
                         });
@@ -544,7 +544,7 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
 
             productionGroupCategory.name = (underscore.contains(['INC-CPS-CROP', 'INC-FRS-FRUT'], productionGroupCategory.code) ? commodityType : productionGroupCategory.name);
 
-            var stock = instance.findStock(assetType, productionGroupCategory.name, commodityType);
+            var stockAssets = instance.findStockAssets(assetType, productionGroupCategory.name, commodityType);
 
             var productionCategory = underscore.extend({
                 commodity: productionSchedule.commodityType,
@@ -556,8 +556,8 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
             productionGroupCategory.categories = productionGroupCategory.categories || [];
             productionGroupCategory.categories.push(productionCategory);
 
-            if (stock) {
-                productionGroupCategory.stock = productionGroupCategory.stock || stock;
+            if (underscore.size(stockAssets) > 0) {
+                productionGroupCategory.stockAssets = productionGroupCategory.stockAssets || stockAssets;
             }
 
             productionGroupCategory.categoriesPerMonth = safeArrayMath.plus(underscore.reduce(Base.initializeArray(instance.numberOfMonths, 1), reduceArrayInRange(startOffset), Base.initializeArray(instance.numberOfMonths)), productionGroupCategory.categoriesPerMonth || Base.initializeArray(instance.numberOfMonths));

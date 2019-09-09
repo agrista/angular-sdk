@@ -18,22 +18,41 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                     this.organization = organization;
                     this.organizationId = organization.id;
                     this.data = underscore.extend(this.data, {
-                        organization: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
-                        farmer: underscore.omit(organizationJson, ['activeFlags', 'farms', 'legalEntities', 'primaryContact', 'teams']),
+                        organization: underscore.omit(organizationJson, ['farms', 'legalEntities', 'pointsOfInterest', 'primaryContact', 'teams']),
+                        farmer: underscore.omit(organizationJson, ['farms', 'legalEntities', 'pointsOfInterest', 'primaryContact', 'teams']),
                         farms : organizationJson.farms,
                         legalEntities: underscore.map(organizationJson.legalEntities, function (entity) {
                             return underscore.omit(entity, ['assets', 'farms']);
                         }),
+                        activities: underscore.chain(organizationJson.legalEntities)
+                            .pluck('assets')
+                            .flatten().compact()
+                            .pluck('activities')
+                            .flatten().compact()
+                            .map(function (activity) {
+                                return underscore.chain(activity)
+                                    .extend(underscore.isUndefined(activity.asset) ? {} : {
+                                        asset: underscore.pick(activity.asset, ['id', 'farmId', 'legalEntityId', 'productId', 'assetKey'])
+                                    })
+                                    .extend({
+                                        assets: underscore.map(activity.assets, function (asset) {
+                                            return underscore.pick(asset, ['id', 'farmId', 'legalEntityId', 'productId', 'assetKey']);
+                                        })
+                                    })
+                                    .value();
+                            })
+                            .value(),
                         assets: underscore.chain(organizationJson.legalEntities)
                             .pluck('assets')
-                            .flatten()
-                            .compact()
+                            .flatten().compact()
+                            .map(function (asset) {
+                                return underscore.omit(asset, ['activities']);
+                            })
                             .groupBy('type')
                             .value(),
                         liabilities: underscore.chain(organizationJson.legalEntities)
                             .pluck('liabilities')
-                            .flatten()
-                            .compact()
+                            .flatten().compact()
                             .value(),
                         pointsOfInterest: underscore.map(organizationJson.pointsOfInterest, function (pointOfInterest) {
                             return underscore.omit(pointOfInterest, ['organization']);
@@ -85,6 +104,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.title = underscore.prune(attrs.title, 255, '');
 
                 this.organization = attrs.organization;
+                this.permissions = attrs.permissions;
                 this.tasks = attrs.tasks;
             }
 
@@ -169,3 +189,51 @@ sdkModelDocument.provider('DocumentFactory', function () {
         }
     }];
 });
+
+sdkModelDocument.provider('DocumentPermission', [function () {
+    this.$get = ['inheritModel', 'Model', 'underscore', function (inheritModel, Model, underscore) {
+        function DocumentPermission (attrs) {
+            Model.Base.apply(this, arguments);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.accessImport = attrs.accessImport;
+            this.accessRead = attrs.accessRead;
+            this.accessShare = attrs.accessShare;
+            this.accessWrite = attrs.accessWrite;
+            this.documentId = attrs.documentId;
+            this.email = attrs.email;
+            this.name = attrs.name;
+            this.reason = attrs.reason;
+            this.userId = attrs.userId;
+
+            this.document = attrs.document;
+            this.user = attrs.user;
+        }
+
+        inheritModel(DocumentPermission, Model.Base);
+
+        DocumentPermission.validates({
+            documentId: {
+                required: true,
+                numeric: true
+            },
+            email: {
+                required: true,
+                format: {
+                    email: true
+                }
+            },
+            name: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 255
+                }
+            }
+        });
+
+        return DocumentPermission;
+    }];
+}]);

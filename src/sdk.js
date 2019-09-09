@@ -17,12 +17,14 @@ angular.module('ag.sdk.interface', [
 ]);
 
 angular.module('ag.sdk.model', [
+    'ag.sdk.model.activity',
     'ag.sdk.model.asset',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
     'ag.sdk.model.comparable-farm-valuation',
     'ag.sdk.model.comparable-sale',
     'ag.sdk.model.crop',
+    'ag.sdk.model.crop-report',
     'ag.sdk.model.crop-inspection',
     'ag.sdk.model.desktop-valuation',
     'ag.sdk.model.document',

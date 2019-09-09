@@ -117,16 +117,11 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     return getActionGroup(this, action);
                 });
 
-                privateProperty(this, 'findLedgerEntry', function (query) {
-                    if (underscore.isObject(query)) {
-                        var entry = underscore.findWhere(this.data.ledger, query);
-
-                        return entry || underscore.findWhere(this.data.ledger, {
-                            reference: underscore.compact([query.reference, query.action, query.date]).join('/')
-                        });
-                    }
-
-                    return underscore.findWhere(this.data.ledger, {reference: query});
+                privateProperty(this, 'findLedgerEntry', function (reference, source) {
+                    return underscore.find(this.data.ledger, function (entry) {
+                        return (underscore.isUndefined(reference) || entry.reference === reference) &&
+                            (underscore.isUndefined(source) || entry.source === source);
+                    });
                 });
 
                 privateProperty(this, 'hasLedgerEntries', function () {
@@ -169,12 +164,17 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 });
 
                 privateProperty(this, 'generateLedgerEntryReference', function (entry) {
-                    return '/' + underscore.compact([entry.action, entry.date]).join('/');
+                    return underscore.compact([entry.action, entry.date]).join('/');
                 });
 
-                privateProperty(this, 'removeLedgerEntriesByReference', function (reference, options) {
+                privateProperty(this, 'removeLedgerEntriesByReference', function (reference, source, options) {
+                    if (underscore.isObject(source)) {
+                        options = source;
+                        source = undefined;
+                    }
+
                     this.data.ledger = underscore.reject(this.data.ledger, function (entry) {
-                        return s.include(entry.reference, reference);
+                        return entry.source === source && s.include(entry.reference, reference);
                     });
                     this.$dirty = true;
 
@@ -247,7 +247,7 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                     recalculateAndCache(this);
                 });
 
-                privateProperty(this, 'recalculateLedger' ,function (options) {
+                privateProperty(this, 'recalculateLedger', function (options) {
                     recalculateAndCache(this, options);
                 });
 
@@ -256,19 +256,19 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 function balanceEntry (curr, prev) {
                     curr.opening = prev.closing;
                     curr.balance = underscore.mapObject(curr.opening, function (value, key) {
-                        return safeMath.chain(value)
+                        return Math.max(0, safeMath.chain(value)
                             .plus(underscore.reduce(curr.incoming, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
                             .minus(underscore.reduce(curr.outgoing, function (total, item) {
                                 return safeMath.plus(total, item[key]);
                             }, 0))
-                            .toNumber();
+                            .toNumber());
                     });
                     curr.closing = curr.balance;
                 }
 
-                function inventoryInRange(instance, rangeStart, rangeEnd) {
+                function inventoryInRange (instance, rangeStart, rangeEnd) {
                     var rangeStartDate = moment(rangeStart, 'YYYY-MM-DD').date(1),
                         rangeEndDate = moment(rangeEnd, 'YYYY-MM-DD').date(1),
                         numberOfMonths = rangeEndDate.diff(rangeStartDate, 'months'),
@@ -355,8 +355,12 @@ sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryP
                 Base.initializeObject(this.data, 'ledger', []);
                 Base.initializeObject(this.data, 'openingBalance', 0);
 
-
                 this.type = 'stock';
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.productId = attrs.productId;
+                this.product = attrs.product;
             }
 
             function asPureAction (action) {
