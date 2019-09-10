@@ -37,12 +37,12 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
 
                                 return {
                                     area: asset.data.size,
+                                    assetValue: asset.data.assetValue,
                                     constructionDate: asset.data.constructionDate,
-                                    totalValue: asset.data.assetValue,
-                                    type: asset.data.landUse,
                                     subType: getLandUseTitle(asset, {
                                         field: asset.data
                                     }),
+                                    type: asset.data.landUse,
                                     unit: 'sm',
                                     unitValue: safeMath.dividedBy(asset.data.assetValue, asset.data.size)
                                 }
@@ -58,7 +58,7 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
 
                                     return {
                                         area: asset.data.size,
-                                        totalValue: safeMath.times(landComponent.valuePerHa, asset.data.size),
+                                        assetValue: safeMath.times(landComponent.valuePerHa, asset.data.size),
                                         type: (field ? field.landUse :
                                             (Field.isLandUse(asset.data.landUse) ? asset.data.landUse : landComponent.name)),
                                         subType: getLandUseTitle(asset, {
