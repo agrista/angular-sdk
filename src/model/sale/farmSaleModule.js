@@ -86,12 +86,15 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
 
             this.id = attrs.id || attrs.$id;
             this.area = attrs.area || 0;
+            this.buyerName = attrs.buyerName;
             this.centroid = attrs.centroid;
             this.country = attrs.country;
             this.countryId = attrs.countryId;
             this.documentCount = attrs.documentCount || 0;
+            this.reference = attrs.reference;
             this.salePrice = attrs.salePrice;
             this.saleDate = attrs.saleDate;
+            this.sellerName = attrs.sellerName;
             this.title = attrs.title;
             this.uid = attrs.uid;
 
