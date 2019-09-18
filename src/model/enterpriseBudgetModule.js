@@ -1224,6 +1224,7 @@ sdkModelEnterpriseBudget.factory('EnterpriseBudgetBase', ['AssetFactory', 'Base'
         });
 
         var baseAnimal = {
+            'Cattle (Dairy)': 'Cattle',
             'Cattle (Extensive)': 'Cattle',
             'Cattle (Feedlot)': 'Cattle',
             'Cattle (Stud)': 'Cattle',
@@ -1621,12 +1622,12 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
                     'Wineberry'
                 ],
                 livestock: [
+                    'Cattle (Dairy)',
                     'Cattle (Extensive)',
                     'Cattle (Feedlot)',
                     'Cattle (Stud)',
                     'Chicken (Broilers)',
                     'Chicken (Layers)',
-                    'Dairy',
                     'Game',
                     'Goats',
                     'Horses',
@@ -1719,7 +1720,7 @@ sdkModelEnterpriseBudget.provider('EnterpriseBudget', ['listServiceMapProvider',
 
             // Schedules
             var scheduleBirthing = {
-                'Calving': ['Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)', 'Dairy'],
+                'Calving': ['Cattle (Dairy)', 'Cattle (Extensive)', 'Cattle (Feedlot)', 'Cattle (Stud)'],
                 'Hatching': ['Chicken (Broilers)', 'Chicken (Layers)', 'Ostrich'],
                 'Kidding': ['Game', 'Goats'],
                 'Foaling': ['Horses'],
