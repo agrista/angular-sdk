@@ -415,7 +415,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'config
     return {
         getAttachmentUri: function (key) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/file-attachment/url?key=' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/attachment/url?key=' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -424,7 +424,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'config
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/file-attachment/upload', dataCopy, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/attachment/upload', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
