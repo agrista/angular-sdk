@@ -14760,6 +14760,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
                 this.author = attrs.author;
+                this.createdAt = attrs.createdAt;
                 this.docType = attrs.docType;
                 this.documentId = attrs.documentId;
                 this.id = attrs.id || attrs.$id;
