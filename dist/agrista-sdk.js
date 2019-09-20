@@ -415,7 +415,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'config
     return {
         getAttachmentUri: function (key) {
             return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/file-attachment/url?key=' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
+                $http.get(host + 'api/attachment/url?key=' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -424,7 +424,7 @@ sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'config
             var dataCopy = asJson(data);
 
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/file-attachment/upload', dataCopy, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/attachment/upload', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             })
@@ -4784,11 +4784,12 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
 }]);
 
 sdkHelperTaskApp.factory('taskWorkflowHelper', ['underscore', function (underscore) {
-    var taskActions = ['accept', 'decline', 'start', 'assign', 'complete', 'approve', 'reject', 'release'],
+    var taskActions = ['accept', 'decline', 'start', 'stop', 'assign', 'complete', 'approve', 'reject', 'release'],
         taskActionsMap = {
             accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
             decline: ['assigned'],
             start: ['assigned', 'in progress'],
+            stop: ['in review', 'complete'],
             assign: ['backlog', 'assigned', 'in progress', 'in review'],
             complete: ['assigned', 'in progress'],
             approve: ['in review'],
@@ -14759,6 +14760,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
                 this.author = attrs.author;
+                this.createdAt = attrs.createdAt;
                 this.docType = attrs.docType;
                 this.documentId = attrs.documentId;
                 this.id = attrs.id || attrs.$id;

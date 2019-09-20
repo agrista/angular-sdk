@@ -147,11 +147,12 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
 }]);
 
 sdkHelperTaskApp.factory('taskWorkflowHelper', ['underscore', function (underscore) {
-    var taskActions = ['accept', 'decline', 'start', 'assign', 'complete', 'approve', 'reject', 'release'],
+    var taskActions = ['accept', 'decline', 'start', 'stop', 'assign', 'complete', 'approve', 'reject', 'release'],
         taskActionsMap = {
             accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
             decline: ['assigned'],
             start: ['assigned', 'in progress'],
+            stop: ['in review', 'complete'],
             assign: ['backlog', 'assigned', 'in progress', 'in review'],
             complete: ['assigned', 'in progress'],
             approve: ['in review'],
