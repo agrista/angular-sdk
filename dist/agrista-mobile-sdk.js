@@ -2759,11 +2759,12 @@ sdkHelperTaskApp.provider('taskHelper', ['underscore', function (underscore) {
 }]);
 
 sdkHelperTaskApp.factory('taskWorkflowHelper', ['underscore', function (underscore) {
-    var taskActions = ['accept', 'decline', 'start', 'assign', 'complete', 'approve', 'reject', 'release'],
+    var taskActions = ['accept', 'decline', 'start', 'stop', 'assign', 'complete', 'approve', 'reject', 'release'],
         taskActionsMap = {
             accept: ['backlog', 'assigned', 'in progress', 'in review', 'complete'],
             decline: ['assigned'],
             start: ['assigned', 'in progress'],
+            stop: ['in review', 'complete'],
             assign: ['backlog', 'assigned', 'in progress', 'in review'],
             complete: ['assigned', 'in progress'],
             approve: ['in review'],
@@ -20257,6 +20258,7 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
                 this.author = attrs.author;
+                this.createdAt = attrs.createdAt;
                 this.docType = attrs.docType;
                 this.documentId = attrs.documentId;
                 this.id = attrs.id || attrs.$id;
