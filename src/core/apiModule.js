@@ -1898,7 +1898,7 @@ sdkApiApp.factory('tagApi', ['$http', 'promiseService', 'configuration', functio
  */
 sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['document', 'organization', 'subtasks'];
+        removableFields = ['assignerUser', 'document', 'organization', 'subtasks', 'user'];
 
     return {
         getTasks: function (params) {
