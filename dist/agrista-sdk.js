@@ -1918,7 +1918,7 @@ sdkApiApp.factory('tagApi', ['$http', 'promiseService', 'configuration', functio
  */
 sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
     var host = configuration.getServer(),
-        removableFields = ['document', 'organization', 'subtasks'];
+        removableFields = ['assignerUser', 'document', 'organization', 'subtasks', 'user'];
 
     return {
         getTasks: function (params) {
@@ -21194,8 +21194,7 @@ sdkModelTask.factory('Task', ['Base', 'inheritModel', 'Model', 'underscore',
 
             this.id = attrs.id || attrs.$id;
             this.assignedAt = attrs.assignedAt;
-            this.assignedBy = attrs.assignedBy;
-            this.assignedTo = attrs.assignedTo;
+            this.assignerUserId = attrs.assignerUserId;
             this.completedAt = attrs.completedAt;
             this.createdAt = attrs.createdAt;
             this.createdBy = attrs.createdBy;
@@ -21212,10 +21211,13 @@ sdkModelTask.factory('Task', ['Base', 'inheritModel', 'Model', 'underscore',
             this.type = attrs.type;
             this.updatedAt = attrs.updatedAt;
             this.updatedBy = attrs.updatedBy;
+            this.userId = attrs.userId;
 
             // Models
+            this.assignerUser = attrs.assignerUser;
             this.document = attrs.document;
             this.organization = attrs.organization;
+            this.user = attrs.user;
         }
 
         inheritModel(Task, Model.Base);
