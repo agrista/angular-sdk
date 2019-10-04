@@ -937,7 +937,6 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
 
         return (geom1 && geom2 && geom1[relation] ? geom1[relation](geom2) : false);
     }
-    
 
     GeojsonHelper.prototype = {
         getJson: function () {
@@ -965,7 +964,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
             var bounds = [];
 
             if (this._json) {
-                var features = this._json.features || [this._json];
+                var features = this._json.geometries || this._json.features || [this._json];
 
                 angular.forEach(features, function(feature) {
                     var geometry = feature.geometry || feature;
@@ -994,7 +993,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
                 }
             });
 
-            return [[lat1, lng1], [lat2, lng2]];
+            return [[lng1, lat1], [lng2, lat2]];
         },
         /**
          * Geometry Editing
@@ -1007,14 +1006,21 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
             this._json = topologyHelper.writeGeoJSON(geom.difference(geometry));
             return this;
         },
+        manipulate: function (geojson, relation) {
+            if (geojson) {
+                this._json = (this._json ? topologyHelper.writeGeoJSON(geometryRelation(this, relation, geojson)) : geojson);
+            }
+
+            return this;
+        },
         /**
          * Geometry Relations
          */
-        contains: function (geometry) {
-            return geometryRelation(this, 'contains', geometry);
+        contains: function (geojson) {
+            return geometryRelation(this, 'contains', geojson);
         },
-        within: function (geometry) {
-            return geometryRelation(this, 'within', geometry);
+        within: function (geojson) {
+            return geometryRelation(this, 'within', geojson);
         },
         /**
          * Get Center
