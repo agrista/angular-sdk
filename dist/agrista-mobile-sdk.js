@@ -1002,7 +1002,7 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
                 }
             });
 
-            return [[lat1, lng1], [lat2, lng2]];
+            return [[lng1, lat1], [lng2, lat2]];
         },
         /**
          * Geometry Editing
