@@ -41,6 +41,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.createdBy = attrs.createdBy;
                 this.customerId = attrs.customerId;
                 this.customerNumber = attrs.customerNumber;
+                this.domain = attrs.domain;
                 this.email = attrs.email;
                 this.hostUrl = attrs.hostUrl;
                 this.legalEntities = attrs.legalEntities || [];
@@ -107,6 +108,11 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             });
 
             Organization.validates({
+                domain: {
+                    format: {
+                        regex: '^[a-z0-9-]*$'
+                    }
+                },
                 countryId: {
                     required: true,
                     numeric: true

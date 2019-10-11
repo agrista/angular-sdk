@@ -19067,6 +19067,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.createdBy = attrs.createdBy;
                 this.customerId = attrs.customerId;
                 this.customerNumber = attrs.customerNumber;
+                this.domain = attrs.domain;
                 this.email = attrs.email;
                 this.hostUrl = attrs.hostUrl;
                 this.legalEntities = attrs.legalEntities || [];
@@ -19133,6 +19134,11 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             });
 
             Organization.validates({
+                domain: {
+                    format: {
+                        regex: '^[a-z0-9-]*$'
+                    }
+                },
                 countryId: {
                     required: true,
                     numeric: true
@@ -22404,8 +22410,8 @@ sdkModelValidators.factory('Validator.equal', ['underscore', 'Validatable.Valida
 /**
  * Format Validator
  */
-sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date', 'Validator.format.email', 'Validator.format.telephone', 'Validator.format.uuid',
-    function (underscore, Validator, date, email, telephone, uuid) {
+sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date', 'Validator.format.email', 'Validator.format.regex', 'Validator.format.telephone', 'Validator.format.uuid',
+    function (underscore, Validator, date, email, regex, telephone, uuid) {
         function format (value, instance, field) {}
 
         format.message = function () {
@@ -22415,6 +22421,7 @@ sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Valid
         format.options = {
             date: date,
             email: email,
+            regex: regex,
             telephone: telephone,
             uuid: uuid
         };
@@ -22456,6 +22463,23 @@ sdkModelValidators.factory('Validator.format.email', ['moment', 'underscore', 'V
         };
 
         return new Validator(email);
+    }]);
+
+sdkModelValidators.factory('Validator.format.regex', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function regex (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return new RegExp(this.regex).test(value);
+        }
+
+        regex.message = function () {
+            return 'Must be a valid';
+        };
+
+        return new Validator(regex);
     }]);
 
 sdkModelValidators.factory('Validator.format.telephone', ['moment', 'underscore', 'Validatable.Validator',
