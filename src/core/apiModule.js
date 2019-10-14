@@ -1500,6 +1500,13 @@ sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagin
                 }, promise.reject);
             });
         },
+        getProfile: function (domain) {
+            return promiseService.wrap(function (promise) {
+                $http.get(host + 'api/profile/' + domain, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            });
+        },
         getOrganizationDuplicates: function (id) {
             return httpRequestor(host + 'api/organization/' + id + '/duplicates');
         },
