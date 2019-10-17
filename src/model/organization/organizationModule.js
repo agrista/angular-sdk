@@ -1,4 +1,4 @@
-var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelOrganization.provider('Organization', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['Base', 'computedProperty', 'geoJSONHelper', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',

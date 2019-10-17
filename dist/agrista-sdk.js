@@ -1041,8 +1041,8 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'configuration', 'organizatio
         createFarmer: function (data, includeRemovable) {
             return organizationApi.createOrganization(underscore.defaults(data, {type: 'farmer'}), includeRemovable);
         },
-        inviteFarmer: function (id) {
-            return organizationApi.inviteOrganization(id);
+        inviteFarmer: function (id, data) {
+            return organizationApi.inviteOrganization(id, data);
         },
         getFarmer: function (id) {
             return organizationApi.getOrganization(id);
@@ -1498,8 +1498,8 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingS
         createMerchant: function (data) {
             return organizationApi.createOrganization(underscore.defaults(data, {type: 'merchant'}));
         },
-        inviteMerchant: function (id) {
-            return organizationApi.inviteOrganization(id);
+        inviteMerchant: function (id, data) {
+            return organizationApi.inviteOrganization(id, data);
         },
         registerMerchant: function (data) {
             var dataCopy = asJson(data);
@@ -1620,9 +1620,11 @@ sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagin
         searchOrganization: function (params) {
             return httpRequestor(host + 'api/organization/search', params);
         },
-        inviteOrganization: function (id) {
+        inviteOrganization: function (id, data) {
+            var dataCopy = asJson(data || {});
+
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/organization/' + id + '/invite', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -2145,9 +2147,11 @@ sdkApiApp.factory('userApi', ['$http', 'asJson', 'pagingService', 'promiseServic
                 }, promise.reject);
             });
         },
-        inviteUser: function (id) {
+        inviteUser: function (id, data) {
+            var dataCopy = asJson(data || {});
+
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/user/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'api/user/' + id + '/invite', dataCopy, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -19031,7 +19035,7 @@ sdkModelMerchant.provider('Merchant', ['OrganizationFactoryProvider', function (
     OrganizationFactoryProvider.add('merchant', 'Merchant');
 }]);
 
-var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelOrganization.provider('Organization', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['Base', 'computedProperty', 'geoJSONHelper', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
