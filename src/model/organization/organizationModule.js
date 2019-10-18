@@ -45,6 +45,8 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.email = attrs.email;
                 this.hostUrl = attrs.hostUrl;
                 this.legalEntities = attrs.legalEntities || [];
+                this.locale = attrs.locale;
+                this.localeId = attrs.localeId;
                 this.name = attrs.name;
                 this.originHost = attrs.originHost;
                 this.originPort = attrs.originPort;
@@ -121,6 +123,10 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     format: {
                         email: true
                     }
+                },
+                localeId: {
+                    required: true,
+                    numeric: true
                 },
                 name: {
                     required: true,
