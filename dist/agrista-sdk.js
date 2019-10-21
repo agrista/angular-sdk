@@ -14747,7 +14747,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
     DocumentFactoryProvider.add('desktop valuation', 'DesktopValuation');
 }]);
 
-var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
@@ -21252,7 +21252,7 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
         return ProductionSchedule;
     }]);
 
-var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field']);
 
 sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
     function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {

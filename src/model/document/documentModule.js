@@ -1,4 +1,4 @@
-var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
