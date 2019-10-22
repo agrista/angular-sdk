@@ -207,7 +207,23 @@ sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function
     }
 }]);
 
-sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'asJson', 'promiseService', function ($http, asJson, promiseService) {
+    return function (url, data, excludeProps) {
+        return promiseService.wrap(function (promise) {
+            if (data) {
+                $http.post(url, asJson(data, excludeProps || []), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            } else {
+                $http.get(url, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            }
+        });
+    }
+}]);
+
+sdkUtilitiesApp.factory('httpResultTypeRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
     return function (url, params) {
         params = params || {};
 

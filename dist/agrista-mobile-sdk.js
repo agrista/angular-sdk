@@ -4,8 +4,8 @@ var sdkApiGeoApp = angular.module('ag.sdk.api.geo', ['ag.sdk.config', 'ag.sdk.ut
 /**
  * PIP Geo API
  */
-sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, configuration, pagingService, promiseService, underscore, uriEncodeQuery) {
-    var _host = configuration.getServer();
+sdkApiGeoApp.factory('pipGeoApi', ['httpRequestor', 'configuration', 'pagingService', 'underscore', 'uriEncodeQuery', function (httpRequestor, configuration, pagingService, underscore, uriEncodeQuery) {
+    var host = configuration.getServer();
 
     function trimQuery (query) {
         return underscore.omit(query, function (value) {
@@ -21,83 +21,51 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
         getAdminRegion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/admin-region' + (query ? '?' + query : ''));
         },
         searchAdminRegions: function (params) {
-            return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
+            return pagingService.page(host + 'api/geo/admin-regions', trimQuery(params));
         },
         getColorMap: function (query) {
             var params = uriEncodeTrimmedQuery(underscore.pick(query, ['type']));
 
-            return promiseService.wrap(function (promise) {
-                $http.post(_host + 'api/geo/color-map' + (params ? '?' + params : ''),  underscore.omit(query, ['type']), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/color-map' + (params ? '?' + params : ''), query, ['type']);
         },
         getDistrict: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/district' + (query ? '?' + query : ''));
         },
         getFarm: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/farm' + (query ? '?' + query : ''));
         },
         searchFarms: function (params) {
-            return pagingService.page(_host + 'api/geo/farms', trimQuery(params));
+            return pagingService.page(host + 'api/geo/farms', trimQuery(params));
         },
         getField: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/field' + (query ? '?' + query : ''));
         },
         getPortion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/portion' + (query ? '?' + query : ''));
         },
         searchPortions: function (params) {
-            return pagingService.page(_host + 'api/geo/portions', trimQuery(params));
+            return pagingService.page(host + 'api/geo/portions', trimQuery(params));
         },
         getProvince: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/province' + (query ? '?' + query : ''));
         },
         getSublayer: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/sublayer' + (query ? '?' + query : ''));
         }
     }
 }]);
@@ -1699,7 +1667,23 @@ sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function
     }
 }]);
 
-sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'asJson', 'promiseService', function ($http, asJson, promiseService) {
+    return function (url, data, excludeProps) {
+        return promiseService.wrap(function (promise) {
+            if (data) {
+                $http.post(url, asJson(data, excludeProps || []), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            } else {
+                $http.get(url, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            }
+        });
+    }
+}]);
+
+sdkUtilitiesApp.factory('httpResultTypeRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
     return function (url, params) {
         params = params || {};
 
