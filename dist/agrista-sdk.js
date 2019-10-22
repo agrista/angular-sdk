@@ -20653,6 +20653,7 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
             privateProperty(this, 'asComparable', function () {
                 return {
                     centroid: this.centroid,
+                    country: this.country,
                     farmland: this.data.farmland,
                     farmName: this.title,
                     farmSize: this.area,
