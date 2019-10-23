@@ -54,6 +54,9 @@ sdkApiGeoApp.factory('pipGeoApi', ['httpRequestor', 'configuration', 'pagingServ
 
             return httpRequestor(host + 'api/geo/portion' + (query ? '?' + query : ''));
         },
+        getPortionLandValues: function (params) {
+            return pagingService.page(host + 'api/geo/portion-values', trimQuery(params));
+        },
         searchPortions: function (params) {
             return pagingService.page(host + 'api/geo/portions', trimQuery(params));
         },
