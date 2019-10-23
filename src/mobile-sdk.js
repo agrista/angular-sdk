@@ -19,6 +19,7 @@ angular.module('ag.sdk.interface', [
 angular.module('ag.sdk.model', [
     'ag.sdk.model.activity',
     'ag.sdk.model.asset',
+    'ag.sdk.model.asset-factory',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
     'ag.sdk.model.comparable-farm-valuation',

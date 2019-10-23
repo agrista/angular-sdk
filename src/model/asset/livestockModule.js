@@ -1,4 +1,4 @@
-var sdkModelLivestock = angular.module('ag.sdk.model.livestock', ['ag.sdk.model.asset', 'ag.sdk.model.stock']);
+var sdkModelLivestock = angular.module('ag.sdk.model.livestock', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.asset', 'ag.sdk.model.asset-factory', 'ag.sdk.model.base', 'ag.sdk.model.stock']);
 
 sdkModelLivestock.provider('Livestock', ['AssetFactoryProvider', function (AssetFactoryProvider) {
     this.$get = ['computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'Stock', 'underscore',
