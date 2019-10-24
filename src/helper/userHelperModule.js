@@ -2,14 +2,9 @@ var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 
 sdkHelperUserApp.provider('userHelper', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['listServiceMap', function (listServiceMap) {
-        var _languageList = ['English'];
-
         return {
             listServiceMap: function() {
                 return listServiceMap('user');
-            },
-            languageList: function() {
-                return _languageList;
             }
         }
     }];

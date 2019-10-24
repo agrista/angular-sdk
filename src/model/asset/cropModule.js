@@ -1,4 +1,4 @@
-var sdkModelCrop = angular.module('ag.sdk.model.crop', ['ag.sdk.model.asset']);
+var sdkModelCrop = angular.module('ag.sdk.model.crop', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.asset', 'ag.sdk.model.asset-factory', 'ag.sdk.model.base']);
 
 sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryProvider) {
     this.$get = ['Base', 'asJson', 'Asset', 'computedProperty', 'inheritModel', 'privateProperty', 'naturalSort', 'readOnlyProperty', 'safeMath', 'underscore',

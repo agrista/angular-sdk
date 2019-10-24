@@ -1,4 +1,4 @@
-var sdkModelStock = angular.module('ag.sdk.model.stock', ['ag.sdk.model.asset']);
+var sdkModelStock = angular.module('ag.sdk.model.stock', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.asset', 'ag.sdk.model.asset-factory', 'ag.sdk.model.base']);
 
 sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryProvider) {
     this.$get = ['AssetBase', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',

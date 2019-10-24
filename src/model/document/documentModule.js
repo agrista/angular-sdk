@@ -1,10 +1,10 @@
-var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (asJson, Base, computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (asJson, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
             function Document (attrs, organization) {
-                Model.Base.apply(this, arguments);
+                Base.apply(this, arguments);
 
                 this.data = (attrs && attrs.data) || {};
                 Base.initializeObject(this.data, 'attachments', []);
@@ -102,14 +102,14 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.organizationId = attrs.organizationId;
                 this.originUuid = attrs.originUuid;
                 this.origin = attrs.origin;
-                this.title = attrs.title;
+                this.title = underscore.prune(attrs.title, 255, '');
 
                 this.organization = attrs.organization;
                 this.permissions = attrs.permissions;
                 this.tasks = attrs.tasks;
             }
 
-            inheritModel(Document, Model.Base);
+            inheritModel(Document, Base);
 
             Document.validates({
                 author: {
@@ -138,9 +138,9 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
     listServiceMapProvider.add('document', ['documentRegistry', 'moment', function (documentRegistry, moment) {
         return function (item) {
             var group = documentRegistry.getProperty(item.docType, 'title'),
-                subtitle = (item.organization && item.organization.name ?
+                subtitle = (item.title ? item.title : (item.organization && item.organization.name ?
                     item.organization.name :
-                    'Created ' + moment(item.createdAt).format('YYYY-MM-DD'));
+                    'Created ' + moment(item.createdAt).format('YYYY-MM-DD')));
 
             return {
                 id: item.id || item.$id,
@@ -163,9 +163,7 @@ sdkModelDocument.provider('DocumentFactory', function () {
     this.$get = ['$injector', 'Document', function ($injector, Document) {
         function apply (attrs, fnName) {
             if (instances[attrs.docType]) {
-                if (typeof instances[attrs.docType] === 'string') {
-                    instances[attrs.docType] = $injector.get(instances[attrs.docType]);
-                }
+                inject(attrs.docType);
 
                 return instances[attrs.docType][fnName](attrs);
             }
@@ -173,13 +171,23 @@ sdkModelDocument.provider('DocumentFactory', function () {
             return Document[fnName](attrs);
         }
 
+        function inject (type) {
+            if (instances[type] && typeof instances[type] === 'string') {
+                instances[type] = $injector.get(instances[type]);
+            }
+        }
+
         return {
             isInstanceOf: function (document) {
-                return (document ?
-                    (instances[document.docType] ?
-                        document instanceof instances[document.docType] :
-                        document instanceof Document) :
-                    false);
+                if (document) {
+                    inject(document.docType);
+
+                    return (instances[document.docType] ?
+                            document instanceof instances[document.docType] :
+                            document instanceof Document);
+                }
+
+                return false;
             },
             new: function (attrs) {
                 return apply(attrs, 'new');
