@@ -1,4 +1,4 @@
-var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.financial', 'ag.sdk.model.liability']);
 
 sdkModelLegalEntity.provider('LegalEntity', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['Base', 'Asset', 'computedProperty', 'Financial', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',

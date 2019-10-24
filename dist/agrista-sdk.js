@@ -4,8 +4,8 @@ var sdkApiGeoApp = angular.module('ag.sdk.api.geo', ['ag.sdk.config', 'ag.sdk.ut
 /**
  * PIP Geo API
  */
-sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, configuration, pagingService, promiseService, underscore, uriEncodeQuery) {
-    var _host = configuration.getServer();
+sdkApiGeoApp.factory('pipGeoApi', ['httpRequestor', 'configuration', 'pagingService', 'underscore', 'uriEncodeQuery', function (httpRequestor, configuration, pagingService, underscore, uriEncodeQuery) {
+    var host = configuration.getServer();
 
     function trimQuery (query) {
         return underscore.omit(query, function (value) {
@@ -21,74 +21,54 @@ sdkApiGeoApp.factory('pipGeoApi', ['$http', 'configuration', 'pagingService', 'p
         getAdminRegion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/admin-region' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/admin-region' + (query ? '?' + query : ''));
         },
         searchAdminRegions: function (params) {
-            return pagingService.page(_host + 'api/geo/admin-regions', trimQuery(params));
+            return pagingService.page(host + 'api/geo/admin-regions', trimQuery(params));
+        },
+        getColorMap: function (query) {
+            var params = uriEncodeTrimmedQuery(underscore.pick(query, ['type']));
+
+            return httpRequestor(host + 'api/geo/color-map' + (params ? '?' + params : ''), query, ['type']);
         },
         getDistrict: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/district' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/district' + (query ? '?' + query : ''));
         },
         getFarm: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/farm' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/farm' + (query ? '?' + query : ''));
         },
         searchFarms: function (params) {
-            return pagingService.page(_host + 'api/geo/farms', trimQuery(params));
+            return pagingService.page(host + 'api/geo/farms', trimQuery(params));
         },
         getField: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/field' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/field' + (query ? '?' + query : ''));
         },
         getPortion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/portion' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/portion' + (query ? '?' + query : ''));
+        },
+        getPortionLandValues: function (params) {
+            return pagingService.page(host + 'api/geo/portion-values', trimQuery(params));
         },
         searchPortions: function (params) {
-            return pagingService.page(_host + 'api/geo/portions', trimQuery(params));
+            return pagingService.page(host + 'api/geo/portions', trimQuery(params));
         },
         getProvince: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(_host + 'api/geo/province' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/province' + (query ? '?' + query : ''));
         },
         getSublayer: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/geo/sublayer' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/geo/sublayer' + (query ? '?' + query : ''));
         }
     }
 }]);
@@ -98,18 +78,12 @@ var sdkApiApp = angular.module('ag.sdk.api', ['ag.sdk.config', 'ag.sdk.utilities
 /**
  * Action API
  */
-sdkApiApp.factory('actionApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('actionApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer();
 
     return {
         createAction: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/action', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/action', data);
         },
         getActions: function (id, type, params) {
             if (typeof type === 'object') {
@@ -131,18 +105,10 @@ sdkApiApp.factory('actionApi', ['$http', 'asJson', 'pagingService', 'promiseServ
             return pagingService.page(host + 'api/actions/organization/' + id, params);
         },
         getAction: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/action/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/action/' + id);
         },
         deleteAction: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/action/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/action/' + id + '/delete', {});
         }
     };
 }]);
@@ -150,49 +116,25 @@ sdkApiApp.factory('actionApi', ['$http', 'asJson', 'pagingService', 'promiseServ
 /**
  * Activity API
  */
-sdkApiApp.factory('activityApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('activityApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer(),
         removableFields = ['asset', 'assets', 'pointOfInterest'];
 
     return {
         createActivity: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/activity', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/activity', data, (includeRemovable ? [] : removableFields));
         },
         updateActivity: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/activity/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/activity/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteActivity: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/activity/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/activity/' + id + '/delete', {});
         },
         attachAsset: function (id, assetId) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/activity/' + id + '/add/' + assetId, {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/activity/' + id+ '/add/' + assetId, {});
         },
         detachAsset: function (id, assetId) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/activity/' + id + '/remove/' + assetId, {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/activity/' + id+ '/remove/' + assetId, {});
         }
     };
 }]);
@@ -200,45 +142,25 @@ sdkApiApp.factory('activityApi', ['$http', 'asJson', 'promiseService', 'configur
 /**
  * Aggregation API
  */
-sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService', 'pagingService', 'underscore', function ($http, configuration, promiseService, pagingService, underscore) {
+sdkApiApp.factory('aggregationApi', ['configuration', 'httpRequestor', 'pagingService', 'underscore', function (configuration, httpRequestor, pagingService, underscore) {
     // TODO: Refactor so that the aggregationApi can be extended for downstream platforms
     var host = configuration.getServer();
 
     return {
         getCustomerLocations: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/aggregation/customer-locations', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/customer-locations');
         },
         getCustomerFarmlands: function (northEastLat, northEastLng, southWestLat, southWestLng) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + southWestLat + '&x2=' + northEastLng + '&y2=' + northEastLat, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + southWestLat + '&x2=' + northEastLng + '&y2=' + northEastLat);
         },
         getSublayerBoundaries: function (northEastLat, northEastLng, southWestLat, southWestLng) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/aggregation/guideline-sublayers?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/guideline-sublayers?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat);
         },
         getGroupCustomerLocations: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/aggregation/customer-locations-group', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/customer-locations-group');
         },
         getGroupCustomerFarmlands: function (northEastLat, northEastLng, southWestLat, southWestLng) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/aggregation/customer-geodata-group?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/customer-geodata-group?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat);
         },
         getFarmlandOverlaps: function (page) {
             return pagingService.page(host + 'api/aggregation/farmland-overlap', page);
@@ -247,11 +169,7 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
             return pagingService.page(host + 'api/aggregation/guideline-exceptions', page);
         },
         listBenefitAuthorisation: function() {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/aggregation/report-benefit-authorisation', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/report-benefit-authorisation');
         },
         listCrossSelling: function(params) {
             return pagingService.page(host + 'api/aggregation/report-cross-selling', params);
@@ -261,54 +179,30 @@ sdkApiApp.factory('aggregationApi', ['$http', 'configuration', 'promiseService',
                 return (underscore.isString(key) ? key.toLowerCase() : key) + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/aggregation/search-production-schedules' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/search-production-schedules' + (query ? '?' + query : ''));
         },
         averageProductionSchedules: function(query) {
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/aggregation/average-production-schedules', query, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/average-production-schedules', query);
         },
         getDistinctProductionScheduleYears: function(query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/aggregation/distinct-production-schedule-years' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/distinct-production-schedule-years' + (query ? '?' + query : ''));
         },
         getDistinctProductionScheduleEnterprises: function(query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/aggregation/distinct-production-schedule-enterprises' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/distinct-production-schedule-enterprises' + (query ? '?' + query : ''));
         },
         getDistinctProductionScheduleCategories: function() {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/aggregation/distinct-production-schedule-categories', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/distinct-production-schedule-categories');
         },
         mapReduce: function(query) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/aggregation/map-reduce', query, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/aggregation/map-reduce', query);
         }
     };
 }]);
@@ -333,7 +227,7 @@ sdkApiApp.factory('agristaApi', ['organizationApi', 'underscore', function (orga
 /**
  * Asset API
  */
-sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('assetApi', ['configuration', 'httpRequestor', 'pagingService', function (configuration, httpRequestor, pagingService) {
     var host = configuration.getServer(),
         removableFields = ['liabilities', 'product', 'productionSchedules'];
 
@@ -347,61 +241,25 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
             return pagingService.page(host + 'api/assets' + (id ? '/' + id : ''), params);
         },
         createAsset: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/asset', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/asset', data, (includeRemovable ? [] : removableFields));
         },
         getAsset: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/asset/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/asset/' + id);
         },
         updateAsset: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/asset/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/asset/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         attachLiability: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/asset/' + id + '/liability', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/asset/' + id + '/liability', data);
         },
         detachLiability: function (id, liabilityId) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/asset/' + id + '/liability/' + liabilityId + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/asset/' + id + '/liability/' + liabilityId + '/delete', {});
         },
         deleteAsset: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/asset/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/asset/' + id + '/delete', {});
         },
         uploadAttachment: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/asset/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            })
+            return httpRequestor(host + 'api/asset/' + id + '/attach', data);
         }
     };
 }]);
@@ -409,25 +267,15 @@ sdkApiApp.factory('assetApi', ['$http', 'asJson', 'pagingService', 'promiseServi
 /**
  * Attachment API
  */
-sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('attachmentApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         getAttachmentUri: function (key) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/attachment/url?key=' + encodeURIComponent(key), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/attachment/url?key=' + encodeURIComponent(key));
         },
         uploadAttachment: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/attachment/upload', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            })
+            return httpRequestor(host + 'api/attachment/upload', data);
         }
     };
 }]);
@@ -435,68 +283,30 @@ sdkApiApp.factory('attachmentApi', ['$http', 'asJson', 'promiseService', 'config
 /**
  * Benefit API
  */
-sdkApiApp.factory('benefitApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('benefitApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer();
 
     return {
         searchCustomerNumber: function (customerNumber) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/benefit/search?customernumber=' + customerNumber, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/benefit/search?customernumber=' + customerNumber);
         },
         linkCustomerNumber: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/benefit/link', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/benefit/link', data);
         },
         unlinkCustomerNumber: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/benefit/unlink', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/benefit/unlink', data);
         },
         authoriseCustomerNumber: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/benefit/authorise', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/benefit/authorise', data);
         },
         modifyAuthorisedCustomerNumber: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/benefit/modify', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/benefit/modify', data);
         },
         deauthoriseCustomerNumber: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/benefit/deauthorise', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/benefit/deauthorise', data);
         },
         listMemberships: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/benefit/memberships', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/benefit/memberships');
         }
     };
 }]);
@@ -504,79 +314,41 @@ sdkApiApp.factory('benefitApi', ['$http', 'asJson', 'pagingService', 'promiseSer
 /**
  * Comparable API
  */
-sdkApiApp.factory('comparableApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', 'underscore', 'uriEncodeQuery', function ($http, asJson, pagingService, promiseService, configuration, underscore, uriEncodeQuery) {
+sdkApiApp.factory('comparableApi', ['httpRequestor', 'pagingService', 'configuration', 'underscore', 'uriEncodeQuery', function (httpRequestor, pagingService, configuration, underscore, uriEncodeQuery) {
     var host = configuration.getServer();
 
     return {
         createComparable: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/comparable', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/comparable', data);
         },
         aggregateComparables: function (query) {
             query = uriEncodeQuery(query, {
                 resulttype: 'simple'
             });
 
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''));
         },
         searchComparables: function (query) {
             query = uriEncodeQuery(query, {
                 resulttype: 'simple'
             });
 
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''));
         },
         getComparable: function (uuid) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/comparable/' + uuid, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/comparable/' + uuid);
         },
         updateComparable: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/comparable/'+ dataCopy.uuid, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/comparable/' + data.uuid, data);
         },
         uploadAttachment: function (uuid, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/comparable/' + uuid + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            })
+            return httpRequestor(host + 'api/comparable/' + uuid + '/attach', data);
         },
         useComparable: function (uuid) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/comparable/'+ uuid + '/use', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/comparable/' + uuid + '/use', {});
         },
         deleteComparable: function (uuid) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/comparable/'+ uuid + '/delete', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/comparable/' + uuid + '/delete', {});
         }
     };
 }]);
@@ -617,45 +389,23 @@ sdkApiApp.factory('countryApi', ['apiPager', 'configuration', 'pagingService', '
 /**
  * Data API
  */
-sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseService', 'underscore', 'uriEncodeQuery', function ($http, asJson, configuration, promiseService, underscore, uriEncodeQuery) {
+sdkApiApp.factory('dataApi', ['httpRequestor', 'configuration', 'underscore', 'uriEncodeQuery', function (httpRequestor, configuration, underscore, uriEncodeQuery) {
     var host = configuration.getServer();
 
     return {
         aggregateAll: function (params) {
             params = uriEncodeQuery(params);
 
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/data/aggregate-all' + (params.length ? '?' + params : ''), {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/data/aggregate-all' + (params.length ? '?' + params : ''), {});
         },
         exportFile: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/data/export-file', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/data/export-file', data);
         },
         importFile: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/data/import-file', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/data/import-file', data);
         },
         validateFile: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/data/validate-file', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/data/validate-file', data);
         }
     };
 }]);
@@ -663,7 +413,7 @@ sdkApiApp.factory('dataApi', ['$http', 'asJson', 'configuration', 'promiseServic
 /**
  * Document API
  */
-sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('documentApi', ['httpRequestor', 'configuration', 'pagingService', 'uriEncodeQuery', function (httpRequestor, configuration, pagingService, uriEncodeQuery) {
     var host = configuration.getServer(),
         removableFields = ['organization', 'origin', 'permissions', 'tasks'];
 
@@ -677,90 +427,41 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
             return pagingService.page(host + 'api/documents' + (id ? '/' + id : ''), params);
         },
         createDocument: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document', data, removableFields);
         },
         getDocument: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/document/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/' + id);
         },
         sendDocument: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/' + id + '/send', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/' + id + '/send', data);
         },
-        relateDocuments: function (id, data) {
-            var dataCopy = asJson(data);
+        attachDocument: function (id, documentId, params) {
+            params = uriEncodeQuery(params);
 
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/' + id + '/relate', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/' + id + '/add/' + documentId + (params.length > 0 ? '?' + params : ''), {});
+        },
+        detachDocument: function (id, documentId, params) {
+            params = uriEncodeQuery(params);
+
+            return httpRequestor(host + 'api/document/' + id + '/remove/' + documentId + (params.length > 0 ? '?' + params : ''), {});
         },
         updateDocument: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/' + data.id, data, removableFields);
         },
         deleteDocument: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/' + id + '/delete', {});
         },
         uploadAttachment: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            })
+            return httpRequestor(host + 'api/document/' + id + '/attach', data);
         },
         getDocumentPdf: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/pdf/get', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/pdf/get', data);
         },
         saveDocumentPdf: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/pdf/save', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/pdf/save', data);
         },
         mergeDocumentPdfs: function (key, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document/pdf/merge?key=' + key, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document/pdf/merge?key=' + key, data);
         }
     };
 }]);
@@ -768,35 +469,19 @@ sdkApiApp.factory('documentApi', ['$http', 'asJson', 'pagingService', 'promiseSe
 /**
  * Document Permission API
  */
-sdkApiApp.factory('documentPermissionApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('documentPermissionApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer(),
         removableFields = ['document', 'user'];
 
     return {
         createDocumentPermission: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document-permission', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document-permission', data,  (includeRemovable ? [] : removableFields));
         },
         updateDocumentPermission: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document-permission/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document-permission/' + data.id, data,  (includeRemovable ? [] : removableFields));
         },
         deleteDocumentPermission: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/document-permission/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/document-permission/' + id + '/delete', {});
         }
     };
 }]);
@@ -804,7 +489,7 @@ sdkApiApp.factory('documentPermissionApi', ['$http', 'asJson', 'promiseService',
 /**
  * Enterprise Budget API
  */
-sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', 'underscore', 'uriEncodeQuery', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration, underscore, uriEncodeQuery) {
+sdkApiApp.factory('enterpriseBudgetApi', ['httpRequestor', 'httpResultTypeRequestor', 'pagingService', 'configuration', 'uriEncodeQuery', function (httpRequestor, httpResultTypeRequestor, pagingService, configuration, uriEncodeQuery) {
     var host = configuration.getServer();
 
     return {
@@ -821,89 +506,43 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
                 resulttype: 'simple'
             });
 
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/budgets/averaged' + (query && query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budgets/averaged' + (query && query.length > 0 ? '?' + query : ''));
         },
         searchEnterpriseBudgets: function (query) {
-            return httpRequestor(host + 'api/budgets/search', query);
+            return httpResultTypeRequestor(host + 'api/budgets/search', query);
         },
         createEnterpriseBudget: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/budget', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget', data);
         },
         getEnterpriseBudget: function (id, requesttype) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''));
         },
         getEnterpriseBudgetPublishers: function (query) {
             query = uriEncodeQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/budget/publishers' + (query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget/publishers' + (query.length > 0 ? '?' + query : ''));
         },
         getEnterpriseBudgetRegions: function (query) {
             query = uriEncodeQuery(query);
 
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/budget/regions' + (query.length > 0 ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget/regions' + (query.length > 0 ? '?' + query : ''));
         },
         updateEnterpriseBudget: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/budget/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget/' + data.id, data);
         },
-        publishEnterpriseBudget: function (id, publishSettings) {
-            publishSettings = publishSettings || {remote: 'agrista'};
+        publishEnterpriseBudget: function (id, data) {
+            data = data || {remote: 'agrista'};
 
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/budget/' + id + '/publish', publishSettings, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget/' + id + '/publish', data);
         },
         deleteEnterpriseBudget: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/budget/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget/' + id + '/delete', {});
         },
         uploadAttachment: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/budget/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            })
+            return httpRequestor(host + 'api/budget/' + id + '/attach', data);
         },
         favoriteEnterpriseBudget: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/budget/' + id + '/favorite', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/budget/' + id + '/favorite', {});
         }
 
     };
@@ -912,7 +551,7 @@ sdkApiApp.factory('enterpriseBudgetApi', ['$http', 'asJson', 'httpRequestor', 'p
 /**
  * Expense API
  */
-sdkApiApp.factory('expenseApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('expenseApi', ['httpRequestor', 'pagingService', 'configuration', function(httpRequestor, pagingService, configuration) {
     var host = configuration.getServer();
 
     return {
@@ -928,29 +567,13 @@ sdkApiApp.factory('expenseApi', ['$http', 'asJson', 'pagingService', 'promiseSer
             return pagingService.page(host + url, params);
         },
         createExpense: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/expense', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/expense', data);
         },
         updateExpense: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/expense/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/expense/' + data.id, data);
         },
         deleteExpense: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/expense/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/expense/' + id + '/delete', {});
         }
     };
 }]);
@@ -958,7 +581,7 @@ sdkApiApp.factory('expenseApi', ['$http', 'asJson', 'pagingService', 'promiseSer
 /**
  * Farm API
  */
-sdkApiApp.factory('farmApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('farmApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer();
 
     return {
@@ -971,36 +594,16 @@ sdkApiApp.factory('farmApi', ['$http', 'asJson', 'pagingService', 'promiseServic
             return pagingService.page(host + 'api/farms' + (id ? '/' + id : ''), params);
         },
         createFarm: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/farm', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/farm', data);
         },
         getFarm: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/farm/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/farm/' + id);
         },
         updateFarm: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/farm/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/farm/' + data.id, data);
         },
         deleteFarm: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/farm/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/farm/' + id + '/delete', {});
         }
     };
 }]);
@@ -1018,13 +621,13 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'configuration', 'organizatio
                 .value());
         },
         searchFarmers: function (query) {
-            return organizationApi.searchOrganizations(query);
+            return organizationApi.searchOrganizations(underscore.defaults(query, {type: 'farmer'}));
         },
         createFarmer: function (data, includeRemovable) {
             return organizationApi.createOrganization(underscore.defaults(data, {type: 'farmer'}), includeRemovable);
         },
-        inviteFarmer: function (id) {
-            return organizationApi.inviteOrganization(id);
+        inviteFarmer: function (id, data) {
+            return organizationApi.inviteOrganization(id, data);
         },
         getFarmer: function (id) {
             return organizationApi.getOrganization(id);
@@ -1044,7 +647,7 @@ sdkApiApp.factory('farmerApi', ['$http', 'asJson', 'configuration', 'organizatio
 /**
  * Farmland Value API
  */
-sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration', 'underscore', function ($http, promiseService, configuration, underscore) {
+sdkApiApp.factory('farmlandValueApi', ['httpRequestor', 'configuration', 'underscore', function (httpRequestor, configuration, underscore) {
     var host = configuration.getServer();
 
     return {
@@ -1053,22 +656,52 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/farmland-value/' + id + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/farmland-value/' + id + (query ? '?' + query : ''));
         },
         getFarmlandValues: function (query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/farmland-values' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/farmland-values' + (query ? '?' + query : ''));
+        }
+    };
+}]);
+
+/**
+ * Farm Sale API
+ */
+sdkApiApp.factory('farmSaleApi', ['httpRequestor', 'httpResultTypeRequestor', 'pagingService', 'configuration', function (httpRequestor, httpResultTypeRequestor, pagingService, configuration) {
+    var host = configuration.getServer(),
+        removableFields = ['country', 'documents', 'organization'];
+
+    return {
+        createFarmSale: function (data, includeRemovable) {
+            return httpRequestor(host + 'api/farm-sale', data, (includeRemovable ? [] : removableFields));
+        },
+        getFarmSales: function (params) {
+            return pagingService.page(host + 'api/farm-sales', params);
+        },
+        aggregateFarmSales: function (params) {
+            return httpResultTypeRequestor(host + 'api/farm-sales/aggregate', params);
+        },
+        searchFarmSales: function (params) {
+            return pagingService.page(host + 'api/farm-sales/search', params);
+        },
+        getFarmSale: function (id) {
+            return httpRequestor(host + 'api/farm-sale/' + id);
+        },
+        updateFarmSale: function (data, includeRemovable) {
+            return httpRequestor(host + 'api/farm-sale/' + data.id, data, (includeRemovable ? [] : removableFields));
+        },
+        deleteFarmSale: function (id) {
+            return httpRequestor(host + 'api/farm-sale/' + id + '/delete', {});
+        },
+        attachDocument: function (id, documentId) {
+            return httpRequestor(host + 'api/farm-sale/' + id + '/add/' + documentId, {});
+        },
+        detachDocument: function (id, documentId) {
+            return httpRequestor(host + 'api/farm-sale/' + id + '/remove/' + documentId, {});
         }
     };
 }]);
@@ -1076,48 +709,25 @@ sdkApiApp.factory('farmlandValueApi', ['$http', 'promiseService', 'configuration
 /**
  * Financial API
  */
-sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('financialApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer(),
         removableFields = ['legalEntity'];
 
     return {
         getFinancials: function (id) {
-            return promiseService.wrap(function (promise) {
-                if (id !== undefined) {
-                    $http.get(host + 'api/financials/' + id, {withCredentials: true}).then(function (res) {
-                        promise.resolve(res.data);
-                    }, promise.reject);
-                } else {
-                    promise.reject();
-                }
-            });
+            return httpRequestor(host + 'api/financials' + (id ? '/' + id : ''));
         },
         createFinancial: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/financial', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/financial', data, removableFields);
         },
         getFinancial: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/financial/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/financial/' + id);
         },
         updateFinancial: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/financial/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/financial/' + data.id, data, removableFields);
         },
         deleteFinancial: function (id) {
+            return httpRequestor(host + 'api/financial/' + id + '/delete', {});
             return promiseService.wrap(function (promise) {
                 $http.post(host + 'api/financial/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
@@ -1130,16 +740,28 @@ sdkApiApp.factory('financialApi', ['$http', 'asJson', 'promiseService', 'configu
 /**
  * Invite API
  */
-sdkApiApp.factory('inviteApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('inviteApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         getInvite: function (hash) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/invite/' + hash, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/invite/' + hash);
+        }
+    };
+}]);
+
+/**
+ * Label API
+ */
+sdkApiApp.factory('labelApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
+    var host = configuration.getServer();
+
+    return {
+        getLabels: function (params) {
+            return pagingService.page(host + 'api/labels', params);
+        },
+        getLabel: function (id) {
+            return httpRequestor(host + 'api/label/' + id);
         }
     };
 }]);
@@ -1147,87 +769,43 @@ sdkApiApp.factory('inviteApi', ['$http', 'promiseService', 'configuration', func
 /**
  * Layers API
  */
-sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('layerApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['country', 'layer'];
 
     return {
         getLayerTypes: function () {
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/layer/types', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/layer/types');
         },
         getLayers: function (params) {
             return pagingService.page(host + 'api/layers', params);
         },
-        getLayer: function (layerId) {
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/layer/' + layerId, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        getLayer: function (id) {
+            return httpRequestor(host + 'api/layer/' + id);
         },
         createLayer: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/layer', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/layer', data, (includeRemovable ? [] : removableFields));
         },
         updateLayer: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/layer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/layer/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         getSublayers: function (params) {
             return pagingService.page(host + 'api/sublayers', params);
         },
-        getSublayer: function (sublayerId) {
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/sublayer/' + sublayerId, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        getSublayer: function (id) {
+            return httpRequestor(host + 'api/sublayer/' + id);
         },
-        getSublayersByLayer: function (layerId) {
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/sublayers/' + layerId, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        getSublayersByLayer: function (id) {
+            return httpRequestor(host + 'api/sublayers/' + id);
         },
         createSublayer: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/sublayer', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/sublayer', data, (includeRemovable ? [] : removableFields));
         },
         updateSublayer: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/sublayer/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/sublayer/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteSublayer: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/sublayer/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/sublayer/' + id + '/delete', {});
         }
     };
 }]);
@@ -1235,7 +813,7 @@ sdkApiApp.factory('layerApi', ['$http', 'asJson', 'pagingService', 'promiseServi
 /**
  * Legal Entity API
  */
-sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('legalEntityApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['assets', 'financials'];
 
@@ -1249,61 +827,25 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
             return pagingService.page(host + 'api/legalentities' + (id ? '/' + id : ''), params);
         },
         updateEntity: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/legalentity/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/legalentity/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         uploadAttachment: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/legalentity/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            })
+            return httpRequestor(host + 'api/legalentity/' + id + '/attach', data);
         },
         getEntity: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/legalentity/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/legalentity/' + id);
         },
         createEntity: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/legalentity', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/legalentity', data, (includeRemovable ? [] : removableFields));
         },
         deleteEntity: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/legalentity/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/legalentity/' + id + '/delete', {});
         },
         attachLiability: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/legalentity/' + id + '/liability', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/legalentity/' + id + '/liability', data);
         },
         detachLiability: function (id, liabilityId) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/legalentity/' + id + '/liability/' + liabilityId + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/legalentity/' + id + '/liability/' + liabilityId + '/delete', {});
         }
     };
 }]);
@@ -1311,34 +853,18 @@ sdkApiApp.factory('legalEntityApi', ['$http', 'asJson', 'pagingService', 'promis
 /**
  * Liability API
  */
-sdkApiApp.factory('liabilityApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('liabilityApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         createLiability: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/liability', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/liability', data);
         },
         updateLiability: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/liability/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/liability/' + data.id, data);
         },
         deleteLiability: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/liability/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/liability/' + id + '/delete', {});
         }
     };
 }]);
@@ -1346,7 +872,7 @@ sdkApiApp.factory('liabilityApi', ['$http', 'asJson', 'promiseService', 'configu
 /**
  * Map Theme API
  */
-sdkApiApp.factory('mapThemeApi', ['$http', 'asJson', 'promiseService', 'configuration', 'underscore', function ($http, asJson, promiseService, configuration, underscore) {
+sdkApiApp.factory('mapThemeApi', ['httpRequestor', 'configuration', 'underscore', function (httpRequestor, configuration, underscore) {
     var host = configuration.getServer();
 
     return {
@@ -1355,29 +881,13 @@ sdkApiApp.factory('mapThemeApi', ['$http', 'asJson', 'promiseService', 'configur
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function(promise) {
-                $http.get(host + 'api/map-themes' + (params ? '?' + params : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/map-themes' + (params ? '?' + params : ''));
         },
         createMapTheme: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/map-theme', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/map-theme', data);
         },
         updateMapTheme: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/map-theme/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/map-theme/' + data.id, data);
         }
     };
 }]);
@@ -1385,7 +895,7 @@ sdkApiApp.factory('mapThemeApi', ['$http', 'asJson', 'promiseService', 'configur
 /**
  * Merchant API
  */
-sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, organizationApi, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('merchantApi', ['httpRequestor', 'organizationApi', 'pagingService', 'configuration', 'underscore', function (httpRequestor, organizationApi, pagingService, configuration, underscore) {
     var host = configuration.getServer();
 
     return {
@@ -1414,17 +924,11 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingS
         createMerchant: function (data) {
             return organizationApi.createOrganization(underscore.defaults(data, {type: 'merchant'}));
         },
-        inviteMerchant: function (id) {
-            return organizationApi.inviteOrganization(id);
+        inviteMerchant: function (id, data) {
+            return organizationApi.inviteOrganization(id, data);
         },
         registerMerchant: function (data) {
-            var dataCopy = asJson(data);
-            
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/register/merchant', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/register/merchant', data);
         },
         getMerchant: function (id, isUuid) {
             return organizationApi.getOrganization(id);
@@ -1444,7 +948,7 @@ sdkApiApp.factory('merchantApi', ['$http', 'asJson', 'organizationApi', 'pagingS
 /**
  * Notification API
  */
-sdkApiApp.factory('notificationApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('notificationApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer();
 
     return {
@@ -1452,43 +956,19 @@ sdkApiApp.factory('notificationApi', ['$http', 'asJson', 'pagingService', 'promi
             return pagingService.page(host + 'api/notifications', params);
         },
         createNotification: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/notification', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/notification', data);
         },
         getNotification: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/notification/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/notification/' + id);
         },
         rejectNotification: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/notification/' + id + '/reject', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/notification/' + id + '/reject', data);
         },
         acceptNotification: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/notification/' + id + '/accept', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/notification/' + id + '/accept', {});
         },
         deleteNotification: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/notification/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/notification/' + id + '/delete', {});
         }
     };
 }]);
@@ -1496,79 +976,49 @@ sdkApiApp.factory('notificationApi', ['$http', 'asJson', 'pagingService', 'promi
 /**
  * Organization API
  */
-sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, httpRequestor, pagingService, promiseService, configuration) {
+sdkApiApp.factory('organizationApi', ['httpRequestor', 'httpResultTypeRequestor', 'pagingService', 'configuration', function (httpRequestor, httpResultTypeRequestor, pagingService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['country', 'farms', 'legalEntities', 'pointsOfInterest'];
 
     return {
         createOrganization: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organization', data, (includeRemovable ? [] : removableFields));
         },
         getOrganizations: function (params) {
             return pagingService.page(host + 'api/organizations', params);
         },
         getOrganization: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/organization/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organization/' + id);
+        },
+        getProfile: function (domain) {
+            return httpRequestor(host + 'api/profile/' + domain);
         },
         getOrganizationDuplicates: function (id) {
-            return httpRequestor(host + 'api/organization/' + id + '/duplicates');
+            return httpResultTypeRequestor(host + 'api/organization/' + id + '/duplicates');
         },
         searchOrganizations: function (params) {
             return pagingService.page(host + 'api/organizations/search', params);
         },
         searchOrganization: function (params) {
-            return httpRequestor(host + 'api/organization/search', params);
+            return httpResultTypeRequestor(host + 'api/organization/search', params);
         },
-        inviteOrganization: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        inviteOrganization: function (id, data) {
+            return httpRequestor(host + 'api/organization/' + id + '/invite', data);
         },
         registerOrganization: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/register/organization', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/register/organization', data);
         },
         updateOrganization: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organization/' + data.id, data, (includeRemovable ? [] : removableFields));
+        },
+        sendOrganization: function (id, data) {
+            return httpRequestor(host + 'api/organization/' + id + '/send', data);
         },
         uploadAttachment: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization/' + id + '/attach', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            })
+            return httpRequestor(host + 'api/organization/' + id + '/attach', data);
         },
         deleteOrganization: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organization/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organization/' + id + '/delete', {});
         }
     };
 }]);
@@ -1576,16 +1026,12 @@ sdkApiApp.factory('organizationApi', ['$http', 'asJson', 'httpRequestor', 'pagin
 /**
  * Organizational Unit API
  */
-sdkApiApp.factory('organizationalUnitApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('organizationalUnitApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer();
 
     return {
         createOrganizationalUnit: function (data) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organizational-unit' + (data.type ? '/' + data.type.toLowerCase() : ''), asJson(data), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organizational-unit' + (data.type ? '/' + data.type.toLowerCase() : ''), data);
         },
         getOrganizationalUnits: function (params) {
             return pagingService.page(host + 'api/organizational-units', params);
@@ -1600,27 +1046,13 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'asJson', 'pagingService', 
             return pagingService.page(host + 'api/organizational-units/regions', params);
         },
         getOrganizationalUnit: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/organizational-unit/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organizational-unit/' + id);
         },
         updateOrganizationalUnit: function (data) {
-            var dataCopy = asJson(data, ['organization', 'users']);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organizational-unit/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organizational-unit/' + data.id, data, ['organization', 'users']);
         },
         deleteOrganizationalUnit: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/organizational-unit/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/organizational-unit/' + id + '/delete', {});
         }
     };
 }]);
@@ -1628,45 +1060,25 @@ sdkApiApp.factory('organizationalUnitApi', ['$http', 'asJson', 'pagingService', 
 /**
  * Point Of Interest API
  */
-sdkApiApp.factory('pointOfInterestApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('pointOfInterestApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['organization'];
 
     return {
         createPointOfInterest: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/point-of-interest', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/point-of-interest', data, removableFields);
         },
         getPointOfInterest: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/point-of-interest/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/point-of-interest/' + id);
         },
         searchPointsOfInterest: function (params) {
             return pagingService.page(host + 'api/points-of-interest/search', params);
         },
         updatePointOfInterest: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/point-of-interest/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/point-of-interest/' + data.id, data, removableFields);
         },
         deletePointOfInterest: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/point-of-interest/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/point-of-interest/' + id + '/delete', {});
         }
     };
 }]);
@@ -1674,7 +1086,7 @@ sdkApiApp.factory('pointOfInterestApi', ['$http', 'asJson', 'pagingService', 'pr
 /**
  * Product Demand API
  */
-sdkApiApp.factory('productDemandApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', 'underscore', function ($http, asJson, pagingService, promiseService, configuration, underscore) {
+sdkApiApp.factory('productDemandApi', ['httpRequestor', 'pagingService', 'configuration', 'underscore', function (httpRequestor, pagingService, configuration, underscore) {
     var host = configuration.getServer();
 
     return {
@@ -1683,45 +1095,19 @@ sdkApiApp.factory('productDemandApi', ['$http', 'asJson', 'pagingService', 'prom
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/demand-assumptions' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/demand-assumptions' + (query ? '?' + query : ''));
         },
         getMapData: function (options) {
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/demand-assumptions/map-data', options, {withCredentials: true}).then(function(res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/demand-assumptions/map-data', options);
         },
         addAssumptionGroup: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/demand-assumption', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/demand-assumption', data);
         },
         updateProductDemandAssumption: function (id, data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/demand-assumption/' + id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/demand-assumption/' + data.id, data);
         },
         deleteProductDemandAssumption: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function(promise) {
-                $http.post(host + 'api/demand-assumption/delete', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/demand-assumption/delete', data);
         }
     };
 }]);
@@ -1729,7 +1115,7 @@ sdkApiApp.factory('productDemandApi', ['$http', 'asJson', 'pagingService', 'prom
 /**
  * Production Schedule API
  */
-sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('productionScheduleApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['assets', 'budget', 'organization'];
 
@@ -1738,50 +1124,22 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
             return pagingService.page(host + 'api/production-schedules' + (id ? '/' + id : ''));
         },
         createProductionSchedule: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/production-schedule', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/production-schedule', data, (includeRemovable ? [] : removableFields));
         },
         getProductionSchedule: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/production-schedule/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/production-schedule/' + id);
         },
         updateProductionSchedule: function (data, includeRemovable) {
-            var dataCopy = asJson(data, (includeRemovable ? [] : removableFields));
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/production-schedule/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/production-schedule/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteProductionSchedule: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/production-schedule/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/production-schedule/' + id + '/delete', {});
         },
         attachAsset: function (id, assetId) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/production-schedule/' + id + '/add/' + assetId, {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/production-schedule/' + id + '/add/' + assetId, {});
         },
         detachAsset: function (id, assetId) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/production-schedule/' + id + '/remove/' + assetId, {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/production-schedule/' + id + '/remove/' + assetId, {});
         }
     };
 }]);
@@ -1789,45 +1147,25 @@ sdkApiApp.factory('productionScheduleApi', ['$http', 'asJson', 'pagingService', 
 /**
  * Product API
  */
-sdkApiApp.factory('productApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('productApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['organization'];
 
     return {
         createProduct: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/product', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/product', data, removableFields);
         },
         getProduct: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/product/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/product/' + id);
         },
         searchProducts: function (params) {
             return pagingService.page(host + 'api/products/search', params);
         },
         updateProduct: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/product/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/product/' + data.id, data, removableFields);
         },
         deleteProduct: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/product/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/product/' + id + '/delete', {});
         }
     };
 }]);
@@ -1835,63 +1173,28 @@ sdkApiApp.factory('productApi', ['$http', 'asJson', 'pagingService', 'promiseSer
 /**
  * Role API
  */
-sdkApiApp.factory('roleApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('roleApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         getRoles: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/roles', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/roles');
         },
         updateRoleApps: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/role-apps', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/role-apps', data);
         }
     };
 }]);
-
-/**
- * Label API
- */
-sdkApiApp.factory('labelApi', ['$http', 'pagingService', 'promiseService', 'configuration', function ($http, pagingService, promiseService, configuration) {
-    var host = configuration.getServer();
-
-    return {
-        getLabels: function (params) {
-            return pagingService.page(host + 'api/labels', params);
-        },
-        getLabel: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/label/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
-        }
-    };
-}]);
-
 
 /**
  * Share API
  */
-sdkApiApp.factory('shareApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('shareApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         getDocument: function (code) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/share/document/' + code, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/share/document/' + code);
         }
     };
 }]);
@@ -1899,16 +1202,12 @@ sdkApiApp.factory('shareApi', ['$http', 'promiseService', 'configuration', funct
 /**
  * Tag API
  */
-sdkApiApp.factory('tagApi', ['$http', 'promiseService', 'configuration', function ($http, promiseService, configuration) {
+sdkApiApp.factory('tagApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         getTags: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/tags', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/tags');
         }
     }
 }]);
@@ -1916,7 +1215,7 @@ sdkApiApp.factory('tagApi', ['$http', 'promiseService', 'configuration', functio
 /**
  * Task API
  */
-sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('taskApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer(),
         removableFields = ['assignerUser', 'document', 'organization', 'subtasks', 'user'];
 
@@ -1931,36 +1230,16 @@ sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseServic
             return pagingService.page(host + 'api/tasks/search', params);
         },
         createTask: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/task', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/task', data, removableFields);
         },
         getTask: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/task/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/task/' + id);
         },
         updateTask: function (data) {
-            var dataCopy = asJson(data, removableFields);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/task/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/task/' + data.id, data, removableFields);
         },
         deleteTask: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/task/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/task/' + id + '/delete', {});
         }
     };
 }]);
@@ -1968,55 +1247,27 @@ sdkApiApp.factory('taskApi', ['$http', 'asJson', 'pagingService', 'promiseServic
 /**
  * Team API
  */
-sdkApiApp.factory('teamApi', ['$http', 'asJson', 'promiseService', 'configuration', function ($http, asJson, promiseService, configuration) {
+sdkApiApp.factory('teamApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         getTeams: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/teams', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/teams');
         },
         createTeam: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/team', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/team', data);
         },
         getTeam: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/team/' + id, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/team/' + id);
         },
         getTeamUsers: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/team/' + id + '/users', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/team/' + id + '/users');
         },
         updateTeam: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/team/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/team/' + data.id, data);
         },
         deleteTeam: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/team/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/team/' + id + '/delete', {});
         }
     };
 }]);
@@ -2024,7 +1275,7 @@ sdkApiApp.factory('teamApi', ['$http', 'asJson', 'promiseService', 'configuratio
 /**
  * User API
  */
-sdkApiApp.factory('userApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('userApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
     var host = configuration.getServer();
 
     return {
@@ -2032,69 +1283,28 @@ sdkApiApp.factory('userApi', ['$http', 'asJson', 'pagingService', 'promiseServic
             return pagingService.page(host + 'api/users', params);
         },
         getUsersByRole: function (id, role) {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/users/organization/' + id + '?rolename=' + role, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/users/organization/' + id + '?rolename=' + role);
         },
         getUsersPositions: function () {
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/users/positions', {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/users/positions');
         },
         createUser: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/user', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/user', data);
         },
-        inviteUser: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/user/' + id + '/invite', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+        inviteUser: function (id, data) {
+            return httpRequestor(host + 'api/user/' + id + '/invite', data);
         },
         getUser: function (id, username) {
-            if (username) {
-                var param = '?username=' + username;
-            }
-            return promiseService.wrap(function (promise) {
-                $http.get(host + 'api/user/' + id + (param ? param : ''), {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/user/' + id + (username ? '?username=' + username : ''));
         },
         updateUser: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/user/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/user/' + data.id, data);
         },
         updateUserGroups: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/user/' + dataCopy.id + '/groups', dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/user/' + data.id + '/groups', data);
         },
         deleteUser: function (id) {
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/user/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/user/' + id + '/delete', {});
         }
     };
 }]);
@@ -2102,18 +1312,12 @@ sdkApiApp.factory('userApi', ['$http', 'asJson', 'pagingService', 'promiseServic
 /**
  * Workload API
  */
-sdkApiApp.factory('workloadApi', ['$http', 'asJson', 'pagingService', 'promiseService', 'configuration', function ($http, asJson, pagingService, promiseService, configuration) {
+sdkApiApp.factory('workloadApi', ['httpRequestor', 'configuration', function (httpRequestor, configuration) {
     var host = configuration.getServer();
 
     return {
         updateWorkload: function (data) {
-            var dataCopy = asJson(data);
-
-            return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/workload/' + dataCopy.id, dataCopy, {withCredentials: true}).then(function (res) {
-                    promise.resolve(res.data);
-                }, promise.reject);
-            });
+            return httpRequestor(host + 'api/workload/' + data.id, data);
         }
     }
 }]);
@@ -3715,7 +2919,23 @@ sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function
     }
 }]);
 
-sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'asJson', 'promiseService', function ($http, asJson, promiseService) {
+    return function (url, data, excludeProps) {
+        return promiseService.wrap(function (promise) {
+            if (data) {
+                $http.post(url, asJson(data, excludeProps || []), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            } else {
+                $http.get(url, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            }
+        });
+    }
+}]);
+
+sdkUtilitiesApp.factory('httpResultTypeRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
     return function (url, params) {
         params = params || {};
 
@@ -3732,6 +2952,28 @@ sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormat
         })).then(function (result) {
             return result.data;
         });
+    }
+}]);
+
+sdkUtilitiesApp.filter('parenthesizeProps', ['underscore', function (underscore) {
+    return function (text, allProps, separator) {
+        var closingParentheses = text.lastIndexOf(')'),
+            propsString = underscore.chain(allProps)
+                .compact()
+                .map(function (props) {
+                    return props.split(', ');
+                })
+                .flatten()
+                .reject(function (prop) {
+                    return s.include(text, prop);
+                })
+                .value()
+                .join(separator || ', ');
+
+        return (propsString.length === 0 ? text :
+            (closingParentheses === -1 ?
+                text + ' (' + propsString + ')' :
+                text.substr(0, closingParentheses) + ', ' + propsString + text.substr(closingParentheses)));
     }
 }]);
 
@@ -3857,7 +3099,7 @@ sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-sdkUtilitiesApp.factory('colorHash', ['md5', function (md5) {
+sdkUtilitiesApp.factory('colorHash', [function () {
     function hashCode (str) {
         var hash = 0;
         for (var i = 0; i < str.length; i++) {
@@ -3914,13 +3156,19 @@ sdkUtilitiesApp.factory('sortJson', ['underscore', function (underscore) {
     return sortValue;
 }]);
 
-sdkUtilitiesApp.factory('md5Json', ['md5', 'sortJson', function (md5, sortJson) {
+sdkUtilitiesApp.factory('md5Json', ['md5String', 'sortJson', function (md5String, sortJson) {
     function compact (json) {
-        return (json ? JSON.stringify(json).toLowerCase().replace(' ', '') : json);
+        return (json ? JSON.stringify(json) : json);
     }
 
     return function (json) {
-        return md5(compact(sortJson(json)));
+        return md5String(compact(sortJson(json)));
+    };
+}]);
+
+sdkUtilitiesApp.factory('md5String', ['md5', function (md5) {
+    return function (str) {
+        return (str ? md5(str.toLowerCase().replace(' ', '')) : str);
     };
 }]);
 
@@ -4155,13 +3403,14 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
             _options.fileResolver = $injector.invoke(_options.fileResolver);
         }
 
-        var _getResizedAttachment = function (attachments, size, defaultImage, type) {
-            attachments = underscore.isArray(attachments) ? attachments : [attachments];
+        var _getResizedAttachment = function (attachments, size, defaultImage, types) {
+            attachments =(underscore.isArray(attachments) ? attachments : [attachments]);
+            types = (underscore.isUndefined(types) || underscore.isArray(types) ? types : [types]);
             defaultImage = defaultImage || _options.defaultImage;
 
             var src = underscore.chain(attachments)
                 .filter(function (attachment) {
-                    return (underscore.isUndefined(type) || attachment.type === type) &&
+                    return (underscore.isUndefined(types) || underscore.contains(types, attachment.type)) &&
                         (underscore.isString(attachment.base64) || (attachment.sizes && attachment.sizes[size]));
                 })
                 .map(function (attachment) {
@@ -4176,14 +3425,14 @@ sdkHelperAttachmentApp.provider('attachmentHelper', ['underscore', function (und
         };
 
         return {
-            findSize: function (obj, size, defaultImage, type) {
-                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage, type);
+            findSize: function (obj, size, defaultImage, types) {
+                return _getResizedAttachment((obj.data && obj.data.attachments ? obj.data.attachments : []), size, defaultImage, types);
             },
-            getSize: function (attachments, size, defaultImage, type) {
-                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage, type);
+            getSize: function (attachments, size, defaultImage, types) {
+                return _getResizedAttachment((attachments ? attachments : []), size, defaultImage, types);
             },
-            getThumbnail: function (attachments, defaultImage, type) {
-                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage, type);
+            getThumbnail: function (attachments, defaultImage, types) {
+                return _getResizedAttachment((attachments ? attachments : []), 'thumb', defaultImage, types);
             },
             resolveUri: function (uri) {
                 return _options.fileResolver(uri);
@@ -4825,14 +4074,9 @@ var sdkHelperUserApp = angular.module('ag.sdk.helper.user', []);
 
 sdkHelperUserApp.provider('userHelper', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['listServiceMap', function (listServiceMap) {
-        var _languageList = ['English'];
-
         return {
             listServiceMap: function() {
                 return listServiceMap('user');
-            },
-            languageList: function() {
-                return _languageList;
             }
         }
     }];
@@ -8709,7 +7953,54 @@ sdkModelActivity.factory('Activity', ['inheritModel', 'Model', 'readOnlyProperty
         return Activity;
     }]);
 
-var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.library', 'ag.sdk.model.activity', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
+var sdkModelAssetFactory = angular.module('ag.sdk.model.asset-factory', []);
+
+sdkModelAssetFactory.provider('AssetFactory', function () {
+    var instances = {};
+
+    this.add = function (type, modelName) {
+        instances[type] = modelName;
+    };
+
+    this.$get = ['$injector', function ($injector) {
+        function apply (attrs, fnName) {
+            if (instances[attrs.type]) {
+                inject(attrs.type);
+
+                return instances[attrs.type][fnName](attrs);
+            }
+
+            return null;
+        }
+
+        function inject (type) {
+            if (instances[type] && typeof instances[type] === 'string') {
+                instances[type] = $injector.get(instances[type]);
+            }
+        }
+
+        return {
+            isInstanceOf: function (asset) {
+                if (asset) {
+                    inject(asset.type);
+
+                    return (instances[asset.type] && asset instanceof instances[asset.type]);
+                }
+
+                return false;
+            },
+            new: function (attrs) {
+                return apply(attrs, 'new');
+            },
+            newCopy: function (attrs) {
+                return apply(attrs, 'newCopy');
+            }
+        }
+    }];
+});
+
+
+var sdkModelAsset = angular.module('ag.sdk.model.asset', ['ag.sdk.helper.attachment', 'ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.activity', 'ag.sdk.model.asset-factory', 'ag.sdk.model.base', 'ag.sdk.model.field', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule']);
 
 sdkModelAsset.factory('AssetBase', ['Activity', 'Base', 'computedProperty', 'inheritModel', 'Liability', 'Model', 'moment', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
     function (Activity, Base, computedProperty, inheritModel, Liability, Model, moment, privateProperty, readOnlyProperty, safeMath, underscore) {
@@ -8866,6 +8157,18 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
 
         inheritModel(AssetGroup, Model.Base);
 
+        var commonProps = ['areaUnit', 'unitValue'];
+
+        var dataProps = {
+            'crop': ['crop', 'irrigated', 'irrigation'],
+            'cropland': ['crop', 'croppingPotential', 'irrigated', 'irrigation'],
+            'improvement': ['category', 'type'],
+            'pasture': ['condition', 'crop', 'grazingCapacity', 'irrigated', 'irrigation', 'terrain'],
+            'permanent crop': ['condition', 'crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
+            'plantation': ['condition', 'crop', 'establishedDate', 'establishedYear', 'irrigated', 'irrigation'],
+            'water right': ['waterSource']
+        };
+
         function addAsset (instance, asset) {
             asset = (AssetFactory.isInstanceOf(asset) ? asset : AssetFactory.new(asset));
 
@@ -8878,15 +8181,18 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
                     .union([asset])
                     .value();
 
-                if (underscore.contains(['crop', 'pasture', 'permanent crop', 'plantation'], instance.type) && asset.data.crop) {
-                    instance.data.crop = asset.data.crop;
-                }
-
-                if (underscore.contains(['permanent crop', 'plantation'], instance.type) && asset.data.establishedDate) {
-                    instance.data.establishedDate = asset.data.establishedDate;
-                }
+                underscore.each(commonProps, setPropFromAsset(instance, asset));
+                underscore.each(dataProps[instance.type], setPropFromAsset(instance, asset));
 
                 instance.recalculate();
+            }
+        }
+
+        function setPropFromAsset (instance, asset) {
+            return function (prop) {
+                if (!underscore.isUndefined(asset.data[prop])) {
+                    instance.data[prop] = asset.data[prop];
+                }
             }
         }
 
@@ -8894,7 +8200,7 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
             underscore.each(instance.assets, function (asset) {
                 if (asset.data[property] !== instance.data[property]) {
                     asset.data[property] = instance.data[property];
-                    asset.data.assetValue = safeMath.times(asset.data.assetValuePerHa, asset.data.size);
+                    asset.data.assetValue = safeMath.times(asset.data.unitValue, asset.data.size);
                     asset.$dirty = true;
                 }
             });
@@ -8903,1215 +8209,1370 @@ sdkModelAsset.factory('AssetGroup', ['Asset', 'AssetFactory', 'computedProperty'
         function recalculate (instance) {
             instance.data = underscore.extend(instance.data, underscore.reduce(instance.assets, function (totals, asset) {
                 totals.size = safeMath.plus(totals.size, asset.data.size);
-                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.assetValuePerHa, asset.data.size)));
-                totals.assetValuePerHa = safeMath.dividedBy(totals.assetValue, totals.size);
+                totals.assetValue = safeMath.plus(totals.assetValue, (asset.data.assetValue ? asset.data.assetValue : safeMath.times(asset.data.unitValue, asset.data.size)));
+                totals.unitValue = (totals.size > 0 ? safeMath.dividedBy(totals.assetValue, totals.size) : totals.unitValue || asset.data.unitValue || 0);
 
                 return totals;
             }, {}));
 
-            instance.data.assetValue = (instance.data.size && instance.data.assetValuePerHa ?
-                safeMath.times(instance.data.assetValuePerHa, instance.data.size) :
+            instance.data.assetValue = (instance.data.size && instance.data.unitValue ?
+                safeMath.times(instance.data.unitValue, instance.data.size) :
                 instance.data.assetValue);
         }
 
         return AssetGroup;
     }]);
 
-sdkModelAsset.factory('Asset', ['AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
-        function Asset (attrs) {
-            AssetBase.apply(this, arguments);
+sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryProvider) {
+    this.$get = ['AssetBase', 'attachmentHelper', 'Base', 'computedProperty', 'Field', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+        function (AssetBase, attachmentHelper, Base, computedProperty, Field, inheritModel, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+            function Asset (attrs) {
+                AssetBase.apply(this, arguments);
 
-            privateProperty(this, 'generateUniqueName', function (categoryLabel, assets) {
-                this.data.name = generateUniqueName(this, categoryLabel, assets);
-            });
+                privateProperty(this, 'generateUniqueName', function (categoryLabel, assets) {
+                    this.data.name = generateUniqueName(this, categoryLabel, assets);
+                });
 
-            privateProperty(this, 'getAge', function (asOfDate) {
-                return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
-            });
+                privateProperty(this, 'getAge', function (asOfDate) {
+                    return (this.data.establishedDate ? moment(asOfDate).diff(this.data.establishedDate, 'years', true) : 0);
+                });
 
-            privateProperty(this, 'getCategories', function () {
-                return Asset.categories[this.type] || [];
-            });
+                privateProperty(this, 'getCategories', function () {
+                    return Asset.categories[this.type] || [];
+                });
 
-            privateProperty(this, 'getCustomTitle', function (props, options) {
-                return getCustomTitle(this, props, options);
-            });
+                privateProperty(this, 'getCustomTitle', function (props, options) {
+                    return getCustomTitle(this, props, options);
+                });
 
-            privateProperty(this, 'getTitle', function (withField, farm) {
-                return getTitle(this, withField, farm);
-            });
+                privateProperty(this, 'getTitle', function (withField, farm) {
+                    return getTitle(this, withField, farm);
+                });
 
-            privateProperty(this, 'isFieldApplicable', function (field) {
-                return isFieldApplicable(this, field);
-            });
+                privateProperty(this, 'isFieldApplicable', function (field) {
+                    return isFieldApplicable(this, field);
+                });
 
-            privateProperty(this, 'clean', function () {
-                if (this.type === 'vme') {
-                    this.data.quantity = (this.data.identificationNo && this.data.identificationNo.length > 0 ? 1 : this.data.quantity);
-                    this.data.identificationNo = (this.data.quantity !== 1 ? '' : this.data.identificationNo);
-                } else if (this.type === 'cropland') {
-                    this.data.equipped = (this.data.irrigated ? this.data.equipped : false);
-                }
-            });
-
-            computedProperty(this, 'thumbnailUrl', function () {
-                return getThumbnailUrl(this);
-            });
-
-            computedProperty(this, 'age', function () {
-                return (this.data.establishedDate ? moment().diff(this.data.establishedDate, 'years', true) : 0);
-            });
-
-            computedProperty(this, 'title', function () {
-                return getTitle(this, true);
-            });
-
-            computedProperty(this, 'description', function () {
-                return this.data.description || '';
-            });
-
-            computedProperty(this, 'fieldName', function () {
-                return this.data.fieldName;
-            });
-
-            computedProperty(this, 'size', function () {
-                return (this.type !== 'farmland' ? this.data.size : this.data.area);
-            });
-
-            computedProperty(this, 'farmRequired', function () {
-                return farmRequired(this);
-            });
-
-            // Crop
-            privateProperty(this, 'availableCrops', function (field) {
-                return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
-            });
-
-            computedProperty(this, 'crop', function () {
-                return this.data.crop;
-            });
-
-            computedProperty(this, 'establishedDate', function () {
-                return this.data.establishedDate;
-            });
-
-            computedProperty(this, 'plantedDate', function () {
-                return this.data.plantedDate;
-            });
-
-            // Value / Liability
-            computedProperty(this, 'liquidityTypeTitle', function () {
-                return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
-            });
-
-            privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
-                var income = {};
-
-                if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate, 'YYYY-MM-DD').isBetween(rangeStart, rangeEnd)) {
-                    income['Sales'] = this.data.salePrice;
-                }
-
-                return income;
-            });
-
-            privateProperty(this, 'totalIncomeInRange', function (rangeStart, rangeEnd) {
-                return underscore.reduce(this.incomeInRange(rangeStart, rangeEnd), function (total, value) {
-                    return safeMath.plus(total, value);
-                }, 0);
-            });
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.farmId = attrs.farmId;
-
-            if (!this.data.assetValuePerHa && this.data.assetValue && this.size) {
-                this.data.assetValuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
-                this.$dirty = true;
-            }
-        }
-
-        inheritModel(Asset, AssetBase);
-
-        readOnlyProperty(Asset, 'categories', {
-            improvement: [
-                {category: 'Airport', subCategory: 'Hangar'},
-                {category: 'Airport', subCategory: 'Helipad'},
-                {category: 'Airport', subCategory: 'Runway'},
-                {category: 'Poultry', subCategory: 'Hatchery'},
-                {category: 'Aquaculture', subCategory: 'Pond'},
-                {category: 'Aquaculture', subCategory: 'Net House'},
-                {category: 'Aviary'},
-                {category: 'Beekeeping'},
-                {category: 'Borehole'},
-                {category: 'Borehole', subCategory: 'Equipped'},
-                {category: 'Borehole', subCategory: 'Pump'},
-                {category: 'Borehole', subCategory: 'Windmill'},
-                {category: 'Poultry', subCategory: 'Broiler House'},
-                {category: 'Poultry', subCategory: 'Broiler House - Atmosphere'},
-                {category: 'Poultry', subCategory: 'Broiler House - Semi'},
-                {category: 'Poultry', subCategory: 'Broiler House - Zinc'},
-                {category: 'Building', subCategory: 'Administrative'},
-                {category: 'Building'},
-                {category: 'Building', subCategory: 'Commercial'},
-                {category: 'Building', subCategory: 'Entrance'},
-                {category: 'Building', subCategory: 'Lean-to'},
-                {category: 'Building', subCategory: 'Outbuilding'},
-                {category: 'Building', subCategory: 'Gate'},
-                {category: 'Cold Storage'},
-                {category: 'Commercial', subCategory: 'Coffee Shop'},
-                {category: 'Commercial', subCategory: 'Sales Facility'},
-                {category: 'Commercial', subCategory: 'Shop'},
-                {category: 'Commercial', subCategory: 'Bar'},
-                {category: 'Commercial', subCategory: 'Café'},
-                {category: 'Commercial', subCategory: 'Restaurant'},
-                {category: 'Commercial', subCategory: 'Factory'},
-                {category: 'Commercial', subCategory: 'Tasting Facility'},
-                {category: 'Commercial', subCategory: 'Cloth House'},
-                {category: 'Compost', subCategory: 'Preparing Unit'},
-                {category: 'Crocodile Dam'},
-                {category: 'Crop Processing', subCategory: 'Degreening Room'},
-                {category: 'Crop Processing', subCategory: 'Dehusking Facility'},
-                {category: 'Crop Processing', subCategory: 'Drying Facility'},
-                {category: 'Crop Processing', subCategory: 'Drying Tunnels'},
-                {category: 'Crop Processing', subCategory: 'Sorting Facility'},
-                {category: 'Crop Processing', subCategory: 'Drying Oven'},
-                {category: 'Crop Processing', subCategory: 'Drying Racks'},
-                {category: 'Crop Processing', subCategory: 'Crushing Plant'},
-                {category: 'Crop Processing', subCategory: 'Nut Cracking Facility'},
-                {category: 'Crop Processing', subCategory: 'Nut Factory'},
-                {category: 'Dairy'},
-                {category: 'Dairy', subCategory: 'Pasteurising Facility'},
-                {category: 'Dairy', subCategory: 'Milking Parlour'},
-                {category: 'Dam'},
-                {category: 'Dam', subCategory: 'Filter'},
-                {category: 'Dam', subCategory: 'Trout'},
-                {category: 'Domestic', subCategory: 'Chicken Coop'},
-                {category: 'Domestic', subCategory: 'Chicken Run'},
-                {category: 'Domestic', subCategory: 'Kennels'},
-                {category: 'Domestic', subCategory: 'Gardening Facility'},
-                {category: 'Education', subCategory: 'Conference Room'},
-                {category: 'Education', subCategory: 'Classroom'},
-                {category: 'Education', subCategory: 'Crèche'},
-                {category: 'Education', subCategory: 'School'},
-                {category: 'Education', subCategory: 'Training Facility'},
-                {category: 'Equipment', subCategory: 'Air Conditioner'},
-                {category: 'Equipment', subCategory: 'Gantry'},
-                {category: 'Equipment', subCategory: 'Oven'},
-                {category: 'Equipment', subCategory: 'Pump'},
-                {category: 'Equipment', subCategory: 'Pumphouse'},
-                {category: 'Equipment', subCategory: 'Scale'},
-                {category: 'Feed Mill'},
-                {category: 'Feedlot'},
-                {category: 'Fencing'},
-                {category: 'Fencing', subCategory: 'Electric'},
-                {category: 'Fencing', subCategory: 'Game'},
-                {category: 'Fencing', subCategory: 'Perimeter'},
-                {category: 'Fencing', subCategory: 'Security'},
-                {category: 'Fencing', subCategory: 'Wire'},
-                {category: 'Fuel', subCategory: 'Tanks'},
-                {category: 'Fuel', subCategory: 'Tank Stand'},
-                {category: 'Fuel', subCategory: 'Fuelling Facility'},
-                {category: 'Grain Mill'},
-                {category: 'Greenhouse'},
-                {category: 'Infrastructure'},
-                {category: 'Irrigation', subCategory: 'Sprinklers'},
-                {category: 'Irrigation'},
-                {category: 'Laboratory'},
-                {category: 'Livestock Handling', subCategory: 'Auction Facility'},
-                {category: 'Livestock Handling', subCategory: 'Cages'},
-                {category: 'Livestock Handling', subCategory: 'Growing House'},
-                {category: 'Livestock Handling', subCategory: 'Pens'},
-                {category: 'Livestock Handling', subCategory: 'Shelter'},
-                {category: 'Livestock Handling', subCategory: 'Breeding Facility'},
-                {category: 'Livestock Handling', subCategory: 'Culling Shed'},
-                {category: 'Livestock Handling', subCategory: 'Dipping Facility'},
-                {category: 'Livestock Handling', subCategory: 'Elephant Enclosures'},
-                {category: 'Livestock Handling', subCategory: 'Feed Troughs/Dispensers'},
-                {category: 'Livestock Handling', subCategory: 'Horse Walker'},
-                {category: 'Livestock Handling', subCategory: 'Maternity Shelter/Pen'},
-                {category: 'Livestock Handling', subCategory: 'Quarantine Area'},
-                {category: 'Livestock Handling', subCategory: 'Rehab Facility'},
-                {category: 'Livestock Handling', subCategory: 'Shearing Facility'},
-                {category: 'Livestock Handling', subCategory: 'Stable'},
-                {category: 'Livestock Handling', subCategory: 'Surgery'},
-                {category: 'Livestock Handling', subCategory: 'Treatment Area'},
-                {category: 'Livestock Handling', subCategory: 'Weaner House'},
-                {category: 'Livestock Handling', subCategory: 'Grading Facility'},
-                {category: 'Livestock Handling', subCategory: 'Inspection Facility'},
-                {category: 'Logistics', subCategory: 'Handling Equipment'},
-                {category: 'Logistics', subCategory: 'Handling Facility'},
-                {category: 'Logistics', subCategory: 'Depot'},
-                {category: 'Logistics', subCategory: 'Loading Area'},
-                {category: 'Logistics', subCategory: 'Loading Shed'},
-                {category: 'Logistics', subCategory: 'Hopper'},
-                {category: 'Logistics', subCategory: 'Weigh Bridge'},
-                {category: 'Meat Processing', subCategory: 'Abattoir'},
-                {category: 'Meat Processing', subCategory: 'Deboning Room'},
-                {category: 'Meat Processing', subCategory: 'Skinning Facility'},
-                {category: 'Mill'},
-                {category: 'Mushrooms', subCategory: 'Cultivation'},
-                {category: 'Mushrooms', subCategory: 'Sweat Room'},
-                {category: 'Nursery ', subCategory: 'Plant'},
-                {category: 'Nursery ', subCategory: 'Plant Growing Facility'},
-                {category: 'Office'},
-                {category: 'Packaging Facility'},
-                {category: 'Paddocks', subCategory: 'Camp'},
-                {category: 'Paddocks', subCategory: 'Kraal'},
-                {category: 'Paddocks'},
-                {category: 'Piggery', subCategory: 'Farrowing House'},
-                {category: 'Piggery', subCategory: 'Pig Sty'},
-                {category: 'Processing', subCategory: 'Bottling Facility'},
-                {category: 'Processing', subCategory: 'Flavour Shed'},
-                {category: 'Processing', subCategory: 'Processing Facility'},
-                {category: 'Recreation', subCategory: 'Viewing Area'},
-                {category: 'Recreation', subCategory: 'BBQ'},
-                {category: 'Recreation', subCategory: 'Clubhouse'},
-                {category: 'Recreation', subCategory: 'Event Venue'},
-                {category: 'Recreation', subCategory: 'Gallery'},
-                {category: 'Recreation', subCategory: 'Game Room'},
-                {category: 'Recreation', subCategory: 'Gazebo'},
-                {category: 'Recreation', subCategory: 'Gymnasium'},
-                {category: 'Recreation', subCategory: 'Jacuzzi'},
-                {category: 'Recreation', subCategory: 'Judging Booth'},
-                {category: 'Recreation', subCategory: 'Museum'},
-                {category: 'Recreation', subCategory: 'Play Area'},
-                {category: 'Recreation', subCategory: 'Pool House'},
-                {category: 'Recreation', subCategory: 'Pottery Room'},
-                {category: 'Recreation', subCategory: 'Racing Track'},
-                {category: 'Recreation', subCategory: 'Salon'},
-                {category: 'Recreation', subCategory: 'Sauna'},
-                {category: 'Recreation', subCategory: 'Shooting Range'},
-                {category: 'Recreation', subCategory: 'Spa Facility'},
-                {category: 'Recreation', subCategory: 'Squash Court'},
-                {category: 'Recreation', subCategory: 'Swimming Pool'},
-                {category: 'Recreation'},
-                {category: 'Religeous', subCategory: 'Church'},
-                {category: 'Residential', subCategory: 'Carport'},
-                {category: 'Residential', subCategory: 'Driveway'},
-                {category: 'Residential', subCategory: 'Flooring'},
-                {category: 'Residential', subCategory: 'Paving'},
-                {category: 'Residential', subCategory: 'Roofing'},
-                {category: 'Residential', subCategory: 'Water Feature'},
-                {category: 'Residential', subCategory: 'Hall'},
-                {category: 'Residential', subCategory: 'Balcony'},
-                {category: 'Residential', subCategory: 'Canopy'},
-                {category: 'Residential', subCategory: 'Concrete Surface'},
-                {category: 'Residential', subCategory: 'Courtyard'},
-                {category: 'Residential', subCategory: 'Covered'},
-                {category: 'Residential', subCategory: 'Deck'},
-                {category: 'Residential', subCategory: 'Mezzanine'},
-                {category: 'Residential', subCategory: 'Parking Area'},
-                {category: 'Residential', subCategory: 'Patio'},
-                {category: 'Residential', subCategory: 'Porch'},
-                {category: 'Residential', subCategory: 'Porte Cochere'},
-                {category: 'Residential', subCategory: 'Terrace'},
-                {category: 'Residential', subCategory: 'Veranda'},
-                {category: 'Residential', subCategory: 'Walkways'},
-                {category: 'Residential', subCategory: 'Rondavel'},
-                {category: 'Residential', subCategory: 'Accommodation Units'},
-                {category: 'Residential', subCategory: 'Boma'},
-                {category: 'Residential', subCategory: 'Bungalow'},
-                {category: 'Residential', subCategory: 'Bunker'},
-                {category: 'Residential', subCategory: 'Cabin'},
-                {category: 'Residential', subCategory: 'Chalet'},
-                {category: 'Residential', subCategory: 'Community Centre'},
-                {category: 'Residential', subCategory: 'Dormitory'},
-                {category: 'Residential', subCategory: 'Dwelling'},
-                {category: 'Residential', subCategory: 'Flat'},
-                {category: 'Residential', subCategory: 'Kitchen'},
-                {category: 'Residential', subCategory: 'Lapa'},
-                {category: 'Residential', subCategory: 'Laundry Facility'},
-                {category: 'Residential', subCategory: 'Locker Room'},
-                {category: 'Residential', subCategory: 'Lodge'},
-                {category: 'Residential', subCategory: 'Shower'},
-                {category: 'Residential', subCategory: 'Toilets'},
-                {category: 'Residential', subCategory: 'Room'},
-                {category: 'Residential', subCategory: 'Cottage'},
-                {category: 'Residential', subCategory: 'Garage'},
-                {category: 'Roads', subCategory: 'Access Roads'},
-                {category: 'Roads', subCategory: 'Gravel'},
-                {category: 'Roads', subCategory: 'Tarred'},
-                {category: 'Security', subCategory: 'Control Room'},
-                {category: 'Security', subCategory: 'Guardhouse'},
-                {category: 'Security', subCategory: 'Office'},
-                {category: 'Shade Nets'},
-                {category: 'Silo'},
-                {category: 'Sports', subCategory: 'Arena'},
-                {category: 'Sports', subCategory: 'Tennis Court'},
-                {category: 'Staff', subCategory: 'Hostel'},
-                {category: 'Staff', subCategory: 'Hut'},
-                {category: 'Staff', subCategory: 'Retirement Centre'},
-                {category: 'Staff', subCategory: 'Staff Building'},
-                {category: 'Staff', subCategory: 'Canteen'},
-                {category: 'Staff', subCategory: 'Dining Facility'},
-                {category: 'Storage', subCategory: 'Truck Shelter'},
-                {category: 'Storage', subCategory: 'Barn'},
-                {category: 'Storage', subCategory: 'Dark Room'},
-                {category: 'Storage', subCategory: 'Bin Compartments'},
-                {category: 'Storage', subCategory: 'Machinery'},
-                {category: 'Storage', subCategory: 'Saddle Room'},
-                {category: 'Storage', subCategory: 'Shed'},
-                {category: 'Storage', subCategory: 'Chemicals'},
-                {category: 'Storage', subCategory: 'Tools'},
-                {category: 'Storage', subCategory: 'Dry'},
-                {category: 'Storage', subCategory: 'Equipment'},
-                {category: 'Storage', subCategory: 'Feed'},
-                {category: 'Storage', subCategory: 'Fertilizer'},
-                {category: 'Storage', subCategory: 'Fuel'},
-                {category: 'Storage', subCategory: 'Grain'},
-                {category: 'Storage', subCategory: 'Hides'},
-                {category: 'Storage', subCategory: 'Oil'},
-                {category: 'Storage', subCategory: 'Pesticide'},
-                {category: 'Storage', subCategory: 'Poison'},
-                {category: 'Storage', subCategory: 'Seed'},
-                {category: 'Storage', subCategory: 'Zinc'},
-                {category: 'Storage', subCategory: 'Sulphur'},
-                {category: 'Storage'},
-                {category: 'Storage', subCategory: 'Vitamin Room'},
-                {category: 'Sugar Mill'},
-                {category: 'Tanks', subCategory: 'Water'},
-                {category: 'Timber Mill'},
-                {category: 'Trench'},
-                {category: 'Utilities', subCategory: 'Battery Room'},
-                {category: 'Utilities', subCategory: 'Boiler Room'},
-                {category: 'Utilities', subCategory: 'Compressor Room'},
-                {category: 'Utilities', subCategory: 'Engine Room'},
-                {category: 'Utilities', subCategory: 'Generator'},
-                {category: 'Utilities', subCategory: 'Power Room'},
-                {category: 'Utilities', subCategory: 'Pumphouse'},
-                {category: 'Utilities', subCategory: 'Transformer Room'},
-                {category: 'Utilities'},
-                {category: 'Vacant Area'},
-                {category: 'Vehicles', subCategory: 'Transport Depot'},
-                {category: 'Vehicles', subCategory: 'Truck Wash'},
-                {category: 'Vehicles', subCategory: 'Workshop'},
-                {category: 'Walls'},
-                {category: 'Walls', subCategory: 'Boundary'},
-                {category: 'Walls', subCategory: 'Retaining'},
-                {category: 'Walls', subCategory: 'Security'},
-                {category: 'Warehouse'},
-                {category: 'Water', subCategory: 'Reservoir'},
-                {category: 'Water', subCategory: 'Tower'},
-                {category: 'Water', subCategory: 'Purification Plant'},
-                {category: 'Water', subCategory: 'Reticulation Works'},
-                {category: 'Water', subCategory: 'Filter Station'},
-                {category: 'Wine Cellar', subCategory: 'Tanks'},
-                {category: 'Wine Cellar'},
-                {category: 'Wine Cellar', subCategory: 'Winery'},
-                {category: 'Wine Cellar', subCategory: 'Barrel Maturation Room'}
-            ],
-            livestock: [
-                {category: 'Cattle', subCategory: 'Phase A Bulls', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Phase B Bulls', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Phase C Bulls', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Phase D Bulls', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Bull Calves', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Heifer Calves', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Tollies 1-2', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Heifers 1-2', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Culls', purpose: 'Breeding'},
-                {category: 'Cattle', subCategory: 'Bulls', purpose: 'Dairy'},
-                {category: 'Cattle', subCategory: 'Dry Cows', purpose: 'Dairy'},
-                {category: 'Cattle', subCategory: 'Lactating Cows', purpose: 'Dairy'},
-                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Dairy'},
-                {category: 'Cattle', subCategory: 'Calves', purpose: 'Dairy'},
-                {category: 'Cattle', subCategory: 'Culls', purpose: 'Dairy'},
-                {category: 'Cattle', subCategory: 'Bulls', purpose: 'Slaughter'},
-                {category: 'Cattle', subCategory: 'Cows', purpose: 'Slaughter'},
-                {category: 'Cattle', subCategory: 'Heifers', purpose: 'Slaughter'},
-                {category: 'Cattle', subCategory: 'Weaners', purpose: 'Slaughter'},
-                {category: 'Cattle', subCategory: 'Calves', purpose: 'Slaughter'},
-                {category: 'Cattle', subCategory: 'Culls', purpose: 'Slaughter'},
-                {category: 'Chickens', subCategory: 'Day Old Chicks', purpose: 'Broilers'},
-                {category: 'Chickens', subCategory: 'Broilers', purpose: 'Broilers'},
-                {category: 'Chickens', subCategory: 'Hens', purpose: 'Layers'},
-                {category: 'Chickens', subCategory: 'Point of Laying Hens', purpose: 'Layers'},
-                {category: 'Chickens', subCategory: 'Culls', purpose: 'Layers'},
-                {category: 'Game', subCategory: 'Game', purpose: 'Slaughter'},
-                {category: 'Goats', subCategory: 'Rams', purpose: 'Slaughter'},
-                {category: 'Goats', subCategory: 'Breeding Ewes', purpose: 'Slaughter'},
-                {category: 'Goats', subCategory: 'Young Ewes', purpose: 'Slaughter'},
-                {category: 'Goats', subCategory: 'Kids', purpose: 'Slaughter'},
-                {category: 'Horses', subCategory: 'Horses', purpose: 'Breeding'},
-                {category: 'Pigs', subCategory: 'Boars', purpose: 'Slaughter'},
-                {category: 'Pigs', subCategory: 'Breeding Sows', purpose: 'Slaughter'},
-                {category: 'Pigs', subCategory: 'Weaned pigs', purpose: 'Slaughter'},
-                {category: 'Pigs', subCategory: 'Piglets', purpose: 'Slaughter'},
-                {category: 'Pigs', subCategory: 'Porkers', purpose: 'Slaughter'},
-                {category: 'Pigs', subCategory: 'Baconers', purpose: 'Slaughter'},
-                {category: 'Pigs', subCategory: 'Culls', purpose: 'Slaughter'},
-                {category: 'Ostriches', subCategory: 'Breeding Stock', purpose: 'Slaughter'},
-                {category: 'Ostriches', subCategory: 'Slaughter Birds > 3 months', purpose: 'Slaughter'},
-                {category: 'Ostriches', subCategory: 'Slaughter Birds < 3 months', purpose: 'Slaughter'},
-                {category: 'Ostriches', subCategory: 'Chicks', purpose: 'Slaughter'},
-                {category: 'Rabbits', subCategory: 'Rabbits', purpose: 'Slaughter'},
-                {category: 'Sheep', subCategory: 'Rams', purpose: 'Breeding'},
-                {category: 'Sheep', subCategory: 'Young Rams', purpose: 'Breeding'},
-                {category: 'Sheep', subCategory: 'Ewes', purpose: 'Breeding'},
-                {category: 'Sheep', subCategory: 'Young Ewes', purpose: 'Breeding'},
-                {category: 'Sheep', subCategory: 'Lambs', purpose: 'Breeding'},
-                {category: 'Sheep', subCategory: 'Wethers', purpose: 'Breeding'},
-                {category: 'Sheep', subCategory: 'Culls', purpose: 'Breeding'},
-                {category: 'Sheep', subCategory: 'Rams', purpose: 'Slaughter'},
-                {category: 'Sheep', subCategory: 'Ewes', purpose: 'Slaughter'},
-                {category: 'Sheep', subCategory: 'Lambs', purpose: 'Slaughter'},
-                {category: 'Sheep', subCategory: 'Wethers', purpose: 'Slaughter'},
-                {category: 'Sheep', subCategory: 'Culls', purpose: 'Slaughter'}
-            ],
-            stock: [
-                {category: 'Animal Feed', subCategory: 'Lick', unit: 'kg'},
-                {category: 'Indirect Costs', subCategory: 'Fuel', unit: 'l'},
-                {category: 'Indirect Costs', subCategory: 'Water', unit: 'l'},
-                {category: 'Preharvest', subCategory: 'Seed', unit: 'kg'},
-                {category: 'Preharvest', subCategory: 'Plant Material', unit: 'each'},
-                {category: 'Preharvest', subCategory: 'Fertiliser', unit: 't'},
-                {category: 'Preharvest', subCategory: 'Fungicides', unit: 'l'},
-                {category: 'Preharvest', subCategory: 'Lime', unit: 't'},
-                {category: 'Preharvest', subCategory: 'Herbicides', unit: 'l'},
-                {category: 'Preharvest', subCategory: 'Pesticides', unit: 'l'}
-            ],
-            vme: [
-                {category: 'Vehicles', subCategory: 'LDV'},
-                {category: 'Vehicles', subCategory: 'LDV (Double Cab)'},
-                {category: 'Vehicles', subCategory: 'LDV (4-Wheel)'},
-                {category: 'Vehicles', subCategory: 'LDV (Double Cab 4-Wheel)'},
-                {category: 'Vehicles', subCategory: 'Truck'},
-                {category: 'Vehicles', subCategory: 'Truck (Double Differential)'},
-                {category: 'Vehicles', subCategory: 'Truck (Horse)'},
-                {category: 'Vehicles', subCategory: 'Truck (Semi-trailer)'},
-                {category: 'Vehicles', subCategory: 'Truck (Timber Trailer)'},
-                {category: 'Vehicles', subCategory: 'Truck (Cane Trailer)'},
-                {category: 'Machinery', subCategory: 'Tractor'},
-                {category: 'Machinery', subCategory: 'Tractor (4-Wheel)'},
-                {category: 'Machinery', subCategory: 'Tractor (Orchard)'},
-                {category: 'Machinery', subCategory: 'Tractor (Orchard, 4-Wheel)'},
-                {category: 'Machinery', subCategory: 'Road Grader'},
-                {category: 'Machinery', subCategory: 'Front-end Loader'},
-                {category: 'Machinery', subCategory: 'Bulldozer'},
-                {category: 'Machinery', subCategory: 'Forklift'},
-                {category: 'Machinery', subCategory: 'Borehole Machine'},
-                {category: 'Machinery', subCategory: 'Loader (Cane)'},
-                {category: 'Machinery', subCategory: 'Loader (Timber)'},
-                {category: 'Machinery', subCategory: 'Harvester (Maize Combine)'},
-                {category: 'Machinery', subCategory: 'Harvester (Wheat Combine)'},
-                {category: 'Machinery', subCategory: 'Electric Motor'},
-                {category: 'Machinery', subCategory: 'Internal Combustion Engine'},
-                {category: 'Machinery', subCategory: 'Irrigation Pump'},
-                {category: 'Machinery', subCategory: 'Irrigation Pump (Electrical)'},
-                {category: 'Machinery', subCategory: 'Irrigation Pump (Internal Combustion Engine) '},
-                {category: 'Equipment', subCategory: 'Ripper'},
-                {category: 'Equipment', subCategory: 'Ripper (Sugar Cane)'},
-                {category: 'Equipment', subCategory: 'Ripper (Heavy Duty)'},
-                {category: 'Equipment', subCategory: 'Ripper (Auto Reset)'},
-                {category: 'Equipment', subCategory: 'Plough'},
-                {category: 'Equipment', subCategory: 'Plough (Moldboard)'},
-                {category: 'Equipment', subCategory: 'Plough (Disc)'},
-                {category: 'Equipment', subCategory: 'Plough (Chisel)'},
-                {category: 'Equipment', subCategory: 'Plough (Bulldog)'},
-                {category: 'Equipment', subCategory: 'Harrow'},
-                {category: 'Equipment', subCategory: 'Harrow (Offset Disc)'},
-                {category: 'Equipment', subCategory: 'Harrow (Hydraulic Offset)'},
-                {category: 'Equipment', subCategory: 'Harrow (Offset Trailer)'},
-                {category: 'Equipment', subCategory: 'Harrow (Tandem Disc)'},
-                {category: 'Equipment', subCategory: 'Harrow (Rotary)'},
-                {category: 'Equipment', subCategory: 'Harrow (Power)'},
-                {category: 'Equipment', subCategory: 'Ridger'},
-                {category: 'Equipment', subCategory: 'Ridger (Disc)'},
-                {category: 'Equipment', subCategory: 'Ridger (Shear)'},
-                {category: 'Equipment', subCategory: 'Tiller'},
-                {category: 'Equipment', subCategory: 'Tiller (S-Shank)'},
-                {category: 'Equipment', subCategory: 'Tiller (C-Shank)'},
-                {category: 'Equipment', subCategory: 'Tiller (Vibro-flex)'},
-                {category: 'Equipment', subCategory: 'Tiller (Otma)'},
-                {category: 'Equipment', subCategory: 'Cultivator'},
-                {category: 'Equipment', subCategory: 'Cultivator (Shank Tiller)'},
-                {category: 'Equipment', subCategory: 'Cultivator (Vibro Tiller)'},
-                {category: 'Equipment', subCategory: 'Planter'},
-                {category: 'Equipment', subCategory: 'Planter (Single Kernel)'},
-                {category: 'Equipment', subCategory: 'Planter (Seed Drill)'},
-                {category: 'Equipment', subCategory: 'Planter (Wheat)'},
-                {category: 'Equipment', subCategory: 'Planter (Potato)'},
-                {category: 'Equipment', subCategory: 'Vegetable Transplanter'},
-                {category: 'Equipment', subCategory: 'Fine Seed Seeder'},
-                {category: 'Equipment', subCategory: 'Land Roller'},
-                {category: 'Equipment', subCategory: 'Spreader (Fertiliser)'},
-                {category: 'Equipment', subCategory: 'Spreader (Manure)'},
-                {category: 'Equipment', subCategory: 'Spreader (Lime)'},
-                {category: 'Equipment', subCategory: 'Mist Blower'},
-                {category: 'Equipment', subCategory: 'Boom Sprayer'},
-                {category: 'Equipment', subCategory: 'Boom Sprayer (Mounted)'},
-                {category: 'Equipment', subCategory: 'Boom Sprayer (Trailer)'},
-                {category: 'Equipment', subCategory: 'Mower'},
-                {category: 'Equipment', subCategory: 'Mower (Conditioner)'},
-                {category: 'Equipment', subCategory: 'Slasher'},
-                {category: 'Equipment', subCategory: 'Haymaker'},
-                {category: 'Equipment', subCategory: 'Hay Rake'},
-                {category: 'Equipment', subCategory: 'Hay Baler'},
-                {category: 'Equipment', subCategory: 'Hay Baler (Square)'},
-                {category: 'Equipment', subCategory: 'Hay Baler (Round)'},
-                {category: 'Equipment', subCategory: 'Bale Handler'},
-                {category: 'Equipment', subCategory: 'Bale Handler (Round)'},
-                {category: 'Equipment', subCategory: 'Bale Handler (Wrapper)'},
-                {category: 'Equipment', subCategory: 'Bale Handler (Shredder)'},
-                {category: 'Equipment', subCategory: 'Harvester (Combine Trailer)'},
-                {category: 'Equipment', subCategory: 'Harvester (Forage)'},
-                {category: 'Equipment', subCategory: 'Harvester (Forage Chop)'},
-                {category: 'Equipment', subCategory: 'Harvester (Forage Flail)'},
-                {category: 'Equipment', subCategory: 'Harvester (Thresher)'},
-                {category: 'Equipment', subCategory: 'Harvester (Potato Lifter)'},
-                {category: 'Equipment', subCategory: 'Harvester (Potato Sorter)'},
-                {category: 'Equipment', subCategory: 'Harvester (Groundnut Picker)'},
-                {category: 'Equipment', subCategory: 'Harvester (Groundnut Sheller)'},
-                {category: 'Equipment', subCategory: 'Harvester (Groundnut Lifter)'},
-                {category: 'Equipment', subCategory: 'Hammer Mill'},
-                {category: 'Equipment', subCategory: 'Feed Mixer'},
-                {category: 'Equipment', subCategory: 'Roller Mill'},
-                {category: 'Equipment', subCategory: 'Grain Pump'},
-                {category: 'Equipment', subCategory: 'Grain Grader'},
-                {category: 'Equipment', subCategory: 'Grain Drier'},
-                {category: 'Equipment', subCategory: 'Grader (Rear Mounted)'},
-                {category: 'Equipment', subCategory: 'Dam Scoop'},
-                {category: 'Equipment', subCategory: 'Post Digger'},
-                {category: 'Equipment', subCategory: 'Trailer'},
-                {category: 'Equipment', subCategory: 'Trailer (Tip)'},
-                {category: 'Equipment', subCategory: 'Trailer (4-Wheel)'},
-                {category: 'Equipment', subCategory: 'Trailer (Water Cart)'},
-                {category: 'Equipment', subCategory: 'Trailer (Cane)'},
-                {category: 'Equipment', subCategory: 'Trailer (Cane Truck)'},
-                {category: 'Equipment', subCategory: 'Trailer (Timber)'},
-                {category: 'Equipment', subCategory: 'Trailer (Timber Truck)'}
-            ]
-        });
-
-        readOnlyProperty(Asset, 'landClassesByType', {
-            'crop': [
-                'Cropland',
-                'Cropland (Emerging)',
-                'Cropland (Irrigated)',
-                'Cropland (Smallholding)',
-                'Greenhouses',
-                'Vegetables'],
-            'cropland': [
-                'Cropland',
-                'Cropland (Emerging)',
-                'Cropland (Irrigated)',
-                'Cropland (Smallholding)',
-                'Greenhouses',
-                'Vegetables'],
-            'farmland': [],
-            'improvement': [],
-            'livestock': [
-                'Grazing',
-                'Grazing (Bush)',
-                'Grazing (Fynbos)',
-                'Grazing (Shrubland)',
-                'Planted Pastures'],
-            'pasture': [
-                'Grazing',
-                'Grazing (Bush)',
-                'Grazing (Fynbos)',
-                'Grazing (Shrubland)',
-                'Planted Pastures'],
-            'permanent crop': [
-                'Orchard',
-                'Orchard (Shadenet)',
-                'Vineyard'],
-            'plantation': [
-                'Forest',
-                'Pineapple',
-                'Plantation',
-                'Plantation (Smallholding)',
-                'Sugarcane',
-                'Sugarcane (Emerging)',
-                'Sugarcane (Irrigated)',
-                'Tea'],
-            'vme': [],
-            'wasteland': [
-                'Non-vegetated'],
-            'water right': [
-                'Water',
-                'Water (Seasonal)',
-                'Wetland']
-        });
-
-        var _croplandCrops = [
-            'Barley',
-            'Bean',
-            'Bean (Broad)',
-            'Bean (Dry)',
-            'Bean (Sugar)',
-            'Bean (Green)',
-            'Bean (Kidney)',
-            'Beet',
-            'Broccoli',
-            'Butternut',
-            'Cabbage',
-            'Canola',
-            'Carrot',
-            'Cassava',
-            'Cauliflower',
-            'Cotton',
-            'Cowpea',
-            'Grain Sorghum',
-            'Groundnut',
-            'Leek',
-            'Lucerne',
-            'Maize',
-            'Maize (White)',
-            'Maize (Yellow)',
-            'Oats',
-            'Onion',
-            'Peanut',
-            'Pearl Millet',
-            'Potato',
-            'Pumpkin',
-            'Rapeseed',
-            'Rice',
-            'Rye',
-            'Soya Bean',
-            'Sunflower',
-            'Sweet Corn',
-            'Sweet Potato',
-            'Teff',
-            'Tobacco',
-            'Triticale',
-            'Turnip',
-            'Wheat',
-            'Wheat (Durum)'
-        ];
-        var _croplandIrrigatedCrops = [
-            'Maize (Irrigated)',
-            'Soya Bean (Irrigated)',
-            'Teff (Irrigated)',
-            'Wheat (Irrigated)'
-        ];
-        var _croplandAllCrops = underscore.union(_croplandCrops, _croplandIrrigatedCrops).sort(naturalSort);
-        var _grazingCrops = [
-            'Bahia-Notatum',
-            'Birdsfoot Trefoil',
-            'Bottle Brush',
-            'Buffalo',
-            'Buffalo (Blue)',
-            'Buffalo (White)',
-            'Bush',
-            'Carribean Stylo',
-            'Clover',
-            'Clover (Arrow Leaf)',
-            'Clover (Crimson)',
-            'Clover (Persian)',
-            'Clover (Red)',
-            'Clover (Rose)',
-            'Clover (Strawberry)',
-            'Clover (Subterranean)',
-            'Clover (White)',
-            'Cocksfoot',
-            'Common Setaria',
-            'Dallis',
-            'Kikuyu',
-            'Lucerne',
-            'Lupin',
-            'Lupin (Narrow Leaf)',
-            'Lupin (White)',
-            'Lupin (Yellow)',
-            'Medic',
-            'Medic (Barrel)',
-            'Medic (Burr)',
-            'Medic (Gama)',
-            'Medic (Snail)',
-            'Medic (Strand)',
-            'Multispecies Pasture',
-            'Phalaris',
-            'Rescue',
-            'Rhodes',
-            'Russian Grass',
-            'Ryegrass',
-            'Ryegrass (Hybrid)',
-            'Ryegrass (Italian)',
-            'Ryegrass (Westerwolds)',
-            'Serradella',
-            'Serradella (Yellow)',
-            'Silver Leaf Desmodium',
-            'Smuts Finger',
-            'Soutbos',
-            'Tall Fescue',
-            'Teff',
-            'Veld',
-            'Weeping Lovegrass'
-        ];
-        var _perennialCrops = [
-            'Almond',
-            'Apple',
-            'Apricot',
-            'Avocado',
-            'Banana',
-            'Barberry',
-            'Berry',
-            'Bilberry',
-            'Blackberry',
-            'Blueberry',
-            'Cherry',
-            'Cloudberry',
-            'Coconut',
-            'Coffee',
-            'Date',
-            'Fig',
-            'Gooseberry',
-            'Grapefruit',
-            'Guava',
-            'Hazelnut',
-            'Kiwi Fruit',
-            'Kumquat',
-            'Lemon',
-            'Lime',
-            'Litchi',
-            'Macadamia Nut',
-            'Mandarin',
-            'Mango',
-            'Mulberry',
-            'Nectarine',
-            'Olive',
-            'Orange',
-            'Papaya',
-            'Peach',
-            'Pear',
-            'Prickly Pear',
-            'Pecan Nut',
-            'Persimmon',
-            'Pistachio Nut',
-            'Plum',
-            'Pomegranate',
-            'Protea',
-            'Prune',
-            'Raspberry',
-            'Rooibos',
-            'Roses',
-            'Strawberry',
-            'Walnut',
-            'Wineberry'
-        ];
-        var _plantationCrops = [
-            'Aloe',
-            'Bluegum',
-            'Hops',
-            'Pine',
-            'Pineapple',
-            'Tea',
-            'Sisal',
-            'Sugarcane',
-            'Sugarcane (Irrigated)',
-            'Wattle'
-        ];
-        var _vegetableCrops = [
-            'Chicory',
-            'Chili',
-            'Garlic',
-            'Lentil',
-            'Melon',
-            'Olive',
-            'Onion',
-            'Pea',
-            'Pumpkin',
-            'Quince',
-            'Strawberry',
-            'Tomato',
-            'Watermelon',
-            'Carrot',
-            'Beet',
-            'Cauliflower',
-            'Broccoli',
-            'Leek',
-            'Butternut',
-            'Cabbage',
-            'Rapeseed'
-        ];
-        var _vineyardCrops = [
-            'Grape',
-            'Grape (Bush Vine)',
-            'Grape (Red)',
-            'Grape (Table)',
-            'Grape (White)'
-        ];
-
-        readOnlyProperty(Asset, 'cropsByLandClass', {
-            'Cropland': _croplandCrops,
-            'Cropland (Emerging)': _croplandCrops,
-            'Cropland (Irrigated)': _croplandIrrigatedCrops,
-            'Cropland (Smallholding)': _croplandCrops,
-            'Forest': ['Pine'],
-            'Grazing': _grazingCrops,
-            'Grazing (Bush)': _grazingCrops,
-            'Grazing (Fynbos)': _grazingCrops,
-            'Grazing (Shrubland)': _grazingCrops,
-            'Greenhouses': _vegetableCrops,
-            'Orchard': _perennialCrops,
-            'Orchard (Shadenet)': _perennialCrops,
-            'Pineapple': ['Pineapple'],
-            'Plantation': _plantationCrops,
-            'Plantation (Smallholding)': _plantationCrops,
-            'Planted Pastures': _grazingCrops,
-            'Sugarcane': ['Sugarcane'],
-            'Sugarcane (Emerging)': ['Sugarcane'],
-            'Sugarcane (Irrigated)': ['Sugarcane (Irrigated)'],
-            'Tea': ['Tea'],
-            'Vegetables': _vegetableCrops,
-            'Vineyard': _vineyardCrops
-        });
-
-        readOnlyProperty(Asset, 'cropsByType', {
-            'crop': underscore.union(_croplandAllCrops, _vegetableCrops),
-            'cropland': underscore.union(_croplandAllCrops, _vegetableCrops),
-            'livestock': _grazingCrops,
-            'pasture': _grazingCrops,
-            'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
-            'plantation': _plantationCrops
-        });
-
-        readOnlyProperty(Asset, 'liquidityTypes', {
-            'long-term': 'Long-term',
-            'medium-term': 'Movable',
-            'short-term': 'Current'
-        });
-
-        readOnlyProperty(Asset, 'liquidityCategories', {
-            'long-term': ['Fixed Improvements', 'Investments', 'Land', 'Other'],
-            'medium-term': ['Breeding Stock', 'Vehicles, Machinery & Equipment', 'Other'],
-            'short-term': ['Crops & Crop Products', 'Cash on Hand', 'Debtors', 'Short-term Investments', 'Prepaid Expenses', 'Production Inputs', 'Life Insurance', 'Livestock Products', 'Marketable Livestock', 'Negotiable Securities', 'Other']
-        });
-
-        readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
-
-        readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
-
-        privateProperty(Asset, 'farmRequired', function (type) {
-            return farmRequired(type)
-        });
-
-        privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
-            return Asset.cropsByLandClass[landClass] || [];
-        });
-
-        privateProperty(Asset, 'getDefaultCrop', function (landClass) {
-            return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
-        });
-
-        privateProperty(Asset, 'getCustomTitle', function (asset, props, options) {
-            return getCustomTitle(asset, props, options);
-        });
-
-        privateProperty(Asset, 'getThumbnailUrl', function (asset) {
-            return getThumbnailUrl(asset);
-        });
-
-        privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
-            return getTitle(asset, withField, farm);
-        });
-
-        privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
-            return listServiceMap(asset, metadata);
-        });
-
-        function getDefaultProps (instance) {
-            switch (instance.type) {
-                case 'crop':
-                case 'permanent crop':
-                case 'plantation':
-                    return ['plantedArea', 'crop', 'fieldName', 'farmName'];
-                case 'farmland':
-                    return [['label', 'portionLabel', 'portionNumber']];
-                case 'cropland':
-                    return ['typeTitle', function (instance) {
-                        return (instance.data.irrigation ?
-                            instance.data.irrigation + ' irrigated' :
-                            (instance.data.irrigated ?
-                                'Irrigated (' + (instance.data.equipped ? 'equipped' : 'unequipped') + ')':
-                                'Non irrigable'))
-                    }, 'waterSource', 'fieldName', 'farmName'];
-                case 'livestock':
-                    return ['type', 'category'];
-                case 'pasture':
-                    return [function (instance) {
-                        return (instance.data.intensified ?
-                            (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type :
-                            'Natural Grazing');
-                    }, 'fieldName', 'farmName'];
-                case 'stock':
-                    return ['category'];
-                case 'vme':
-                    return ['category', 'model'];
-                case 'wasteland':
-                    return ['typeTitle'];
-                case 'water source':
-                case 'water right':
-                    return ['waterSource', 'fieldName', 'farmName'];
-                default:
-                    return [['name', 'category', 'typeTitle']];
-            }
-        }
-
-        function getProps (instance, props, options) {
-            return underscore.chain(props)
-                .map(function (prop) {
-                    if (underscore.isArray(prop)) {
-                        return underscore.first(getProps(instance, prop, options));
-                    } else if (underscore.isFunction(prop)) {
-                        return prop(instance, options);
-                    } else {
-                        switch (prop) {
-                            case 'age':
-                                return instance.data.establishedDate && s.replaceAll(moment(options.asOfDate).from(instance.data.establishedDate, true), 'a ', '1 ');
-                            case 'defaultTitle':
-                                return getProps(instance, getDefaultProps(instance), options);
-                            case 'farmName':
-                                return options.withFarm && options.field && options.field[prop];
-                            case 'fieldName':
-                                return options.withField && instance.data[prop];
-                            case 'croppingPotential':
-                                return options.field && options.field[prop] && options.field[prop] + ' Potential';
-                            case 'landUse':
-                                return options.field && options.field[prop];
-                            case 'area':
-                            case 'plantedArea':
-                            case 'size':
-                                return instance.data[prop] && safeMath.round(instance.data[prop], 2) + 'ha';
-                            case 'portionNumber':
-                                return (instance.data.portionNumber ? 'Ptn. ' + instance.data.portionNumber : 'Rem. extent of farm');
-                            case 'typeTitle':
-                                return Asset.assetTypes[instance.type];
-                            default:
-                                return instance.data[prop];
-                        }
+                privateProperty(this, 'clean', function () {
+                    if (this.type === 'vme') {
+                        this.data.quantity = (this.data.identificationNo && this.data.identificationNo.length > 0 ? 1 : this.data.quantity);
+                        this.data.identificationNo = (this.data.quantity !== 1 ? '' : this.data.identificationNo);
+                    } else if (this.type === 'cropland') {
+                        this.data.equipped = (this.data.irrigated ? this.data.equipped : false);
                     }
-                })
-                .compact()
-                .uniq()
-                .value();
-        }
+                });
 
-        function getCustomTitle (instance, props, options) {
-            options = underscore.defaults(options || {}, {
-                separator: ', '
-            });
+                computedProperty(this, 'thumbnailUrl', function () {
+                    return getThumbnailUrl(this);
+                });
 
-            return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
-        }
+                computedProperty(this, 'age', function () {
+                    return (this.data.establishedDate ? moment().diff(this.data.establishedDate, 'years', true) : 0);
+                });
 
-        function getThumbnailUrl (instance) {
-            return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
-        }
-        
-        function getTitle (instance, withField, farm) {
-            return getCustomTitle(instance, getDefaultProps(instance), {
-                farm: farm,
-                withFarm: !underscore.isUndefined(farm),
-                field: farm && underscore.findWhere(farm.data.fields, {fieldName: instance.data.fieldName}),
-                withField: withField
-            });
-        }
-        
-        function listServiceMap (instance, metadata) {
-            var map = {
-                id: instance.id || instance.$id,
-                type: instance.type,
-                updatedAt: instance.updatedAt
+                computedProperty(this, 'title', function () {
+                    return getTitle(this, true);
+                });
+
+                computedProperty(this, 'description', function () {
+                    return this.data.description || '';
+                });
+
+                computedProperty(this, 'fieldName', function () {
+                    return this.data.fieldName;
+                });
+
+                computedProperty(this, 'size', function () {
+                    return (this.type !== 'farmland' ? this.data.size : this.data.area);
+                });
+
+                computedProperty(this, 'farmRequired', function () {
+                    return farmRequired(this);
+                });
+
+                privateProperty(this, 'unitSize', function (unit) {
+                    return convertValue(this, unit, (this.type !== 'farmland' ? 'size' : 'area'));
+                });
+
+                privateProperty(this, 'unitValue', function (unit) {
+                    return (this.data.valuePerHa ?
+                        convertUnitValue(this, unit, 'ha', 'valuePerHa') :
+                        convertValue(this, unit, 'unitValue'));
+                });
+
+                // Crop
+                privateProperty(this, 'availableCrops', function (field) {
+                    return (field && field.landUse ? Asset.cropsByLandClass[field.landUse] : Asset.cropsByType[this.type]) || [];
+                });
+
+                computedProperty(this, 'crop', function () {
+                    return this.data.crop;
+                });
+
+                computedProperty(this, 'establishedDate', function () {
+                    return this.data.establishedDate;
+                });
+
+                computedProperty(this, 'plantedDate', function () {
+                    return this.data.plantedDate;
+                });
+
+                // Value / Liability
+                computedProperty(this, 'liquidityTypeTitle', function () {
+                    return (this.data.liquidityType && this.assetTypes[this.data.liquidityType]) || '';
+                });
+
+                privateProperty(this, 'incomeInRange', function (rangeStart, rangeEnd) {
+                    var income = {};
+
+                    if (this.data.sold === true && this.data.salePrice && moment(this.data.soldDate, 'YYYY-MM-DD').isBetween(rangeStart, rangeEnd)) {
+                        income['Sales'] = this.data.salePrice;
+                    }
+
+                    return income;
+                });
+
+                privateProperty(this, 'totalIncomeInRange', function (rangeStart, rangeEnd) {
+                    return underscore.reduce(this.incomeInRange(rangeStart, rangeEnd), function (total, value) {
+                        return safeMath.plus(total, value);
+                    }, 0);
+                });
+
+                if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+                this.farmId = attrs.farmId;
+
+                if (!this.data.valuePerHa && this.data.assetValue && this.size) {
+                    this.data.valuePerHa = safeMath.dividedBy(this.data.assetValue, this.size);
+                    this.$dirty = true;
+                }
+
+                if (!this.data.unitValue && this.data.valuePerHa) {
+                    this.data.unitValue = this.data.valuePerHa;
+                    this.data.areaUnit = 'ha';
+                    this.$dirty = true;
+                }
+            }
+
+            var unitConversions = {
+                'sm/ha': function (value) {
+                    return safeMath.dividedBy(value, 10000);
+                },
+                'ha/sm': function (value) {
+                    return safeMath.times(value, 10000);
+                }
             };
 
-            if (instance.data) {
-                map.title = getTitle(instance, true);
-                map.groupby = instance.farmId;
-                map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
+            function convertValue (instance, toUnit, prop) {
+                var unit = instance.data.areaUnit || 'ha';
 
+                return convertUnitValue(instance, toUnit, unit, prop);
+            }
+
+            function convertUnitValue (instance, toUnit, unit, prop) {
+                var unitConversion = unitConversions[unit + '/' + toUnit],
+                    value = instance.data[prop];
+
+                return (unit === toUnit ? value : unitConversion && unitConversion(value));
+            }
+
+            inheritModel(Asset, AssetBase);
+
+            function categoryMapper (keys) {
+                return function (items) {
+                    return underscore.object(underscore.first(keys, items.length), items);
+                }
+            }
+
+            var AIRPORT = 'Airport',
+                AQUACULTURE = 'Aquaculture',
+                BOREHOLE = 'Borehole',
+                POULTRY = 'Poultry',
+                BREEDING = 'Breeding',
+                BUILDING = 'Building',
+                CATTLE = 'Cattle',
+                CHICKENS = 'Chickens',
+                COMMERCIAL = 'Commercial',
+                COMPOST = 'Compost',
+                CROP_PROCESSING = 'Crop Processing',
+                DAIRY = 'Dairy',
+                DAM = 'Dam',
+                DOMESTIC = 'Domestic',
+                EDUCATION = 'Education',
+                EQUIPMENT = 'Equipment',
+                FENCING = 'Fencing',
+                FUEL = 'Fuel',
+                GOATS = 'Goats',
+                INDIRECT_COSTS = 'Indirect Costs',
+                IRRIGATION = 'Irrigation',
+                LIVESTOCK_HANDING = 'Livestock Handling',
+                LOGISTICS = 'Logistics',
+                MACHINERY = 'Machinery',
+                MEAT_PROCESSING = 'Meat Processing',
+                MUSHROOMS = 'Mushrooms',
+                NURSERY = 'Nursery',
+                OSTRICHES = 'Ostriches',
+                PADDOCKS = 'Paddocks',
+                PIGGERY = 'Piggery',
+                PIGS = 'Pigs',
+                PREHARVEST = 'Preharvest',
+                PROCESSING = 'Processing',
+                RECREATION = 'Recreation',
+                RESIDENTIAL = 'Residential',
+                ROADS = 'Roads',
+                SECURITY = 'Security',
+                SHEEP = 'Sheep',
+                SLAUGHTER = 'Slaughter',
+                SPORTS = 'Sports',
+                STAFF = 'Staff',
+                STORAGE = 'Storage',
+                TANKS = 'Tanks',
+                UTILITIES = 'Utilities',
+                VEHICLES = 'Vehicles',
+                WALLS = 'Walls',
+                WATER = 'Water',
+                WINE_CELLAR = 'Wine Cellar';
+
+            readOnlyProperty(Asset, 'categories', {
+                improvement: underscore.map([
+                    [AIRPORT],
+                    [AIRPORT, 'Hangar'],
+                    [AIRPORT, 'Helipad'],
+                    [AIRPORT, 'Runway'],
+                    [AQUACULTURE],
+                    [AQUACULTURE, 'Pond'],
+                    [AQUACULTURE, 'Net House'],
+                    ['Aviary'],
+                    ['Beekeeping'],
+                    [BOREHOLE],
+                    [BOREHOLE, 'Equipped'],
+                    [BOREHOLE, 'Pump'],
+                    [BOREHOLE, 'Windmill'],
+                    [POULTRY],
+                    [POULTRY, 'Broiler House'],
+                    [POULTRY, 'Broiler House - Atmosphere'],
+                    [POULTRY, 'Broiler House - Semi'],
+                    [POULTRY, 'Broiler House - Zinc'],
+                    [POULTRY, 'Hatchery'],
+                    [BUILDING],
+                    [BUILDING, 'Administrative'],
+                    [BUILDING, COMMERCIAL],
+                    [BUILDING, 'Entrance'],
+                    [BUILDING, 'Lean-to'],
+                    [BUILDING, 'Outbuilding'],
+                    [BUILDING, 'Gate'],
+                    ['Cold Storage'],
+                    [COMMERCIAL],
+                    [COMMERCIAL, 'Coffee Shop'],
+                    [COMMERCIAL, 'Sales Facility'],
+                    [COMMERCIAL, 'Shop'],
+                    [COMMERCIAL, 'Bar'],
+                    [COMMERCIAL, 'Café'],
+                    [COMMERCIAL, 'Restaurant'],
+                    [COMMERCIAL, 'Factory'],
+                    [COMMERCIAL, 'Tasting Facility'],
+                    [COMMERCIAL, 'Cloth House'],
+                    [COMPOST],
+                    [COMPOST, 'Preparing Unit'],
+                    ['Crocodile Dam'],
+                    [CROP_PROCESSING],
+                    [CROP_PROCESSING, 'Degreening Room'],
+                    [CROP_PROCESSING, 'Dehusking Facility'],
+                    [CROP_PROCESSING, 'Drying Facility'],
+                    [CROP_PROCESSING, 'Drying Tunnels'],
+                    [CROP_PROCESSING, 'Sorting Facility'],
+                    [CROP_PROCESSING, 'Drying Oven'],
+                    [CROP_PROCESSING, 'Drying Racks'],
+                    [CROP_PROCESSING, 'Crushing Plant'],
+                    [CROP_PROCESSING, 'Nut Cracking Facility'],
+                    [CROP_PROCESSING, 'Nut Factory'],
+                    [DAIRY],
+                    [DAIRY, 'Pasteurising Facility'],
+                    [DAIRY, 'Milking Parlour'],
+                    [DAM],
+                    [DAM, 'Filter'],
+                    [DAM, 'Trout'],
+                    [DOMESTIC],
+                    [DOMESTIC, 'Chicken Coop'],
+                    [DOMESTIC, 'Chicken Run'],
+                    [DOMESTIC, 'Kennels'],
+                    [DOMESTIC, 'Gardening Facility'],
+                    [EDUCATION],
+                    [EDUCATION, 'Conference Room'],
+                    [EDUCATION, 'Classroom'],
+                    [EDUCATION, 'Crèche'],
+                    [EDUCATION, 'School'],
+                    [EDUCATION, 'Training Facility'],
+                    [EQUIPMENT],
+                    [EQUIPMENT, 'Air Conditioner'],
+                    [EQUIPMENT, 'Gantry'],
+                    [EQUIPMENT, 'Oven'],
+                    [EQUIPMENT, 'Pump'],
+                    [EQUIPMENT, 'Pumphouse'],
+                    [EQUIPMENT, 'Scale'],
+                    ['Feed Mill'],
+                    ['Feedlot'],
+                    [FENCING],
+                    [FENCING, 'Electric'],
+                    [FENCING, 'Game'],
+                    [FENCING, 'Perimeter'],
+                    [FENCING, SECURITY],
+                    [FENCING, 'Wire'],
+                    [FUEL],
+                    [FUEL, 'Tanks'],
+                    [FUEL, 'Tank Stand'],
+                    [FUEL, 'Fuelling Facility'],
+                    ['Grain Mill'],
+                    ['Greenhouse'],
+                    ['Infrastructure'],
+                    [IRRIGATION],
+                    [IRRIGATION, 'Sprinklers'],
+                    ['Laboratory'],
+                    [LIVESTOCK_HANDING],
+                    [LIVESTOCK_HANDING, 'Auction Facility'],
+                    [LIVESTOCK_HANDING, 'Cages'],
+                    [LIVESTOCK_HANDING, 'Growing House'],
+                    [LIVESTOCK_HANDING, 'Pens'],
+                    [LIVESTOCK_HANDING, 'Shelter'],
+                    [LIVESTOCK_HANDING, 'Breeding Facility'],
+                    [LIVESTOCK_HANDING, 'Culling Shed'],
+                    [LIVESTOCK_HANDING, 'Dipping Facility'],
+                    [LIVESTOCK_HANDING, 'Elephant Enclosures'],
+                    [LIVESTOCK_HANDING, 'Feed Troughs/Dispensers'],
+                    [LIVESTOCK_HANDING, 'Horse Walker'],
+                    [LIVESTOCK_HANDING, 'Maternity Shelter/Pen'],
+                    [LIVESTOCK_HANDING, 'Quarantine Area'],
+                    [LIVESTOCK_HANDING, 'Rehab Facility'],
+                    [LIVESTOCK_HANDING, 'Shearing Facility'],
+                    [LIVESTOCK_HANDING, 'Stable'],
+                    [LIVESTOCK_HANDING, 'Surgery'],
+                    [LIVESTOCK_HANDING, 'Treatment Area'],
+                    [LIVESTOCK_HANDING, 'Weaner House'],
+                    [LIVESTOCK_HANDING, 'Grading Facility'],
+                    [LIVESTOCK_HANDING, 'Inspection Facility'],
+                    [LOGISTICS],
+                    [LOGISTICS, 'Handling Equipment'],
+                    [LOGISTICS, 'Handling Facility'],
+                    [LOGISTICS, 'Depot'],
+                    [LOGISTICS, 'Loading Area'],
+                    [LOGISTICS, 'Loading Shed'],
+                    [LOGISTICS, 'Hopper'],
+                    [LOGISTICS, 'Weigh Bridge'],
+                    [MEAT_PROCESSING],
+                    [MEAT_PROCESSING, 'Abattoir'],
+                    [MEAT_PROCESSING, 'Deboning Room'],
+                    [MEAT_PROCESSING, 'Skinning Facility'],
+                    ['Mill'],
+                    [MUSHROOMS],
+                    [MUSHROOMS, 'Cultivation'],
+                    [MUSHROOMS, 'Sweat Room'],
+                    [NURSERY, 'Plant'],
+                    [NURSERY, 'Plant Growing Facility'],
+                    ['Office'],
+                    ['Packaging Facility'],
+                    [PADDOCKS],
+                    [PADDOCKS, 'Camp'],
+                    [PADDOCKS, 'Kraal'],
+                    [PIGGERY],
+                    [PIGGERY, 'Farrowing House'],
+                    [PIGGERY, 'Pig Sty'],
+                    [PROCESSING],
+                    [PROCESSING, 'Bottling Facility'],
+                    [PROCESSING, 'Flavour Shed'],
+                    [PROCESSING, 'Processing Facility'],
+                    [RECREATION],
+                    [RECREATION, 'Viewing Area'],
+                    [RECREATION, 'BBQ'],
+                    [RECREATION, 'Clubhouse'],
+                    [RECREATION, 'Event Venue'],
+                    [RECREATION, 'Gallery'],
+                    [RECREATION, 'Game Room'],
+                    [RECREATION, 'Gazebo'],
+                    [RECREATION, 'Gymnasium'],
+                    [RECREATION, 'Jacuzzi'],
+                    [RECREATION, 'Judging Booth'],
+                    [RECREATION, 'Museum'],
+                    [RECREATION, 'Play Area'],
+                    [RECREATION, 'Pool House'],
+                    [RECREATION, 'Pottery Room'],
+                    [RECREATION, 'Racing Track'],
+                    [RECREATION, 'Salon'],
+                    [RECREATION, 'Sauna'],
+                    [RECREATION, 'Shooting Range'],
+                    [RECREATION, 'Spa Facility'],
+                    [RECREATION, 'Squash Court'],
+                    [RECREATION, 'Swimming Pool'],
+                    ['Religious', 'Church'],
+                    [RESIDENTIAL],
+                    [RESIDENTIAL, 'Carport'],
+                    [RESIDENTIAL, 'Driveway'],
+                    [RESIDENTIAL, 'Flooring'],
+                    [RESIDENTIAL, 'Paving'],
+                    [RESIDENTIAL, 'Roofing'],
+                    [RESIDENTIAL, 'Water Feature'],
+                    [RESIDENTIAL, 'Hall'],
+                    [RESIDENTIAL, 'Balcony'],
+                    [RESIDENTIAL, 'Canopy'],
+                    [RESIDENTIAL, 'Concrete Surface'],
+                    [RESIDENTIAL, 'Courtyard'],
+                    [RESIDENTIAL, 'Covered'],
+                    [RESIDENTIAL, 'Deck'],
+                    [RESIDENTIAL, 'Mezzanine'],
+                    [RESIDENTIAL, 'Parking Area'],
+                    [RESIDENTIAL, 'Patio'],
+                    [RESIDENTIAL, 'Porch'],
+                    [RESIDENTIAL, 'Porte Cochere'],
+                    [RESIDENTIAL, 'Terrace'],
+                    [RESIDENTIAL, 'Veranda'],
+                    [RESIDENTIAL, 'Walkways'],
+                    [RESIDENTIAL, 'Rondavel'],
+                    [RESIDENTIAL, 'Accommodation Units'],
+                    [RESIDENTIAL, 'Boma'],
+                    [RESIDENTIAL, 'Bungalow'],
+                    [RESIDENTIAL, 'Bunker'],
+                    [RESIDENTIAL, 'Cabin'],
+                    [RESIDENTIAL, 'Chalet'],
+                    [RESIDENTIAL, 'Community Centre'],
+                    [RESIDENTIAL, 'Dormitory'],
+                    [RESIDENTIAL, 'Dwelling'],
+                    [RESIDENTIAL, 'Flat'],
+                    [RESIDENTIAL, 'Kitchen'],
+                    [RESIDENTIAL, 'Lapa'],
+                    [RESIDENTIAL, 'Laundry Facility'],
+                    [RESIDENTIAL, 'Locker Room'],
+                    [RESIDENTIAL, 'Lodge'],
+                    [RESIDENTIAL, 'Shower'],
+                    [RESIDENTIAL, 'Toilets'],
+                    [RESIDENTIAL, 'Room'],
+                    [RESIDENTIAL, 'Cottage'],
+                    [RESIDENTIAL, 'Garage'],
+                    [ROADS],
+                    [ROADS, 'Access Roads'],
+                    [ROADS, 'Gravel'],
+                    [ROADS, 'Tarred'],
+                    ['Rail'],
+                    [SECURITY],
+                    [SECURITY, 'Control Room'],
+                    [SECURITY, 'Guardhouse'],
+                    [SECURITY, 'Office'],
+                    ['Shade Nets'],
+                    ['Silo'],
+                    [SPORTS],
+                    [SPORTS, 'Arena'],
+                    [SPORTS, 'Tennis Court'],
+                    [STAFF],
+                    [STAFF, 'Hostel'],
+                    [STAFF, 'Hut'],
+                    [STAFF, 'Retirement Centre'],
+                    [STAFF, 'Staff Building'],
+                    [STAFF, 'Canteen'],
+                    [STAFF, 'Dining Facility'],
+                    [STORAGE],
+                    [STORAGE, 'Truck Shelter'],
+                    [STORAGE, 'Barn'],
+                    [STORAGE, 'Dark Room'],
+                    [STORAGE, 'Bin Compartments'],
+                    [STORAGE, MACHINERY],
+                    [STORAGE, 'Saddle Room'],
+                    [STORAGE, 'Shed'],
+                    [STORAGE, 'Chemicals'],
+                    [STORAGE, 'Tools'],
+                    [STORAGE, 'Dry'],
+                    [STORAGE, EQUIPMENT],
+                    [STORAGE, 'Feed'],
+                    [STORAGE, 'Fertilizer'],
+                    [STORAGE, FUEL],
+                    [STORAGE, 'Grain'],
+                    [STORAGE, 'Hides'],
+                    [STORAGE, 'Oil'],
+                    [STORAGE, 'Pesticide'],
+                    [STORAGE, 'Poison'],
+                    [STORAGE, 'Seed'],
+                    [STORAGE, 'Zinc'],
+                    [STORAGE, 'Sulphur'],
+                    [STORAGE],
+                    [STORAGE, 'Vitamin Room'],
+                    ['Sugar Mill'],
+                    [TANKS],
+                    [TANKS, WATER],
+                    ['Timber Mill'],
+                    ['Trench'],
+                    [UTILITIES],
+                    [UTILITIES, 'Battery Room'],
+                    [UTILITIES, 'Boiler Room'],
+                    [UTILITIES, 'Compressor Room'],
+                    [UTILITIES, 'Engine Room'],
+                    [UTILITIES, 'Generator'],
+                    [UTILITIES, 'Power Room'],
+                    [UTILITIES, 'Pumphouse'],
+                    [UTILITIES, 'Transformer Room'],
+                    ['Vacant Area'],
+                    [VEHICLES],
+                    [VEHICLES, 'Transport Depot'],
+                    [VEHICLES, 'Truck Wash'],
+                    [VEHICLES, 'Workshop'],
+                    [WALLS],
+                    [WALLS, 'Boundary'],
+                    [WALLS, 'Retaining'],
+                    [WALLS, SECURITY],
+                    ['Warehouse'],
+                    [WATER],
+                    [WATER, 'Reservoir'],
+                    [WATER, 'Tower'],
+                    [WATER, 'Purification Plant'],
+                    [WATER, 'Reticulation Works'],
+                    [WATER, 'Filter Station'],
+                    [WINE_CELLAR],
+                    [WINE_CELLAR, 'Tanks'],
+                    [WINE_CELLAR, 'Winery'],
+                    [WINE_CELLAR, 'Barrel Maturation Room']
+                ], categoryMapper(['category', 'subCategory'])),
+                livestock: underscore.map([
+                    [CATTLE, 'Phase A Bulls', BREEDING],
+                    [CATTLE, 'Phase B Bulls', BREEDING],
+                    [CATTLE, 'Phase C Bulls', BREEDING],
+                    [CATTLE, 'Phase D Bulls', BREEDING],
+                    [CATTLE, 'Heifers', BREEDING],
+                    [CATTLE, 'Bull Calves', BREEDING],
+                    [CATTLE, 'Heifer Calves', BREEDING],
+                    [CATTLE, 'Tollies 1-2', BREEDING],
+                    [CATTLE, 'Heifers 1-2', BREEDING],
+                    [CATTLE, 'Culls', BREEDING],
+                    [CATTLE, 'Bulls', DAIRY],
+                    [CATTLE, 'Dry Cows', DAIRY],
+                    [CATTLE, 'Lactating Cows', DAIRY],
+                    [CATTLE, 'Heifers', DAIRY],
+                    [CATTLE, 'Calves', DAIRY],
+                    [CATTLE, 'Culls', DAIRY],
+                    [CATTLE, 'Bulls', SLAUGHTER],
+                    [CATTLE, 'Cows', SLAUGHTER],
+                    [CATTLE, 'Heifers', SLAUGHTER],
+                    [CATTLE, 'Weaners', SLAUGHTER],
+                    [CATTLE, 'Calves', SLAUGHTER],
+                    [CATTLE, 'Culls', SLAUGHTER],
+                    [CHICKENS, 'Day Old Chicks', 'Broilers'],
+                    [CHICKENS, 'Broilers', 'Broilers'],
+                    [CHICKENS, 'Hens', 'Layers'],
+                    [CHICKENS, 'Point of Laying Hens', 'Layers'],
+                    [CHICKENS, 'Culls', 'Layers'],
+                    ['Game', 'Game', SLAUGHTER],
+                    [GOATS, 'Rams', SLAUGHTER],
+                    [GOATS, 'Breeding Ewes', SLAUGHTER],
+                    [GOATS, 'Young Ewes', SLAUGHTER],
+                    [GOATS, 'Kids', SLAUGHTER],
+                    ['Horses', 'Horses', BREEDING],
+                    [PIGS, 'Boars', SLAUGHTER],
+                    [PIGS, 'Breeding Sows', SLAUGHTER],
+                    [PIGS, 'Weaned pigs', SLAUGHTER],
+                    [PIGS, 'Piglets', SLAUGHTER],
+                    [PIGS, 'Porkers', SLAUGHTER],
+                    [PIGS, 'Baconers', SLAUGHTER],
+                    [PIGS, 'Culls', SLAUGHTER],
+                    [OSTRICHES, 'Breeding Stock', SLAUGHTER],
+                    [OSTRICHES, 'Slaughter Birds > 3 months', SLAUGHTER],
+                    [OSTRICHES, 'Slaughter Birds < 3 months', SLAUGHTER],
+                    [OSTRICHES, 'Chicks', SLAUGHTER],
+                    ['Rabbits', 'Rabbits', SLAUGHTER],
+                    [SHEEP, 'Rams', BREEDING],
+                    [SHEEP, 'Young Rams', BREEDING],
+                    [SHEEP, 'Ewes', BREEDING],
+                    [SHEEP, 'Young Ewes', BREEDING],
+                    [SHEEP, 'Lambs', BREEDING],
+                    [SHEEP, 'Wethers', BREEDING],
+                    [SHEEP, 'Culls', BREEDING],
+                    [SHEEP, 'Rams', SLAUGHTER],
+                    [SHEEP, 'Ewes', SLAUGHTER],
+                    [SHEEP, 'Lambs', SLAUGHTER],
+                    [SHEEP, 'Wethers', SLAUGHTER],
+                    [SHEEP, 'Culls', SLAUGHTER]
+                ], categoryMapper(['category', 'subCategory', 'purpose'])),
+                stock: underscore.map([
+                    ['Animal Feed', 'Lick', 'kg'],
+                    [INDIRECT_COSTS, FUEL, 'l'],
+                    [INDIRECT_COSTS, WATER, 'l'],
+                    [PREHARVEST, 'Seed', 'kg'],
+                    [PREHARVEST, 'Plant Material', 'each'],
+                    [PREHARVEST, 'Fertiliser', 't'],
+                    [PREHARVEST, 'Fungicides', 'l'],
+                    [PREHARVEST, 'Lime', 't'],
+                    [PREHARVEST, 'Herbicides', 'l'],
+                    [PREHARVEST, 'Pesticides', 'l']
+                ], categoryMapper(['category', 'subCategory', 'unit'])),
+                vme: underscore.map([
+                    [VEHICLES, 'LDV'],
+                    [VEHICLES, 'LDV (Double Cab)'],
+                    [VEHICLES, 'LDV (4-Wheel)'],
+                    [VEHICLES, 'LDV (Double Cab 4-Wheel)'],
+                    [VEHICLES, 'Truck'],
+                    [VEHICLES, 'Truck (Double Differential)'],
+                    [VEHICLES, 'Truck (Horse)'],
+                    [VEHICLES, 'Truck (Semi-trailer)'],
+                    [VEHICLES, 'Truck (Timber Trailer)'],
+                    [VEHICLES, 'Truck (Cane Trailer)'],
+                    [MACHINERY, 'Tractor'],
+                    [MACHINERY, 'Tractor (4-Wheel)'],
+                    [MACHINERY, 'Tractor (Orchard)'],
+                    [MACHINERY, 'Tractor (Orchard, 4-Wheel)'],
+                    [MACHINERY, 'Road Grader'],
+                    [MACHINERY, 'Front-end Loader'],
+                    [MACHINERY, 'Bulldozer'],
+                    [MACHINERY, 'Forklift'],
+                    [MACHINERY, 'Borehole Machine'],
+                    [MACHINERY, 'Loader (Cane)'],
+                    [MACHINERY, 'Loader (Timber)'],
+                    [MACHINERY, 'Harvester (Maize Combine)'],
+                    [MACHINERY, 'Harvester (Wheat Combine)'],
+                    [MACHINERY, 'Electric Motor'],
+                    [MACHINERY, 'Internal Combustion Engine'],
+                    [MACHINERY, 'Irrigation Pump'],
+                    [MACHINERY, 'Irrigation Pump (Electrical)'],
+                    [MACHINERY, 'Irrigation Pump (Internal Combustion Engine) '],
+                    [EQUIPMENT, 'Ripper'],
+                    [EQUIPMENT, 'Ripper (Sugar Cane)'],
+                    [EQUIPMENT, 'Ripper (Heavy Duty)'],
+                    [EQUIPMENT, 'Ripper (Auto Reset)'],
+                    [EQUIPMENT, 'Plough'],
+                    [EQUIPMENT, 'Plough (Moldboard)'],
+                    [EQUIPMENT, 'Plough (Disc)'],
+                    [EQUIPMENT, 'Plough (Chisel)'],
+                    [EQUIPMENT, 'Plough (Bulldog)'],
+                    [EQUIPMENT, 'Harrow'],
+                    [EQUIPMENT, 'Harrow (Offset Disc)'],
+                    [EQUIPMENT, 'Harrow (Hydraulic Offset)'],
+                    [EQUIPMENT, 'Harrow (Offset Trailer)'],
+                    [EQUIPMENT, 'Harrow (Tandem Disc)'],
+                    [EQUIPMENT, 'Harrow (Rotary)'],
+                    [EQUIPMENT, 'Harrow (Power)'],
+                    [EQUIPMENT, 'Ridger'],
+                    [EQUIPMENT, 'Ridger (Disc)'],
+                    [EQUIPMENT, 'Ridger (Shear)'],
+                    [EQUIPMENT, 'Tiller'],
+                    [EQUIPMENT, 'Tiller (S-Shank)'],
+                    [EQUIPMENT, 'Tiller (C-Shank)'],
+                    [EQUIPMENT, 'Tiller (Vibro-flex)'],
+                    [EQUIPMENT, 'Tiller (Otma)'],
+                    [EQUIPMENT, 'Cultivator'],
+                    [EQUIPMENT, 'Cultivator (Shank Tiller)'],
+                    [EQUIPMENT, 'Cultivator (Vibro Tiller)'],
+                    [EQUIPMENT, 'Planter'],
+                    [EQUIPMENT, 'Planter (Single Kernel)'],
+                    [EQUIPMENT, 'Planter (Seed Drill)'],
+                    [EQUIPMENT, 'Planter (Wheat)'],
+                    [EQUIPMENT, 'Planter (Potato)'],
+                    [EQUIPMENT, 'Vegetable Transplanter'],
+                    [EQUIPMENT, 'Fine Seed Seeder'],
+                    [EQUIPMENT, 'Land Roller'],
+                    [EQUIPMENT, 'Spreader (Fertiliser)'],
+                    [EQUIPMENT, 'Spreader (Manure)'],
+                    [EQUIPMENT, 'Spreader (Lime)'],
+                    [EQUIPMENT, 'Mist Blower'],
+                    [EQUIPMENT, 'Boom Sprayer'],
+                    [EQUIPMENT, 'Boom Sprayer (Mounted)'],
+                    [EQUIPMENT, 'Boom Sprayer (Trailer)'],
+                    [EQUIPMENT, 'Mower'],
+                    [EQUIPMENT, 'Mower (Conditioner)'],
+                    [EQUIPMENT, 'Slasher'],
+                    [EQUIPMENT, 'Haymaker'],
+                    [EQUIPMENT, 'Hay Rake'],
+                    [EQUIPMENT, 'Hay Baler'],
+                    [EQUIPMENT, 'Hay Baler (Square)'],
+                    [EQUIPMENT, 'Hay Baler (Round)'],
+                    [EQUIPMENT, 'Bale Handler'],
+                    [EQUIPMENT, 'Bale Handler (Round)'],
+                    [EQUIPMENT, 'Bale Handler (Wrapper)'],
+                    [EQUIPMENT, 'Bale Handler (Shredder)'],
+                    [EQUIPMENT, 'Harvester (Combine Trailer)'],
+                    [EQUIPMENT, 'Harvester (Forage)'],
+                    [EQUIPMENT, 'Harvester (Forage Chop)'],
+                    [EQUIPMENT, 'Harvester (Forage Flail)'],
+                    [EQUIPMENT, 'Harvester (Thresher)'],
+                    [EQUIPMENT, 'Harvester (Potato Lifter)'],
+                    [EQUIPMENT, 'Harvester (Potato Sorter)'],
+                    [EQUIPMENT, 'Harvester (Groundnut Picker)'],
+                    [EQUIPMENT, 'Harvester (Groundnut Sheller)'],
+                    [EQUIPMENT, 'Harvester (Groundnut Lifter)'],
+                    [EQUIPMENT, 'Hammer Mill'],
+                    [EQUIPMENT, 'Feed Mixer'],
+                    [EQUIPMENT, 'Roller Mill'],
+                    [EQUIPMENT, 'Grain Pump'],
+                    [EQUIPMENT, 'Grain Grader'],
+                    [EQUIPMENT, 'Grain Drier'],
+                    [EQUIPMENT, 'Grader (Rear Mounted)'],
+                    [EQUIPMENT, 'Dam Scoop'],
+                    [EQUIPMENT, 'Post Digger'],
+                    [EQUIPMENT, 'Trailer'],
+                    [EQUIPMENT, 'Trailer (Tip)'],
+                    [EQUIPMENT, 'Trailer (4-Wheel)'],
+                    [EQUIPMENT, 'Trailer (Water Cart)'],
+                    [EQUIPMENT, 'Trailer (Cane)'],
+                    [EQUIPMENT, 'Trailer (Cane Truck)'],
+                    [EQUIPMENT, 'Trailer (Timber)'],
+                    [EQUIPMENT, 'Trailer (Timber Truck)']
+                ], categoryMapper(['category', 'subCategory']))
+            });
+
+            readOnlyProperty(Asset, 'landClassesByType', {
+                'crop': [
+                    'Cropland',
+                    'Cropland (Irrigated)',
+                    'Cropland (Smallholding)',
+                    'Cropland (Subsistence)',
+                    'Greenhouses',
+                    'Vegetables'],
+                'cropland': [
+                    'Cropland',
+                    'Cropland (Irrigated)',
+                    'Cropland (Smallholding)',
+                    'Cropland (Subsistence)',
+                    'Greenhouses',
+                    'Vegetables'],
+                'farmland': [],
+                'improvement': [
+                    'Commercial',
+                    'Dam',
+                    'Homestead',
+                    'Industrial',
+                    'Mining',
+                    'Recreational',
+                    'Residential',
+                    'Residential (Informal)',
+                    'Residential (Smallholding)',
+                    'Road & Rail',
+                    'Structures (Handling)',
+                    'Structures (Processing)',
+                    'Structures (Storage)',
+                    'Utilities'
+                ],
+                'livestock': [
+                    'Grazing',
+                    'Grazing (Bush)',
+                    'Grazing (Fynbos)',
+                    'Grazing (Shrubland)',
+                    'Planted Pastures'],
+                'pasture': [
+                    'Grazing',
+                    'Grazing (Bush)',
+                    'Grazing (Fynbos)',
+                    'Grazing (Shrubland)',
+                    'Planted Pastures',
+                    'Planted Pastures (Irrigated)'],
+                'permanent crop': [
+                    'Orchard',
+                    'Orchard (Shadenet)',
+                    'Vineyard'],
+                'plantation': [
+                    'Forest',
+                    'Pineapple',
+                    'Plantation',
+                    'Plantation (Smallholding)',
+                    'Sugarcane',
+                    'Sugarcane (Irrigated)',
+                    'Sugarcane (Small-scale)',
+                    'Tea',
+                    'Tea (Irrigated)'],
+                'vme': [],
+                'wasteland': [
+                    'Erosion',
+                    'Landfill',
+                    'Non-vegetated',
+                    'Sewage Ponds',
+                    'Wasteland'],
+                'water right': [
+                    'River',
+                    'Water',
+                    'Water (Seasonal)',
+                    'Wetland']
+            });
+
+            var _croplandCrops = [
+                'Barley',
+                'Bean',
+                'Bean (Broad)',
+                'Bean (Dry)',
+                'Bean (Sugar)',
+                'Bean (Green)',
+                'Bean (Kidney)',
+                'Beet',
+                'Broccoli',
+                'Butternut',
+                'Cabbage',
+                'Canola',
+                'Carrot',
+                'Cassava',
+                'Cauliflower',
+                'Cotton',
+                'Cowpea',
+                'Grain Sorghum',
+                'Groundnut',
+                'Leek',
+                'Lucerne',
+                'Maize',
+                'Maize (White)',
+                'Maize (Yellow)',
+                'Oats',
+                'Onion',
+                'Peanut',
+                'Pearl Millet',
+                'Potato',
+                'Pumpkin',
+                'Rapeseed',
+                'Rice',
+                'Rye',
+                'Soya Bean',
+                'Sunflower',
+                'Sweet Corn',
+                'Sweet Potato',
+                'Teff',
+                'Tobacco',
+                'Triticale',
+                'Turnip',
+                'Wheat',
+                'Wheat (Durum)'
+            ];
+            var _croplandIrrigatedCrops = [
+                'Maize (Irrigated)',
+                'Soya Bean (Irrigated)',
+                'Teff (Irrigated)',
+                'Wheat (Irrigated)'
+            ];
+            var _croplandAllCrops = underscore.union(_croplandCrops, _croplandIrrigatedCrops).sort(naturalSort);
+            var _grazingCrops = [
+                'Bahia-Notatum',
+                'Birdsfoot Trefoil',
+                'Bottle Brush',
+                'Buffalo',
+                'Buffalo (Blue)',
+                'Buffalo (White)',
+                'Bush',
+                'Carribean Stylo',
+                'Clover',
+                'Clover (Arrow Leaf)',
+                'Clover (Crimson)',
+                'Clover (Persian)',
+                'Clover (Red)',
+                'Clover (Rose)',
+                'Clover (Strawberry)',
+                'Clover (Subterranean)',
+                'Clover (White)',
+                'Cocksfoot',
+                'Common Setaria',
+                'Dallis',
+                'Eragrostis',
+                'Kikuyu',
+                'Lucerne',
+                'Lupin',
+                'Lupin (Narrow Leaf)',
+                'Lupin (White)',
+                'Lupin (Yellow)',
+                'Medic',
+                'Medic (Barrel)',
+                'Medic (Burr)',
+                'Medic (Gama)',
+                'Medic (Snail)',
+                'Medic (Strand)',
+                'Multispecies Pasture',
+                'Phalaris',
+                'Rescue',
+                'Rhodes',
+                'Russian Grass',
+                'Ryegrass',
+                'Ryegrass (Hybrid)',
+                'Ryegrass (Italian)',
+                'Ryegrass (Westerwolds)',
+                'Serradella',
+                'Serradella (Yellow)',
+                'Silver Leaf Desmodium',
+                'Smuts Finger',
+                'Soutbos',
+                'Tall Fescue',
+                'Teff',
+                'Veld',
+                'Weeping Lovegrass'
+            ];
+            var _perennialCrops = [
+                'Almond',
+                'Apple',
+                'Apricot',
+                'Avocado',
+                'Banana',
+                'Barberry',
+                'Berry',
+                'Bilberry',
+                'Blackberry',
+                'Blueberry',
+                'Cherry',
+                'Citrus',
+                'Cloudberry',
+                'Coconut',
+                'Coffee',
+                'Date',
+                'Fig',
+                'Gooseberry',
+                'Grapefruit',
+                'Guava',
+                'Hazelnut',
+                'Kiwi Fruit',
+                'Kumquat',
+                'Lemon',
+                'Lime',
+                'Litchi',
+                'Macadamia Nut',
+                'Mandarin',
+                'Mango',
+                'Mulberry',
+                'Nectarine',
+                'Olive',
+                'Orange',
+                'Papaya',
+                'Peach',
+                'Pear',
+                'Prickly Pear',
+                'Pecan Nut',
+                'Persimmon',
+                'Pistachio Nut',
+                'Plum',
+                'Pomegranate',
+                'Protea',
+                'Prune',
+                'Raspberry',
+                'Rooibos',
+                'Roses',
+                'Strawberry',
+                'Walnut',
+                'Wineberry'
+            ];
+            var _plantationCrops = [
+                'Aloe',
+                'Bluegum',
+                'Eucalyptus',
+                'Hops',
+                'Pine',
+                'Pineapple',
+                'Tea',
+                'Timber',
+                'Sisal',
+                'Sugarcane',
+                'Sugarcane (Irrigated)',
+                'Wattle'
+            ];
+            var _vegetableCrops = [
+                'Chicory',
+                'Chili',
+                'Garlic',
+                'Lentil',
+                'Melon',
+                'Olive',
+                'Onion',
+                'Pea',
+                'Pumpkin',
+                'Quince',
+                'Strawberry',
+                'Tomato',
+                'Watermelon',
+                'Carrot',
+                'Beet',
+                'Cauliflower',
+                'Broccoli',
+                'Leek',
+                'Butternut',
+                'Cabbage',
+                'Rapeseed'
+            ];
+            var _vineyardCrops = [
+                'Currant',
+                'Grape',
+                'Grape (Bush Vine)',
+                'Grape (Red)',
+                'Grape (Table)',
+                'Grape (White)',
+                'Raisin'
+            ];
+
+            readOnlyProperty(Asset, 'cropsByLandClass', {
+                'Cropland': _croplandCrops,
+                'Cropland (Irrigated)': _croplandIrrigatedCrops,
+                'Cropland (Smallholding)': _croplandCrops,
+                'Cropland (Subsistence)': _croplandCrops,
+                'Forest': ['Pine', 'Timber'],
+                'Grazing': _grazingCrops,
+                'Grazing (Bush)': ['Bush'],
+                'Grazing (Fynbos)': _grazingCrops,
+                'Grazing (Shrubland)': _grazingCrops,
+                'Greenhouses': _vegetableCrops,
+                'Orchard': _perennialCrops,
+                'Orchard (Shadenet)': _perennialCrops,
+                'Pineapple': ['Pineapple'],
+                'Plantation': _plantationCrops,
+                'Plantation (Smallholding)': _plantationCrops,
+                'Planted Pastures': _grazingCrops,
+                'Planted Pastures (Irrigated)': _grazingCrops,
+                'Sugarcane': ['Sugarcane'],
+                'Sugarcane (Irrigated)': ['Sugarcane (Irrigated)'],
+                'Sugarcane (Small-scale)': ['Sugarcane'],
+                'Tea': ['Tea'],
+                'Tea (Irrigated)': ['Tea'],
+                'Vegetables': _vegetableCrops,
+                'Vineyard': _vineyardCrops
+            });
+
+            readOnlyProperty(Asset, 'cropsByType', {
+                'crop': underscore.union(_croplandAllCrops, _vegetableCrops),
+                'cropland': underscore.union(_croplandAllCrops, _vegetableCrops),
+                'livestock': _grazingCrops,
+                'pasture': _grazingCrops,
+                'permanent crop': underscore.union(_perennialCrops, _vineyardCrops),
+                'plantation': _plantationCrops
+            });
+
+            readOnlyProperty(Asset, 'improvementCategoriesByLandClass', {
+                'Commercial': [COMMERCIAL],
+                'Dam': [DAM, 'Crocodile Dam'],
+                'Industrial': [AIRPORT, BUILDING, FENCING, 'Infrastructure', 'Laboratory', 'Office', SECURITY, 'Trench', 'Vacant Area', WALLS],
+                'Recreational': [EDUCATION, RECREATION, 'Religious', SPORTS],
+                'Residential': [DOMESTIC, RESIDENTIAL, STAFF],
+                'Road & Rail': [ROADS, 'Rail'],
+                'Structures (Handling)': [AQUACULTURE, 'Aviary', 'Beekeeping', DAIRY, 'Feedlot', 'Greenhouse', LIVESTOCK_HANDING, MUSHROOMS, NURSERY, PADDOCKS, PIGGERY, POULTRY],
+                'Structures (Processing)': [CROP_PROCESSING, 'Feed Mill', 'Grain Mill', MEAT_PROCESSING, 'Packaging Facility', PROCESSING, 'Sugar Mill', 'Timber Mill'],
+                'Structures (Storage)': ['Cold Storage', 'Silo', STORAGE, 'Warehouse', WINE_CELLAR],
+                'Utilities': [BOREHOLE, 'Compost', EQUIPMENT, FUEL, IRRIGATION, LOGISTICS, 'Shade Nets', 'Tanks', UTILITIES, VEHICLES, WATER]
+            });
+
+            readOnlyProperty(Asset, 'liquidityTypes', {
+                'long-term': 'Long-term',
+                'medium-term': 'Movable',
+                'short-term': 'Current'
+            });
+
+            readOnlyProperty(Asset, 'liquidityCategories', {
+                'long-term': ['Fixed Improvements', 'Investments', 'Land', 'Other'],
+                'medium-term': ['Breeding Stock', 'Vehicles, Machinery & Equipment', 'Other'],
+                'short-term': ['Crops & Crop Products', 'Cash on Hand', 'Debtors', 'Short-term Investments', 'Prepaid Expenses', 'Production Inputs', 'Life Insurance', 'Livestock Products', 'Marketable Livestock', 'Negotiable Securities', 'Other']
+            });
+
+            readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
+
+            readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
+
+            privateProperty(Asset, 'farmRequired', function (type) {
+                return farmRequired(type)
+            });
+
+            privateProperty(Asset, 'getCropsByLandClass', function (landClass) {
+                return Asset.cropsByLandClass[landClass] || [];
+            });
+
+            privateProperty(Asset, 'getCustomTitle', function (asset, props, options) {
+                return getCustomTitle(asset, props, options);
+            });
+
+            privateProperty(Asset, 'getDefaultCrop', function (landClass) {
+                return (underscore.size(Asset.cropsByLandClass[landClass]) === 1 ? underscore.first(Asset.cropsByLandClass[landClass]) : undefined);
+            });
+
+            privateProperty(Asset, 'getImprovementLandClass', function (asset) {
+                return getImprovementLandClass(asset);
+            });
+
+            privateProperty(Asset, 'getThumbnailUrl', function (asset) {
+                return getThumbnailUrl(asset);
+            });
+
+            privateProperty(Asset, 'getTitle', function (asset, withField, farm) {
+                return getTitle(asset, withField, farm);
+            });
+
+            privateProperty(Asset, 'listServiceMap', function (asset, metadata) {
+                return listServiceMap(asset, metadata);
+            });
+
+            function getDefaultProps (instance) {
                 switch (instance.type) {
                     case 'crop':
-                        map.subtitle = (instance.data.plantedDate ? 'Planted: ' + moment(instance.data.plantedDate).format('YYYY-MM-DD') : '');
-                        map.size = instance.data.size;
-                        break;
-                    case 'cropland':
-                    case 'pasture':
-                    case 'wasteland':
-                    case 'water right':
-                        map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
-                        map.size = instance.data.size;
-                        break;
-                    case 'farmland':
-                        map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
-                        map.size = instance.data.area;
-                        break;
                     case 'permanent crop':
                     case 'plantation':
-                        map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('YYYY-MM-DD') : '');
-                        map.size = instance.data.size;
-                        break;
-                    case 'improvement':
-                        map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '') + (instance.data.size !== undefined ? ' (' + safeMath.round(instance.data.size, 2) + 'm²)' : '');
-                        map.summary = (instance.data.description || '');
-                        break;
+                        return ['plantedArea', 'crop', 'fieldName', 'farmName'];
+                    case 'farmland':
+                        return [['label', 'portionLabel', 'portionNumber']];
+                    case 'cropland':
+                        return ['typeTitle', function (instance) {
+                            return (instance.data.irrigation ?
+                                instance.data.irrigation + ' irrigated' :
+                                (instance.data.irrigated ?
+                                    'Irrigated (' + (instance.data.equipped ? 'equipped' : 'unequipped') + ')':
+                                    'Non irrigable'))
+                        }, 'waterSource', 'fieldName', 'farmName'];
                     case 'livestock':
-                        map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
-                        map.summary = (instance.data.description || '');
-                        map.groupby = instance.data.type;
-                        break;
+                        return ['type', 'category'];
+                    case 'pasture':
+                        return [function (instance) {
+                            return (instance.data.intensified ?
+                                (instance.data.crop ? instance.data.crop + ' intensified ' : 'Intensified ') + instance.type :
+                                'Natural Grazing');
+                        }, 'fieldName', 'farmName'];
                     case 'stock':
-                        map.groupby = instance.type;
-                        break;
+                        return ['category'];
                     case 'vme':
-                        map.subtitle = 'Quantity: ' + instance.data.quantity;
-                        map.summary = (instance.data.description || '');
-                        map.groupby = instance.data.type;
-                        break;
+                        return ['category', 'model'];
+                    case 'wasteland':
+                        return ['typeTitle'];
+                    case 'water source':
+                    case 'water right':
+                        return ['waterSource', 'fieldName', 'farmName'];
+                    default:
+                        return [['name', 'category', 'typeTitle']];
                 }
             }
 
-            if (metadata) {
-                map = underscore.extend(map, metadata);
+            function getProps (instance, props, options) {
+                return underscore.chain(props)
+                    .map(function (prop) {
+                        if (underscore.isArray(prop)) {
+                            return underscore.first(getProps(instance, prop, options));
+                        } else if (underscore.isFunction(prop)) {
+                            return prop(instance, options);
+                        } else {
+                            switch (prop) {
+                                case 'age':
+                                    var years = moment(options.asOfDate).diff(instance.data.establishedDate, 'years');
+                                    return instance.data.establishedDate && (years === 0 ? 'Established' : years + ' year' + (years === 1 ? '' : 's'));
+                                case 'defaultTitle':
+                                    return getProps(instance, getDefaultProps(instance), options);
+                                case 'farmName':
+                                    return options.withFarm && options.field && options.field[prop];
+                                case 'fieldName':
+                                    return options.withField && instance.data[prop];
+                                case 'croppingPotential':
+                                    return options.field && options.field[prop] && options.field[prop] + ' Potential';
+                                case 'landUse':
+                                    return options.field && options.field[prop];
+                                case 'area':
+                                case 'plantedArea':
+                                case 'size':
+                                    return instance.data[prop] && safeMath.round(instance.data[prop], 2) + 'ha';
+                                case 'portionNumber':
+                                    return (instance.data.portionNumber ? 'Ptn. ' + instance.data.portionNumber : 'Rem. extent of farm');
+                                case 'typeTitle':
+                                    return Asset.assetTypes[instance.type];
+                                default:
+                                    return instance.data[prop];
+                            }
+                        }
+                    })
+                    .compact()
+                    .uniq()
+                    .value();
             }
 
-            return map;
-        }
+            function getCustomTitle (instance, props, options) {
+                options = underscore.defaults(options || {}, {
+                    separator: ', '
+                });
 
-        function generateUniqueName (instance, categoryLabel, assets) {
-            categoryLabel = categoryLabel || '';
+                return underscore.flatten(getProps(instance, props || getDefaultProps(instance), options)).join(options.separator);
+            }
 
-            var assetCount = underscore.chain(assets)
-                .where({type: instance.type})
-                .reduce(function(assetCount, asset) {
-                    if (asset.data.name) {
-                        var index = asset.data.name.search(/\s+[0-9]+$/),
-                            name = asset.data.name,
-                            number;
-
-                        if (index !== -1) {
-                            name = name.substr(0, index);
-                            number = parseInt(asset.data.name.substring(index).trim());
+            function getImprovementLandClass (instance) {
+                return underscore.chain(Asset.improvementCategoriesByLandClass)
+                    .reduce(function (results, categories, landUse) {
+                        if (underscore.contains(categories, instance.data.type)) {
+                            results.push(landUse);
                         }
 
-                        if (categoryLabel && name === categoryLabel && (!number || number > assetCount)) {
-                            assetCount = number || 1;
+                        return results;
+                    }, [])
+                    .union(['Built-up'])
+                    .first()
+                    .value();
+            }
+
+            function getThumbnailUrl (instance) {
+                return attachmentHelper.findSize(this, 'thumb', 'img/camera.png');
+            }
+
+            function getTitle (instance, withField, farm) {
+                return getCustomTitle(instance, getDefaultProps(instance), {
+                    farm: farm,
+                    withFarm: !underscore.isUndefined(farm),
+                    field: farm && underscore.findWhere(farm.data.fields, {fieldName: instance.data.fieldName}),
+                    withField: withField
+                });
+            }
+
+            function listServiceMap (instance, metadata) {
+                var map = {
+                    id: instance.id || instance.$id,
+                    type: instance.type,
+                    updatedAt: instance.updatedAt
+                };
+
+                if (instance.data) {
+                    map.title = getTitle(instance, true);
+                    map.groupby = instance.farmId;
+                    map.thumbnailUrl = attachmentHelper.findSize(instance, 'thumb', 'img/camera.png');
+
+                    switch (instance.type) {
+                        case 'crop':
+                            map.subtitle = (instance.data.plantedDate ? 'Planted: ' + moment(instance.data.plantedDate).format('YYYY-MM-DD') : '');
+                            map.size = instance.data.size;
+                            break;
+                        case 'cropland':
+                        case 'pasture':
+                        case 'wasteland':
+                        case 'water right':
+                            map.subtitle = (instance.data.size !== undefined ? 'Area: ' + safeMath.round(instance.data.size, 2) + 'ha' : 'Unknown area');
+                            map.size = instance.data.size;
+                            break;
+                        case 'farmland':
+                            map.subtitle = (instance.data.area !== undefined ? 'Area: ' + safeMath.round(instance.data.area, 2) + 'ha' : 'Unknown area');
+                            map.size = instance.data.area;
+                            break;
+                        case 'permanent crop':
+                        case 'plantation':
+                            map.subtitle = (instance.data.establishedDate ? 'Established: ' + moment(instance.data.establishedDate).format('YYYY-MM-DD') : '');
+                            map.size = instance.data.size;
+                            break;
+                        case 'improvement':
+                            map.subtitle = instance.data.type + (instance.data.category ? ' - ' + instance.data.category : '') + (instance.data.size !== undefined ? ' (' + safeMath.round(instance.data.size, 2) + 'm²)' : '');
+                            map.summary = (instance.data.description || '');
+                            break;
+                        case 'livestock':
+                            map.subtitle = (instance.data.breed ? instance.data.breed + ' for ' : 'For ') + instance.data.purpose;
+                            map.summary = (instance.data.description || '');
+                            map.groupby = instance.data.type;
+                            break;
+                        case 'stock':
+                            map.groupby = instance.type;
+                            break;
+                        case 'vme':
+                            map.subtitle = 'Quantity: ' + instance.data.quantity;
+                            map.summary = (instance.data.description || '');
+                            map.groupby = instance.data.type;
+                            break;
+                    }
+                }
+
+                if (metadata) {
+                    map = underscore.extend(map, metadata);
+                }
+
+                return map;
+            }
+
+            function generateUniqueName (instance, categoryLabel, assets) {
+                categoryLabel = categoryLabel || '';
+
+                var assetCount = underscore.chain(assets)
+                    .where({type: instance.type})
+                    .reduce(function(assetCount, asset) {
+                        if (asset.data.name) {
+                            var index = asset.data.name.search(/\s+[0-9]+$/),
+                                name = asset.data.name,
+                                number;
+
+                            if (index !== -1) {
+                                name = name.substr(0, index);
+                                number = parseInt(asset.data.name.substring(index).trim());
+                            }
+
+                            if (categoryLabel && name === categoryLabel && (!number || number > assetCount)) {
+                                assetCount = number || 1;
+                            }
+                        }
+
+                        return assetCount;
+                    }, -1)
+                    .value();
+
+                return categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
+            }
+
+            function isFieldApplicable (instance, field) {
+                return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
+            }
+
+            function farmRequired (type) {
+                return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
+            }
+
+            Asset.validates({
+                assetKey: {
+                    required: true
+                },
+                crop: {
+                    requiredIf: function (value, instance) {
+                        return underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type);
+                    },
+                    inclusion: {
+                        in: function (value, instance) {
+                            return Asset.cropsByType[instance.type];
                         }
                     }
-
-                    return assetCount;
-                }, -1)
-                .value();
-
-            return categoryLabel + (assetCount + 1 ? ' ' + (assetCount + 1) : '');
-        }
-
-        function isFieldApplicable (instance, field) {
-            return underscore.contains(Asset.landClassesByType[instance.type], Field.new(field).landUse);
-        }
-
-        function farmRequired (type) {
-            return underscore.contains(['crop', 'farmland', 'cropland', 'improvement', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], type);
-        }
-
-        Asset.validates({
-            assetKey: {
-                required: true
-            },
-            crop: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'permanent crop', 'plantation'], instance.type);
                 },
-                inclusion: {
-                    in: function (value, instance) {
-                        return Asset.cropsByType[instance.type];
+                establishedDate: {
+                    requiredIf: function (value, instance) {
+                        return underscore.contains(['permanent crop', 'plantation'], instance.type);
+                    },
+                    format: {
+                        date: true
+                    }
+                },
+                farmId: {
+                    requiredIf: function (value, instance) {
+                        return farmRequired(instance.type);
+                    },
+                    numeric: true
+                },
+                fieldName: {
+                    requiredIf: function (value, instance) {
+                        return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation'], instance.type);
+                    },
+                    length: {
+                        min: 1,
+                        max: 255
+                    }
+                },
+                legalEntityId: {
+                    required: true,
+                    numeric: true
+                },
+                plantedDate: {
+                    requiredIf: function (value, instance) {
+                        return underscore.contains(['crop'], instance.type);
+                    },
+                    format: {
+                        date: true
+                    }
+                },
+                size: {
+                    requiredIf: function (value, instance) {
+                        return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
+                    },
+                    numeric: true
+                },
+                type: {
+                    required: true,
+                    inclusion: {
+                        in: underscore.keys(Asset.assetTypesWithOther)
                     }
                 }
-            },
-            establishedDate: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['permanent crop', 'plantation'], instance.type);
-                },
-                format: {
-                    date: true
-                }
-            },
-            farmId: {
-                requiredIf: function (value, instance) {
-                    return farmRequired(instance.type);
-                },
-                numeric: true
-            },
-            fieldName: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation'], instance.type);
-                },
-                length: {
-                    min: 1,
-                    max: 255
-                }
-            },
-            legalEntityId: {
-                required: true,
-                numeric: true
-            },
-            plantedDate: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop'], instance.type);
-                },
-                format: {
-                    date: true
-                }
-            },
-            size: {
-                requiredIf: function (value, instance) {
-                    return underscore.contains(['crop', 'cropland', 'pasture', 'permanent crop', 'plantation', 'wasteland', 'water right'], instance.type);
-                },
-                numeric: true
-            },
-            type: {
-                required: true,
-                inclusion: {
-                    in: underscore.keys(Asset.assetTypesWithOther)
-                }
-            }
-        });
+            });
 
-        return Asset;
-    }]);
+            return Asset;
+        }];
 
-sdkModelAsset.provider('AssetFactory', function () {
-    var instances = {};
+    AssetFactoryProvider.add('farmland', 'Asset');
+    AssetFactoryProvider.add('improvement', 'Asset');
+    AssetFactoryProvider.add('cropland', 'Asset');
+    AssetFactoryProvider.add('pasture', 'Asset');
+    AssetFactoryProvider.add('permanent crop', 'Asset');
+    AssetFactoryProvider.add('plantation', 'Asset');
+    AssetFactoryProvider.add('other', 'Asset');
+    AssetFactoryProvider.add('vme', 'Asset');
+    AssetFactoryProvider.add('wasteland', 'Asset');
+    AssetFactoryProvider.add('water right', 'Asset');
+}]);
 
-    this.add = function (type, modelName) {
-        instances[type] = modelName;
-    };
-
-    this.$get = ['$injector', 'Asset', function ($injector, Asset) {
-        function apply (attrs, fnName) {
-            if (instances[attrs.type]) {
-                if (typeof instances[attrs.type] === 'string') {
-                    instances[attrs.type] = $injector.get(instances[attrs.type]);
-                }
-
-                return instances[attrs.type][fnName](attrs);
-            }
-
-            return Asset[fnName](attrs);
-        }
-
-        return {
-            isInstanceOf: function (asset) {
-                return (asset ?
-                    (instances[asset.type] ?
-                        asset instanceof instances[asset.type] :
-                        asset instanceof Asset) :
-                    false);
-            },
-            new: function (attrs) {
-                return apply(attrs, 'new');
-            },
-            newCopy: function (attrs) {
-                return apply(attrs, 'newCopy');
-            }
-        }
-    }];
-});
-
-
-var sdkModelCrop = angular.module('ag.sdk.model.crop', ['ag.sdk.model.asset']);
+var sdkModelCrop = angular.module('ag.sdk.model.crop', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.asset', 'ag.sdk.model.asset-factory', 'ag.sdk.model.base']);
 
 sdkModelCrop.provider('Crop', ['AssetFactoryProvider', function (AssetFactoryProvider) {
     this.$get = ['Base', 'asJson', 'Asset', 'computedProperty', 'inheritModel', 'privateProperty', 'naturalSort', 'readOnlyProperty', 'safeMath', 'underscore',
@@ -11479,7 +10940,7 @@ sdkModelCrop.factory('CropZone', ['computedProperty', 'generateUUID', 'inheritMo
 
 
 
-var sdkModelLivestock = angular.module('ag.sdk.model.livestock', ['ag.sdk.model.asset', 'ag.sdk.model.stock']);
+var sdkModelLivestock = angular.module('ag.sdk.model.livestock', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.asset', 'ag.sdk.model.asset-factory', 'ag.sdk.model.base', 'ag.sdk.model.stock']);
 
 sdkModelLivestock.provider('Livestock', ['AssetFactoryProvider', function (AssetFactoryProvider) {
     this.$get = ['computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'Stock', 'underscore',
@@ -11757,7 +11218,7 @@ sdkModelLivestock.provider('Livestock', ['AssetFactoryProvider', function (Asset
     AssetFactoryProvider.add('livestock', 'Livestock');
 }]);
 
-var sdkModelStock = angular.module('ag.sdk.model.stock', ['ag.sdk.model.asset']);
+var sdkModelStock = angular.module('ag.sdk.model.stock', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.asset', 'ag.sdk.model.asset-factory', 'ag.sdk.model.base']);
 
 sdkModelStock.provider('Stock', ['AssetFactoryProvider', function (AssetFactoryProvider) {
     this.$get = ['AssetBase', 'Base', 'computedProperty', 'inheritModel', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
@@ -12359,256 +11820,6 @@ angular.module('ag.sdk.model.base', ['ag.sdk.library', 'ag.sdk.model.validation'
             }
         }
     }]);
-var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base']);
-
-sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
-    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
-        function ComparableSale (attrs) {
-            Model.Base.apply(this, arguments);
-
-            computedProperty(this, 'distanceInKm', function () {
-                return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
-            });
-
-            computedProperty(this, 'improvedRatePerHa', function () {
-                return safeMath.dividedBy(this.purchasePrice, this.area);
-            }, {enumerable: true});
-
-            computedProperty(this, 'vacantLandValue', function () {
-                return safeMath.dividedBy(this.valueMinusImprovements, this.area);
-            }, {enumerable: true});
-
-            computedProperty(this, 'valueMinusImprovements', function () {
-                return safeMath.minus(this.purchasePrice,  this.depImpValue);
-            }, {enumerable: true});
-
-            computedProperty(this, 'farmName', function () {
-                return underscore.chain(this.portions)
-                    .groupBy('farmLabel')
-                    .map(function (portions, farmName) {
-                        var portionSentence = underscore.chain(portions)
-                            .sortBy('portionLabel')
-                            .pluck('portionLabel')
-                            .map(function (portionLabel) {
-                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
-                            })
-                            .toSentence()
-                            .value();
-
-                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
-                    })
-                    .toSentence()
-                    .value();
-            }, {enumerable: true});
-
-
-            computedProperty(this, 'totalLandComponentArea', function () {
-                return underscore.chain(this.landComponents)
-                    .reject(function (component) {
-                        return component.type === 'Water Rights';
-                    })
-                    .reduce(function(total, landComponent) {
-                        return safeMath.plus(total, landComponent.area);
-                    }, 0)
-                    .value();
-            });
-
-            computedProperty(this, 'totalLandComponentValue', function () {
-                return underscore.reduce(this.landComponents, function(total, landComponent) {
-                    return safeMath.plus(total, landComponent.assetValue);
-                }, 0);
-            });
-
-            /**
-             * Attachment Handling
-             */
-            privateProperty(this, 'addAttachment', function (attachment) {
-                this.removeAttachment(attachment);
-
-                this.attachments.push(attachment);
-            });
-
-            privateProperty(this, 'removeAttachment', function (attachment) {
-                this.attachments = underscore.reject(this.attachments, function (item) {
-                    return item.key === attachment.key;
-                });
-            });
-
-            privateProperty(this, 'removeNewAttachments', function () {
-                var attachments = this.attachments;
-
-                this.attachments = underscore.reject(attachments, function (attachment) {
-                    return underscore.isObject(attachment.archive);
-                });
-
-                return underscore.difference(attachments, this.attachments);
-            });
-
-            /**
-             * Land Component Handling
-             */
-            privateProperty(this, 'addLandComponent', function (type) {
-                this.landComponents.push({
-                    type: type,
-                    assetValue: 0
-                });
-            });
-
-            privateProperty(this, 'removeLandComponent', function (landComponent) {
-                this.landComponents = underscore.without(this.landComponents, landComponent);
-            });
-
-            /**
-             * Portion Handling
-             */
-            privateProperty(this, 'addPortion', function (portion) {
-                if (!this.hasPortion(portion)) {
-                    this.portions.push(portion);
-
-                    underscore.each(portion.landCover || [], function (landCover) {
-                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
-
-                        if (underscore.isUndefined(landComponent)) {
-                            landComponent = {
-                                type: landCover.label,
-                                assetValue: 0
-                            };
-
-                            this.landComponents.push(landComponent);
-                        }
-
-                        landComponent.area = safeMath.plus(landComponent.area, landCover.area, 3);
-
-                        if (landComponent.unitValue) {
-                            landComponent.assetValue = safeMath.times(landComponent.area, landComponent.unitValue);
-                        }
-                    }, this);
-                }
-
-                recalculateArea(this);
-            });
-
-            privateProperty(this, 'hasPortion', function (portion) {
-                return underscore.some(this.portions, function (storedPortion) {
-                    return storedPortion.sgKey === portion.sgKey;
-                });
-            });
-
-            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
-                this.portions = underscore.reject(this.portions, function (portion) {
-                    return (portion.sgKey === sgKey);
-                });
-                recalculateArea(this);
-            });
-
-            /**
-             * Edit Authorisation
-             */
-            privateProperty(this, 'isEditable', function (user) {
-                return (user && this.authorData && user.username === this.authorData.username && user.company === this.authorData.company);
-            });
-
-            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
-
-            this.id = attrs.id || attrs.$id;
-            this.uuid = attrs.uuid;
-            this.area = attrs.area;
-            this.attachments = attrs.attachments || [];
-            this.authorData = attrs.authorData;
-            this.centroid = attrs.centroid;
-            this.comments = attrs.comments;
-            this.country = attrs.country;
-            this.countryId = attrs.countryId;
-            this.createdAt = attrs.createdAt;
-            this.createdBy = attrs.createdBy;
-            this.depImpValue = attrs.depImpValue;
-            this.distance = attrs.distance || 0;
-            this.geometry = attrs.geometry;
-            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
-            this.portions = attrs.portions || [];
-            this.regions = attrs.regions || [];
-            this.propertyKnowledge = attrs.propertyKnowledge;
-            this.purchasedAt = attrs.purchasedAt;
-            this.purchasePrice = attrs.purchasePrice || 0;
-            this.useCount = attrs.useCount || 0;
-        }
-
-        function convertLandComponent (landComponent) {
-            landComponent.type = convertLandComponentType(landComponent.type);
-
-            return landComponent;
-        }
-
-        function convertLandComponentType (type) {
-            switch (type) {
-                case 'Cropland (Dry)':
-                    return 'Cropland';
-                case 'Cropland (Equipped, Irrigable)':
-                case 'Cropland (Irrigable)':
-                    return 'Cropland (Irrigated)';
-                case 'Conservation':
-                    return 'Grazing (Bush)';
-                case 'Horticulture (Intensive)':
-                    return 'Greenhouses';
-                case 'Horticulture (Perennial)':
-                    return 'Orchard';
-                case 'Horticulture (Seasonal)':
-                    return 'Vegetables';
-                case 'Housing':
-                    return 'Homestead';
-                case 'Wasteland':
-                    return 'Non-vegetated';
-            }
-
-            return type;
-        }
-
-        function recalculateArea (instance) {
-            instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
-                return safeMath.plus(total, portion.area);
-            }, 0), 4);
-        }
-
-        inheritModel(ComparableSale, Model.Base);
-
-        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
-
-        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
-            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
-            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
-
-        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
-
-        ComparableSale.validates({
-            area: {
-                required: true,
-                numeric: true
-            },
-            countryId: {
-                required: true,
-                numeric: true
-            },
-            landComponents: {
-                required: true,
-                length: {
-                    min: 1
-                }
-            },
-            portions: {
-                required: true,
-                length: {
-                    min: 1
-                }
-            },
-            purchasePrice: {
-                required: true,
-                numeric: true
-            }
-        });
-
-        return ComparableSale;
-    }]);
-
 var sdkModelBusinessPlanDocument = angular.module('ag.sdk.model.business-plan', ['ag.sdk.id', 'ag.sdk.model.asset', 'ag.sdk.model.document', 'ag.sdk.model.liability', 'ag.sdk.model.production-schedule', 'ag.sdk.model.stock']);
 
 sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
@@ -14420,6 +13631,34 @@ sdkModelBusinessPlanDocument.provider('BusinessPlan', ['DocumentFactoryProvider'
     DocumentFactoryProvider.add('financial resource plan', 'BusinessPlan');
 }]);
 
+var sdkModelComparableFarmValuationDocument = angular.module('ag.sdk.model.comparable-farm-valuation', ['ag.sdk.model.farm-valuation']);
+
+sdkModelComparableFarmValuationDocument.provider('ComparableFarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['FarmValuation', 'inheritModel', 'underscore',
+        function (FarmValuation, inheritModel, underscore) {
+            function ComparableFarmValuation (attrs) {
+                FarmValuation.apply(this, arguments);
+
+                this.docType = 'comparable farm valuation';
+            }
+
+            inheritModel(ComparableFarmValuation, FarmValuation);
+
+            ComparableFarmValuation.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    equal: {
+                        to: 'comparable farm valuation'
+                    }
+                }
+            }, FarmValuation.validations));
+
+            return ComparableFarmValuation;
+        }];
+
+    DocumentFactoryProvider.add('comparable farm valuation', 'ComparableFarmValuation');
+}]);
+
 var sdkModelCropInspectionDocument = angular.module('ag.sdk.model.crop-inspection', ['ag.sdk.model.document']);
 
 sdkModelCropInspectionDocument.provider('CropInspection', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
@@ -14542,18 +13781,24 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                     '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
                     '</div>';
 
+                Base.initializeObject(this.data, 'hashes', {});
                 Base.initializeObject(this.data, 'request', {});
                 Base.initializeObject(this.data, 'report', {});
 
                 Base.initializeObject(this.data.request, 'farmland', []);
 
                 Base.initializeObject(this.data.report, 'body', defaultReportBody);
-                Base.initializeObject(this.data.report, 'comparableSales', []);
+                Base.initializeObject(this.data.report, 'comparables', []);
                 Base.initializeObject(this.data.report, 'improvements', []);
                 Base.initializeObject(this.data.report, 'improvementsValue', {});
                 Base.initializeObject(this.data.report, 'landUseComponents', {});
                 Base.initializeObject(this.data.report, 'landUseValue', {});
                 Base.initializeObject(this.data.report, 'summary', {});
+
+                if (!underscore.isUndefined(this.data.report.comparableSales)) {
+                    this.data.report.comparables = this.data.report.comparableSales;
+                    delete this.data.report.comparableSales;
+                }
 
                 /**
                  * Legal Entity handling
@@ -14632,7 +13877,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
 
                     _this.removeComparableSale(comparableSale);
 
-                    _this.data.report.comparableSales.push(comparableSale.asJSON());
+                    _this.data.report.comparables.push(comparableSale.asJSON());
 
                     underscore.each(comparableSale.attachments, function (attachment) {
                         _this.addAttachment(attachment);
@@ -14642,9 +13887,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                 privateProperty(this, 'removeComparableSale', function (comparableSale) {
                     var _this = this;
 
-                    _this.data.report.comparableSales = underscore.reject(_this.data.report.comparableSales, function (comparable) {
-                        return comparable.uuid === comparableSale.uuid;
-                    });
+                    _this.data.report.comparables = underscore.reject(_this.data.report.comparables, underscore.identity({uuid: comparableSale.uuid}));
 
                     underscore.each(comparableSale.attachments, function (attachment) {
                         _this.removeAttachment(attachment);
@@ -14669,13 +13912,13 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
     DocumentFactoryProvider.add('desktop valuation', 'DesktopValuation');
 }]);
 
-var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelDocument = angular.module('ag.sdk.model.document', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listServiceMapProvider) {
-    this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
-        function (asJson, Base, computedProperty, inheritModel, Model, privateProperty, readOnlyProperty, underscore) {
+    this.$get = ['asJson', 'Base', 'computedProperty', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'underscore',
+        function (asJson, Base, computedProperty, inheritModel, privateProperty, readOnlyProperty, underscore) {
             function Document (attrs, organization) {
-                Model.Base.apply(this, arguments);
+                Base.apply(this, arguments);
 
                 this.data = (attrs && attrs.data) || {};
                 Base.initializeObject(this.data, 'attachments', []);
@@ -14773,14 +14016,14 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
                 this.organizationId = attrs.organizationId;
                 this.originUuid = attrs.originUuid;
                 this.origin = attrs.origin;
-                this.title = attrs.title;
+                this.title = underscore.prune(attrs.title, 255, '');
 
                 this.organization = attrs.organization;
                 this.permissions = attrs.permissions;
                 this.tasks = attrs.tasks;
             }
 
-            inheritModel(Document, Model.Base);
+            inheritModel(Document, Base);
 
             Document.validates({
                 author: {
@@ -14809,9 +14052,9 @@ sdkModelDocument.provider('Document', ['listServiceMapProvider', function (listS
     listServiceMapProvider.add('document', ['documentRegistry', 'moment', function (documentRegistry, moment) {
         return function (item) {
             var group = documentRegistry.getProperty(item.docType, 'title'),
-                subtitle = (item.organization && item.organization.name ?
+                subtitle = (item.title ? item.title : (item.organization && item.organization.name ?
                     item.organization.name :
-                    'Created ' + moment(item.createdAt).format('YYYY-MM-DD'));
+                    'Created ' + moment(item.createdAt).format('YYYY-MM-DD')));
 
             return {
                 id: item.id || item.$id,
@@ -14834,9 +14077,7 @@ sdkModelDocument.provider('DocumentFactory', function () {
     this.$get = ['$injector', 'Document', function ($injector, Document) {
         function apply (attrs, fnName) {
             if (instances[attrs.docType]) {
-                if (typeof instances[attrs.docType] === 'string') {
-                    instances[attrs.docType] = $injector.get(instances[attrs.docType]);
-                }
+                inject(attrs.docType);
 
                 return instances[attrs.docType][fnName](attrs);
             }
@@ -14844,13 +14085,23 @@ sdkModelDocument.provider('DocumentFactory', function () {
             return Document[fnName](attrs);
         }
 
+        function inject (type) {
+            if (instances[type] && typeof instances[type] === 'string') {
+                instances[type] = $injector.get(instances[type]);
+            }
+        }
+
         return {
             isInstanceOf: function (document) {
-                return (document ?
-                    (instances[document.docType] ?
-                        document instanceof instances[document.docType] :
-                        document instanceof Document) :
-                    false);
+                if (document) {
+                    inject(document.docType);
+
+                    return (instances[document.docType] ?
+                            document instanceof instances[document.docType] :
+                            document instanceof Document);
+                }
+
+                return false;
             },
             new: function (attrs) {
                 return apply(attrs, 'new');
@@ -14913,15 +14164,125 @@ sdkModelDocument.provider('DocumentPermission', [function () {
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
 sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['Asset', 'computedProperty', 'Document', 'inheritModel', 'underscore',
-        function (Asset, computedProperty, Document, inheritModel, underscore) {
+    this.$get = ['$filter', 'Asset', 'Base', 'Document', 'Field', 'inheritModel', 'privateProperty', 'safeMath', 'underscore',
+        function ($filter, Asset, Base, Document, Field, inheritModel, privateProperty, safeMath, underscore) {
             function FarmValuation (attrs) {
                 Document.apply(this, arguments);
+
+                privateProperty(this, 'asComparable', function () {
+                    var instance = this;
+
+                    return {
+                        attachmentIds: underscore.chain(instance.data.attachments)
+                            .filter(function (attachment) {
+                                return attachment.type === 'cover photo' || s.include(attachment.mimeType, 'image');
+                            })
+                            .sortBy(function (attachment, index) {
+                                return (attachment.type === 'cover photo' ? -1 : index);
+                            })
+                            .first(1)
+                            .map(function (attachment) {
+                                return attachment.key;
+                            })
+                            .value(),
+                        authorData: underscore.chain(instance.data.report.completedBy || {})
+                            .pick(['email', 'mobile', 'name', 'position', 'telephone'])
+                            .extend({
+                                company: instance.data.request.merchant.name
+                            })
+                            .value(),
+                        documentId: instance.id,
+                        depreciatedImprovements: instance.data.report.improvementsValue.depreciatedValue,
+                        improvedRatePerHa: safeMath.dividedBy(instance.data.report.totalRoundedValue, instance.data.report.summary.totalArea),
+                        improvements: underscore.chain(instance.data.report.improvements)
+                            .map(function (asset) {
+                                asset.data.landUse = asset.data.landUse || Asset.getImprovementLandClass(asset);
+
+                                return {
+                                    area: asset.data.size,
+                                    assetValue: asset.data.assetValue,
+                                    constructionDate: asset.data.constructionDate,
+                                    subType: getLandUseTitle(asset, {
+                                        field: asset.data
+                                    }),
+                                    type: asset.data.landUse,
+                                    unit: 'sm',
+                                    unitValue: safeMath.dividedBy(asset.data.assetValue, asset.data.size)
+                                }
+                            })
+                            .value(),
+                        knowledgeOfProperty: instance.data.report.knowledgeOfProperty,
+                        landUse: underscore.chain(instance.data.report.landUseComponents)
+                            .values()
+                            .flatten()
+                            .map(function (landComponent) {
+                                return underscore.map(landComponent.assets, function (asset) {
+                                    var field = getAssetField(instance, asset);
+
+                                    return {
+                                        area: asset.data.size,
+                                        assetValue: safeMath.times(landComponent.valuePerHa, asset.data.size),
+                                        type: (field ? field.landUse :
+                                            (Field.isLandUse(asset.data.landUse) ? asset.data.landUse : landComponent.name)),
+                                        subType: getLandUseTitle(asset, {
+                                            asOfDate: instance.data.report.completionDate,
+                                            field: field || asset.data
+                                        }),
+                                        unit: 'ha',
+                                        unitValue: landComponent.valuePerHa
+                                    }
+                                });
+                            })
+                            .flatten()
+                            .sortBy('subType')
+                            .value(),
+                        purchasePrice: instance.data.report.totalRoundedValue,
+                        vacantLandValue: safeMath.dividedBy(instance.data.report.landUseValue.land, instance.data.report.summary.totalArea),
+                        valuationDate: instance.data.report.completionDate,
+                        valueMinusImprovements: safeMath.minus(instance.data.report.totalRoundedValue, instance.data.report.improvementsValue.depreciatedValue)
+                    }
+                });
+
+                Base.initializeObject(this.data, 'request', {});
+                Base.initializeObject(this.data.request, 'farmland', []);
+                Base.initializeObject(this.data, 'report', {});
+                Base.initializeObject(this.data.report, 'description', {});
+                Base.initializeObject(this.data.report, 'improvements', []);
+                Base.initializeObject(this.data.report, 'improvementsValue', {});
+                Base.initializeObject(this.data.report, 'landUseComponents', {});
+                Base.initializeObject(this.data.report, 'landUseValue', {});
+                Base.initializeObject(this.data.report, 'location', {});
+                Base.initializeObject(this.data.report, 'research', []);
+                Base.initializeObject(this.data.report, 'services', {});
+                Base.initializeObject(this.data.report, 'summary', {});
+                Base.initializeObject(this.data.report, 'template', 'default');
 
                 this.docType = 'farm valuation';
             }
 
             inheritModel(FarmValuation, Document);
+
+            var parenthesizeProps = $filter('parenthesizeProps');
+
+            function getLandUseTitle (asset, options) {
+                var assetProps = [Asset.getCustomTitle(asset, (asset.type === 'improvement' ?
+                    ['type', 'category'] :
+                    ['crop', 'age', 'croppingPotential', 'irrigation', 'terrain', 'waterSource']), options)];
+
+                return parenthesizeProps(Asset.getCustomTitle(asset, [['landUse', (asset.type === 'improvement' ? 'name' : 'typeTitle')]], options), assetProps);
+            }
+
+            function getAssetField (instance, asset) {
+                return underscore.chain(instance.data.farms)
+                    .where({id: asset.farmId})
+                    .pluck('data')
+                    .pluck('fields')
+                    .flatten()
+                    .where({fieldName: asset.data.fieldName})
+                    .map(Field.newCopy)
+                    .first()
+                    .value();
+            }
 
             FarmValuation.validates(underscore.defaults({
                 docType: {
@@ -14936,6 +14297,44 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
         }];
 
     DocumentFactoryProvider.add('farm valuation', 'FarmValuation');
+}]);
+
+var sdkModelMarketReportDocument = angular.module('ag.sdk.model.market-report', ['ag.sdk.model.desktop-valuation']);
+
+sdkModelMarketReportDocument.provider('MarketReport', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
+    this.$get = ['Base', 'DesktopValuation', 'inheritModel', 'underscore',
+        function (Base, DesktopValuation, inheritModel, underscore) {
+            function MarketReport (attrs) {
+                DesktopValuation.apply(this, arguments);
+
+                this.docType = 'market report';
+
+                var defaultReportBody = '<div class="tinymce-container pdf-container">' +
+                    '<h2 id="property-description">Property Description</h2><br/><table id="property-description-table" width="100%"></table><br/>' +
+                    '<h2 id="farmland-value">Estimated Farmland Value</h2><br/><div id="farmland-value-table"></div><br/>' +
+                    '<h2 id="regional-value">Regional Value Development</h2><br/><div id="regional-value-graph"></div><br/>' +
+                    '<h2 id="comparable-sales">Comparable Sales</h2><table id="comparable-sales-table" width="100%"></table><br/>' +
+                    '<h2 id="disclaimer">Disclaimer</h2><p>Estimates of farmland and property value is based on the aggregation of regional sales data and assumptions regarding the property being valued.</p><br/><br/>' +
+                    '</div>';
+
+                Base.initializeObject(this.data.report, 'body', defaultReportBody);
+            }
+
+            inheritModel(MarketReport, DesktopValuation);
+
+            MarketReport.validates(underscore.defaults({
+                docType: {
+                    required: true,
+                    equal: {
+                        to: 'market report'
+                    }
+                }
+            }, DesktopValuation.validations));
+
+            return MarketReport;
+        }];
+
+    DocumentFactoryProvider.add('market report', 'MarketReport');
 }]);
 
 var sdkModelEnterpriseBudget = angular.module('ag.sdk.model.enterprise-budget', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model.base', 'ag.sdk.model.asset']);
@@ -17215,7 +16614,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             });
 
             privateProperty(this, 'setIrrigatedFromLandUse', function () {
-                this.irrigated = s.include(this.landUse, 'Irrigated');
+                this.irrigated = irrigatedFromLandUse(this.landUse);
             });
 
             privateProperty(this, 'fieldNameUnique', function (fieldName, farm) {
@@ -17245,13 +16644,22 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
         function convertLandUse (instance) {
             switch (instance.landUse) {
+                case 'Building':
+                case 'Built-up':
+                case 'Housing':
+                    instance.landUse = 'Residential';
+                    break;
                 case 'Cropland':
                     if (instance.irrigated) {
                         instance.landUse = 'Cropland (Irrigated)';
                     }
                     break;
+                case 'Cropland (Emerging)':
+                    instance.landUse = 'Cropland (Subsistence)';
+                    break;
                 case 'Conservation':
-                    instance.landUse = 'Grazing (Bush)';
+                case 'Protected Area':
+                    instance.landUse = 'Grazing';
                     break;
                 case 'Horticulture (Intensive)':
                     instance.landUse = 'Greenhouses';
@@ -17262,11 +16670,11 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                 case 'Horticulture (Seasonal)':
                     instance.landUse = 'Vegetables';
                     break;
-                case 'Housing':
-                    instance.landUse = 'Homestead';
+                case 'Structures (Retail)':
+                    instance.landUse = 'Commercial';
                     break;
-                case 'Wasteland':
-                    instance.landUse = 'Non-vegetated';
+                case 'Sugarcane (Emerging)':
+                    instance.landUse = 'Sugarcane (Small-scale)';
                     break;
             }
         }
@@ -17277,6 +16685,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             return (farm && farm.data && !underscore.isEmpty(trimmedValue) && !underscore.some(farm.data.fields || [], function (field) {
                 return (s.trim(field.fieldName).toLowerCase() === trimmedValue || (!underscore.isUndefined(instance.loc) && underscore.isEqual(field.loc, instance.loc)));
             }));
+        }
+
+        function irrigatedFromLandUse (landUse) {
+            return s.include(landUse, 'Irrigated');
         }
 
         inheritModel(Field, Model.Base);
@@ -17304,12 +16716,12 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Sub-drainage']);
 
         readOnlyProperty(Field, 'landClasses', [
-            'Building',
-            'Built-up',
+            'Commercial',
             'Cropland',
-            'Cropland (Emerging)',
             'Cropland (Irrigated)',
             'Cropland (Smallholding)',
+            'Cropland (Subsistence)',
+            'Dam',
             'Erosion',
             'Forest',
             'Grazing',
@@ -17318,20 +16730,39 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Grazing (Shrubland)',
             'Greenhouses',
             'Homestead',
+            'Horticulture',
+            'Industrial',
+            'Landfill',
             'Mining',
             'Non-vegetated',
+            'Ocean',
             'Orchard',
             'Orchard (Shadenet)',
             'Pineapple',
             'Plantation',
             'Plantation (Smallholding)',
             'Planted Pastures',
+            'Planted Pastures (Irrigated)',
+            'Recreational',
+            'Residential',
+            'Residential (Informal)',
+            'Residential (Smallholding)',
+            'River',
+            'Road & Rail',
+            'Sewage Ponds',
+            'Structures (Handling)',
+            'Structures (Processing)',
+            'Structures (Storage)',
             'Sugarcane',
-            'Sugarcane (Emerging)',
             'Sugarcane (Irrigated)',
+            'Sugarcane (Small-scale)',
             'Tea',
+            'Tea (Irrigated)',
+            'Utilities',
             'Vegetables',
+            'Village',
             'Vineyard',
+            'Wasteland',
             'Water',
             'Water (Seasonal)',
             'Wetland']);
@@ -17375,6 +16806,14 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         readOnlyProperty(Field, 'terrains', [
             'Mountains',
             'Plains']);
+
+        privateProperty(Field, 'getIrrigatedFromLandUse', function (landUse) {
+            return irrigatedFromLandUse(landUse);
+        });
+
+        privateProperty(Field, 'isLandUse', function (landUse) {
+            return landUse && underscore.contains(Field.landClasses, landUse);
+        });
 
         Field.validates({
             croppingPotential: {
@@ -17932,7 +17371,7 @@ sdkModelLayer.factory('Sublayer', ['computedProperty', 'inheritModel', 'Model', 
         return Sublayer;
     }]);
 
-var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.liability']);
+var sdkModelLegalEntity = angular.module('ag.sdk.model.legal-entity', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.asset', 'ag.sdk.model.financial', 'ag.sdk.model.liability']);
 
 sdkModelLegalEntity.provider('LegalEntity', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['Base', 'Asset', 'computedProperty', 'Financial', 'inheritModel', 'Liability', 'Model', 'privateProperty', 'readOnlyProperty', 'underscore',
@@ -18823,7 +18262,7 @@ sdkModelMerchant.provider('Merchant', ['OrganizationFactoryProvider', function (
     OrganizationFactoryProvider.add('merchant', 'Merchant');
 }]);
 
-var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelOrganization.provider('Organization', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['Base', 'computedProperty', 'geoJSONHelper', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
@@ -18866,9 +18305,12 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.createdBy = attrs.createdBy;
                 this.customerId = attrs.customerId;
                 this.customerNumber = attrs.customerNumber;
+                this.domain = attrs.domain;
                 this.email = attrs.email;
                 this.hostUrl = attrs.hostUrl;
                 this.legalEntities = attrs.legalEntities || [];
+                this.locale = attrs.locale;
+                this.localeId = attrs.localeId;
                 this.name = attrs.name;
                 this.originHost = attrs.originHost;
                 this.originPort = attrs.originPort;
@@ -18932,6 +18374,11 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             });
 
             Organization.validates({
+                domain: {
+                    format: {
+                        regex: '^[a-z0-9-]*$'
+                    }
+                },
                 countryId: {
                     required: true,
                     numeric: true
@@ -18940,6 +18387,10 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     format: {
                         email: true
                     }
+                },
+                localeId: {
+                    required: true,
+                    numeric: true
                 },
                 name: {
                     required: true,
@@ -19013,7 +18464,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
     this.$get = ['$injector', 'Organization', function ($injector, Organization) {
         function apply (attrs, fnName) {
             if (instances[attrs.type]) {
-                initInstance(attrs.type);
+                inject(attrs.type);
 
                 return instances[attrs.type][fnName](attrs);
             }
@@ -19021,7 +18472,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
             return Organization[fnName](attrs);
         }
 
-        function initInstance(type) {
+        function inject (type) {
             if (instances[type] && typeof instances[type] === 'string') {
                 instances[type] = $injector.get(instances[type]);
             }
@@ -19030,7 +18481,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
         return {
             isInstanceOf: function (organization) {
                 if (organization) {
-                    initInstance(organization.type);
+                    inject(organization.type);
 
                     return (instances[organization.type] ?
                             organization instanceof instances[organization.type] :
@@ -19929,8 +19380,8 @@ sdkModelProductionGroup.factory('ProductionGroup', ['Base', 'computedProperty', 
 
 var sdkModelProductionSchedule = angular.module('ag.sdk.model.production-schedule', ['ag.sdk.library', 'ag.sdk.utilities', 'ag.sdk.model']);
 
-sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'md5', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
-    function (AssetFactory, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, md5, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
+sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base', 'computedProperty', 'EnterpriseBudget', 'EnterpriseBudgetBase', 'Field', 'inheritModel', 'Livestock', 'moment', 'privateProperty', 'promiseService', 'readOnlyProperty', 'safeArrayMath', 'safeMath', 'underscore',
+    function (AssetFactory, Base, computedProperty, EnterpriseBudget, EnterpriseBudgetBase, Field, inheritModel, Livestock, moment, privateProperty, promiseService, readOnlyProperty, safeArrayMath, safeMath, underscore) {
         function ProductionSchedule (attrs) {
             EnterpriseBudgetBase.apply(this, arguments);
 
@@ -20995,6 +20446,448 @@ sdkModelProductionSchedule.factory('ProductionSchedule', ['AssetFactory', 'Base'
         return ProductionSchedule;
     }]);
 
+var sdkModelComparableSale = angular.module('ag.sdk.model.comparable-sale', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.field']);
+
+sdkModelComparableSale.factory('ComparableSale', ['computedProperty', 'Field', 'inheritModel', 'Model', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (computedProperty, Field, inheritModel, Model, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+        function ComparableSale (attrs) {
+            Model.Base.apply(this, arguments);
+
+            computedProperty(this, 'distanceInKm', function () {
+                return (this.distance ? safeMath.dividedBy(this.distance, 1000.0) : '-');
+            });
+
+            computedProperty(this, 'improvedRatePerHa', function () {
+                return safeMath.dividedBy(this.purchasePrice, this.area);
+            }, {enumerable: true});
+
+            computedProperty(this, 'vacantLandValue', function () {
+                return safeMath.dividedBy(this.valueMinusImprovements, this.area);
+            }, {enumerable: true});
+
+            computedProperty(this, 'valueMinusImprovements', function () {
+                return safeMath.minus(this.purchasePrice,  this.depImpValue);
+            }, {enumerable: true});
+
+            computedProperty(this, 'farmName', function () {
+                return underscore.chain(this.portions)
+                    .groupBy('farmLabel')
+                    .map(function (portions, farmName) {
+                        var portionSentence = underscore.chain(portions)
+                            .sortBy('portionLabel')
+                            .pluck('portionLabel')
+                            .map(function (portionLabel) {
+                                return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
+                            })
+                            .toSentence()
+                            .value();
+
+                        return ((portionSentence.length ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') + (farmName ? (underscore.startsWith(farmName.toLowerCase(), 'farm') ? '' : 'farm ') + farmName : ''));
+                    })
+                    .toSentence()
+                    .value();
+            }, {enumerable: true});
+
+
+            computedProperty(this, 'totalLandComponentArea', function () {
+                return underscore.chain(this.landComponents)
+                    .reject(function (component) {
+                        return component.type === 'Water Rights';
+                    })
+                    .reduce(function(total, landComponent) {
+                        return safeMath.plus(total, landComponent.area);
+                    }, 0)
+                    .value();
+            });
+
+            computedProperty(this, 'totalLandComponentValue', function () {
+                return underscore.reduce(this.landComponents, function(total, landComponent) {
+                    return safeMath.plus(total, landComponent.assetValue);
+                }, 0);
+            });
+
+            /**
+             * Attachment Handling
+             */
+            privateProperty(this, 'addAttachment', function (attachment) {
+                this.removeAttachment(attachment);
+
+                this.attachments.push(attachment);
+            });
+
+            privateProperty(this, 'removeAttachment', function (attachment) {
+                this.attachments = underscore.reject(this.attachments, function (item) {
+                    return item.key === attachment.key;
+                });
+            });
+
+            privateProperty(this, 'removeNewAttachments', function () {
+                var attachments = this.attachments;
+
+                this.attachments = underscore.reject(attachments, function (attachment) {
+                    return underscore.isObject(attachment.archive);
+                });
+
+                return underscore.difference(attachments, this.attachments);
+            });
+
+            /**
+             * Land Component Handling
+             */
+            privateProperty(this, 'addLandComponent', function (type) {
+                this.landComponents.push({
+                    type: type,
+                    assetValue: 0
+                });
+            });
+
+            privateProperty(this, 'removeLandComponent', function (landComponent) {
+                this.landComponents = underscore.without(this.landComponents, landComponent);
+            });
+
+            /**
+             * Portion Handling
+             */
+            privateProperty(this, 'addPortion', function (portion) {
+                if (!this.hasPortion(portion)) {
+                    this.portions.push(portion);
+
+                    underscore.each(portion.landCover || [], function (landCover) {
+                        var landComponent = underscore.findWhere(this.landComponents, {type: landCover.label});
+
+                        if (underscore.isUndefined(landComponent)) {
+                            landComponent = {
+                                type: landCover.label,
+                                assetValue: 0
+                            };
+
+                            this.landComponents.push(landComponent);
+                        }
+
+                        landComponent.area = safeMath.plus(landComponent.area, landCover.area, 3);
+
+                        if (landComponent.unitValue) {
+                            landComponent.assetValue = safeMath.times(landComponent.area, landComponent.unitValue);
+                        }
+                    }, this);
+                }
+
+                recalculateArea(this);
+            });
+
+            privateProperty(this, 'hasPortion', function (portion) {
+                return underscore.some(this.portions, function (storedPortion) {
+                    return storedPortion.sgKey === portion.sgKey;
+                });
+            });
+
+            privateProperty(this, 'removePortionBySgKey', function (sgKey) {
+                this.portions = underscore.reject(this.portions, function (portion) {
+                    return (portion.sgKey === sgKey);
+                });
+                recalculateArea(this);
+            });
+
+            /**
+             * Edit Authorisation
+             */
+            privateProperty(this, 'isEditable', function (user) {
+                return (user && this.authorData && user.username === this.authorData.username && user.company === this.authorData.company);
+            });
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.uuid = attrs.uuid;
+            this.area = attrs.area;
+            this.attachments = attrs.attachments || [];
+            this.authorData = attrs.authorData;
+            this.centroid = attrs.centroid;
+            this.comments = attrs.comments;
+            this.country = attrs.country;
+            this.countryId = attrs.countryId;
+            this.createdAt = attrs.createdAt;
+            this.createdBy = attrs.createdBy;
+            this.depImpValue = attrs.depImpValue;
+            this.distance = attrs.distance || 0;
+            this.geometry = attrs.geometry;
+            this.landComponents = underscore.map(attrs.landComponents || [], convertLandComponent);
+            this.portions = attrs.portions || [];
+            this.regions = attrs.regions || [];
+            this.propertyKnowledge = attrs.propertyKnowledge;
+            this.purchasedAt = attrs.purchasedAt;
+            this.purchasePrice = attrs.purchasePrice || 0;
+            this.useCount = attrs.useCount || 0;
+        }
+
+        function convertLandComponent (landComponent) {
+            landComponent.type = convertLandComponentType(landComponent.type);
+
+            return landComponent;
+        }
+
+        function convertLandComponentType (type) {
+            switch (type) {
+                case 'Cropland (Dry)':
+                    return 'Cropland';
+                case 'Cropland (Equipped, Irrigable)':
+                case 'Cropland (Irrigable)':
+                    return 'Cropland (Irrigated)';
+                case 'Conservation':
+                    return 'Grazing (Bush)';
+                case 'Horticulture (Intensive)':
+                    return 'Greenhouses';
+                case 'Horticulture (Perennial)':
+                    return 'Orchard';
+                case 'Horticulture (Seasonal)':
+                    return 'Vegetables';
+                case 'Housing':
+                    return 'Homestead';
+                case 'Wasteland':
+                    return 'Non-vegetated';
+            }
+
+            return type;
+        }
+
+        function recalculateArea (instance) {
+            instance.area = safeMath.round(underscore.reduce(instance.portions, function(total, portion) {
+                return safeMath.plus(total, portion.area);
+            }, 0), 4);
+        }
+
+        inheritModel(ComparableSale, Model.Base);
+
+        readOnlyProperty(ComparableSale, 'landComponentTypes', underscore.union(Field.landClasses, ['Water Rights']).sort(naturalSort));
+
+        readOnlyProperty(ComparableSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
+            'The valuer has inspected this comparable from aerial photos, and has no firsthand knowledge of the property.',
+            'The valuer has inspected/valued this comparable before, and has firsthand knowledge of the property.']);
+
+        privateProperty(ComparableSale, 'convertLandComponentType', convertLandComponentType);
+
+        ComparableSale.validates({
+            area: {
+                required: true,
+                numeric: true
+            },
+            countryId: {
+                required: true,
+                numeric: true
+            },
+            landComponents: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            portions: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            purchasePrice: {
+                required: true,
+                numeric: true
+            }
+        });
+
+        return ComparableSale;
+    }]);
+
+var sdkModelFarmSale = angular.module('ag.sdk.model.farm-sale', ['ag.sdk.library', 'ag.sdk.model.base', 'ag.sdk.model.farm-valuation']);
+
+sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFactory', 'inheritModel', 'md5String', 'moment', 'naturalSort', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+    function (Base, computedProperty, DocumentFactory, inheritModel, md5String, moment, naturalSort, privateProperty, readOnlyProperty, safeMath, underscore) {
+        function FarmSale (attrs) {
+            Base.apply(this, arguments);
+
+            computedProperty(this, 'farmland', function () {
+                return this.data.farmland;
+            });
+
+            privateProperty(this, 'generateUid', function () {
+                this.uid = md5String(underscore.chain(this.farmland)
+                    .pluck('data')
+                    .pluck('sgKey')
+                    .compact()
+                    .value()
+                    .join(',') + (this.saleDate ? '/' + moment(this.saleDate).format('YYYY-MM-DD') : ''));
+
+                return this.uid;
+            });
+
+            privateProperty(this, 'asComparable', function () {
+                return {
+                    centroid: this.centroid,
+                    country: this.country,
+                    farmland: this.data.farmland,
+                    farmName: this.title,
+                    farmSize: this.area,
+                    uuid: this.uid
+                }
+            });
+
+            /**
+             * Document Handling
+             */
+
+            privateProperty(this, 'addDocument', function (document) {
+                this.documents = underscore.chain(this.documents)
+                    .reject(underscore.identity({documentId: document.documentId}))
+                    .union([document])
+                    .sortBy(function (document) {
+                        return moment(document.data.report && document.data.report.completionDate).unix();
+                    })
+                    .value();
+                this.documentCount = underscore.size(this.documents);
+            });
+
+            /**
+             * Farmland Handling
+             */
+
+            privateProperty(this, 'addFarmland', function (farmland) {
+                this.data.farmland = underscore.chain(this.data.farmland)
+                    .reject(function (item) {
+                        return item.data.sgKey === farmland.data.sgKey;
+                    })
+                    .union([farmland])
+                    .value()
+                    .sort(function (itemA, itemB) {
+                        return naturalSort(itemA.data.sgKey, itemB.data.sgKey);
+                    });
+
+                generateTitle(this);
+                recalculateArea(this);
+            });
+
+            privateProperty(this, 'hasFarmland', function (farmland) {
+                return underscore.some(this.data.farmland, function (item) {
+                    return item.data.sgKey === farmland.data.sgKey;
+                });
+            });
+
+            privateProperty(this, 'removeFarmlandBySgKey', function (sgKey) {
+                this.data.farmland = underscore.reject(this.data.farmland, function (item) {
+                    return (item.data.sgKey === sgKey);
+                });
+
+                generateTitle(this);
+                recalculateArea(this);
+            });
+
+            this.data = (attrs && attrs.data ? attrs.data : {});
+            Base.initializeObject(this.data, 'farmland', []);
+
+            if (underscore.isUndefined(attrs) || arguments.length === 0) return;
+
+            this.id = attrs.id || attrs.$id;
+            this.area = attrs.area || 0;
+            this.buyerName = attrs.buyerName;
+            this.centroid = attrs.centroid;
+            this.country = attrs.country;
+            this.countryId = attrs.countryId;
+            this.documentCount = attrs.documentCount || 0;
+            this.reference = attrs.reference;
+            this.salePrice = attrs.salePrice;
+            this.saleDate = attrs.saleDate;
+            this.sellerName = attrs.sellerName;
+            this.title = attrs.title;
+            this.uid = attrs.uid;
+
+            this.documents = underscore.chain(attrs.documents)
+                .map(DocumentFactory.newCopy)
+                .sortBy(function (document) {
+                    return moment(document.data.report && document.data.report.completionDate).unix();
+                })
+                .value();
+        }
+
+        function generateTitle (instance) {
+            instance.title = underscore.chain(instance.farmland)
+                .groupBy(function (asset) {
+                    return asset.data.farmLabel;
+                })
+                .map(function (assets, farmLabel) {
+                    var portionSentence = underscore.chain(assets)
+                        .pluck('data')
+                        .sortBy('portionLabel')
+                        .pluck('portionLabel')
+                        .compact()
+                        .map(function (portionLabel) {
+                            return (s.include(portionLabel, '/') ? s.strLeftBack(portionLabel, '/') : '');
+                        })
+                        .toSentence()
+                        .value();
+
+                    return (underscore.size(portionSentence) > 0 ? (s.startsWith(portionSentence, 'RE') ? '' : 'Ptn ') + portionSentence + ' of the ' : 'The ') +
+                        (farmLabel ? (underscore.startsWith(farmLabel.toLowerCase(), 'farm') ? '' : 'farm ') + farmLabel : '');
+                })
+                .toSentence()
+                .prune(1024, '')
+                .value();
+        }
+
+        function recalculateArea (instance) {
+            instance.area = safeMath.round(underscore.reduce(instance.data.farmland, function(total, farmland) {
+                return safeMath.plus(total, farmland.data.area);
+            }, 0), 3);
+        }
+
+        inheritModel(FarmSale, Base);
+
+        readOnlyProperty(FarmSale, 'propertyKnowledgeOptions', ['The valuer has no firsthand knowledge of this property.',
+            'The valuer has inspected this property from aerial photos, and has no firsthand knowledge of the property.',
+            'The valuer has inspected/valued this property before, and has firsthand knowledge of the property.']);
+
+
+        FarmSale.validates({
+            area: {
+                required: true,
+                numeric: true
+            },
+            countryId: {
+                required: true,
+                numeric: true
+            },
+            data: {
+                required: true,
+                object: true
+            },
+            farmland: {
+                required: true,
+                length: {
+                    min: 1
+                }
+            },
+            salePrice: {
+                required: true,
+                numeric: true
+            },
+            saleDate: {
+                required: true,
+                date: true
+            },
+            title: {
+                required: true,
+                length: {
+                    min: 1,
+                    max: 1024
+                }
+            },
+            uid: {
+                required: true,
+                format: {
+                    uid: true
+                }
+            }
+        });
+
+        return FarmSale;
+    }]);
+
 var sdkModelTaskEmergenceInspection = angular.module('ag.sdk.model.task.emergence-inspection', ['ag.sdk.model.crop-inspection', 'ag.sdk.model.task']);
 
 sdkModelTaskEmergenceInspection.provider('EmergenceInspectionTask', ['TaskFactoryProvider', function (TaskFactoryProvider) {
@@ -21762,8 +21655,8 @@ sdkModelValidators.factory('Validator.equal', ['underscore', 'Validatable.Valida
 /**
  * Format Validator
  */
-sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date', 'Validator.format.email', 'Validator.format.telephone', 'Validator.format.uuid',
-    function (underscore, Validator, date, email, telephone, uuid) {
+sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Validator', 'Validator.format.date', 'Validator.format.email', 'Validator.format.regex', 'Validator.format.telephone', 'Validator.format.uuid',
+    function (underscore, Validator, date, email, regex, telephone, uuid) {
         function format (value, instance, field) {}
 
         format.message = function () {
@@ -21773,6 +21666,7 @@ sdkModelValidators.factory('Validator.format', ['underscore', 'Validatable.Valid
         format.options = {
             date: date,
             email: email,
+            regex: regex,
             telephone: telephone,
             uuid: uuid
         };
@@ -21816,6 +21710,23 @@ sdkModelValidators.factory('Validator.format.email', ['moment', 'underscore', 'V
         return new Validator(email);
     }]);
 
+sdkModelValidators.factory('Validator.format.regex', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        function regex (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return new RegExp(this.regex).test(value);
+        }
+
+        regex.message = function () {
+            return 'Must be a valid';
+        };
+
+        return new Validator(regex);
+    }]);
+
 sdkModelValidators.factory('Validator.format.telephone', ['moment', 'underscore', 'Validatable.Validator',
     function (moment, underscore, Validator) {
         var regexValidator = new RegExp('^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$');
@@ -21852,6 +21763,25 @@ sdkModelValidators.factory('Validator.format.uuid', ['moment', 'underscore', 'Va
         };
 
         return new Validator(uuid);
+    }]);
+
+sdkModelValidators.factory('Validator.format.uid', ['moment', 'underscore', 'Validatable.Validator',
+    function (moment, underscore, Validator) {
+        var regexValidator = new RegExp('^[0-9a-f]{16}$', 'i');
+
+        function uid (value, instance, field) {
+            if (underscore.isUndefined(value) || underscore.isNull(value) || value === '') {
+                return true;
+            }
+
+            return regexValidator.test(value);
+        }
+
+        uid.message = function () {
+            return 'Must be a valid UID';
+        };
+
+        return new Validator(uid);
     }]);
 
 /**
@@ -22164,8 +22094,10 @@ angular.module('ag.sdk.interface', [
 angular.module('ag.sdk.model', [
     'ag.sdk.model.activity',
     'ag.sdk.model.asset',
+    'ag.sdk.model.asset-factory',
     'ag.sdk.model.base',
     'ag.sdk.model.business-plan',
+    'ag.sdk.model.comparable-farm-valuation',
     'ag.sdk.model.comparable-sale',
     'ag.sdk.model.crop',
     'ag.sdk.model.crop-report',
@@ -22175,6 +22107,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.enterprise-budget',
     'ag.sdk.model.expense',
     'ag.sdk.model.farm',
+    'ag.sdk.model.farm-sale',
     'ag.sdk.model.farm-valuation',
     'ag.sdk.model.farmer',
     'ag.sdk.model.field',
@@ -22184,6 +22117,7 @@ angular.module('ag.sdk.model', [
     'ag.sdk.model.liability',
     'ag.sdk.model.livestock',
     'ag.sdk.model.map-theme',
+    'ag.sdk.model.market-report',
     'ag.sdk.model.merchant',
     'ag.sdk.model.organization',
     'ag.sdk.model.point-of-interest',

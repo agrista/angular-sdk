@@ -1,4 +1,4 @@
-var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.library', 'ag.sdk.model.base']);
+var sdkModelOrganization = angular.module('ag.sdk.model.organization', ['ag.sdk.interface.list', 'ag.sdk.library', 'ag.sdk.model.base']);
 
 sdkModelOrganization.provider('Organization', ['listServiceMapProvider', function (listServiceMapProvider) {
     this.$get = ['Base', 'computedProperty', 'geoJSONHelper', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'topologyHelper', 'underscore',
@@ -41,9 +41,12 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.createdBy = attrs.createdBy;
                 this.customerId = attrs.customerId;
                 this.customerNumber = attrs.customerNumber;
+                this.domain = attrs.domain;
                 this.email = attrs.email;
                 this.hostUrl = attrs.hostUrl;
                 this.legalEntities = attrs.legalEntities || [];
+                this.locale = attrs.locale;
+                this.localeId = attrs.localeId;
                 this.name = attrs.name;
                 this.originHost = attrs.originHost;
                 this.originPort = attrs.originPort;
@@ -107,6 +110,11 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
             });
 
             Organization.validates({
+                domain: {
+                    format: {
+                        regex: '^[a-z0-9-]*$'
+                    }
+                },
                 countryId: {
                     required: true,
                     numeric: true
@@ -115,6 +123,10 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                     format: {
                         email: true
                     }
+                },
+                localeId: {
+                    required: true,
+                    numeric: true
                 },
                 name: {
                     required: true,
@@ -188,7 +200,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
     this.$get = ['$injector', 'Organization', function ($injector, Organization) {
         function apply (attrs, fnName) {
             if (instances[attrs.type]) {
-                initInstance(attrs.type);
+                inject(attrs.type);
 
                 return instances[attrs.type][fnName](attrs);
             }
@@ -196,7 +208,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
             return Organization[fnName](attrs);
         }
 
-        function initInstance(type) {
+        function inject (type) {
             if (instances[type] && typeof instances[type] === 'string') {
                 instances[type] = $injector.get(instances[type]);
             }
@@ -205,7 +217,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
         return {
             isInstanceOf: function (organization) {
                 if (organization) {
-                    initInstance(organization.type);
+                    inject(organization.type);
 
                     return (instances[organization.type] ?
                             organization instanceof instances[organization.type] :

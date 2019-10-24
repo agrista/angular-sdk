@@ -22,7 +22,7 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             });
 
             privateProperty(this, 'setIrrigatedFromLandUse', function () {
-                this.irrigated = s.include(this.landUse, 'Irrigated');
+                this.irrigated = irrigatedFromLandUse(this.landUse);
             });
 
             privateProperty(this, 'fieldNameUnique', function (fieldName, farm) {
@@ -52,13 +52,22 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
         function convertLandUse (instance) {
             switch (instance.landUse) {
+                case 'Building':
+                case 'Built-up':
+                case 'Housing':
+                    instance.landUse = 'Residential';
+                    break;
                 case 'Cropland':
                     if (instance.irrigated) {
                         instance.landUse = 'Cropland (Irrigated)';
                     }
                     break;
+                case 'Cropland (Emerging)':
+                    instance.landUse = 'Cropland (Subsistence)';
+                    break;
                 case 'Conservation':
-                    instance.landUse = 'Grazing (Bush)';
+                case 'Protected Area':
+                    instance.landUse = 'Grazing';
                     break;
                 case 'Horticulture (Intensive)':
                     instance.landUse = 'Greenhouses';
@@ -69,11 +78,11 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                 case 'Horticulture (Seasonal)':
                     instance.landUse = 'Vegetables';
                     break;
-                case 'Housing':
-                    instance.landUse = 'Homestead';
+                case 'Structures (Retail)':
+                    instance.landUse = 'Commercial';
                     break;
-                case 'Wasteland':
-                    instance.landUse = 'Non-vegetated';
+                case 'Sugarcane (Emerging)':
+                    instance.landUse = 'Sugarcane (Small-scale)';
                     break;
             }
         }
@@ -84,6 +93,10 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             return (farm && farm.data && !underscore.isEmpty(trimmedValue) && !underscore.some(farm.data.fields || [], function (field) {
                 return (s.trim(field.fieldName).toLowerCase() === trimmedValue || (!underscore.isUndefined(instance.loc) && underscore.isEqual(field.loc, instance.loc)));
             }));
+        }
+
+        function irrigatedFromLandUse (landUse) {
+            return s.include(landUse, 'Irrigated');
         }
 
         inheritModel(Field, Model.Base);
@@ -111,12 +124,12 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Sub-drainage']);
 
         readOnlyProperty(Field, 'landClasses', [
-            'Building',
-            'Built-up',
+            'Commercial',
             'Cropland',
-            'Cropland (Emerging)',
             'Cropland (Irrigated)',
             'Cropland (Smallholding)',
+            'Cropland (Subsistence)',
+            'Dam',
             'Erosion',
             'Forest',
             'Grazing',
@@ -125,20 +138,39 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Grazing (Shrubland)',
             'Greenhouses',
             'Homestead',
+            'Horticulture',
+            'Industrial',
+            'Landfill',
             'Mining',
             'Non-vegetated',
+            'Ocean',
             'Orchard',
             'Orchard (Shadenet)',
             'Pineapple',
             'Plantation',
             'Plantation (Smallholding)',
             'Planted Pastures',
+            'Planted Pastures (Irrigated)',
+            'Recreational',
+            'Residential',
+            'Residential (Informal)',
+            'Residential (Smallholding)',
+            'River',
+            'Road & Rail',
+            'Sewage Ponds',
+            'Structures (Handling)',
+            'Structures (Processing)',
+            'Structures (Storage)',
             'Sugarcane',
-            'Sugarcane (Emerging)',
             'Sugarcane (Irrigated)',
+            'Sugarcane (Small-scale)',
             'Tea',
+            'Tea (Irrigated)',
+            'Utilities',
             'Vegetables',
+            'Village',
             'Vineyard',
+            'Wasteland',
             'Water',
             'Water (Seasonal)',
             'Wetland']);
@@ -182,6 +214,14 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
         readOnlyProperty(Field, 'terrains', [
             'Mountains',
             'Plains']);
+
+        privateProperty(Field, 'getIrrigatedFromLandUse', function (landUse) {
+            return irrigatedFromLandUse(landUse);
+        });
+
+        privateProperty(Field, 'isLandUse', function (landUse) {
+            return landUse && underscore.contains(Field.landClasses, landUse);
+        });
 
         Field.validates({
             croppingPotential: {

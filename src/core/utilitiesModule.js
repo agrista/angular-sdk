@@ -207,7 +207,23 @@ sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function
     }
 }]);
 
-sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
+sdkUtilitiesApp.factory('httpRequestor', ['$http', 'asJson', 'promiseService', function ($http, asJson, promiseService) {
+    return function (url, data, excludeProps) {
+        return promiseService.wrap(function (promise) {
+            if (data) {
+                $http.post(url, asJson(data, excludeProps || []), {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            } else {
+                $http.get(url, {withCredentials: true}).then(function (res) {
+                    promise.resolve(res.data);
+                }, promise.reject);
+            }
+        });
+    }
+}]);
+
+sdkUtilitiesApp.factory('httpResultTypeRequestor', ['$http', 'underscore', 'uriQueryFormatArrays', function ($http, underscore, uriQueryFormatArrays) {
     return function (url, params) {
         params = params || {};
 
@@ -224,6 +240,28 @@ sdkUtilitiesApp.factory('httpRequestor', ['$http', 'underscore', 'uriQueryFormat
         })).then(function (result) {
             return result.data;
         });
+    }
+}]);
+
+sdkUtilitiesApp.filter('parenthesizeProps', ['underscore', function (underscore) {
+    return function (text, allProps, separator) {
+        var closingParentheses = text.lastIndexOf(')'),
+            propsString = underscore.chain(allProps)
+                .compact()
+                .map(function (props) {
+                    return props.split(', ');
+                })
+                .flatten()
+                .reject(function (prop) {
+                    return s.include(text, prop);
+                })
+                .value()
+                .join(separator || ', ');
+
+        return (propsString.length === 0 ? text :
+            (closingParentheses === -1 ?
+                text + ' (' + propsString + ')' :
+                text.substr(0, closingParentheses) + ', ' + propsString + text.substr(closingParentheses)));
     }
 }]);
 
@@ -349,7 +387,7 @@ sdkUtilitiesApp.factory('localStore', ['$cookieStore', '$window', function ($coo
     }
 }]);
 
-sdkUtilitiesApp.factory('colorHash', ['md5', function (md5) {
+sdkUtilitiesApp.factory('colorHash', [function () {
     function hashCode (str) {
         var hash = 0;
         for (var i = 0; i < str.length; i++) {
@@ -406,13 +444,19 @@ sdkUtilitiesApp.factory('sortJson', ['underscore', function (underscore) {
     return sortValue;
 }]);
 
-sdkUtilitiesApp.factory('md5Json', ['md5', 'sortJson', function (md5, sortJson) {
+sdkUtilitiesApp.factory('md5Json', ['md5String', 'sortJson', function (md5String, sortJson) {
     function compact (json) {
-        return (json ? JSON.stringify(json).toLowerCase().replace(' ', '') : json);
+        return (json ? JSON.stringify(json) : json);
     }
 
     return function (json) {
-        return md5(compact(sortJson(json)));
+        return md5String(compact(sortJson(json)));
+    };
+}]);
+
+sdkUtilitiesApp.factory('md5String', ['md5', function (md5) {
+    return function (str) {
+        return (str ? md5(str.toLowerCase().replace(' ', '')) : str);
     };
 }]);
 
