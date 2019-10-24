@@ -9440,20 +9440,23 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
         function convertLandUse (instance) {
             switch (instance.landUse) {
+                case 'Building':
+                case 'Built-up':
+                case 'Homestead':
+                case 'Housing':
+                    instance.landUse = 'Residential';
+                    break;
                 case 'Cropland':
                     if (instance.irrigated) {
                         instance.landUse = 'Cropland (Irrigated)';
                     }
                     break;
-                case 'Building':
-                    instance.landUse = 'Built-up';
+                case 'Cropland (Emerging)':
+                    instance.landUse = 'Cropland (Subsistence)';
                     break;
                 case 'Conservation':
-                    instance.landUse = 'Protected Area';
-                    break;
-                case 'Homestead':
-                case 'Housing':
-                    instance.landUse = 'Residential';
+                case 'Protected Area':
+                    instance.landUse = 'Grazing';
                     break;
                 case 'Horticulture (Intensive)':
                     instance.landUse = 'Greenhouses';
@@ -9463,6 +9466,12 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                     break;
                 case 'Horticulture (Seasonal)':
                     instance.landUse = 'Vegetables';
+                    break;
+                case 'Structures (Retail)':
+                    instance.landUse = 'Commercial';
+                    break;
+                case 'Sugarcane (Emerging)':
+                    instance.landUse = 'Sugarcane (Small-scale)';
                     break;
             }
         }
@@ -9504,11 +9513,12 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Sub-drainage']);
 
         readOnlyProperty(Field, 'landClasses', [
-            'Built-up',
+            'Commercial',
             'Cropland',
-            'Cropland (Emerging)',
             'Cropland (Irrigated)',
             'Cropland (Smallholding)',
+            'Cropland (Subsistence)',
+            'Dam',
             'Erosion',
             'Forest',
             'Grazing',
@@ -9516,26 +9526,38 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Grazing (Fynbos)',
             'Grazing (Shrubland)',
             'Greenhouses',
+            'Homestead',
+            'Horticulture',
+            'Industrial',
+            'Landfill',
             'Mining',
             'Non-vegetated',
+            'Ocean',
             'Orchard',
             'Orchard (Shadenet)',
             'Pineapple',
             'Plantation',
             'Plantation (Smallholding)',
             'Planted Pastures',
-            'Protected Area',
+            'Planted Pastures (Irrigated)',
+            'Recreational',
             'Residential',
+            'Residential (Informal)',
+            'Residential (Smallholding)',
+            'River',
+            'Road & Rail',
+            'Sewage Ponds',
             'Structures (Handling)',
             'Structures (Processing)',
-            'Structures (Retail)',
             'Structures (Storage)',
             'Sugarcane',
-            'Sugarcane (Emerging)',
             'Sugarcane (Irrigated)',
+            'Sugarcane (Small-scale)',
             'Tea',
+            'Tea (Irrigated)',
             'Utilities',
             'Vegetables',
+            'Village',
             'Vineyard',
             'Wasteland',
             'Water',
@@ -15363,25 +15385,32 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
             readOnlyProperty(Asset, 'landClassesByType', {
                 'crop': [
                     'Cropland',
-                    'Cropland (Emerging)',
                     'Cropland (Irrigated)',
                     'Cropland (Smallholding)',
+                    'Cropland (Subsistence)',
                     'Greenhouses',
                     'Vegetables'],
                 'cropland': [
                     'Cropland',
-                    'Cropland (Emerging)',
                     'Cropland (Irrigated)',
                     'Cropland (Smallholding)',
+                    'Cropland (Subsistence)',
                     'Greenhouses',
                     'Vegetables'],
                 'farmland': [],
                 'improvement': [
-                    'Built-up',
+                    'Commercial',
+                    'Dam',
+                    'Homestead',
+                    'Industrial',
+                    'Mining',
+                    'Recreational',
                     'Residential',
+                    'Residential (Informal)',
+                    'Residential (Smallholding)',
+                    'Road & Rail',
                     'Structures (Handling)',
                     'Structures (Processing)',
-                    'Structures (Retail)',
                     'Structures (Storage)',
                     'Utilities'
                 ],
@@ -15396,7 +15425,8 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
                     'Grazing (Bush)',
                     'Grazing (Fynbos)',
                     'Grazing (Shrubland)',
-                    'Planted Pastures'],
+                    'Planted Pastures',
+                    'Planted Pastures (Irrigated)'],
                 'permanent crop': [
                     'Orchard',
                     'Orchard (Shadenet)',
@@ -15407,14 +15437,19 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
                     'Plantation',
                     'Plantation (Smallholding)',
                     'Sugarcane',
-                    'Sugarcane (Emerging)',
                     'Sugarcane (Irrigated)',
-                    'Tea'],
+                    'Sugarcane (Small-scale)',
+                    'Tea',
+                    'Tea (Irrigated)'],
                 'vme': [],
                 'wasteland': [
+                    'Erosion',
+                    'Landfill',
                     'Non-vegetated',
+                    'Sewage Ponds',
                     'Wasteland'],
                 'water right': [
+                    'River',
                     'Water',
                     'Water (Seasonal)',
                     'Wetland']
@@ -15626,9 +15661,9 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
 
             readOnlyProperty(Asset, 'cropsByLandClass', {
                 'Cropland': _croplandCrops,
-                'Cropland (Emerging)': _croplandCrops,
                 'Cropland (Irrigated)': _croplandIrrigatedCrops,
                 'Cropland (Smallholding)': _croplandCrops,
+                'Cropland (Subsistence)': _croplandCrops,
                 'Forest': ['Pine', 'Timber'],
                 'Grazing': _grazingCrops,
                 'Grazing (Bush)': ['Bush'],
@@ -15641,10 +15676,12 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
                 'Plantation': _plantationCrops,
                 'Plantation (Smallholding)': _plantationCrops,
                 'Planted Pastures': _grazingCrops,
+                'Planted Pastures (Irrigated)': _grazingCrops,
                 'Sugarcane': ['Sugarcane'],
-                'Sugarcane (Emerging)': ['Sugarcane'],
                 'Sugarcane (Irrigated)': ['Sugarcane (Irrigated)'],
+                'Sugarcane (Small-scale)': ['Sugarcane'],
                 'Tea': ['Tea'],
+                'Tea (Irrigated)': ['Tea'],
                 'Vegetables': _vegetableCrops,
                 'Vineyard': _vineyardCrops
             });
@@ -15659,11 +15696,14 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
             });
 
             readOnlyProperty(Asset, 'improvementCategoriesByLandClass', {
-                'Built-up': [AIRPORT, BUILDING, 'Crocodile Dam', DAM, DOMESTIC, EDUCATION, FENCING, 'Infrastructure', 'Laboratory', 'Office', ROADS, SECURITY, 'Trench', 'Vacant Area', WALLS],
-                'Residential': [RECREATION, 'Religious', RESIDENTIAL, STAFF, SPORTS],
+                'Commercial': [COMMERCIAL],
+                'Dam': [DAM, 'Crocodile Dam'],
+                'Industrial': [AIRPORT, BUILDING, FENCING, 'Infrastructure', 'Laboratory', 'Office', SECURITY, 'Trench', 'Vacant Area', WALLS],
+                'Recreational': [EDUCATION, RECREATION, 'Religious', SPORTS],
+                'Residential': [DOMESTIC, RESIDENTIAL, STAFF],
+                'Road & Rail': [ROADS],
                 'Structures (Handling)': [AQUACULTURE, 'Aviary', 'Beekeeping', DAIRY, 'Feedlot', 'Greenhouse', LIVESTOCK_HANDING, MUSHROOMS, NURSERY, PADDOCKS, PIGGERY, POULTRY],
                 'Structures (Processing)': [CROP_PROCESSING, 'Feed Mill', 'Grain Mill', MEAT_PROCESSING, 'Packaging Facility', PROCESSING, 'Sugar Mill', 'Timber Mill'],
-                'Structures (Retail)': [COMMERCIAL],
                 'Structures (Storage)': ['Cold Storage', 'Silo', STORAGE, 'Warehouse', WINE_CELLAR],
                 'Utilities': [BOREHOLE, 'Compost', EQUIPMENT, FUEL, IRRIGATION, LOGISTICS, 'Shade Nets', 'Tanks', UTILITIES, VEHICLES, WATER]
             });

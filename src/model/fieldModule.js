@@ -52,20 +52,23 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
 
         function convertLandUse (instance) {
             switch (instance.landUse) {
+                case 'Building':
+                case 'Built-up':
+                case 'Homestead':
+                case 'Housing':
+                    instance.landUse = 'Residential';
+                    break;
                 case 'Cropland':
                     if (instance.irrigated) {
                         instance.landUse = 'Cropland (Irrigated)';
                     }
                     break;
-                case 'Building':
-                    instance.landUse = 'Built-up';
+                case 'Cropland (Emerging)':
+                    instance.landUse = 'Cropland (Subsistence)';
                     break;
                 case 'Conservation':
-                    instance.landUse = 'Protected Area';
-                    break;
-                case 'Homestead':
-                case 'Housing':
-                    instance.landUse = 'Residential';
+                case 'Protected Area':
+                    instance.landUse = 'Grazing';
                     break;
                 case 'Horticulture (Intensive)':
                     instance.landUse = 'Greenhouses';
@@ -75,6 +78,12 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
                     break;
                 case 'Horticulture (Seasonal)':
                     instance.landUse = 'Vegetables';
+                    break;
+                case 'Structures (Retail)':
+                    instance.landUse = 'Commercial';
+                    break;
+                case 'Sugarcane (Emerging)':
+                    instance.landUse = 'Sugarcane (Small-scale)';
                     break;
             }
         }
@@ -116,11 +125,12 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Sub-drainage']);
 
         readOnlyProperty(Field, 'landClasses', [
-            'Built-up',
+            'Commercial',
             'Cropland',
-            'Cropland (Emerging)',
             'Cropland (Irrigated)',
             'Cropland (Smallholding)',
+            'Cropland (Subsistence)',
+            'Dam',
             'Erosion',
             'Forest',
             'Grazing',
@@ -128,26 +138,38 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             'Grazing (Fynbos)',
             'Grazing (Shrubland)',
             'Greenhouses',
+            'Homestead',
+            'Horticulture',
+            'Industrial',
+            'Landfill',
             'Mining',
             'Non-vegetated',
+            'Ocean',
             'Orchard',
             'Orchard (Shadenet)',
             'Pineapple',
             'Plantation',
             'Plantation (Smallholding)',
             'Planted Pastures',
-            'Protected Area',
+            'Planted Pastures (Irrigated)',
+            'Recreational',
             'Residential',
+            'Residential (Informal)',
+            'Residential (Smallholding)',
+            'River',
+            'Road & Rail',
+            'Sewage Ponds',
             'Structures (Handling)',
             'Structures (Processing)',
-            'Structures (Retail)',
             'Structures (Storage)',
             'Sugarcane',
-            'Sugarcane (Emerging)',
             'Sugarcane (Irrigated)',
+            'Sugarcane (Small-scale)',
             'Tea',
+            'Tea (Irrigated)',
             'Utilities',
             'Vegetables',
+            'Village',
             'Vineyard',
             'Wasteland',
             'Water',
