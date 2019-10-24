@@ -128,7 +128,7 @@ sdkApiApp.factory('activityApi', ['httpRequestor', 'configuration', function (ht
             return httpRequestor(host + 'api/activity/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteActivity: function (id) {
-            return httpRequestor(host + 'api/activity/' + data.id + '/delete', {});
+            return httpRequestor(host + 'api/activity/' + id + '/delete', {});
         },
         attachAsset: function (id, assetId) {
             return httpRequestor(host + 'api/activity/' + id+ '/add/' + assetId, {});
@@ -433,7 +433,7 @@ sdkApiApp.factory('documentApi', ['httpRequestor', 'configuration', 'pagingServi
             return httpRequestor(host + 'api/document/' + id);
         },
         sendDocument: function (id, data) {
-            return httpRequestor(host + 'api/document/' + id+ '/send', data);
+            return httpRequestor(host + 'api/document/' + id + '/send', data);
         },
         attachDocument: function (id, documentId, params) {
             params = uriEncodeQuery(params);
@@ -689,10 +689,10 @@ sdkApiApp.factory('farmSaleApi', ['httpRequestor', 'httpResultTypeRequestor', 'p
             return pagingService.page(host + 'api/farm-sales/search', params);
         },
         getFarmSale: function (id) {
-            return httpRequestor(host + 'api/farm-sale/ + id');
+            return httpRequestor(host + 'api/farm-sale/' + id);
         },
         updateFarmSale: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/farm-sale/' + id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'api/farm-sale/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteFarmSale: function (id) {
             return httpRequestor(host + 'api/farm-sale/' + id + '/delete', {});
@@ -1295,11 +1295,7 @@ sdkApiApp.factory('userApi', ['httpRequestor', 'pagingService', 'configuration',
             return httpRequestor(host + 'api/user/' + id + '/invite', data);
         },
         getUser: function (id, username) {
-            if (username) {
-                var param = '?username=' + username;
-            }
-
-            return httpRequestor(host + 'api/user/' + id + (param ? param : ''));
+            return httpRequestor(host + 'api/user/' + id + (username ? '?username=' + username : ''));
         },
         updateUser: function (data) {
             return httpRequestor(host + 'api/user/' + data.id, data);
@@ -1308,7 +1304,7 @@ sdkApiApp.factory('userApi', ['httpRequestor', 'pagingService', 'configuration',
             return httpRequestor(host + 'api/user/' + data.id + '/groups', data);
         },
         deleteUser: function (id) {
-            return httpRequestor(host + 'api/user/' + data.id + '/delete', {});
+            return httpRequestor(host + 'api/user/' + id + '/delete', {});
         }
     };
 }]);
