@@ -54,7 +54,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             switch (instance.landUse) {
                 case 'Building':
                 case 'Built-up':
-                case 'Homestead':
                 case 'Housing':
                     instance.landUse = 'Residential';
                     break;

@@ -8644,6 +8644,7 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
                     [ROADS, 'Access Roads'],
                     [ROADS, 'Gravel'],
                     [ROADS, 'Tarred'],
+                    ['Rail'],
                     [SECURITY],
                     [SECURITY, 'Control Room'],
                     [SECURITY, 'Guardhouse'],
@@ -9223,7 +9224,7 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
                 'Industrial': [AIRPORT, BUILDING, FENCING, 'Infrastructure', 'Laboratory', 'Office', SECURITY, 'Trench', 'Vacant Area', WALLS],
                 'Recreational': [EDUCATION, RECREATION, 'Religious', SPORTS],
                 'Residential': [DOMESTIC, RESIDENTIAL, STAFF],
-                'Road & Rail': [ROADS],
+                'Road & Rail': [ROADS, 'Rail'],
                 'Structures (Handling)': [AQUACULTURE, 'Aviary', 'Beekeeping', DAIRY, 'Feedlot', 'Greenhouse', LIVESTOCK_HANDING, MUSHROOMS, NURSERY, PADDOCKS, PIGGERY, POULTRY],
                 'Structures (Processing)': [CROP_PROCESSING, 'Feed Mill', 'Grain Mill', MEAT_PROCESSING, 'Packaging Facility', PROCESSING, 'Sugar Mill', 'Timber Mill'],
                 'Structures (Storage)': ['Cold Storage', 'Silo', STORAGE, 'Warehouse', WINE_CELLAR],
@@ -16631,7 +16632,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             switch (instance.landUse) {
                 case 'Building':
                 case 'Built-up':
-                case 'Homestead':
                 case 'Housing':
                     instance.landUse = 'Residential';
                     break;
