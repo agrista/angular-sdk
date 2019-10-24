@@ -14446,9 +14446,7 @@ sdkModelAssetFactory.provider('AssetFactory', function () {
     this.$get = ['$injector', function ($injector) {
         function apply (attrs, fnName) {
             if (instances[attrs.type]) {
-                if (typeof instances[attrs.type] === 'string') {
-                    instances[attrs.type] = $injector.get(instances[attrs.type]);
-                }
+                inject(attrs.type);
 
                 return instances[attrs.type][fnName](attrs);
             }
@@ -14456,9 +14454,21 @@ sdkModelAssetFactory.provider('AssetFactory', function () {
             return null;
         }
 
+        function inject (type) {
+            if (instances[type] && typeof instances[type] === 'string') {
+                instances[type] = $injector.get(instances[type]);
+            }
+        }
+
         return {
             isInstanceOf: function (asset) {
-                return (asset && instances[asset.type] && asset instanceof instances[asset.type]);
+                if (asset) {
+                    inject(asset.type);
+
+                    return (instances[asset.type] && asset instanceof instances[asset.type]);
+                }
+
+                return false;
             },
             new: function (attrs) {
                 return apply(attrs, 'new');
@@ -20381,9 +20391,7 @@ sdkModelDocument.provider('DocumentFactory', function () {
     this.$get = ['$injector', 'Document', function ($injector, Document) {
         function apply (attrs, fnName) {
             if (instances[attrs.docType]) {
-                if (typeof instances[attrs.docType] === 'string') {
-                    instances[attrs.docType] = $injector.get(instances[attrs.docType]);
-                }
+                inject(attrs.docType);
 
                 return instances[attrs.docType][fnName](attrs);
             }
@@ -20391,13 +20399,23 @@ sdkModelDocument.provider('DocumentFactory', function () {
             return Document[fnName](attrs);
         }
 
+        function inject (type) {
+            if (instances[type] && typeof instances[type] === 'string') {
+                instances[type] = $injector.get(instances[type]);
+            }
+        }
+
         return {
             isInstanceOf: function (document) {
-                return (document ?
-                    (instances[document.docType] ?
-                        document instanceof instances[document.docType] :
-                        document instanceof Document) :
-                    false);
+                if (document) {
+                    inject(document.docType);
+
+                    return (instances[document.docType] ?
+                            document instanceof instances[document.docType] :
+                            document instanceof Document);
+                }
+
+                return false;
             },
             new: function (attrs) {
                 return apply(attrs, 'new');
@@ -20977,7 +20995,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
     this.$get = ['$injector', 'Organization', function ($injector, Organization) {
         function apply (attrs, fnName) {
             if (instances[attrs.type]) {
-                initInstance(attrs.type);
+                inject(attrs.type);
 
                 return instances[attrs.type][fnName](attrs);
             }
@@ -20985,7 +21003,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
             return Organization[fnName](attrs);
         }
 
-        function initInstance(type) {
+        function inject (type) {
             if (instances[type] && typeof instances[type] === 'string') {
                 instances[type] = $injector.get(instances[type]);
             }
@@ -20994,7 +21012,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
         return {
             isInstanceOf: function (organization) {
                 if (organization) {
-                    initInstance(organization.type);
+                    inject(organization.type);
 
                     return (instances[organization.type] ?
                             organization instanceof instances[organization.type] :

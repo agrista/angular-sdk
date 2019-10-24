@@ -200,7 +200,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
     this.$get = ['$injector', 'Organization', function ($injector, Organization) {
         function apply (attrs, fnName) {
             if (instances[attrs.type]) {
-                initInstance(attrs.type);
+                inject(attrs.type);
 
                 return instances[attrs.type][fnName](attrs);
             }
@@ -208,7 +208,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
             return Organization[fnName](attrs);
         }
 
-        function initInstance(type) {
+        function inject (type) {
             if (instances[type] && typeof instances[type] === 'string') {
                 instances[type] = $injector.get(instances[type]);
             }
@@ -217,7 +217,7 @@ sdkModelOrganization.provider('OrganizationFactory', function () {
         return {
             isInstanceOf: function (organization) {
                 if (organization) {
-                    initInstance(organization.type);
+                    inject(organization.type);
 
                     return (instances[organization.type] ?
                             organization instanceof instances[organization.type] :

@@ -163,9 +163,7 @@ sdkModelDocument.provider('DocumentFactory', function () {
     this.$get = ['$injector', 'Document', function ($injector, Document) {
         function apply (attrs, fnName) {
             if (instances[attrs.docType]) {
-                if (typeof instances[attrs.docType] === 'string') {
-                    instances[attrs.docType] = $injector.get(instances[attrs.docType]);
-                }
+                inject(attrs.docType);
 
                 return instances[attrs.docType][fnName](attrs);
             }
@@ -173,13 +171,23 @@ sdkModelDocument.provider('DocumentFactory', function () {
             return Document[fnName](attrs);
         }
 
+        function inject (type) {
+            if (instances[type] && typeof instances[type] === 'string') {
+                instances[type] = $injector.get(instances[type]);
+            }
+        }
+
         return {
             isInstanceOf: function (document) {
-                return (document ?
-                    (instances[document.docType] ?
-                        document instanceof instances[document.docType] :
-                        document instanceof Document) :
-                    false);
+                if (document) {
+                    inject(document.docType);
+
+                    return (instances[document.docType] ?
+                            document instanceof instances[document.docType] :
+                            document instanceof Document);
+                }
+
+                return false;
             },
             new: function (attrs) {
                 return apply(attrs, 'new');
