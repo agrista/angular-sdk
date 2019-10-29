@@ -928,7 +928,7 @@ sdkApiApp.factory('organizationApi', ['httpRequestor', 'httpResultTypeRequestor'
             return httpResultTypeRequestor(host + 'api/organization/search', params);
         },
         inviteOrganization: function (id, data) {
-            return httpRequestor(host + 'api/organization/' + id + '/invite', data);
+            return httpRequestor(host + 'api/organization/' + id + '/invite', data || {});
         },
         registerOrganization: function (data) {
             return httpRequestor(host + 'api/register/organization', data);
@@ -1217,7 +1217,7 @@ sdkApiApp.factory('userApi', ['httpRequestor', 'pagingService', 'configuration',
             return httpRequestor(host + 'api/user', data);
         },
         inviteUser: function (id, data) {
-            return httpRequestor(host + 'api/user/' + id + '/invite', data);
+            return httpRequestor(host + 'api/user/' + id + '/invite', data || {});
         },
         getUser: function (id, username) {
             return httpRequestor(host + 'api/user/' + id + (username ? '?username=' + username : ''));
