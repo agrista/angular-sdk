@@ -9433,7 +9433,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             this.irrigationType = attrs.irrigationType;
             this.landUse = attrs.landUse;
             this.loc = attrs.loc;
-            this.sgKey = attrs.sgKey;
             this.size = attrs.size;
             this.soilTexture = attrs.soilTexture;
             this.source = attrs.source;
@@ -9655,10 +9654,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             },
             size: {
                 required: true,
-                numeric: true
-            },
-            sgKey: {
-                required: false,
                 numeric: true
             },
             soilTexture: {
