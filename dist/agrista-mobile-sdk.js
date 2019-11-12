@@ -22983,6 +22983,12 @@ sdkModelFarmSale.factory('FarmSale', ['Base', 'computedProperty', 'DocumentFacto
                 return this.uid;
             });
 
+            privateProperty(this, 'generateTitle', function () {
+                generateTitle(this);
+
+                return this.title;
+            });
+
             privateProperty(this, 'asComparable', function () {
                 return {
                     centroid: this.centroid,
