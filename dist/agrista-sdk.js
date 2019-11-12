@@ -1198,8 +1198,11 @@ sdkApiApp.factory('shareApi', ['httpRequestor', 'configuration', function (httpR
     var host = configuration.getServer();
 
     return {
-        getDocument: function (code) {
-            return httpRequestor(host + 'api/share/document/' + code);
+        createShare: function (data) {
+            return httpRequestor(host + 'api/share', data);
+        },
+        getShare: function (hash) {
+            return httpRequestor(host + 'api/share/' + hash);
         }
     };
 }]);
