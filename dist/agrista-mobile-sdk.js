@@ -20478,8 +20478,8 @@ sdkModelDocument.provider('DocumentPermission', [function () {
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
 sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['$filter', 'Asset', 'Base', 'Document', 'Field', 'inheritModel', 'privateProperty', 'safeMath', 'underscore',
-        function ($filter, Asset, Base, Document, Field, inheritModel, privateProperty, safeMath, underscore) {
+    this.$get = ['$filter', 'Asset', 'Base', 'Document', 'Field', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+        function ($filter, Asset, Base, Document, Field, inheritModel, privateProperty, readOnlyProperty, safeMath, underscore) {
             function FarmValuation (attrs) {
                 Document.apply(this, arguments);
 
@@ -20597,6 +20597,12 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
                     .first()
                     .value();
             }
+
+            readOnlyProperty(FarmValuation, 'priorities', {
+                'Priority 1': 1,
+                'Priority 2': 2,
+                'Priority 3': 3
+            });
 
             FarmValuation.validates(underscore.defaults({
                 docType: {
