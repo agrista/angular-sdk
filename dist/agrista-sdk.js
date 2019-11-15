@@ -13814,7 +13814,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                  * Legal Entity handling
                  */
                 privateProperty(this, 'setLegalEntity', function (entity) {
-                    this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
+                    this.data.request.legalEntity = underscore.omit(entity, ['assets', 'financials', 'liabilities']);
                 });
 
                 /**
