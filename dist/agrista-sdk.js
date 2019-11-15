@@ -2921,9 +2921,11 @@ sdkUtilitiesApp.factory('apiPager', ['pagingService', 'promiseService', function
 
 sdkUtilitiesApp.factory('httpRequestor', ['$http', 'asJson', 'promiseService', function ($http, asJson, promiseService) {
     return function (url, data, excludeProps) {
+        var jsonData = data && asJson(data, excludeProps || []);
+
         return promiseService.wrap(function (promise) {
             if (data) {
-                $http.post(url, asJson(data, excludeProps || []), {withCredentials: true}).then(function (res) {
+                $http.post(url, jsonData, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             } else {
