@@ -18358,15 +18358,15 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 return underscore.chain(instance.legalEntities)
                     .pluck('assets')
                     .flatten().compact()
-                    .filter(function (asset) {
-                        return asset.data && asset.data.loc;
-                    })
-                    .reduce(function (geom, asset) {
-                        var assetGeom = geoJSONHelper(asset.data.loc).geometry();
+                    .reduce(function (geojson, asset) {
+                        if (asset.data && asset.data.loc) {
+                            geojson.addGeometry(asset.data.loc);
+                        }
 
-                        return (geom && assetGeom.isValid() ? geom.union(assetGeom) : geom || assetGeom);
-                    }, null)
-                    .value();
+                        return geojson;
+                    }, geoJSONHelper())
+                    .value()
+                    .geometry();
             }
 
             inheritModel(Organization, Base);
