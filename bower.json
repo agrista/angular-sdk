@@ -1,6 +1,6 @@
 {
     "name": "agrista-sdk",
-    "version": "1.12.7",
+    "version": "1.12.8",
     "dependencies": {
         "angular": "https://github.com/angular/bower-angular.git",
         "angular-cookies": "https://github.com/angular/bower-angular-cookies.git",
