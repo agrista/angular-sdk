@@ -54,6 +54,11 @@ sdkApiGeoApp.factory('pipGeoApi', ['httpRequestor', 'configuration', 'pagingServ
 
             return httpRequestor(host + 'api/geo/portion' + (query ? '?' + query : ''));
         },
+        getPortionLandCapabilities: function (query) {
+            query = uriEncodeTrimmedQuery(query);
+
+            return httpRequestor(host + 'api/geo/portion-capabilities' + (query ? '?' + query : ''));
+        },
         getPortionLandValues: function (params) {
             return pagingService.page(host + 'api/geo/portion-values', trimQuery(params));
         },
@@ -1193,8 +1198,11 @@ sdkApiApp.factory('shareApi', ['httpRequestor', 'configuration', function (httpR
     var host = configuration.getServer();
 
     return {
-        getDocument: function (code) {
-            return httpRequestor(host + 'api/share/document/' + code);
+        createShare: function (data) {
+            return httpRequestor(host + 'api/share', data);
+        },
+        getShare: function (hash) {
+            return httpRequestor(host + 'api/share/' + hash);
         }
     };
 }]);
@@ -13806,7 +13814,7 @@ sdkModelDesktopValuationDocument.provider('DesktopValuation', ['DocumentFactoryP
                  * Legal Entity handling
                  */
                 privateProperty(this, 'setLegalEntity', function (entity) {
-                    this.data.request.legalEntity = underscore.omit(entity, ['assets', 'farms', 'liabilities']);
+                    this.data.request.legalEntity = underscore.omit(entity, ['assets', 'financials', 'liabilities']);
                 });
 
                 /**
@@ -14166,8 +14174,8 @@ sdkModelDocument.provider('DocumentPermission', [function () {
 var sdkModelFarmValuationDocument = angular.module('ag.sdk.model.farm-valuation', ['ag.sdk.model.asset', 'ag.sdk.model.document']);
 
 sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvider', function (DocumentFactoryProvider) {
-    this.$get = ['$filter', 'Asset', 'Base', 'Document', 'Field', 'inheritModel', 'privateProperty', 'safeMath', 'underscore',
-        function ($filter, Asset, Base, Document, Field, inheritModel, privateProperty, safeMath, underscore) {
+    this.$get = ['$filter', 'Asset', 'Base', 'Document', 'Field', 'inheritModel', 'privateProperty', 'readOnlyProperty', 'safeMath', 'underscore',
+        function ($filter, Asset, Base, Document, Field, inheritModel, privateProperty, readOnlyProperty, safeMath, underscore) {
             function FarmValuation (attrs) {
                 Document.apply(this, arguments);
 
@@ -14285,6 +14293,12 @@ sdkModelFarmValuationDocument.provider('FarmValuation', ['DocumentFactoryProvide
                     .first()
                     .value();
             }
+
+            readOnlyProperty(FarmValuation, 'priorities', {
+                'Priority 1': 1,
+                'Priority 2': 2,
+                'Priority 3': 3
+            });
 
             FarmValuation.validates(underscore.defaults({
                 docType: {
@@ -16634,7 +16648,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             this.irrigationType = attrs.irrigationType;
             this.landUse = attrs.landUse;
             this.loc = attrs.loc;
-            this.sgKey = attrs.sgKey;
             this.size = attrs.size;
             this.soilTexture = attrs.soilTexture;
             this.source = attrs.source;
@@ -16856,10 +16869,6 @@ sdkModelField.factory('Field', ['computedProperty', 'inheritModel', 'Model', 'pr
             },
             size: {
                 required: true,
-                numeric: true
-            },
-            sgKey: {
-                required: false,
                 numeric: true
             },
             soilTexture: {
@@ -18349,15 +18358,15 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 return underscore.chain(instance.legalEntities)
                     .pluck('assets')
                     .flatten().compact()
-                    .filter(function (asset) {
-                        return asset.data && asset.data.loc;
-                    })
-                    .reduce(function (geom, asset) {
-                        var assetGeom = geoJSONHelper(asset.data.loc).geometry();
+                    .reduce(function (geojson, asset) {
+                        if (asset.data && asset.data.loc) {
+                            geojson.addGeometry(asset.data.loc);
+                        }
 
-                        return (geom && assetGeom.isValid() ? geom.union(assetGeom) : geom || assetGeom);
-                    }, null)
-                    .value();
+                        return geojson;
+                    }, geoJSONHelper())
+                    .value()
+                    .geometry();
             }
 
             inheritModel(Organization, Base);
