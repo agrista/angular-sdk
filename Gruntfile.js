@@ -10,17 +10,6 @@ module.exports = function(grunt) {
                 dest: 'dist/agrista-mobile-sdk.js'
             }
         },
-        karma: {
-            single: {
-                configFile: 'test/karma.conf.js',
-                singleRun: true
-            },
-            continuous: {
-                configFile: 'test/karma.conf.js',
-                autoWatch: true,
-                browsers: ['PhantomJS']
-            }
-        },
         uglify: {
             dist: {
                 files: {
@@ -57,24 +46,15 @@ module.exports = function(grunt) {
                     'dist': ['agrista-mobile-sdk.js']
                 }
             }
-        },
-        watch: {
-            testbuild: {
-                files: ['src/**/*.js', 'test/unit/**/*.js'],
-                tasks: ['karma:single', 'concat', 'uglify']
-            }
         }
     });
 
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-concat');
     grunt.loadNpmTasks('grunt-contrib-obfuscator');
-    grunt.loadNpmTasks('grunt-contrib-watch');
-    grunt.loadNpmTasks('grunt-karma');
     grunt.loadNpmTasks('grunt-sloc');
 
     grunt.registerTask('build', ['build-min', 'obfuscator']);
     grunt.registerTask('build-min', ['concat', 'uglify']);
-    grunt.registerTask('default', ['karma:single','build']);
-    grunt.registerTask('unit-test', ['karma:single']);
+    grunt.registerTask('default', ['build']);
 };

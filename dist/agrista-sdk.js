@@ -4902,54 +4902,24 @@ sdkInterfaceMapApp.provider('mapboxService', ['mapboxServiceCacheProvider', 'und
                     type: 'mapbox.styleLayer'
                 },
                 'Capability (Climate)': {
-                    template: 'https://maps.agrista.com/gwc/service/wmts',
-                    type: 'wmts',
-                    options: {
-                        attribution: "&copy; 2019 Agrista, DAFF",
-                        format: 'image/png8',
-                        layer: 'za:climate_capability',
-                        tilematrixSet: 'EPSG:900913'
-                    }
+                    template: 'mapbox://styles/agrista/ck4ccgoxv31l81drjt5g85ual',
+                    type: 'mapbox.styleLayer'
                 },
                 'Capability (Land)': {
-                    template: 'https://maps.agrista.com/gwc/service/wmts',
-                    type: 'wmts',
-                    options: {
-                        attribution: "&copy; 2019 Agrista, DAFF",
-                        format: 'image/png8',
-                        layer: 'za:land_capability',
-                        tilematrixSet: 'EPSG:900913'
-                    }
+                    template: 'mapbox://styles/agrista/ck4cc25q10ck91dnu30znyxdi',
+                    type: 'mapbox.styleLayer'
                 },
                 'Capability (Soil)': {
-                    template: 'https://maps.agrista.com/gwc/service/wmts',
-                    type: 'wmts',
-                    options: {
-                        attribution: "&copy; 2019 Agrista, DAFF",
-                        format: 'image/png8',
-                        layer: 'za:soil_capability',
-                        tilematrixSet: 'EPSG:900913'
-                    }
+                    template: 'mapbox://styles/agrista/ck4ccqwrs31n21cmgfcie4ev2',
+                    type: 'mapbox.styleLayer'
                 },
                 'Capability (Terrain)': {
-                    template: 'https://maps.agrista.com/gwc/service/wmts',
-                    type: 'wmts',
-                    options: {
-                        attribution: "&copy; 2019 Agrista, DAFF",
-                        format: 'image/png8',
-                        layer: 'za:terrain_capability',
-                        tilematrixSet: 'EPSG:900913'
-                    }
+                    template: 'mapbox://styles/agrista/ck4cct3im12on1cmw93yjdoci',
+                    type: 'mapbox.styleLayer'
                 },
                 'Land Cover': {
-                    template: 'https://maps.agrista.com/gwc/service/wmts',
-                    type: 'wmts',
-                    options: {
-                        attribution: "&copy; 2019 Agrista, DAFF",
-                        format: 'image/png8',
-                        layer: 'za:land_cover',
-                        tilematrixSet: 'EPSG:900913'
-                    }
+                    template: 'mapbox://styles/agrista/ck4dqz27j0fxt1cppej8kgupa',
+                    type: 'mapbox.styleLayer'
                 },
                 'Production Regions': {
                     template: 'agrista.87ceb2ab',
