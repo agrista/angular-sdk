@@ -2232,7 +2232,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion' + params)
+            $http.get(host + 'geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -2253,7 +2253,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion' + params)
+            $http.get(host + 'geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
@@ -2275,7 +2275,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district' + params)
+            $http.get(host + 'geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -2296,7 +2296,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district' + params)
+            $http.get(host + 'geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -2319,7 +2319,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field' + params)
+            $http.get(host + 'geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -2339,7 +2339,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field' + params)
+            $http.get(host + 'geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });

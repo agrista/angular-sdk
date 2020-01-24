@@ -1263,7 +1263,7 @@ mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydratio
                 }).join('&');
 
                 return promiseService.wrap(function (promise) {
-                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    $http.get(_host + 'agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                         promise.resolve(res.data);
                     }, promise.reject);
                 });

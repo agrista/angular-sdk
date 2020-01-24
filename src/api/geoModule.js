@@ -21,59 +21,59 @@ sdkApiGeoApp.factory('pipGeoApi', ['httpRequestor', 'configuration', 'pagingServ
         getAdminRegion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/admin-region' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/admin-region' + (query ? '?' + query : ''));
         },
         searchAdminRegions: function (params) {
-            return pagingService.page(host + 'api/geo/admin-regions', trimQuery(params));
+            return pagingService.page(host + 'geo/admin-regions', trimQuery(params));
         },
         getColorMap: function (query) {
             var params = uriEncodeTrimmedQuery(underscore.pick(query, ['type']));
 
-            return httpRequestor(host + 'api/geo/color-map' + (params ? '?' + params : ''), query, ['type']);
+            return httpRequestor(host + 'geo/color-map' + (params ? '?' + params : ''), query, ['type']);
         },
         getDistrict: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/district' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/district' + (query ? '?' + query : ''));
         },
         getFarm: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/farm' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/farm' + (query ? '?' + query : ''));
         },
         searchFarms: function (params) {
-            return pagingService.page(host + 'api/geo/farms', trimQuery(params));
+            return pagingService.page(host + 'geo/farms', trimQuery(params));
         },
         getField: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/field' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/field' + (query ? '?' + query : ''));
         },
         getPortion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/portion' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/portion' + (query ? '?' + query : ''));
         },
         getPortionLandCapabilities: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/portion-capabilities' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/portion-capabilities' + (query ? '?' + query : ''));
         },
         getPortionLandValues: function (params) {
-            return pagingService.page(host + 'api/geo/portion-values', trimQuery(params));
+            return pagingService.page(host + 'geo/portion-values', trimQuery(params));
         },
         searchPortions: function (params) {
-            return pagingService.page(host + 'api/geo/portions', trimQuery(params));
+            return pagingService.page(host + 'geo/portions', trimQuery(params));
         },
         getProvince: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/province' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/province' + (query ? '?' + query : ''));
         },
         getSublayer: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/sublayer' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/sublayer' + (query ? '?' + query : ''));
         }
     }
 }]);

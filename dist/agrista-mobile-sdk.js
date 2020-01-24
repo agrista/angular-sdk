@@ -21,59 +21,59 @@ sdkApiGeoApp.factory('pipGeoApi', ['httpRequestor', 'configuration', 'pagingServ
         getAdminRegion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/admin-region' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/admin-region' + (query ? '?' + query : ''));
         },
         searchAdminRegions: function (params) {
-            return pagingService.page(host + 'api/geo/admin-regions', trimQuery(params));
+            return pagingService.page(host + 'geo/admin-regions', trimQuery(params));
         },
         getColorMap: function (query) {
             var params = uriEncodeTrimmedQuery(underscore.pick(query, ['type']));
 
-            return httpRequestor(host + 'api/geo/color-map' + (params ? '?' + params : ''), query, ['type']);
+            return httpRequestor(host + 'geo/color-map' + (params ? '?' + params : ''), query, ['type']);
         },
         getDistrict: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/district' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/district' + (query ? '?' + query : ''));
         },
         getFarm: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/farm' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/farm' + (query ? '?' + query : ''));
         },
         searchFarms: function (params) {
-            return pagingService.page(host + 'api/geo/farms', trimQuery(params));
+            return pagingService.page(host + 'geo/farms', trimQuery(params));
         },
         getField: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/field' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/field' + (query ? '?' + query : ''));
         },
         getPortion: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/portion' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/portion' + (query ? '?' + query : ''));
         },
         getPortionLandCapabilities: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/portion-capabilities' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/portion-capabilities' + (query ? '?' + query : ''));
         },
         getPortionLandValues: function (params) {
-            return pagingService.page(host + 'api/geo/portion-values', trimQuery(params));
+            return pagingService.page(host + 'geo/portion-values', trimQuery(params));
         },
         searchPortions: function (params) {
-            return pagingService.page(host + 'api/geo/portions', trimQuery(params));
+            return pagingService.page(host + 'geo/portions', trimQuery(params));
         },
         getProvince: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/province' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/province' + (query ? '?' + query : ''));
         },
         getSublayer: function (query) {
             query = uriEncodeTrimmedQuery(query);
 
-            return httpRequestor(host + 'api/geo/sublayer' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'geo/sublayer' + (query ? '?' + query : ''));
         }
     }
 }]);
@@ -121,14 +121,14 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
         },
         getUser: function () {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/me').then(function (res) {
+                $http.get(_host + 'me').then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/me', underscore.omit(data, 'profilePhotoSrc')).then(function (res) {
+                $http.post(_host + 'me', underscore.omit(data, 'profilePhotoSrc')).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -508,95 +508,103 @@ var sdkConfigApp = angular.module('ag.sdk.config', []);
  * @name configurationProvider / configuration
  * @description Provider to define the configuration of servers
  */
-sdkConfigApp.provider('configuration', ['$httpProvider', function($httpProvider) {
-    var _version = '';
-    var _host = 'local';
+sdkConfigApp.provider('configuration', [
+    '$httpProvider',
+    function($httpProvider) {
+        var _version = '';
+        var _host = 'local';
 
-    var _modules = [];
-    var _servers = {
-        local: '',
-        testing: 'https://dev-enterprise.agrista.com/',
-        staging: 'https://staging-enterprise.agrista.com/',
-        production: 'https://enterprise.agrista.com/'
-    };
+        var _modules = [];
+        var _servers = {
+            local: 'http://localhost:9000/',
+            staging: 'https://stage-api.agrista.com/',
+            production: 'https://api.agrista.com/'
+        };
 
-    var _hasModule = function (name) {
-        return (_modules.indexOf(name) !== -1);
-    };
+        var _hasModule = function(name) {
+            return _modules.indexOf(name) !== -1;
+        };
 
-    var _addModule = function (name) {
-        if (_hasModule(name) == false) {
-            _modules.push(name);
-        }
-    };
+        var _addModule = function(name) {
+            if (_hasModule(name) == false) {
+                _modules.push(name);
+            }
+        };
 
-    var _getServer = function (stripTrailingSlash) {
-        var server = _servers[_host];
+        var _getServer = function(stripTrailingSlash) {
+            var server = _servers[_host];
 
-        if (stripTrailingSlash && server.lastIndexOf('/') === server.length - 1) {
-            server = server.substr(0, server.length - 1);
-        }
+            if (
+                stripTrailingSlash &&
+                server.lastIndexOf('/') === server.length - 1
+            ) {
+                server = server.substr(0, server.length - 1);
+            }
 
-        return server;
-    };
+            return server;
+        };
 
-    return {
-        addModule: _addModule,
-        hasModule: _hasModule,
+        return {
+            addModule: _addModule,
+            hasModule: _hasModule,
 
-        setServers: function(servers) {
-            angular.forEach(servers, function (host, name) {
-                if (host.lastIndexOf('/') !== host.length - 1) {
-                    host += '/';
+            setServers: function(servers) {
+                angular.forEach(servers, function(host, name) {
+                    if (host.lastIndexOf('/') !== host.length - 1) {
+                        host += '/';
+                    }
+
+                    _servers[name] = host;
+                });
+
+                this.useHost(_host, _version);
+            },
+            setVersion: function(version) {
+                if (version) {
+                    _version = version;
+                }
+            },
+            getServer: _getServer,
+            useHost: function(host, version, cCallback) {
+                if (typeof version === 'function') {
+                    cCallback = version;
+                    version = _version;
                 }
 
-                _servers[name] = host;
-            });
+                _version = version || _version;
 
-            this.useHost(_host, _version);
-        },
-        setVersion: function (version) {
-            if (version) {
-                _version = version;
+                if (_servers[host] !== undefined) {
+                    _host = host;
+
+                    // Enable cross domain
+                    $httpProvider.defaults.useXDomain = true;
+                    delete $httpProvider.defaults.headers.common[
+                        'X-Requested-With'
+                    ];
+                }
+
+                if (typeof cCallback === 'function') {
+                    cCallback(_servers[_host]);
+                }
+            },
+            $get: function() {
+                return {
+                    addModule: _addModule,
+                    hasModule: _hasModule,
+
+                    getVersion: function() {
+                        return _version;
+                    },
+                    getHost: function() {
+                        return _host;
+                    },
+                    getServer: _getServer
+                };
             }
-        },
-        getServer: _getServer,
-        useHost: function(host, version, cCallback) {
-            if (typeof version === 'function') {
-                cCallback = version;
-                version = _version;
-            }
-
-            _version = version || _version;
-
-            if (_servers[host] !== undefined) {
-                _host = host;
-
-                // Enable cross domain
-                $httpProvider.defaults.useXDomain = true;
-                delete $httpProvider.defaults.headers.common['X-Requested-With'];
-            }
-
-            if (typeof cCallback === 'function') {
-                cCallback(_servers[_host]);
-            }
-        },
-        $get: function() {
-            return {
-                addModule: _addModule,
-                hasModule: _hasModule,
-
-                getVersion: function() {
-                    return _version;
-                },
-                getHost: function() {
-                    return _host;
-                },
-                getServer: _getServer
-            }
-        }
+        };
     }
-}]);
+]);
+
 var sdkEditorApp = angular.module('ag.sdk.editor', ['ag.sdk.library']);
 
 sdkEditorApp.factory('enterpriseEditor', ['underscore', function (underscore) {
@@ -5509,7 +5517,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion' + params)
+            $http.get(host + 'geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -5530,7 +5538,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/portion' + params)
+            $http.get(host + 'geo/portion' + params)
                 .success(function (portion) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, portion.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, portion.position, _this._optionSchema, {featureId: portion.sgKey, portion: portion});
@@ -5552,7 +5560,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district' + params)
+            $http.get(host + 'geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -5573,7 +5581,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/district' + params)
+            $http.get(host + 'geo/district' + params)
                 .success(function (district) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, district.sgKey)) {
                         var districtOptions = mapStyleHelper.getStyle('background', 'district');
@@ -5596,7 +5604,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field' + params)
+            $http.get(host + 'geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.removeGeoJSONLayer(_this._editableLayer);
@@ -5616,7 +5624,7 @@ sdkInterfaceMapApp.directive('mapbox', ['$rootScope', '$http', '$log', '$timeout
         if (_this._editing == false) {
             var host = configuration.getServer();
             var params = '?x=' + e.latlng.lng + '&y=' + e.latlng.lat;
-            $http.get(host + 'api/geo/field' + params)
+            $http.get(host + 'geo/field' + params)
                 .success(function (field) {
                     if(!_this._mapboxServiceInstance.getGeoJSONFeature(_this._editableLayer, field.sgKey)) {
                         _this._mapboxServiceInstance.addGeoJSON(_this._editableLayer, field.position, _this._optionSchema, { });
@@ -13081,7 +13089,7 @@ mobileSdkApiApp.provider('merchantApi', ['hydrationProvider', function (hydratio
                 }).join('&');
 
                 return promiseService.wrap(function (promise) {
-                    $http.get(_host + 'api/agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
+                    $http.get(_host + 'agrista/providers' + (query ? '?' + query : ''), {withCredentials: true}).then(function (res) {
                         promise.resolve(res.data);
                     }, promise.reject);
                 });
@@ -13470,7 +13478,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
      * @type {Array}
      */
     this.$get = ['$http', '$log', '$rootScope', 'fileStorageService', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, fileStorageService, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
-        var _hostApi = configuration.getServer() + 'api/';
+        var _hostApi = configuration.getServer();
 
         var _defaultHydration = function (obj) {
             return promiseService.wrap(function (promise) {

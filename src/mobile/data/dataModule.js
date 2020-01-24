@@ -156,7 +156,7 @@ mobileSdkDataApp.provider('dataStore', ['dataStoreConstants', 'underscore', func
      * @type {Array}
      */
     this.$get = ['$http', '$log', '$rootScope', 'fileStorageService', 'localStore', 'promiseService', 'safeApply', 'configuration', 'dataStoreUtilities', function ($http, $log, $rootScope, fileStorageService, localStore, promiseService, safeApply, configuration, dataStoreUtilities) {
-        var _hostApi = configuration.getServer() + 'api/';
+        var _hostApi = configuration.getServer();
 
         var _defaultHydration = function (obj) {
             return promiseService.wrap(function (promise) {

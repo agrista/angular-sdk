@@ -41,14 +41,14 @@ sdkAuthorizationApp.factory('authorizationApi', ['$http', 'promiseService', 'con
         },
         getUser: function () {
             return promiseService.wrap(function(promise) {
-                $http.get(_host + 'api/me').then(function (res) {
+                $http.get(_host + 'me').then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
         },
         updateUser: function (data) {
             return promiseService.wrap(function(promise) {
-                $http.post(_host + 'api/me', underscore.omit(data, 'profilePhotoSrc')).then(function (res) {
+                $http.post(_host + 'me', underscore.omit(data, 'profilePhotoSrc')).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
