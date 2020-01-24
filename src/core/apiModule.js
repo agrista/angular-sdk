@@ -8,7 +8,7 @@ sdkApiApp.factory('actionApi', ['httpRequestor', 'pagingService', 'configuration
 
     return {
         createAction: function (data) {
-            return httpRequestor(host + 'api/action', data);
+            return httpRequestor(host + 'action', data);
         },
         getActions: function (id, type, params) {
             if (typeof type === 'object') {
@@ -21,19 +21,19 @@ sdkApiApp.factory('actionApi', ['httpRequestor', 'pagingService', 'configuration
                 id = undefined;
             }
 
-            return pagingService.page(host + 'api/actions' + (id ? '/' + id : '') + (type ? '/' + type : ''), params);
+            return pagingService.page(host + 'actions' + (id ? '/' + id : '') + (type ? '/' + type : ''), params);
         },
         getDocumentActions: function (id, params) {
-            return pagingService.page(host + 'api/actions/document/' + id, params);
+            return pagingService.page(host + 'actions/document/' + id, params);
         },
         getOrganizationActions: function (id, params) {
-            return pagingService.page(host + 'api/actions/organization/' + id, params);
+            return pagingService.page(host + 'actions/organization/' + id, params);
         },
         getAction: function (id) {
-            return httpRequestor(host + 'api/action/' + id);
+            return httpRequestor(host + 'action/' + id);
         },
         deleteAction: function (id) {
-            return httpRequestor(host + 'api/action/' + id + '/delete', {});
+            return httpRequestor(host + 'action/' + id + '/delete', {});
         }
     };
 }]);
@@ -47,19 +47,19 @@ sdkApiApp.factory('activityApi', ['httpRequestor', 'configuration', function (ht
 
     return {
         createActivity: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/activity', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'activity', data, (includeRemovable ? [] : removableFields));
         },
         updateActivity: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/activity/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'activity/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteActivity: function (id) {
-            return httpRequestor(host + 'api/activity/' + id + '/delete', {});
+            return httpRequestor(host + 'activity/' + id + '/delete', {});
         },
         attachAsset: function (id, assetId) {
-            return httpRequestor(host + 'api/activity/' + id+ '/add/' + assetId, {});
+            return httpRequestor(host + 'activity/' + id+ '/add/' + assetId, {});
         },
         detachAsset: function (id, assetId) {
-            return httpRequestor(host + 'api/activity/' + id+ '/remove/' + assetId, {});
+            return httpRequestor(host + 'activity/' + id+ '/remove/' + assetId, {});
         }
     };
 }]);
@@ -73,61 +73,61 @@ sdkApiApp.factory('aggregationApi', ['configuration', 'httpRequestor', 'pagingSe
 
     return {
         getCustomerLocations: function () {
-            return httpRequestor(host + 'api/aggregation/customer-locations');
+            return httpRequestor(host + 'aggregation/customer-locations');
         },
         getCustomerFarmlands: function (northEastLat, northEastLng, southWestLat, southWestLng) {
-            return httpRequestor(host + 'api/aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + southWestLat + '&x2=' + northEastLng + '&y2=' + northEastLat);
+            return httpRequestor(host + 'aggregation/customer-geodata?x1=' + southWestLng + '&y1=' + southWestLat + '&x2=' + northEastLng + '&y2=' + northEastLat);
         },
         getSublayerBoundaries: function (northEastLat, northEastLng, southWestLat, southWestLng) {
-            return httpRequestor(host + 'api/aggregation/guideline-sublayers?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat);
+            return httpRequestor(host + 'aggregation/guideline-sublayers?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat);
         },
         getGroupCustomerLocations: function () {
-            return httpRequestor(host + 'api/aggregation/customer-locations-group');
+            return httpRequestor(host + 'aggregation/customer-locations-group');
         },
         getGroupCustomerFarmlands: function (northEastLat, northEastLng, southWestLat, southWestLng) {
-            return httpRequestor(host + 'api/aggregation/customer-geodata-group?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat);
+            return httpRequestor(host + 'aggregation/customer-geodata-group?x1=' + southWestLng + '&y1=' + northEastLat + '&x2=' + northEastLng + '&y2=' + southWestLat);
         },
         getFarmlandOverlaps: function (page) {
-            return pagingService.page(host + 'api/aggregation/farmland-overlap', page);
+            return pagingService.page(host + 'aggregation/farmland-overlap', page);
         },
         getGuidelineExceptions: function (page) {
-            return pagingService.page(host + 'api/aggregation/guideline-exceptions', page);
+            return pagingService.page(host + 'aggregation/guideline-exceptions', page);
         },
         listBenefitAuthorisation: function() {
-            return httpRequestor(host + 'api/aggregation/report-benefit-authorisation');
+            return httpRequestor(host + 'aggregation/report-benefit-authorisation');
         },
         listCrossSelling: function(params) {
-            return pagingService.page(host + 'api/aggregation/report-cross-selling', params);
+            return pagingService.page(host + 'aggregation/report-cross-selling', params);
         },
         searchProductionSchedules: function(query) {
             query = underscore.map(query, function (value, key) {
                 return (underscore.isString(key) ? key.toLowerCase() : key) + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return httpRequestor(host + 'api/aggregation/search-production-schedules' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'aggregation/search-production-schedules' + (query ? '?' + query : ''));
         },
         averageProductionSchedules: function(query) {
-            return httpRequestor(host + 'api/aggregation/average-production-schedules', query);
+            return httpRequestor(host + 'aggregation/average-production-schedules', query);
         },
         getDistinctProductionScheduleYears: function(query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return httpRequestor(host + 'api/aggregation/distinct-production-schedule-years' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'aggregation/distinct-production-schedule-years' + (query ? '?' + query : ''));
         },
         getDistinctProductionScheduleEnterprises: function(query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return httpRequestor(host + 'api/aggregation/distinct-production-schedule-enterprises' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'aggregation/distinct-production-schedule-enterprises' + (query ? '?' + query : ''));
         },
         getDistinctProductionScheduleCategories: function() {
-            return httpRequestor(host + 'api/aggregation/distinct-production-schedule-categories');
+            return httpRequestor(host + 'aggregation/distinct-production-schedule-categories');
         },
         mapReduce: function(query) {
-            return httpRequestor(host + 'api/aggregation/map-reduce', query);
+            return httpRequestor(host + 'aggregation/map-reduce', query);
         }
     };
 }]);
@@ -163,28 +163,28 @@ sdkApiApp.factory('assetApi', ['configuration', 'httpRequestor', 'pagingService'
                 id = undefined;
             }
 
-            return pagingService.page(host + 'api/assets' + (id ? '/' + id : ''), params);
+            return pagingService.page(host + 'assets' + (id ? '/' + id : ''), params);
         },
         createAsset: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/asset', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'asset', data, (includeRemovable ? [] : removableFields));
         },
         getAsset: function (id) {
-            return httpRequestor(host + 'api/asset/' + id);
+            return httpRequestor(host + 'asset/' + id);
         },
         updateAsset: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/asset/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'asset/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         attachLiability: function (id, data) {
-            return httpRequestor(host + 'api/asset/' + id + '/liability', data);
+            return httpRequestor(host + 'asset/' + id + '/liability', data);
         },
         detachLiability: function (id, liabilityId) {
-            return httpRequestor(host + 'api/asset/' + id + '/liability/' + liabilityId + '/delete', {});
+            return httpRequestor(host + 'asset/' + id + '/liability/' + liabilityId + '/delete', {});
         },
         deleteAsset: function (id) {
-            return httpRequestor(host + 'api/asset/' + id + '/delete', {});
+            return httpRequestor(host + 'asset/' + id + '/delete', {});
         },
         uploadAttachment: function (id, data) {
-            return httpRequestor(host + 'api/asset/' + id + '/attach', data);
+            return httpRequestor(host + 'asset/' + id + '/attach', data);
         }
     };
 }]);
@@ -197,10 +197,10 @@ sdkApiApp.factory('attachmentApi', ['httpRequestor', 'configuration', function (
 
     return {
         getAttachmentUri: function (key) {
-            return httpRequestor(host + 'api/attachment/url?key=' + encodeURIComponent(key));
+            return httpRequestor(host + 'attachment/url?key=' + encodeURIComponent(key));
         },
         uploadAttachment: function (data) {
-            return httpRequestor(host + 'api/attachment/upload', data);
+            return httpRequestor(host + 'attachment/upload', data);
         }
     };
 }]);
@@ -213,25 +213,25 @@ sdkApiApp.factory('benefitApi', ['httpRequestor', 'pagingService', 'configuratio
 
     return {
         searchCustomerNumber: function (customerNumber) {
-            return httpRequestor(host + 'api/benefit/search?customernumber=' + customerNumber);
+            return httpRequestor(host + 'benefit/search?customernumber=' + customerNumber);
         },
         linkCustomerNumber: function (data) {
-            return httpRequestor(host + 'api/benefit/link', data);
+            return httpRequestor(host + 'benefit/link', data);
         },
         unlinkCustomerNumber: function (data) {
-            return httpRequestor(host + 'api/benefit/unlink', data);
+            return httpRequestor(host + 'benefit/unlink', data);
         },
         authoriseCustomerNumber: function (data) {
-            return httpRequestor(host + 'api/benefit/authorise', data);
+            return httpRequestor(host + 'benefit/authorise', data);
         },
         modifyAuthorisedCustomerNumber: function (data) {
-            return httpRequestor(host + 'api/benefit/modify', data);
+            return httpRequestor(host + 'benefit/modify', data);
         },
         deauthoriseCustomerNumber: function (data) {
-            return httpRequestor(host + 'api/benefit/deauthorise', data);
+            return httpRequestor(host + 'benefit/deauthorise', data);
         },
         listMemberships: function () {
-            return httpRequestor(host + 'api/benefit/memberships');
+            return httpRequestor(host + 'benefit/memberships');
         }
     };
 }]);
@@ -244,36 +244,36 @@ sdkApiApp.factory('comparableApi', ['httpRequestor', 'pagingService', 'configura
 
     return {
         createComparable: function (data) {
-            return httpRequestor(host + 'api/comparable', data);
+            return httpRequestor(host + 'comparable', data);
         },
         aggregateComparables: function (query) {
             query = uriEncodeQuery(query, {
                 resulttype: 'simple'
             });
 
-            return httpRequestor(host + 'api/comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''));
+            return httpRequestor(host + 'comparables/aggregate' + (query && query.length > 0 ? '?' + query : ''));
         },
         searchComparables: function (query) {
             query = uriEncodeQuery(query, {
                 resulttype: 'simple'
             });
 
-            return httpRequestor(host + 'api/comparables/search' + (query && query.length > 0 ? '?' + query : ''));
+            return httpRequestor(host + 'comparables/search' + (query && query.length > 0 ? '?' + query : ''));
         },
         getComparable: function (uuid) {
-            return httpRequestor(host + 'api/comparable/' + uuid);
+            return httpRequestor(host + 'comparable/' + uuid);
         },
         updateComparable: function (data) {
-            return httpRequestor(host + 'api/comparable/' + data.uuid, data);
+            return httpRequestor(host + 'comparable/' + data.uuid, data);
         },
         uploadAttachment: function (uuid, data) {
-            return httpRequestor(host + 'api/comparable/' + uuid + '/attach', data);
+            return httpRequestor(host + 'comparable/' + uuid + '/attach', data);
         },
         useComparable: function (uuid) {
-            return httpRequestor(host + 'api/comparable/' + uuid + '/use', {});
+            return httpRequestor(host + 'comparable/' + uuid + '/use', {});
         },
         deleteComparable: function (uuid) {
-            return httpRequestor(host + 'api/comparable/' + uuid + '/delete', {});
+            return httpRequestor(host + 'comparable/' + uuid + '/delete', {});
         }
     };
 }]);
@@ -298,7 +298,7 @@ sdkApiApp.factory('countryApi', ['apiPager', 'configuration', 'pagingService', '
                     }
                 } else {
                     countries = apiPager(function (page) {
-                        return pagingService.page(host + 'api/countries', page);
+                        return pagingService.page(host + 'countries', page);
                     });
 
                     countries.then(function (results) {
@@ -321,16 +321,16 @@ sdkApiApp.factory('dataApi', ['httpRequestor', 'configuration', 'underscore', 'u
         aggregateAll: function (params) {
             params = uriEncodeQuery(params);
 
-            return httpRequestor(host + 'api/data/aggregate-all' + (params.length ? '?' + params : ''), {});
+            return httpRequestor(host + 'data/aggregate-all' + (params.length ? '?' + params : ''), {});
         },
         exportFile: function (data) {
-            return httpRequestor(host + 'api/data/export-file', data);
+            return httpRequestor(host + 'data/export-file', data);
         },
         importFile: function (data) {
-            return httpRequestor(host + 'api/data/import-file', data);
+            return httpRequestor(host + 'data/import-file', data);
         },
         validateFile: function (data) {
-            return httpRequestor(host + 'api/data/validate-file', data);
+            return httpRequestor(host + 'data/validate-file', data);
         }
     };
 }]);
@@ -349,44 +349,44 @@ sdkApiApp.factory('documentApi', ['httpRequestor', 'configuration', 'pagingServi
                 id = undefined;
             }
 
-            return pagingService.page(host + 'api/documents' + (id ? '/' + id : ''), params);
+            return pagingService.page(host + 'documents' + (id ? '/' + id : ''), params);
         },
         createDocument: function (data) {
-            return httpRequestor(host + 'api/document', data, removableFields);
+            return httpRequestor(host + 'document', data, removableFields);
         },
         getDocument: function (id) {
-            return httpRequestor(host + 'api/document/' + id);
+            return httpRequestor(host + 'document/' + id);
         },
         sendDocument: function (id, data) {
-            return httpRequestor(host + 'api/document/' + id + '/send', data);
+            return httpRequestor(host + 'document/' + id + '/send', data);
         },
         attachDocument: function (id, documentId, params) {
             params = uriEncodeQuery(params);
 
-            return httpRequestor(host + 'api/document/' + id + '/add/' + documentId + (params.length > 0 ? '?' + params : ''), {});
+            return httpRequestor(host + 'document/' + id + '/add/' + documentId + (params.length > 0 ? '?' + params : ''), {});
         },
         detachDocument: function (id, documentId, params) {
             params = uriEncodeQuery(params);
 
-            return httpRequestor(host + 'api/document/' + id + '/remove/' + documentId + (params.length > 0 ? '?' + params : ''), {});
+            return httpRequestor(host + 'document/' + id + '/remove/' + documentId + (params.length > 0 ? '?' + params : ''), {});
         },
         updateDocument: function (data) {
-            return httpRequestor(host + 'api/document/' + data.id, data, removableFields);
+            return httpRequestor(host + 'document/' + data.id, data, removableFields);
         },
         deleteDocument: function (id) {
-            return httpRequestor(host + 'api/document/' + id + '/delete', {});
+            return httpRequestor(host + 'document/' + id + '/delete', {});
         },
         uploadAttachment: function (id, data) {
-            return httpRequestor(host + 'api/document/' + id + '/attach', data);
+            return httpRequestor(host + 'document/' + id + '/attach', data);
         },
         getDocumentPdf: function (data) {
-            return httpRequestor(host + 'api/document/pdf/get', data);
+            return httpRequestor(host + 'document/pdf/get', data);
         },
         saveDocumentPdf: function (data) {
-            return httpRequestor(host + 'api/document/pdf/save', data);
+            return httpRequestor(host + 'document/pdf/save', data);
         },
         mergeDocumentPdfs: function (key, data) {
-            return httpRequestor(host + 'api/document/pdf/merge?key=' + key, data);
+            return httpRequestor(host + 'document/pdf/merge?key=' + key, data);
         }
     };
 }]);
@@ -400,13 +400,13 @@ sdkApiApp.factory('documentPermissionApi', ['httpRequestor', 'configuration', fu
 
     return {
         createDocumentPermission: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/document-permission', data,  (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'document-permission', data,  (includeRemovable ? [] : removableFields));
         },
         updateDocumentPermission: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/document-permission/' + data.id, data,  (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'document-permission/' + data.id, data,  (includeRemovable ? [] : removableFields));
         },
         deleteDocumentPermission: function (id) {
-            return httpRequestor(host + 'api/document-permission/' + id + '/delete', {});
+            return httpRequestor(host + 'document-permission/' + id + '/delete', {});
         }
     };
 }]);
@@ -424,50 +424,50 @@ sdkApiApp.factory('enterpriseBudgetApi', ['httpRequestor', 'httpResultTypeReques
                 id = undefined;
             }
 
-            return pagingService.page(host + 'api/budgets' + (id ? '?sublayer=' + id : ''), page);
+            return pagingService.page(host + 'budgets' + (id ? '?sublayer=' + id : ''), page);
         },
         getAveragedBudgets: function(query) {
             query = uriEncodeQuery(query, {
                 resulttype: 'simple'
             });
 
-            return httpRequestor(host + 'api/budgets/averaged' + (query && query.length > 0 ? '?' + query : ''));
+            return httpRequestor(host + 'budgets/averaged' + (query && query.length > 0 ? '?' + query : ''));
         },
         searchEnterpriseBudgets: function (query) {
-            return httpResultTypeRequestor(host + 'api/budgets/search', query);
+            return httpResultTypeRequestor(host + 'budgets/search', query);
         },
         createEnterpriseBudget: function (data) {
-            return httpRequestor(host + 'api/budget', data);
+            return httpRequestor(host + 'budget', data);
         },
         getEnterpriseBudget: function (id, requesttype) {
-            return httpRequestor(host + 'api/budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''));
+            return httpRequestor(host + 'budget/' + id + (requesttype ? '?requesttype=' + requesttype : ''));
         },
         getEnterpriseBudgetPublishers: function (query) {
             query = uriEncodeQuery(query);
 
-            return httpRequestor(host + 'api/budget/publishers' + (query.length > 0 ? '?' + query : ''));
+            return httpRequestor(host + 'budget/publishers' + (query.length > 0 ? '?' + query : ''));
         },
         getEnterpriseBudgetRegions: function (query) {
             query = uriEncodeQuery(query);
 
-            return httpRequestor(host + 'api/budget/regions' + (query.length > 0 ? '?' + query : ''));
+            return httpRequestor(host + 'budget/regions' + (query.length > 0 ? '?' + query : ''));
         },
         updateEnterpriseBudget: function (data) {
-            return httpRequestor(host + 'api/budget/' + data.id, data);
+            return httpRequestor(host + 'budget/' + data.id, data);
         },
         publishEnterpriseBudget: function (id, data) {
             data = data || {remote: 'agrista'};
 
-            return httpRequestor(host + 'api/budget/' + id + '/publish', data);
+            return httpRequestor(host + 'budget/' + id + '/publish', data);
         },
         deleteEnterpriseBudget: function (id) {
-            return httpRequestor(host + 'api/budget/' + id + '/delete', {});
+            return httpRequestor(host + 'budget/' + id + '/delete', {});
         },
         uploadAttachment: function (id, data) {
-            return httpRequestor(host + 'api/budget/' + id + '/attach', data);
+            return httpRequestor(host + 'budget/' + id + '/attach', data);
         },
         favoriteEnterpriseBudget: function (id) {
-            return httpRequestor(host + 'api/budget/' + id + '/favorite', {});
+            return httpRequestor(host + 'budget/' + id + '/favorite', {});
         }
 
     };
@@ -481,7 +481,7 @@ sdkApiApp.factory('expenseApi', ['httpRequestor', 'pagingService', 'configuratio
 
     return {
         getExpenses: function (params) {
-            var url = 'api/expenses';
+            var url = 'expenses';
             if(params) {
                 if(params.key && (params.id !== undefined && params.id > -1)) {
                     url +=  '/' + params.key + '/' + params.id;
@@ -492,13 +492,13 @@ sdkApiApp.factory('expenseApi', ['httpRequestor', 'pagingService', 'configuratio
             return pagingService.page(host + url, params);
         },
         createExpense: function (data) {
-            return httpRequestor(host + 'api/expense', data);
+            return httpRequestor(host + 'expense', data);
         },
         updateExpense: function (data) {
-            return httpRequestor(host + 'api/expense/' + data.id, data);
+            return httpRequestor(host + 'expense/' + data.id, data);
         },
         deleteExpense: function (id) {
-            return httpRequestor(host + 'api/expense/' + id + '/delete', {});
+            return httpRequestor(host + 'expense/' + id + '/delete', {});
         }
     };
 }]);
@@ -516,19 +516,19 @@ sdkApiApp.factory('farmApi', ['httpRequestor', 'pagingService', 'configuration',
                 id = undefined;
             }
 
-            return pagingService.page(host + 'api/farms' + (id ? '/' + id : ''), params);
+            return pagingService.page(host + 'farms' + (id ? '/' + id : ''), params);
         },
         createFarm: function (data) {
-            return httpRequestor(host + 'api/farm', data);
+            return httpRequestor(host + 'farm', data);
         },
         getFarm: function (id) {
-            return httpRequestor(host + 'api/farm/' + id);
+            return httpRequestor(host + 'farm/' + id);
         },
         updateFarm: function (data) {
-            return httpRequestor(host + 'api/farm/' + data.id, data);
+            return httpRequestor(host + 'farm/' + data.id, data);
         },
         deleteFarm: function (id) {
-            return httpRequestor(host + 'api/farm/' + id + '/delete', {});
+            return httpRequestor(host + 'farm/' + id + '/delete', {});
         }
     };
 }]);
@@ -581,14 +581,14 @@ sdkApiApp.factory('farmlandValueApi', ['httpRequestor', 'configuration', 'unders
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return httpRequestor(host + 'api/farmland-value/' + id + (query ? '?' + query : ''));
+            return httpRequestor(host + 'farmland-value/' + id + (query ? '?' + query : ''));
         },
         getFarmlandValues: function (query) {
             query = underscore.map(query, function (value, key) {
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return httpRequestor(host + 'api/farmland-values' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'farmland-values' + (query ? '?' + query : ''));
         }
     };
 }]);
@@ -602,31 +602,31 @@ sdkApiApp.factory('farmSaleApi', ['httpRequestor', 'httpResultTypeRequestor', 'p
 
     return {
         createFarmSale: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/farm-sale', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'farm-sale', data, (includeRemovable ? [] : removableFields));
         },
         getFarmSales: function (params) {
-            return pagingService.page(host + 'api/farm-sales', params);
+            return pagingService.page(host + 'farm-sales', params);
         },
         aggregateFarmSales: function (params) {
-            return httpResultTypeRequestor(host + 'api/farm-sales/aggregate', params);
+            return httpResultTypeRequestor(host + 'farm-sales/aggregate', params);
         },
         searchFarmSales: function (params) {
-            return pagingService.page(host + 'api/farm-sales/search', params);
+            return pagingService.page(host + 'farm-sales/search', params);
         },
         getFarmSale: function (id) {
-            return httpRequestor(host + 'api/farm-sale/' + id);
+            return httpRequestor(host + 'farm-sale/' + id);
         },
         updateFarmSale: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/farm-sale/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'farm-sale/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteFarmSale: function (id) {
-            return httpRequestor(host + 'api/farm-sale/' + id + '/delete', {});
+            return httpRequestor(host + 'farm-sale/' + id + '/delete', {});
         },
         attachDocument: function (id, documentId) {
-            return httpRequestor(host + 'api/farm-sale/' + id + '/add/' + documentId, {});
+            return httpRequestor(host + 'farm-sale/' + id + '/add/' + documentId, {});
         },
         detachDocument: function (id, documentId) {
-            return httpRequestor(host + 'api/farm-sale/' + id + '/remove/' + documentId, {});
+            return httpRequestor(host + 'farm-sale/' + id + '/remove/' + documentId, {});
         }
     };
 }]);
@@ -640,21 +640,21 @@ sdkApiApp.factory('financialApi', ['httpRequestor', 'configuration', function (h
 
     return {
         getFinancials: function (id) {
-            return httpRequestor(host + 'api/financials' + (id ? '/' + id : ''));
+            return httpRequestor(host + 'financials' + (id ? '/' + id : ''));
         },
         createFinancial: function (data) {
-            return httpRequestor(host + 'api/financial', data, removableFields);
+            return httpRequestor(host + 'financial', data, removableFields);
         },
         getFinancial: function (id) {
-            return httpRequestor(host + 'api/financial/' + id);
+            return httpRequestor(host + 'financial/' + id);
         },
         updateFinancial: function (data) {
-            return httpRequestor(host + 'api/financial/' + data.id, data, removableFields);
+            return httpRequestor(host + 'financial/' + data.id, data, removableFields);
         },
         deleteFinancial: function (id) {
-            return httpRequestor(host + 'api/financial/' + id + '/delete', {});
+            return httpRequestor(host + 'financial/' + id + '/delete', {});
             return promiseService.wrap(function (promise) {
-                $http.post(host + 'api/financial/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
+                $http.post(host + 'financial/' + id + '/delete', {}, {withCredentials: true}).then(function (res) {
                     promise.resolve(res.data);
                 }, promise.reject);
             });
@@ -670,7 +670,7 @@ sdkApiApp.factory('inviteApi', ['httpRequestor', 'configuration', function (http
 
     return {
         getInvite: function (hash) {
-            return httpRequestor(host + 'api/invite/' + hash);
+            return httpRequestor(host + 'invite/' + hash);
         }
     };
 }]);
@@ -683,10 +683,10 @@ sdkApiApp.factory('labelApi', ['httpRequestor', 'pagingService', 'configuration'
 
     return {
         getLabels: function (params) {
-            return pagingService.page(host + 'api/labels', params);
+            return pagingService.page(host + 'labels', params);
         },
         getLabel: function (id) {
-            return httpRequestor(host + 'api/label/' + id);
+            return httpRequestor(host + 'label/' + id);
         }
     };
 }]);
@@ -700,37 +700,37 @@ sdkApiApp.factory('layerApi', ['httpRequestor', 'pagingService', 'configuration'
 
     return {
         getLayerTypes: function () {
-            return httpRequestor(host + 'api/layer/types');
+            return httpRequestor(host + 'layer/types');
         },
         getLayers: function (params) {
-            return pagingService.page(host + 'api/layers', params);
+            return pagingService.page(host + 'layers', params);
         },
         getLayer: function (id) {
-            return httpRequestor(host + 'api/layer/' + id);
+            return httpRequestor(host + 'layer/' + id);
         },
         createLayer: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/layer', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'layer', data, (includeRemovable ? [] : removableFields));
         },
         updateLayer: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/layer/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'layer/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         getSublayers: function (params) {
-            return pagingService.page(host + 'api/sublayers', params);
+            return pagingService.page(host + 'sublayers', params);
         },
         getSublayer: function (id) {
-            return httpRequestor(host + 'api/sublayer/' + id);
+            return httpRequestor(host + 'sublayer/' + id);
         },
         getSublayersByLayer: function (id) {
-            return httpRequestor(host + 'api/sublayers/' + id);
+            return httpRequestor(host + 'sublayers/' + id);
         },
         createSublayer: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/sublayer', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'sublayer', data, (includeRemovable ? [] : removableFields));
         },
         updateSublayer: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/sublayer/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'sublayer/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteSublayer: function (id) {
-            return httpRequestor(host + 'api/sublayer/' + id + '/delete', {});
+            return httpRequestor(host + 'sublayer/' + id + '/delete', {});
         }
     };
 }]);
@@ -749,28 +749,28 @@ sdkApiApp.factory('legalEntityApi', ['httpRequestor', 'pagingService', 'configur
                 id = undefined;
             }
 
-            return pagingService.page(host + 'api/legalentities' + (id ? '/' + id : ''), params);
+            return pagingService.page(host + 'legalentities' + (id ? '/' + id : ''), params);
         },
         updateEntity: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/legalentity/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'legalentity/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         uploadAttachment: function (id, data) {
-            return httpRequestor(host + 'api/legalentity/' + id + '/attach', data);
+            return httpRequestor(host + 'legalentity/' + id + '/attach', data);
         },
         getEntity: function (id) {
-            return httpRequestor(host + 'api/legalentity/' + id);
+            return httpRequestor(host + 'legalentity/' + id);
         },
         createEntity: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/legalentity', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'legalentity', data, (includeRemovable ? [] : removableFields));
         },
         deleteEntity: function (id) {
-            return httpRequestor(host + 'api/legalentity/' + id + '/delete', {});
+            return httpRequestor(host + 'legalentity/' + id + '/delete', {});
         },
         attachLiability: function (id, data) {
-            return httpRequestor(host + 'api/legalentity/' + id + '/liability', data);
+            return httpRequestor(host + 'legalentity/' + id + '/liability', data);
         },
         detachLiability: function (id, liabilityId) {
-            return httpRequestor(host + 'api/legalentity/' + id + '/liability/' + liabilityId + '/delete', {});
+            return httpRequestor(host + 'legalentity/' + id + '/liability/' + liabilityId + '/delete', {});
         }
     };
 }]);
@@ -783,13 +783,13 @@ sdkApiApp.factory('liabilityApi', ['httpRequestor', 'configuration', function (h
 
     return {
         createLiability: function (data) {
-            return httpRequestor(host + 'api/liability', data);
+            return httpRequestor(host + 'liability', data);
         },
         updateLiability: function (data) {
-            return httpRequestor(host + 'api/liability/' + data.id, data);
+            return httpRequestor(host + 'liability/' + data.id, data);
         },
         deleteLiability: function (id) {
-            return httpRequestor(host + 'api/liability/' + id + '/delete', {});
+            return httpRequestor(host + 'liability/' + id + '/delete', {});
         }
     };
 }]);
@@ -806,13 +806,13 @@ sdkApiApp.factory('mapThemeApi', ['httpRequestor', 'configuration', 'underscore'
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return httpRequestor(host + 'api/map-themes' + (params ? '?' + params : ''));
+            return httpRequestor(host + 'map-themes' + (params ? '?' + params : ''));
         },
         createMapTheme: function (data) {
-            return httpRequestor(host + 'api/map-theme', data);
+            return httpRequestor(host + 'map-theme', data);
         },
         updateMapTheme: function (data) {
-            return httpRequestor(host + 'api/map-theme/' + data.id, data);
+            return httpRequestor(host + 'map-theme/' + data.id, data);
         }
     };
 }]);
@@ -853,7 +853,7 @@ sdkApiApp.factory('merchantApi', ['httpRequestor', 'organizationApi', 'pagingSer
             return organizationApi.inviteOrganization(id, data);
         },
         registerMerchant: function (data) {
-            return httpRequestor(host + 'api/register/merchant', data);
+            return httpRequestor(host + 'register/merchant', data);
         },
         getMerchant: function (id, isUuid) {
             return organizationApi.getOrganization(id);
@@ -878,22 +878,22 @@ sdkApiApp.factory('notificationApi', ['httpRequestor', 'pagingService', 'configu
 
     return {
         getNotifications: function (params) {
-            return pagingService.page(host + 'api/notifications', params);
+            return pagingService.page(host + 'notifications', params);
         },
         createNotification: function (data) {
-            return httpRequestor(host + 'api/notification', data);
+            return httpRequestor(host + 'notification', data);
         },
         getNotification: function (id) {
-            return httpRequestor(host + 'api/notification/' + id);
+            return httpRequestor(host + 'notification/' + id);
         },
         rejectNotification: function (id, data) {
-            return httpRequestor(host + 'api/notification/' + id + '/reject', data);
+            return httpRequestor(host + 'notification/' + id + '/reject', data);
         },
         acceptNotification: function (id) {
-            return httpRequestor(host + 'api/notification/' + id + '/accept', {});
+            return httpRequestor(host + 'notification/' + id + '/accept', {});
         },
         deleteNotification: function (id) {
-            return httpRequestor(host + 'api/notification/' + id + '/delete', {});
+            return httpRequestor(host + 'notification/' + id + '/delete', {});
         }
     };
 }]);
@@ -907,43 +907,43 @@ sdkApiApp.factory('organizationApi', ['httpRequestor', 'httpResultTypeRequestor'
 
     return {
         createOrganization: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/organization', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'organization', data, (includeRemovable ? [] : removableFields));
         },
         getOrganizations: function (params) {
-            return pagingService.page(host + 'api/organizations', params);
+            return pagingService.page(host + 'organizations', params);
         },
         getOrganization: function (id) {
-            return httpRequestor(host + 'api/organization/' + id);
+            return httpRequestor(host + 'organization/' + id);
         },
         getProfile: function (domain) {
-            return httpRequestor(host + 'api/profile/' + domain);
+            return httpRequestor(host + 'profile/' + domain);
         },
         getOrganizationDuplicates: function (id) {
-            return httpResultTypeRequestor(host + 'api/organization/' + id + '/duplicates');
+            return httpResultTypeRequestor(host + 'organization/' + id + '/duplicates');
         },
         searchOrganizations: function (params) {
-            return pagingService.page(host + 'api/organizations/search', params);
+            return pagingService.page(host + 'organizations/search', params);
         },
         searchOrganization: function (params) {
-            return httpResultTypeRequestor(host + 'api/organization/search', params);
+            return httpResultTypeRequestor(host + 'organization/search', params);
         },
         inviteOrganization: function (id, data) {
-            return httpRequestor(host + 'api/organization/' + id + '/invite', data || {});
+            return httpRequestor(host + 'organization/' + id + '/invite', data || {});
         },
         registerOrganization: function (data) {
-            return httpRequestor(host + 'api/register/organization', data);
+            return httpRequestor(host + 'register/organization', data);
         },
         updateOrganization: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/organization/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'organization/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         sendOrganization: function (id, data) {
-            return httpRequestor(host + 'api/organization/' + id + '/send', data);
+            return httpRequestor(host + 'organization/' + id + '/send', data);
         },
         uploadAttachment: function (id, data) {
-            return httpRequestor(host + 'api/organization/' + id + '/attach', data);
+            return httpRequestor(host + 'organization/' + id + '/attach', data);
         },
         deleteOrganization: function (id) {
-            return httpRequestor(host + 'api/organization/' + id + '/delete', {});
+            return httpRequestor(host + 'organization/' + id + '/delete', {});
         }
     };
 }]);
@@ -956,28 +956,28 @@ sdkApiApp.factory('organizationalUnitApi', ['httpRequestor', 'pagingService', 'c
 
     return {
         createOrganizationalUnit: function (data) {
-            return httpRequestor(host + 'api/organizational-unit' + (data.type ? '/' + data.type.toLowerCase() : ''), data);
+            return httpRequestor(host + 'organizational-unit' + (data.type ? '/' + data.type.toLowerCase() : ''), data);
         },
         getOrganizationalUnits: function (params) {
-            return pagingService.page(host + 'api/organizational-units', params);
+            return pagingService.page(host + 'organizational-units', params);
         },
         getOrganizationalUnitBranches: function (params) {
-            return pagingService.page(host + 'api/organizational-units/branches', params);
+            return pagingService.page(host + 'organizational-units/branches', params);
         },
         getOrganizationalUnitGroups: function (params) {
-            return pagingService.page(host + 'api/organizational-units/groups', params);
+            return pagingService.page(host + 'organizational-units/groups', params);
         },
         getOrganizationalUnitRegions: function (params) {
-            return pagingService.page(host + 'api/organizational-units/regions', params);
+            return pagingService.page(host + 'organizational-units/regions', params);
         },
         getOrganizationalUnit: function (id) {
-            return httpRequestor(host + 'api/organizational-unit/' + id);
+            return httpRequestor(host + 'organizational-unit/' + id);
         },
         updateOrganizationalUnit: function (data) {
-            return httpRequestor(host + 'api/organizational-unit/' + data.id, data, ['organization', 'users']);
+            return httpRequestor(host + 'organizational-unit/' + data.id, data, ['organization', 'users']);
         },
         deleteOrganizationalUnit: function (id) {
-            return httpRequestor(host + 'api/organizational-unit/' + id + '/delete', {});
+            return httpRequestor(host + 'organizational-unit/' + id + '/delete', {});
         }
     };
 }]);
@@ -991,19 +991,19 @@ sdkApiApp.factory('pointOfInterestApi', ['httpRequestor', 'pagingService', 'conf
 
     return {
         createPointOfInterest: function (data) {
-            return httpRequestor(host + 'api/point-of-interest', data, removableFields);
+            return httpRequestor(host + 'point-of-interest', data, removableFields);
         },
         getPointOfInterest: function (id) {
-            return httpRequestor(host + 'api/point-of-interest/' + id);
+            return httpRequestor(host + 'point-of-interest/' + id);
         },
         searchPointsOfInterest: function (params) {
-            return pagingService.page(host + 'api/points-of-interest/search', params);
+            return pagingService.page(host + 'points-of-interest/search', params);
         },
         updatePointOfInterest: function (data) {
-            return httpRequestor(host + 'api/point-of-interest/' + data.id, data, removableFields);
+            return httpRequestor(host + 'point-of-interest/' + data.id, data, removableFields);
         },
         deletePointOfInterest: function (id) {
-            return httpRequestor(host + 'api/point-of-interest/' + id + '/delete', {});
+            return httpRequestor(host + 'point-of-interest/' + id + '/delete', {});
         }
     };
 }]);
@@ -1020,19 +1020,19 @@ sdkApiApp.factory('productDemandApi', ['httpRequestor', 'pagingService', 'config
                 return key + '=' + encodeURIComponent(value);
             }).join('&');
 
-            return httpRequestor(host + 'api/demand-assumptions' + (query ? '?' + query : ''));
+            return httpRequestor(host + 'demand-assumptions' + (query ? '?' + query : ''));
         },
         getMapData: function (options) {
-            return httpRequestor(host + 'api/demand-assumptions/map-data', options);
+            return httpRequestor(host + 'demand-assumptions/map-data', options);
         },
         addAssumptionGroup: function (data) {
-            return httpRequestor(host + 'api/demand-assumption', data);
+            return httpRequestor(host + 'demand-assumption', data);
         },
         updateProductDemandAssumption: function (id, data) {
-            return httpRequestor(host + 'api/demand-assumption/' + data.id, data);
+            return httpRequestor(host + 'demand-assumption/' + data.id, data);
         },
         deleteProductDemandAssumption: function (data) {
-            return httpRequestor(host + 'api/demand-assumption/delete', data);
+            return httpRequestor(host + 'demand-assumption/delete', data);
         }
     };
 }]);
@@ -1046,25 +1046,25 @@ sdkApiApp.factory('productionScheduleApi', ['httpRequestor', 'pagingService', 'c
 
     return {
         getProductionSchedules: function (id) {
-            return pagingService.page(host + 'api/production-schedules' + (id ? '/' + id : ''));
+            return pagingService.page(host + 'production-schedules' + (id ? '/' + id : ''));
         },
         createProductionSchedule: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/production-schedule', data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'production-schedule', data, (includeRemovable ? [] : removableFields));
         },
         getProductionSchedule: function (id) {
-            return httpRequestor(host + 'api/production-schedule/' + id);
+            return httpRequestor(host + 'production-schedule/' + id);
         },
         updateProductionSchedule: function (data, includeRemovable) {
-            return httpRequestor(host + 'api/production-schedule/' + data.id, data, (includeRemovable ? [] : removableFields));
+            return httpRequestor(host + 'production-schedule/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteProductionSchedule: function (id) {
-            return httpRequestor(host + 'api/production-schedule/' + id + '/delete', {});
+            return httpRequestor(host + 'production-schedule/' + id + '/delete', {});
         },
         attachAsset: function (id, assetId) {
-            return httpRequestor(host + 'api/production-schedule/' + id + '/add/' + assetId, {});
+            return httpRequestor(host + 'production-schedule/' + id + '/add/' + assetId, {});
         },
         detachAsset: function (id, assetId) {
-            return httpRequestor(host + 'api/production-schedule/' + id + '/remove/' + assetId, {});
+            return httpRequestor(host + 'production-schedule/' + id + '/remove/' + assetId, {});
         }
     };
 }]);
@@ -1078,19 +1078,19 @@ sdkApiApp.factory('productApi', ['httpRequestor', 'pagingService', 'configuratio
 
     return {
         createProduct: function (data) {
-            return httpRequestor(host + 'api/product', data, removableFields);
+            return httpRequestor(host + 'product', data, removableFields);
         },
         getProduct: function (id) {
-            return httpRequestor(host + 'api/product/' + id);
+            return httpRequestor(host + 'product/' + id);
         },
         searchProducts: function (params) {
-            return pagingService.page(host + 'api/products/search', params);
+            return pagingService.page(host + 'products/search', params);
         },
         updateProduct: function (data) {
-            return httpRequestor(host + 'api/product/' + data.id, data, removableFields);
+            return httpRequestor(host + 'product/' + data.id, data, removableFields);
         },
         deleteProduct: function (id) {
-            return httpRequestor(host + 'api/product/' + id + '/delete', {});
+            return httpRequestor(host + 'product/' + id + '/delete', {});
         }
     };
 }]);
@@ -1103,10 +1103,10 @@ sdkApiApp.factory('roleApi', ['httpRequestor', 'configuration', function (httpRe
 
     return {
         getRoles: function () {
-            return httpRequestor(host + 'api/roles');
+            return httpRequestor(host + 'roles');
         },
         updateRoleApps: function (data) {
-            return httpRequestor(host + 'api/role-apps', data);
+            return httpRequestor(host + 'role-apps', data);
         }
     };
 }]);
@@ -1119,10 +1119,10 @@ sdkApiApp.factory('shareApi', ['httpRequestor', 'configuration', function (httpR
 
     return {
         createShare: function (data) {
-            return httpRequestor(host + 'api/share', data);
+            return httpRequestor(host + 'share', data);
         },
         getShare: function (hash) {
-            return httpRequestor(host + 'api/share/' + hash);
+            return httpRequestor(host + 'share/' + hash);
         }
     };
 }]);
@@ -1135,7 +1135,7 @@ sdkApiApp.factory('tagApi', ['httpRequestor', 'configuration', function (httpReq
 
     return {
         getTags: function () {
-            return httpRequestor(host + 'api/tags');
+            return httpRequestor(host + 'tags');
         }
     }
 }]);
@@ -1149,25 +1149,25 @@ sdkApiApp.factory('taskApi', ['httpRequestor', 'pagingService', 'configuration',
 
     return {
         getTasks: function (params) {
-            return pagingService.page(host + 'api/tasks', params);
+            return pagingService.page(host + 'tasks', params);
         },
         getManagerTasks: function (params) {
-            return pagingService.page(host + 'api/tasks/manager', params);
+            return pagingService.page(host + 'tasks/manager', params);
         },
         searchTasks: function (params) {
-            return pagingService.page(host + 'api/tasks/search', params);
+            return pagingService.page(host + 'tasks/search', params);
         },
         createTask: function (data) {
-            return httpRequestor(host + 'api/task', data, removableFields);
+            return httpRequestor(host + 'task', data, removableFields);
         },
         getTask: function (id) {
-            return httpRequestor(host + 'api/task/' + id);
+            return httpRequestor(host + 'task/' + id);
         },
         updateTask: function (data) {
-            return httpRequestor(host + 'api/task/' + data.id, data, removableFields);
+            return httpRequestor(host + 'task/' + data.id, data, removableFields);
         },
         deleteTask: function (id) {
-            return httpRequestor(host + 'api/task/' + id + '/delete', {});
+            return httpRequestor(host + 'task/' + id + '/delete', {});
         }
     };
 }]);
@@ -1180,22 +1180,22 @@ sdkApiApp.factory('teamApi', ['httpRequestor', 'configuration', function (httpRe
 
     return {
         getTeams: function () {
-            return httpRequestor(host + 'api/teams');
+            return httpRequestor(host + 'teams');
         },
         createTeam: function (data) {
-            return httpRequestor(host + 'api/team', data);
+            return httpRequestor(host + 'team', data);
         },
         getTeam: function (id) {
-            return httpRequestor(host + 'api/team/' + id);
+            return httpRequestor(host + 'team/' + id);
         },
         getTeamUsers: function (id) {
-            return httpRequestor(host + 'api/team/' + id + '/users');
+            return httpRequestor(host + 'team/' + id + '/users');
         },
         updateTeam: function (data) {
-            return httpRequestor(host + 'api/team/' + data.id, data);
+            return httpRequestor(host + 'team/' + data.id, data);
         },
         deleteTeam: function (id) {
-            return httpRequestor(host + 'api/team/' + id + '/delete', {});
+            return httpRequestor(host + 'team/' + id + '/delete', {});
         }
     };
 }]);
@@ -1208,31 +1208,31 @@ sdkApiApp.factory('userApi', ['httpRequestor', 'pagingService', 'configuration',
 
     return {
         getUsers: function (params) {
-            return pagingService.page(host + 'api/users', params);
+            return pagingService.page(host + 'users', params);
         },
         getUsersByRole: function (id, role) {
-            return httpRequestor(host + 'api/users/organization/' + id + '?rolename=' + role);
+            return httpRequestor(host + 'users/organization/' + id + '?rolename=' + role);
         },
         getUsersPositions: function () {
-            return httpRequestor(host + 'api/users/positions');
+            return httpRequestor(host + 'users/positions');
         },
         createUser: function (data) {
-            return httpRequestor(host + 'api/user', data);
+            return httpRequestor(host + 'user', data);
         },
         inviteUser: function (id, data) {
-            return httpRequestor(host + 'api/user/' + id + '/invite', data || {});
+            return httpRequestor(host + 'user/' + id + '/invite', data || {});
         },
         getUser: function (id, username) {
-            return httpRequestor(host + 'api/user/' + id + (username ? '?username=' + username : ''));
+            return httpRequestor(host + 'user/' + id + (username ? '?username=' + username : ''));
         },
         updateUser: function (data) {
-            return httpRequestor(host + 'api/user/' + data.id, data);
+            return httpRequestor(host + 'user/' + data.id, data);
         },
         updateUserGroups: function (data) {
-            return httpRequestor(host + 'api/user/' + data.id + '/groups', data);
+            return httpRequestor(host + 'user/' + data.id + '/groups', data);
         },
         deleteUser: function (id) {
-            return httpRequestor(host + 'api/user/' + id + '/delete', {});
+            return httpRequestor(host + 'user/' + id + '/delete', {});
         }
     };
 }]);
@@ -1245,7 +1245,7 @@ sdkApiApp.factory('workloadApi', ['httpRequestor', 'configuration', function (ht
 
     return {
         updateWorkload: function (data) {
-            return httpRequestor(host + 'api/workload/' + data.id, data);
+            return httpRequestor(host + 'workload/' + data.id, data);
         }
     }
 }]);
