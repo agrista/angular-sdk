@@ -587,7 +587,8 @@ sdkApiApp.factory('expenseApi', ['httpRequestor', 'pagingService', 'configuratio
  * Farm API
  */
 sdkApiApp.factory('farmApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
-    var host = configuration.getServer();
+    var host = configuration.getServer(),
+        removableFields = ['assets'];
 
     return {
         getFarms: function (id, params) {
@@ -598,14 +599,14 @@ sdkApiApp.factory('farmApi', ['httpRequestor', 'pagingService', 'configuration',
 
             return pagingService.page(host + 'farms' + (id ? '/' + id : ''), params);
         },
-        createFarm: function (data) {
-            return httpRequestor(host + 'farm', data);
+        createFarm: function (data, includeRemovable) {
+            return httpRequestor(host + 'farm', data, (includeRemovable ? [] : removableFields));
         },
         getFarm: function (id) {
             return httpRequestor(host + 'farm/' + id);
         },
-        updateFarm: function (data) {
-            return httpRequestor(host + 'farm/' + data.id, data);
+        updateFarm: function (data, includeRemovable) {
+            return httpRequestor(host + 'farm/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteFarm: function (id) {
             return httpRequestor(host + 'farm/' + id + '/delete', {});
@@ -2263,6 +2264,9 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
          */
         contains: function (geojson) {
             return geometryRelation(this, 'contains', geojson);
+        },
+        relation: function (geojson, relation) {
+            return geometryRelation(this, relation, geojson);
         },
         within: function (geojson) {
             return geometryRelation(this, 'within', geojson);
@@ -9238,6 +9242,14 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
             });
 
             readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
+
+            readOnlyProperty(Asset, 'relationships', {
+                'owner': 'Owner',
+                'sentimential': 'Grew Up',
+                'renting': 'Renting',
+                'prospective-buyer': 'Potential Buyer',
+                'client': 'Client'
+            });
 
             readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
 
@@ -16485,6 +16497,7 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             this.organizationId = attrs.organizationId;
 
             // Models
+            this.assets = attrs.assets || [];
             this.organization = attrs.organization;
         }
 

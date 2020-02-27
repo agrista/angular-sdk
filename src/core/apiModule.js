@@ -507,7 +507,8 @@ sdkApiApp.factory('expenseApi', ['httpRequestor', 'pagingService', 'configuratio
  * Farm API
  */
 sdkApiApp.factory('farmApi', ['httpRequestor', 'pagingService', 'configuration', function (httpRequestor, pagingService, configuration) {
-    var host = configuration.getServer();
+    var host = configuration.getServer(),
+        removableFields = ['assets'];
 
     return {
         getFarms: function (id, params) {
@@ -518,14 +519,14 @@ sdkApiApp.factory('farmApi', ['httpRequestor', 'pagingService', 'configuration',
 
             return pagingService.page(host + 'farms' + (id ? '/' + id : ''), params);
         },
-        createFarm: function (data) {
-            return httpRequestor(host + 'farm', data);
+        createFarm: function (data, includeRemovable) {
+            return httpRequestor(host + 'farm', data, (includeRemovable ? [] : removableFields));
         },
         getFarm: function (id) {
             return httpRequestor(host + 'farm/' + id);
         },
-        updateFarm: function (data) {
-            return httpRequestor(host + 'farm/' + data.id, data);
+        updateFarm: function (data, includeRemovable) {
+            return httpRequestor(host + 'farm/' + data.id, data, (includeRemovable ? [] : removableFields));
         },
         deleteFarm: function (id) {
             return httpRequestor(host + 'farm/' + id + '/delete', {});
