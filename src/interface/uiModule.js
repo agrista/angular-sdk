@@ -309,3 +309,69 @@ sdkInterfaceUiApp.directive('sparkline', ['$window', 'underscore', function ($wi
         }
     }
 }]);
+
+sdkInterfaceUiApp.directive('validator', ['$timeout', '$q', 'underscore', function ($timeout, $q, underscore) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        scope: {
+            validate: '&validator',
+            validateWatch: '&validatorWatch',
+            validateAsync: '=validatorAsync',
+            validateAsyncWait: '=validatorAsyncWait'
+        },
+        link: function (scope, element, attrs, ngModel) {
+            if (typeof scope.validate == 'function') {
+                var validator = scope.validate(),
+                    waitPeriod = scope.validateAsyncWait || 0;
+
+                function setTouched() {
+                    if (typeof ngModel.$setTouched === 'function' && ngModel.$viewValue !== ngModel.$modelValue) {
+                        ngModel.$setTouched();
+                    }
+                }
+
+                if (scope.validateAsync) {
+                    ngModel.$asyncValidators.validator = function (value) {
+                        if (scope.waitTimer) {
+                            $timeout.cancel(scope.waitTimer);
+                            scope.deferredResult.reject();
+                        }
+
+                        scope.deferredResult = $q.defer();
+                        scope.deferredResult.promise.finally(setTouched);
+
+                        if (underscore.size(value) > 0) {
+                            scope.waitTimer = $timeout(function () {
+                                delete scope.waitTimer;
+
+                                validator(ngModel.$name, value).then(scope.deferredResult.resolve, scope.deferredResult.reject);
+                            }, waitPeriod);
+                        } else if (attrs.required) {
+                            scope.deferredResult.reject();
+                        } else {
+                            scope.deferredResult.resolve();
+                        }
+
+                        return scope.deferredResult.promise;
+                    }
+                } else {
+                    ngModel.$validators.validator = function (value) {
+                        setTouched();
+
+                        return validator(ngModel.$name, value) === true;
+                    }
+                }
+            }
+
+            if (typeof scope.validateWatch == 'function') {
+                if (scope.validateWatch()) {
+                    scope.$watch(scope.validateWatch(), function () {
+                        ngModel.$setDirty();
+                        ngModel.$validate();
+                    });
+                }
+            }
+        }
+    };
+}]);
