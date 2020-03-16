@@ -258,6 +258,9 @@ sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHe
         contains: function (geojson) {
             return geometryRelation(this, 'contains', geojson);
         },
+        relation: function (geojson, relation) {
+            return geometryRelation(this, relation, geojson);
+        },
         within: function (geojson) {
             return geometryRelation(this, 'within', geojson);
         },
