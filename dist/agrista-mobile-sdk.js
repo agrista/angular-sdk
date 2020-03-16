@@ -20731,7 +20731,6 @@ sdkModelFarmer.provider('Farmer', ['OrganizationFactoryProvider', function (Orga
 
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
-                this.farms = attrs.farms || [];
                 this.operationType = attrs.operationType;
 
                 this.productionSchedules = underscore.map(attrs.productionSchedules, ProductionSchedule.newCopy);
@@ -20902,6 +20901,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.customerNumber = attrs.customerNumber;
                 this.domain = attrs.domain;
                 this.email = attrs.email;
+                this.farms = attrs.farms || [];
                 this.hostUrl = attrs.hostUrl;
                 this.legalEntities = attrs.legalEntities || [];
                 this.locale = attrs.locale;
