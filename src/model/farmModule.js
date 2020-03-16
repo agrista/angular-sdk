@@ -72,6 +72,7 @@ sdkModelFarm.factory('Farm', ['asJson', 'Base', 'computedProperty', 'geoJSONHelp
             this.organizationId = attrs.organizationId;
 
             // Models
+            this.assets = attrs.assets || [];
             this.organization = attrs.organization;
         }
 

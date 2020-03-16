@@ -1249,6 +1249,14 @@ sdkModelAsset.provider('Asset', ['AssetFactoryProvider', function (AssetFactoryP
 
             readOnlyProperty(Asset, 'conditions', ['Good', 'Good to fair', 'Fair', 'Fair to poor', 'Poor']);
 
+            readOnlyProperty(Asset, 'relationships', {
+                'owner': 'Owner',
+                'sentimential': 'Grew Up',
+                'renting': 'Renting',
+                'prospective-buyer': 'Potential Buyer',
+                'client': 'Client'
+            });
+
             readOnlyProperty(Asset, 'seasons', ['Cape', 'Summer', 'Fruit', 'Winter']);
 
             privateProperty(Asset, 'farmRequired', function (type) {

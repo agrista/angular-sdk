@@ -43,6 +43,7 @@ sdkModelOrganization.provider('Organization', ['listServiceMapProvider', functio
                 this.customerNumber = attrs.customerNumber;
                 this.domain = attrs.domain;
                 this.email = attrs.email;
+                this.farms = attrs.farms || [];
                 this.hostUrl = attrs.hostUrl;
                 this.legalEntities = attrs.legalEntities || [];
                 this.locale = attrs.locale;

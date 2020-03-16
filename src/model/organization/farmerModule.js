@@ -14,7 +14,6 @@ sdkModelFarmer.provider('Farmer', ['OrganizationFactoryProvider', function (Orga
 
                 if (underscore.isUndefined(attrs) || arguments.length === 0) return;
 
-                this.farms = attrs.farms || [];
                 this.operationType = attrs.operationType;
 
                 this.productionSchedules = underscore.map(attrs.productionSchedules, ProductionSchedule.newCopy);
