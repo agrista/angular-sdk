@@ -876,6 +876,56 @@ sdkGeospatialApp.factory('areaHelper', ['sphericalHelper', function (sphericalHe
     };
 }]);
 
+sdkGeospatialApp.factory('epsgConverter', [function () {
+    function epsg3857Converter(coordinates) {
+        if (coordinates) {
+            if (angular.isArray(coordinates[0])) {
+                angular.forEach(coordinates, function (coordinate) {
+                    epsg3857Converter(coordinate);
+                });
+            } else if (angular.isArray(coordinates)) {
+                coordinates[0] = coordinates[0] * 20037508.34 / 180;
+                coordinates[1] = (Math.log(Math.tan((90 + coordinates[1]) * Math.PI / 360)) / (Math.PI / 180)) * 20037508.34 / 180;
+            }
+        }
+    }
+
+    function epsg4826Converter(coordinates) {
+        if (coordinates) {
+            if (angular.isArray(coordinates[0])) {
+                angular.forEach(coordinates, function (coordinate) {
+                    epsg4826Converter(coordinate);
+                });
+            } else if (angular.isArray(coordinates)) {
+                coordinates[0] = coordinates[0] * 180 / 20037508.34;
+                coordinates[1] = Math.atan(Math.exp(coordinates[1] * Math.PI / 20037508.34)) * 360 / Math.PI - 90; 
+            }
+        }
+    }
+
+    function handleGeojson(geojson, fn) {
+        var geojsonCopy = angular.copy(geojson),
+            features = geojsonCopy.geometries || geojsonCopy.features || [geojsonCopy];
+
+            angular.forEach(features, function(feature) {
+                var geometry = feature.geometry || feature;
+
+                fn(geometry.coordinates);
+            });
+
+        return geojsonCopy;
+    }
+
+    return {
+        toEpsg3857: function (geojson) {
+            return handleGeojson(geojson, epsg3857Converter);
+        },
+        toEpsg4826: function (geojson) {
+            return handleGeojson(geojson, epsg4826Converter);
+        }
+    }
+}]);
+
 sdkGeospatialApp.factory('geoJSONHelper', ['areaHelper', 'objectId', 'topologyHelper', 'underscore', function (areaHelper, objectId, topologyHelper, underscore) {
     function GeojsonHelper(json, properties) {
         if (!(this instanceof GeojsonHelper)) {
