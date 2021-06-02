@@ -2,8 +2,8 @@
 
 ## Install
 
-1. Clone the repository `git clone https://bitbucket.org/agrista/sdk.git`
-2. Move into the sdk directory `cd sk`
+1. Clone the repository `git clone https://github.com/agrista/angular-sdk.git`
+2. Move into the sdk directory `cd angular-sk`
 
 ### Node Dependencies
 
