@@ -1763,28 +1763,28 @@ var sdkConfigApp = angular.module('ag.sdk.config', []);
  */
 sdkConfigApp.provider('configuration', [
     '$httpProvider',
-    function ($httpProvider) {
+    function($httpProvider) {
         var _version = '';
         var _host = 'local';
 
         var _modules = [];
         var _servers = {
             local: 'http://localhost:9000/',
-            staging: 'https://stage-drive-api.agrista.com/',
-            production: 'https://drive-api.agrista.com/'
+            staging: 'https://stage-api.agrista.com/',
+            production: 'https://api.agrista.com/'
         };
 
-        var _hasModule = function (name) {
+        var _hasModule = function(name) {
             return _modules.indexOf(name) !== -1;
         };
 
-        var _addModule = function (name) {
+        var _addModule = function(name) {
             if (_hasModule(name) == false) {
                 _modules.push(name);
             }
         };
 
-        var _getServer = function (stripTrailingSlash) {
+        var _getServer = function(stripTrailingSlash) {
             var server = _servers[_host];
 
             if (
@@ -1801,8 +1801,8 @@ sdkConfigApp.provider('configuration', [
             addModule: _addModule,
             hasModule: _hasModule,
 
-            setServers: function (servers) {
-                angular.forEach(servers, function (host, name) {
+            setServers: function(servers) {
+                angular.forEach(servers, function(host, name) {
                     if (host.lastIndexOf('/') !== host.length - 1) {
                         host += '/';
                     }
@@ -1812,13 +1812,13 @@ sdkConfigApp.provider('configuration', [
 
                 this.useHost(_host, _version);
             },
-            setVersion: function (version) {
+            setVersion: function(version) {
                 if (version) {
                     _version = version;
                 }
             },
             getServer: _getServer,
-            useHost: function (host, version, cCallback) {
+            useHost: function(host, version, cCallback) {
                 if (typeof version === 'function') {
                     cCallback = version;
                     version = _version;
@@ -1840,15 +1840,15 @@ sdkConfigApp.provider('configuration', [
                     cCallback(_servers[_host]);
                 }
             },
-            $get: function () {
+            $get: function() {
                 return {
                     addModule: _addModule,
                     hasModule: _hasModule,
 
-                    getVersion: function () {
+                    getVersion: function() {
                         return _version;
                     },
-                    getHost: function () {
+                    getHost: function() {
                         return _host;
                     },
                     getServer: _getServer
