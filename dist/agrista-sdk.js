@@ -1498,7 +1498,11 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         }
     }], _preReauthenticate = function () {
         return true;
-    };
+    }, _getUserHandler = ['authorizationApi', function (authorizationApi) {
+        return function () {
+            return authorizationApi.getUser();
+        }
+    }];
 
     var _processExpiry = ['moment', function (moment) {
         return function (data) {
@@ -1526,6 +1530,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
             _preReauthenticate = fn;
         },
 
+        setGetUser: function (fn) {
+            _getUserHandler = fn;
+        },
+
         $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService', 'underscore',
             function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService, underscore) {
                 var _user = _getUser(),
@@ -1539,6 +1547,10 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
 
                 if (_preAuthenticate instanceof Array) {
                     _preAuthenticate = $injector.invoke(_preAuthenticate);
+                }
+
+                if (_getUserHandler instanceof Array) {
+                    _getUserHandler = $injector.invoke(_getUserHandler);
                 }
 
                 _processExpiry(_tokens);
@@ -1575,7 +1587,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         _tokens = res.data;
                     }
 
-                    return authorizationApi.getUser();
+                    return _getUserHandler();
                 }
 
                 function _postGetUserSuccess (promise) {
