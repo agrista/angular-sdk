@@ -118,7 +118,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     return config;
                 }
 
-                if (_tokens && _tokens.refresh_token && _preReauthenticate(_expiry)) {
+                if (_tokens && _tokens.refresh_token && _preReauthenticateHandler(_expiry)) {
                     if (_requestQueue.length === 0) {
                         var $auth = $injector.get('$auth'),
                             authorizationApi = $injector.get('authorizationApi');
@@ -157,13 +157,17 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         }
     }]);
 
-    var _preAuthenticate = ['promiseService', function (promiseService) {
+    var _authenticateHandler = ['authorizationApi', function (authorizationApi) {
+        return function (authentication) {
+            return authorizationApi.authorize(authentication.provider, authentication)
+        }
+    }], _preAuthenticateHandler = ['promiseService', function (promiseService) {
         return function () {
             return promiseService.wrap(function (promise) {
                 promise.resolve();
             });
         }
-    }], _preReauthenticate = function () {
+    }], _preReauthenticateHandler = function () {
         return true;
     }, _getUserHandler = ['authorizationApi', function (authorizationApi) {
         return function () {
@@ -189,20 +193,24 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
         userRole: _userRoles,
         accessLevel: _accessLevels,
 
+        setAuthenticate: function (fn) {
+            _authenticateHandler = fn;
+        },
+
         setPreAuthenticate: function (fn) {
-            _preAuthenticate = fn;
+            _preAuthenticateHandler = fn;
         },
 
         setPreReauthenticate: function (fn) {
-            _preReauthenticate = fn;
+            _preReauthenticateHandler = fn;
         },
 
         setGetUser: function (fn) {
             _getUserHandler = fn;
         },
 
-        $get: ['$auth', '$injector', '$log', '$rootScope', '$timeout', 'authorizationApi', 'localStore', 'promiseService', 'underscore',
-            function ($auth, $injector, $log, $rootScope, $timeout, authorizationApi, localStore, promiseService, underscore) {
+        $get: ['$auth', '$injector', '$log', '$rootScope', 'authorizationApi', 'localStore', 'promiseService', 'underscore',
+            function ($auth, $injector, $log, $rootScope, authorizationApi, localStore, promiseService, underscore) {
                 var _user = _getUser(),
                     _authenticationPromise;
 
@@ -212,8 +220,12 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     _processExpiry = $injector.invoke(_processExpiry);
                 }
 
-                if (_preAuthenticate instanceof Array) {
-                    _preAuthenticate = $injector.invoke(_preAuthenticate);
+                if (_authenticateHandler instanceof Array) {
+                    _authenticateHandler = $injector.invoke(_authenticateHandler);
+                }
+
+                if (_preAuthenticateHandler instanceof Array) {
+                    _preAuthenticateHandler = $injector.invoke(_preAuthenticateHandler);
                 }
 
                 if (_getUserHandler instanceof Array) {
@@ -301,9 +313,9 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         _authenticationPromise = promiseService
                             .wrap(function (promise) {
                                 if (underscore.has(authentication, 'code')) {
-                                    _preAuthenticate(authentication)
+                                    _preAuthenticateHandler(authentication)
                                         .then(function () {
-                                            return authorizationApi.authorize(authentication.provider, authentication)
+                                            return _authenticateHandler(authentication);
                                         }, promiseService.throwError)
                                         .then(function (response) {
                                             return _postAuthenticateSuccess({data: response});
@@ -357,7 +369,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                         };
 
                         _authenticationPromise = promiseService.wrap(function (promise) {
-                            return _preAuthenticate(credentials)
+                            return _preAuthenticateHandler(credentials)
                                 .then(function () {
                                     return $auth.login(credentials);
                                 }, promiseService.throwError)
@@ -369,7 +381,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     },
                     authenticate: function (name, data) {
                         _authenticationPromise = promiseService.wrap(function (promise) {
-                            return _preAuthenticate(data)
+                            return _preAuthenticateHandler(data)
                                 .then(function () {
                                     return $auth.authenticate(name, data);
                                 }, promiseService.throwError)
@@ -406,7 +418,7 @@ sdkAuthorizationApp.provider('authorization', ['$httpProvider', function ($httpP
                     },
                     register: function (data) {
                         _authenticationPromise = promiseService.wrap(function (promise) {
-                            return _preAuthenticate(data)
+                            return _preAuthenticateHandler(data)
                                 .then(function () {
                                     return $auth.signup(data);
                                 }, promiseService.throwError)
